@@ -1,8 +1,6 @@
 mod utils;
 
-use std::collections::HashMap;
-
-use sdk_core::{is_enabled, EngineState, InnerContext};
+use sdk_core::{EngineState, InnerContext};
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -63,13 +61,4 @@ impl From<&Context> for InnerContext {
             environment: context_wrapper.environment.clone(),
         }
     }
-}
-
-#[wasm_bindgen]
-pub fn isEnabled(name: String, context: &Context) {
-    let context = context.into();
-
-    let enabled = is_enabled(name, context);
-    let display = format!("Hello, node and thang {:?}!", enabled);
-    // alert(&display);
 }
