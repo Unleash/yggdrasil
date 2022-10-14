@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "sdk-core",
+    "node-sdk"
+]
