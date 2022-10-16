@@ -1,14 +1,50 @@
 use pyo3::prelude::*;
+use sdk_core::{EngineState, InnerContext};
 
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
+#[pyclass]
+struct UnleashEngine {
+    engine_state: EngineState,
 }
 
-/// A Python module implemented in Rust.
+#[pyclass]
+pub struct Context {
+    environment: String,
+}
+
+#[pymethods]
+impl Context {
+    #[new]
+    pub fn new(environment: String) -> Context {
+        Context { environment }
+    }
+}
+
+#[pymethods]
+impl UnleashEngine {
+    #[new]
+    pub fn new() -> UnleashEngine {
+        UnleashEngine {
+            engine_state: EngineState::new(),
+        }
+    }
+
+    pub fn is_enabled(&self, name: String, context: &Context) -> bool {
+        let context = context.into();
+        self.engine_state.is_enabled(name, context)
+    }
+}
+
+impl From<&Context> for InnerContext {
+    fn from(context_wrapper: &Context) -> Self {
+        InnerContext {
+            environment: context_wrapper.environment.clone(),
+        }
+    }
+}
+
 #[pymodule]
-fn python_sdk(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
+fn python_sdk(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    m.add_class::<UnleashEngine>()?;
+    m.add_class::<Context>()?;
     Ok(())
 }

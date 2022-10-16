@@ -2,5 +2,6 @@
 
 members = [
     "sdk-core",
-    "node-sdk"
+    "node-sdk",
+    "python-sdk"
 ]
