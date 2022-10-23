@@ -58,7 +58,10 @@ impl UnleashEngine {
 impl From<&Context> for InnerContext {
     fn from(context_wrapper: &Context) -> Self {
         InnerContext {
-            environment: context_wrapper.environment.clone(),
+            user_id: None,
+            session_id: None,
+            remote_address: None,
+            properties: None,
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use pyo3::prelude::*;
 use sdk_core::{EngineState, InnerContext};
 
@@ -8,14 +10,38 @@ struct UnleashEngine {
 
 #[pyclass]
 pub struct Context {
-    environment: String,
+    pub user_id: Option<String>,
+    pub session_id: Option<String>,
+    pub remote_address: Option<String>,
+    pub properties: Option<HashMap<String, String>>,
 }
 
 #[pymethods]
 impl Context {
     #[new]
-    pub fn new(environment: String) -> Context {
-        Context { environment }
+    pub fn new(
+        user_id: Option<String>,
+        session_id: Option<String>,
+        remote_address: Option<String>,
+        properties: Option<HashMap<String, String>>,
+    ) -> Context {
+        Context {
+            user_id,
+            session_id,
+            remote_address,
+            properties,
+        }
+    }
+}
+
+impl From<&Context> for InnerContext {
+    fn from(context_wrapper: &Context) -> Self {
+        InnerContext {
+            user_id: context_wrapper.user_id.clone(),
+            session_id: context_wrapper.session_id.clone(),
+            remote_address: context_wrapper.remote_address.clone(),
+            properties: context_wrapper.properties.clone(),
+        }
     }
 }
 
@@ -31,14 +57,6 @@ impl UnleashEngine {
     pub fn is_enabled(&self, name: String, context: &Context) -> bool {
         let context = context.into();
         self.engine_state.is_enabled(name, context)
-    }
-}
-
-impl From<&Context> for InnerContext {
-    fn from(context_wrapper: &Context) -> Self {
-        InnerContext {
-            environment: context_wrapper.environment.clone(),
-        }
     }
 }
 
