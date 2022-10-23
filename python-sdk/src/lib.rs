@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use pyo3::prelude::*;
 use sdk_core::{EngineState, InnerContext};
+use serde::{Deserialize, Serialize};
 
 #[pyclass]
 struct UnleashEngine {
@@ -52,6 +53,11 @@ impl UnleashEngine {
         UnleashEngine {
             engine_state: EngineState::new(),
         }
+    }
+
+    pub fn take_state(&mut self, state: String){
+        let toggles = serde_json::from_str(&state).expect("Failed to parse client spec");
+        self.engine_state.take_state(toggles)
     }
 
     pub fn is_enabled(&self, name: String, context: &Context) -> bool {
