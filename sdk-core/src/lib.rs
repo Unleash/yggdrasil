@@ -1,16 +1,37 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, net::IpAddr};
 
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize};
 use state::State;
 pub mod state;
 pub mod strategy;
 
-#[derive(Serialize, Deserialize, Debug)]
+
+#[derive(Debug)]
+pub struct IPAddress(pub IpAddr);
+
+impl<'de> de::Deserialize<'de> for IPAddress {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            // Deserialize from a human-readable string like "127.0.0.1".
+            let s = String::deserialize(deserializer)?;
+            s.parse::<IpAddr>()
+                .map_err(de::Error::custom)
+                .map(IPAddress)
+        } else {
+            unimplemented!();
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct InnerContext {
     pub user_id: Option<String>,
     pub session_id: Option<String>,
-    pub remote_address: Option<String>,
+    pub remote_address: Option<IPAddress>,
     pub properties: Option<HashMap<String, String>>,
 }
 
@@ -62,7 +83,7 @@ impl EngineState {
 
 #[cfg(test)]
 mod test {
-    use serde::{Deserialize, Serialize};
+    use serde::{Deserialize};
     use std::fs;
     use test_case::test_case;
 
@@ -70,14 +91,14 @@ mod test {
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
 
-    #[derive(Serialize, Deserialize, Debug)]
+    #[derive(Deserialize, Debug)]
     pub(crate) struct TestSuite {
         pub(crate) name: String,
         pub(crate) state: State,
         pub(crate) tests: Vec<TestCase>,
     }
 
-    #[derive(Serialize, Deserialize, Debug)]
+    #[derive(Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct TestCase {
         pub(crate) description: String,
@@ -97,6 +118,8 @@ mod test {
     #[test_case("02-user-with-id-strategy.json"; "User Id with strategy")]
     #[test_case("03-gradual-rollout-user-id-strategy.json"; "Gradual Rollout user id strategy")]
     #[test_case("04-gradual-rollout-session-id-strategy.json"; "Gradual Rollout session-id strategy")]
+    #[test_case("05-gradual-rollout-random-strategy.json"; "Gradual Rollout random")]
+    #[test_case("06-remote-address-strategy.json"; "Remote address")]
     fn run_client_spec(spec_name: &str) {
         let mut spec = load_spec(spec_name);
         // println!("Loaded testcase {:?}", &spec);

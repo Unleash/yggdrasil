@@ -8,6 +8,8 @@ version = "0.1.0"
 [dependencies]
 serde_json = "1.0.68"
 murmur3 = "0.5.1"
+ipnet = "2.3.1"
+rand = "0.8.4"
 
 [dependencies.serde]
 features = ["derive"]

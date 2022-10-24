@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use sdk_core::{EngineState, InnerContext};
-use serde::{Deserialize, Serialize};
+use sdk_core::{EngineState, IPAddress, InnerContext};
+use serde::{de, Deserialize};
 
 #[pyclass]
 struct UnleashEngine {
@@ -37,10 +37,17 @@ impl Context {
 
 impl From<&Context> for InnerContext {
     fn from(context_wrapper: &Context) -> Self {
+        let remote_address = context_wrapper
+            .remote_address
+            .clone()
+            .map(|x| serde_json::from_str::<IPAddress>(&x))
+            .transpose()
+            .unwrap_or(None);
+
         InnerContext {
             user_id: context_wrapper.user_id.clone(),
             session_id: context_wrapper.session_id.clone(),
-            remote_address: context_wrapper.remote_address.clone(),
+            remote_address: remote_address,
             properties: context_wrapper.properties.clone(),
         }
     }
@@ -55,7 +62,7 @@ impl UnleashEngine {
         }
     }
 
-    pub fn take_state(&mut self, state: String){
+    pub fn take_state(&mut self, state: String) {
         let toggles = serde_json::from_str(&state).expect("Failed to parse client spec");
         self.engine_state.take_state(toggles)
     }
