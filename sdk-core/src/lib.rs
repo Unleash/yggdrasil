@@ -120,6 +120,7 @@ mod test {
     #[test_case("04-gradual-rollout-session-id-strategy.json"; "Gradual Rollout session-id strategy")]
     #[test_case("05-gradual-rollout-random-strategy.json"; "Gradual Rollout random")]
     #[test_case("06-remote-address-strategy.json"; "Remote address")]
+    #[test_case("07-multiple-strategies.json"; "Multiple strategies")]
     fn run_client_spec(spec_name: &str) {
         let mut spec = load_spec(spec_name);
         // println!("Loaded testcase {:?}", &spec);
