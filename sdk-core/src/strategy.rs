@@ -3,7 +3,7 @@ use std::io::Cursor;
 use std::net::IpAddr;
 use std::num::ParseIntError;
 
-use ipnet::{AddrParseError, IpNet};
+use ipnet::IpNet;
 use murmur3::murmur3_32;
 use rand::Rng;
 
@@ -115,7 +115,7 @@ pub(crate) struct RemoteAddressParams {
     pub(crate) ips: Vec<IpNet>,
 }
 
-fn _parse_ip(ip: &str) -> Result<IpNet, std::net::AddrParseError> {
+fn parse_ip(ip: &str) -> Result<IpNet, std::net::AddrParseError> {
     ip.parse::<IpNet>()
         .or_else(|_| ip.parse::<IpAddr>().map(|addr| addr.into()))
 }
@@ -127,7 +127,7 @@ impl From<Option<&HashMap<String, String>>> for RemoteAddressParams {
                 Some(ips) => {
                     let mut parsed_ips: Vec<IpNet> = Vec::new();
                     for ip_str in ips.split(',') {
-                        let ip_parsed = _parse_ip(ip_str.trim());
+                        let ip_parsed = parse_ip(ip_str.trim());
                         if let Ok(ip) = ip_parsed {
                             parsed_ips.push(ip)
                         }
@@ -191,7 +191,6 @@ impl Strategy {
                 let remote_address = &context.remote_address;
                 match remote_address {
                     Some(remote_address) => {
-                        println!("GOT ME SOME STUFF {:?} {:?}", &params.ips, &remote_address);
                         for ip in &params.ips {
                             if ip.contains(&remote_address.0) {
                                 return true;
