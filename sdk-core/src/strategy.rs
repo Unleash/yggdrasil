@@ -7,7 +7,7 @@ use ipnet::IpNet;
 use murmur3::murmur3_32;
 use rand::Rng;
 
-use crate::state::Strategy;
+use crate::state::{Constraint, Operator, Strategy};
 use crate::InnerContext;
 
 pub fn normalized_hash(group: &str, identifier: &str, modulus: u32) -> std::io::Result<u32> {
@@ -147,8 +147,67 @@ pub(crate) struct FlexibleRolloutParams {
     pub(crate) group_id: String,
 }
 
+fn resolve_context_prop(name: &str, context: &InnerContext) -> Option<String> {
+    match name {
+        "userId" => return context.user_id.clone(),
+        "sessionId" => return context.session_id.clone(),
+        "remoteAddress" => {}
+        "environment" => return context.environment.clone(),
+        "appName" => return context.app_name.clone(),
+        _ => {
+            println!("Resolving an unknown context {} {:?}", name, context);
+            if let Some(props) = &context.properties {
+                return props.get(name).map(|x| x.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn check_constraints(constraints: &Option<Vec<Constraint>>, context: &InnerContext) -> bool {
+    if let Some(constraints) = constraints {
+        constraints
+            .iter()
+            .all(|constraint| check_constraint(constraint, context))
+    } else {
+        true
+    }
+}
+
+fn check_constraint(constraint: &Constraint, context: &InnerContext) -> bool {
+    let context_value = resolve_context_prop(&constraint.context_name, context);
+    let constraint_value = &constraint.values;
+
+    match &constraint.operator {
+        Operator::In => {
+            if context_value.is_none() || constraint_value.is_none() {
+                return false;
+            };
+            let context_value = context_value.unwrap();
+            let constraint_value = constraint_value.as_ref().unwrap();
+
+            constraint_value.contains(&context_value)
+        }
+        Operator::NotIn => {
+            if context_value.is_none() || constraint_value.is_none() {
+                println!(
+                    "Not in early exit {:?} {:?}",
+                    context_value, constraint_value
+                );
+                return true;
+            };
+            let context_value = context_value.unwrap();
+            let constraint_value = constraint_value.as_ref().unwrap();
+            !constraint_value.contains(&context_value)
+        }
+    }
+}
+
 impl Strategy {
     pub fn is_enabled(&self, context: &InnerContext) -> bool {
+        if !check_constraints(&self.constraints, context) {
+            return false;
+        };
         match self.name.as_str() {
             "userWithId" => {
                 let params = UserWithIdParams::from(self.parameters.as_ref());
@@ -203,6 +262,7 @@ impl Strategy {
                 };
                 false
             }
+            "default" => true,
             _ => {
                 println!(
                     "Unknown strategy type: {:?}, defaulting to disabled",

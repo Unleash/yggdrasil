@@ -66,23 +66,24 @@ pub struct VariantPayload {
 pub struct Strategy {
     pub name: String,
     pub parameters: Option<HashMap<String, String>>,
-    constraints: Option<Vec<Constraint>>,
+    pub constraints: Option<Vec<Constraint>>,
     segments: Option<Vec<i32>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-enum Operator {
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Operator {
     In,
     NotIn,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-struct Constraint {
-    context_name: String,
-    values: Vec<String>,
-    value: String,
-    operator: Operator,
+pub struct Constraint {
+    pub context_name: String,
+    pub values: Option<Vec<String>>,
+    pub value: Option<String>,
+    pub operator: Operator,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

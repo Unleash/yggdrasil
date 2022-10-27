@@ -31,6 +31,8 @@ impl<'de> de::Deserialize<'de> for IPAddress {
 pub struct InnerContext {
     pub user_id: Option<String>,
     pub session_id: Option<String>,
+    pub environment: Option<String>,
+    pub app_name: Option<String>,
     pub remote_address: Option<IPAddress>,
     pub properties: Option<HashMap<String, String>>,
 }
@@ -226,6 +228,7 @@ mod test {
     #[test_case("06-remote-address-strategy.json"; "Remote address")]
     #[test_case("07-multiple-strategies.json"; "Multiple strategies")]
     #[test_case("08-variants.json"; "Variants")]
+    #[test_case("09-strategy-constraints.json"; "Strategy constraints")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::new();

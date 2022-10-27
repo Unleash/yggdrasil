@@ -61,6 +61,8 @@ impl From<&Context> for InnerContext {
             user_id: None,
             session_id: None,
             remote_address: None,
+            environment: None,
+            app_name: None,
             properties: None,
         }
     }

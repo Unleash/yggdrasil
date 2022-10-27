@@ -14,6 +14,8 @@ pub struct Context {
     pub user_id: Option<String>,
     pub session_id: Option<String>,
     pub remote_address: Option<String>,
+    pub environment: Option<String>,
+    pub app_name: Option<String>,
     pub properties: Option<HashMap<String, String>>,
 }
 
@@ -24,12 +26,16 @@ impl Context {
         user_id: Option<String>,
         session_id: Option<String>,
         remote_address: Option<String>,
+        environment: Option<String>,
+        app_name: Option<String>,
         properties: Option<HashMap<String, String>>,
     ) -> Context {
         Context {
             user_id,
             session_id,
             remote_address,
+            environment,
+            app_name,
             properties,
         }
     }
@@ -48,6 +54,8 @@ impl From<&Context> for InnerContext {
             user_id: context_wrapper.user_id.clone(),
             session_id: context_wrapper.session_id.clone(),
             remote_address: remote_address,
+            environment: context_wrapper.environment.clone(),
+            app_name: context_wrapper.app_name.clone(),
             properties: context_wrapper.properties.clone(),
         }
     }
