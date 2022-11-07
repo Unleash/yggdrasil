@@ -1,0 +1,55 @@
+expr = { term ~ (boolean_operator ~ term)* }
+term = { constraint | "(" ~ expr ~ ")" }
+
+strategy = { SOI? ~ expr ~ EOI }
+
+//Constraints
+
+constraint = { rollout_constraint | semver_constraint | numeric_constraint }
+
+numeric_constraint = { context_value ~ ordinal_operator ~ number }
+semver_constraint = { context_value ~ ordinal_operator ~ semver }
+rollout_constraint = { percentage ~ stickiness_param? ~ group_id_param?}
+
+//Gradual rollout parameters
+
+percentage = { ("100" | (ASCII_DIGIT ~ ASCII_DIGIT?)) ~ "%" }
+stickiness_param = { "sticky on" ~ context_value }
+group_id_param = { "with group_id of" ~ string }
+
+//Operators - all of these should resolve left/right to a boolean
+
+boolean_operator = { and | or }
+
+ordinal_operator = { lte | gte | lt | eq | gt }
+
+lte = { "<=" }
+gte = { ">=" }
+lt = { "<" }
+eq = { "==" }
+gt = { ">" }
+
+and = { "and" }
+or = { "or" }
+
+//Context values
+
+context_value = { user_id | app_name | environment | property  }
+
+user_id = { "user_id" }
+app_name = { "app_name" }
+environment = { "environment" }
+property = { "context[\"" ~ ASCII_ALPHANUMERIC+ ~ "\"]" }
+
+//Atoms
+
+number = @{ "-"? ~ ASCII_DIGIT+ ~ ( "." ~ ASCII_DIGIT+ )? }
+
+string = @{ "\"" ~ ( ASCII_ALPHANUMERIC | "." )* ~ "\"" }
+
+semver = @{ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ semver_patch? ~ semver_build? }
+semver_patch = @{ "-" ~ semver_fragment }
+semver_build = @{ "+" ~ semver_fragment }
+semver_fragment = @{ (ASCII_ALPHANUMERIC | "-")+ ~ ("." ~ (ASCII_ALPHANUMERIC | "-")+)* }
+
+WHITESPACE = _{ " " | "\t" }

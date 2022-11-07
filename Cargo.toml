@@ -3,5 +3,7 @@
 members = [
     "sdk-core",
     "node-sdk",
-    "python-sdk"
+    "python-sdk",
+    "ruby_sdk",
+    "rule-parser"
 ]
