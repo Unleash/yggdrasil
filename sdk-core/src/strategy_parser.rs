@@ -1,33 +1,16 @@
 extern crate pest;
 
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::io::Cursor;
 use std::num::ParseFloatError;
 
+use crate::InnerContext as Context;
 use murmur3::murmur3_32;
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
 use semver::Version;
-
-pub struct Context {
-    user_id: String,
-    app_name: String,
-    environment: String,
-    properties: HashMap<String, String>,
-}
-
-impl Context {
-    fn new(user_id: String, properties: HashMap<String, String>) -> Self {
-        Context {
-            user_id,
-            app_name: "".to_string(),
-            environment: "".to_string(),
-            properties,
-        }
-    }
-}
 
 #[derive(Parser)]
 #[grammar = "strategy_grammar.pest"]
@@ -62,10 +45,14 @@ enum Comparator {
 fn context_value(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> String> {
     let child = node.next().unwrap();
     match child.as_rule() {
-        Rule::user_id => Box::new(|context: &Context| -> String { context.user_id.clone() }),
-        Rule::app_name => Box::new(|context: &Context| -> String { context.app_name.clone() }),
+        Rule::user_id => {
+            Box::new(|context: &Context| -> String { context.user_id.clone().unwrap() })
+        }
+        Rule::app_name => {
+            Box::new(|context: &Context| -> String { context.app_name.clone().unwrap() })
+        }
         Rule::environment => {
-            Box::new(|context: &Context| -> String { context.environment.clone() })
+            Box::new(|context: &Context| -> String { context.environment.clone().unwrap() })
         }
         Rule::property => context_property(child.into_inner()),
         _ => unreachable!(),
@@ -86,7 +73,13 @@ fn context_property(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> String> {
     let context_name = chars.as_str().to_string();
 
     Box::new(move |context: &Context| -> String {
-        context.properties.get(&context_name).unwrap().clone()
+        context
+            .properties
+            .clone()
+            .unwrap()
+            .get(&context_name)
+            .unwrap()
+            .clone()
     })
 }
 
@@ -269,7 +262,14 @@ mod tests {
     use test_case::test_case;
 
     fn context_from_user_id(user_id: &str) -> Context {
-        Context::new(user_id.into(), HashMap::new())
+        Context {
+            user_id: Some(user_id.into()),
+            properties: Some(HashMap::new()),
+            session_id: None,
+            environment: None,
+            app_name: None,
+            remote_address: None,
+        }
     }
 
     #[test_case("1", "user_id == 1 and (user_id > 1 and user_id < 1)", false)]
@@ -365,7 +365,7 @@ mod tests {
     // #[test_case("not (true and false)", true)]
     fn run_boolean_constraint(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = Context::new("6".into(), HashMap::new());
+        let context = context_from_user_id("6".into());
 
         assert_eq!(rule(&context), expected);
     }
@@ -374,7 +374,7 @@ mod tests {
     #[test_case("99%", true)]
     fn run_rollout_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = Context::new("6".into(), HashMap::new());
+        let context = context_from_user_id("6".into());
 
         assert_eq!(rule(&context), expected);
     }
@@ -387,8 +387,16 @@ mod tests {
         context_property.insert("penguins".into(), "7".into());
         context_property.insert("squirrels".into(), "-2".into());
 
+        let context = Context {
+            user_id: Some("6".into()),
+            properties: Some(context_property),
+            session_id: None,
+            environment: None,
+            app_name: None,
+            remote_address: None,
+        };
+
         let rule = compile_rule(rule).expect("");
-        let context = Context::new("6".into(), context_property);
 
         assert_eq!(rule(&context), expected);
     }
@@ -399,7 +407,7 @@ mod tests {
     )]
     fn run_rollout_test_with_group_id(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = Context::new("25".into(), HashMap::new());
+        let context = context_from_user_id("25");
 
         assert_eq!(rule(&context), expected);
     }
@@ -407,7 +415,7 @@ mod tests {
     #[test_case("55% with group_id of \"Feature.flexibleRollout.userId.55\"", true)]
     fn run_rollout_test_with_group_id_and_no_sticky(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = Context::new("25".into(), HashMap::new());
+        let context = context_from_user_id("25");
 
         assert_eq!(rule(&context), expected);
     }
@@ -415,7 +423,7 @@ mod tests {
     #[test_case("100% sticky on user_id", true)]
     fn run_rollout_test_with_stickiness(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = Context::new("6".into(), HashMap::new());
+        let context = context_from_user_id("6");
 
         assert_eq!(rule(&context), expected);
     }
@@ -424,7 +432,7 @@ mod tests {
     #[test_case("user_id in [1, 3, 5]", false)]
     fn run_numeric_list_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = Context::new("6".into(), HashMap::new());
+        let context = context_from_user_id("6");
 
         assert_eq!(rule(&context), expected);
     }
