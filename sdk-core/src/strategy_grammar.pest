@@ -1,0 +1,69 @@
+num = @{ int ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ int)? }
+    int = { ("+" | "-")? ~ ASCII_DIGIT+ }
+
+percentage = { ("100" | (ASCII_DIGIT ~ ASCII_DIGIT?)) ~ "%" }
+
+string = @{ "\"" ~ ( ASCII_ALPHANUMERIC | "." )* ~ "\"" }
+
+semver = @{ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ semver_patch? ~ semver_build? }
+    semver_patch    = @{ "-" ~ semver_fragment }
+    semver_build    = @{ "+" ~ semver_fragment }
+        semver_fragment = @{ (ASCII_ALPHANUMERIC | "-")+ ~ ("." ~ (ASCII_ALPHANUMERIC | "-")+)* }
+
+boolean = { "true" | "false" }
+
+numeric_list = { "[" ~ num ~ ( "," ~ num )* ~ "]" }
+string_list = { "[" ~ string ~ ( "," ~ string )* ~ "]" }
+semver_list = { "[" ~ semver ~ ( "," ~ semver )* ~ "]" }
+
+WHITESPACE = _{ " " | "\t" }
+
+
+boolean_operation = _{ and | or }
+    and     = { "and" }
+    or      = { "or" }
+
+ordinal_operation = { lte | gte | lt | eq | gt }
+    lte     = { "<=" }
+    gte     = { ">=" }
+    lt      = { "<" }
+    eq      = { "==" }
+    gt      = { ">" }
+
+string_list_operation = { in_any | not_in_any | starts_with | ends_with | contains_any }
+    in_any      = { "in_any" }
+    not_in_any  = { "not_in_any" }
+    starts_with = { "starts_with_any" }
+    ends_with   = { "ends_with_any" }
+    contains_any    = { "contains_any" }
+
+list_operation = { "in" }
+
+constraint = {
+    rollout_constraint
+    | semver_constraint
+    | numeric_constraint
+    | default_strategy_constraint
+    | string_fragment_constraint
+    | list_constraint
+}
+    default_strategy_constraint = { boolean }
+    string_fragment_constraint = { context_value ~ string_list_operation ~ string_list }
+    list_constraint = { context_value ~ list_operation ~ ( numeric_list | string_list ) }
+    numeric_constraint = { context_value ~ ordinal_operation ~ num }
+    semver_constraint = { context_value ~ ordinal_operation ~ semver }
+    rollout_constraint = { percentage ~ stickiness_param? ~ group_id_param?}
+        stickiness_param = { "sticky on" ~ context_value }
+        group_id_param = { "with group_id of" ~ string }
+
+context_value = { user_id | app_name | environment | property  }
+    user_id         = { "user_id" }
+    app_name        = { "app_name" }
+    environment     = { "environment" }
+    property        = { "context[" ~ string ~ "]" }
+
+
+expr = { term ~ (boolean_operation ~ term)* }
+term = _{ constraint | "(" ~ expr ~ ")" }
+
+strategy = _{ SOI ~ expr ~ EOI }

@@ -1,11 +1,18 @@
-use std::{collections::HashMap, net::IpAddr};
+use std::net::IpAddr;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate pest_derive;
 
-use rand::Rng;
-use serde::{de, Deserialize};
-use state::{State, Toggle, Variant, VariantDef};
-use strategy::normalized_hash;
 pub mod state;
 pub mod strategy;
+pub mod strategy_parser;
+
+use rand::Rng;
+use serde::de;
+use state::{State, Toggle, Variant, VariantDef};
+use strategy::normalized_hash;
+use state::InnerContext;
 
 #[derive(Debug)]
 pub struct IPAddress(pub IpAddr);
@@ -24,17 +31,6 @@ impl<'de> de::Deserialize<'de> for IPAddress {
             unimplemented!();
         }
     }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct InnerContext {
-    pub user_id: Option<String>,
-    pub session_id: Option<String>,
-    pub environment: Option<String>,
-    pub app_name: Option<String>,
-    pub remote_address: Option<IPAddress>,
-    pub properties: Option<HashMap<String, String>>,
 }
 
 pub struct EngineState {
@@ -229,6 +225,7 @@ mod test {
     #[test_case("07-multiple-strategies.json"; "Multiple strategies")]
     #[test_case("08-variants.json"; "Variants")]
     #[test_case("09-strategy-constraints.json"; "Strategy constraints")]
+    // #[test_case("10-flexible-rollout-strategy.json"; "Flexible rollout strategy")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::new();

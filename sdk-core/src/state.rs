@@ -2,6 +2,19 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::IPAddress;
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct InnerContext {
+    pub user_id: Option<String>,
+    pub session_id: Option<String>,
+    pub environment: Option<String>,
+    pub app_name: Option<String>,
+    pub remote_address: Option<IPAddress>,
+    pub properties: Option<HashMap<String, String>>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct State {
     version: i8,

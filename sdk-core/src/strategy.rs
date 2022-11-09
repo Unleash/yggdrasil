@@ -145,6 +145,27 @@ impl From<Option<&HashMap<String, String>>> for RemoteAddressParams {
 pub(crate) struct FlexibleRolloutParams {
     pub(crate) rollout: u32,
     pub(crate) group_id: String,
+    pub(crate) stickiness: String,
+}
+
+impl From<Option<&HashMap<String, String>>> for FlexibleRolloutParams {
+    fn from(parameters: Option<&HashMap<String, String>>) -> Self {
+        if let Some(parameters) = parameters {
+            let rollout = get_int_param("rollout", parameters);
+            let stickiness = get_string_param("stickiness", parameters);
+            let group_id = get_string_param("groupId", parameters);
+            return FlexibleRolloutParams {
+                rollout,
+                group_id,
+                stickiness,
+            };
+        }
+        FlexibleRolloutParams {
+            rollout: 0,
+            group_id: "".to_string(),
+            stickiness: "".to_string(),
+        }
+    }
 }
 
 fn resolve_context_prop(name: &str, context: &InnerContext) -> Option<String> {
@@ -260,6 +281,10 @@ impl Strategy {
 
                     None => false,
                 };
+                false
+            }
+            "flexibleRollout" => {
+                let params = FlexibleRolloutParams::from(self.parameters.as_ref());
                 false
             }
             "default" => true,

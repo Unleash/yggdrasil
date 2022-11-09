@@ -1,6 +1,6 @@
 mod utils;
 
-use sdk_core::{EngineState, InnerContext};
+use sdk_core::{EngineState, state::InnerContext};
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global

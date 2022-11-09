@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use sdk_core::{EngineState, IPAddress, InnerContext};
+use sdk_core::{EngineState, IPAddress, state::InnerContext};
 use serde::{de, Deserialize};
 
 #[pyclass]

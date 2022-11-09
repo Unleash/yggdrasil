@@ -1,9 +1,8 @@
 [workspace]
 
 members = [
-    "sdk-core",
-    "node-sdk",
-    "python-sdk",
-    "ruby_sdk",
-    "rule-parser"
+  "sdk-core",
+  "node-sdk",
+  "python-sdk",
+  "ruby_sdk",
 ]

@@ -1,0 +1,15 @@
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/bin/Debug/net6.0/dotnet-sdk
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/bin/Debug/net6.0/dotnet-sdk.deps.json
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/bin/Debug/net6.0/dotnet-sdk.runtimeconfig.json
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/bin/Debug/net6.0/dotnet-sdk.dll
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/bin/Debug/net6.0/ref/dotnet-sdk.dll
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/bin/Debug/net6.0/dotnet-sdk.pdb
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/dotnet-sdk.csproj.AssemblyReference.cache
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/dotnet-sdk.GeneratedMSBuildEditorConfig.editorconfig
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/dotnet-sdk.AssemblyInfoInputs.cache
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/dotnet-sdk.AssemblyInfo.cs
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/dotnet-sdk.csproj.CoreCompileInputs.cache
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/dotnet-sdk.dll
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/ref/dotnet-sdk.dll
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/dotnet-sdk.pdb
+/home/simon/dev/experiments/yggdrasil/dotnet-sdk/obj/Debug/net6.0/dotnet-sdk.genruntimeconfig.cache
