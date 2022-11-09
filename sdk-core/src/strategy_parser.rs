@@ -1,6 +1,5 @@
 extern crate pest;
 
-use std::collections::HashMap;
 use std::io::Cursor;
 use std::num::ParseFloatError;
 
@@ -42,18 +41,12 @@ enum Comparator {
 }
 
 //Context lifting properties - these resolve properties from the context
-fn context_value(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> String> {
+fn context_value(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String>> {
     let child = node.next().unwrap();
     match child.as_rule() {
-        Rule::user_id => {
-            Box::new(|context: &Context| -> String { context.user_id.clone().unwrap() })
-        }
-        Rule::app_name => {
-            Box::new(|context: &Context| -> String { context.app_name.clone().unwrap() })
-        }
-        Rule::environment => {
-            Box::new(|context: &Context| -> String { context.environment.clone().unwrap() })
-        }
+        Rule::user_id => Box::new(|context: &Context| context.user_id.clone()),
+        Rule::app_name => Box::new(|context: &Context| context.app_name.clone()),
+        Rule::environment => Box::new(|context: &Context| context.environment.clone()),
         Rule::property => context_property(child.into_inner()),
         _ => unreachable!(),
     }
@@ -62,24 +55,21 @@ fn context_value(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> String> {
 // This is a special property, it's functionally identical to 'context_value'
 // and our rule here does nothing but call 'context_value' to resolve the value
 // this only gets a special place so that our syntax in the grammar is nice
-fn stickiness_param(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> String> {
+fn stickiness_param(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String>> {
     context_value(node.next().unwrap().into_inner())
 }
 
-fn context_property(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> String> {
+fn context_property(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String>> {
     let mut chars = node.next().unwrap().as_str().chars();
     chars.next();
     chars.next_back();
     let context_name = chars.as_str().to_string();
 
-    Box::new(move |context: &Context| -> String {
-        context
-            .properties
-            .clone()
-            .unwrap()
-            .get(&context_name)
-            .unwrap()
-            .clone()
+    Box::new(move |context: &Context| -> Option<String> {
+        match &context.properties {
+            Some(props) => props.get(&context_name).map(|x| x.clone()),
+            None => None,
+        }
     })
 }
 
@@ -124,13 +114,19 @@ fn numeric_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     let number = numeric(node.next().unwrap());
 
     Box::new(move |context: &Context| {
-        let context_value: f64 = context_getter(context).parse().unwrap();
-        match ordinal_operation {
-            Comparator::Lte => context_value <= number,
-            Comparator::Lt => context_value < number,
-            Comparator::Gte => context_value >= number,
-            Comparator::Gt => context_value > number,
-            Comparator::Eq => (context_value - number).abs() < f64::EPSILON,
+        let context_value = context_getter(context);
+        match context_value {
+            Some(context_value) => {
+                let context_value: f64 = context_value.parse().unwrap();
+                match ordinal_operation {
+                    Comparator::Lte => context_value <= number,
+                    Comparator::Lt => context_value < number,
+                    Comparator::Gte => context_value >= number,
+                    Comparator::Gt => context_value > number,
+                    Comparator::Eq => (context_value - number).abs() < f64::EPSILON,
+                }
+            }
+            None => false,
         }
     })
 }
@@ -141,13 +137,20 @@ fn semver_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     let semver = semver(node.next().unwrap());
 
     Box::new(move |context: &Context| {
-        let context_value = context_getter(context).parse::<Version>().unwrap();
-        match ordinal_operation {
-            Comparator::Lte => context_value <= semver,
-            Comparator::Lt => context_value < semver,
-            Comparator::Gte => context_value >= semver,
-            Comparator::Gt => context_value > semver,
-            Comparator::Eq => context_value == semver,
+        let context_value = context_getter(context);
+
+        match context_value {
+            Some(context_value) => {
+                let context_value = context_value.parse::<Version>().unwrap();
+                match ordinal_operation {
+                    Comparator::Lte => context_value <= semver,
+                    Comparator::Lt => context_value < semver,
+                    Comparator::Gte => context_value >= semver,
+                    Comparator::Gt => context_value > semver,
+                    Comparator::Eq => context_value == semver,
+                }
+            }
+            None => false,
         }
     })
 }
@@ -175,8 +178,9 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     Box::new(move |context: &Context| {
         let stickiness = match &stickiness_getter {
             Some(stickiness_getter) => stickiness_getter(&context),
-            None => "".to_string(), //This should be userId || sessionId || random
-        };
+            None => Some("".to_string()), //This should be userId || sessionId || random
+        }
+        .unwrap_or("".to_string());
 
         let group_id = match &group_id {
             Some(group_id) => group_id.clone(),
@@ -203,8 +207,15 @@ fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
         Rule::numeric_list => {
             let values = harvest_list(list.into_inner());
             Box::new(move |context: &Context| {
-                let context_value: f64 = context_getter(context).parse().unwrap();
-                values.contains(&context_value)
+                println!("EXECUTING THING");
+                let context_value = context_getter(context);
+                match context_value {
+                    Some(context_value) => {
+                        let context_value: f64 = context_value.parse().unwrap();
+                        values.contains(&context_value)
+                    }
+                    None => false,
+                }
             })
         }
         _ => unreachable!(),
@@ -259,6 +270,7 @@ pub fn compile_rule(rule: &str) -> Result<Box<dyn Fn(&Context) -> bool>, Error<R
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     use test_case::test_case;
 
     fn context_from_user_id(user_id: &str) -> Context {

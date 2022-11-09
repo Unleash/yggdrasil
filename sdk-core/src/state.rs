@@ -1,8 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
-
+use crate::strategy_parser::compile_rule;
 use crate::IPAddress;
+
+pub type CompiledState = HashMap<String, CompiledToggle>;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -104,3 +106,58 @@ pub struct Segment {
     id: i32,
     constraints: Vec<Constraint>,
 }
+
+pub struct CompiledToggle {
+    pub enabled: bool,
+    pub compiled_strategy: Box<dyn Fn(&InnerContext) -> bool>,
+    pub variants: Vec<VariantDef>,
+}
+
+pub fn compile_state(state: &State) -> HashMap<String, CompiledToggle> {
+    let mut compiled_state = HashMap::new();
+    for toggle in &state.features {
+        let rule = upgrade(&toggle.strategies);
+        compiled_state.insert(
+            toggle.name.clone(),
+            CompiledToggle {
+                enabled: toggle.enabled,
+                compiled_strategy: compile_rule(rule.as_str()).unwrap(),
+                variants: toggle.variants.clone(),
+            },
+        );
+    }
+
+    compiled_state
+}
+
+pub fn upgrade(strategies: &Vec<Strategy>) -> String {
+    if strategies.is_empty() {
+        return "true".into();
+    }
+    strategies
+        .iter()
+        .map(|x| upgrade_strategy(x))
+        .collect::<Vec<String>>()
+        .join(" or ")
+}
+
+fn upgrade_strategy(strategy: &Strategy) -> String {
+    match strategy.name.as_str() {
+        "default" => "true".into(),
+        "userWithId" => upgrade_user_id_strategy(strategy),
+        _ => "true".into(),
+    }
+    .into()
+}
+
+fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
+    match &strategy.parameters {
+        Some(parameters) => match parameters.get("userIds") {
+            Some(user_ids) => format!("user_id in [{}]", user_ids),
+            None => "".into(),
+        },
+        None => "".into(),
+    }
+}
+
+fn upgrade_constraint(constraint: &Constraint) {}
