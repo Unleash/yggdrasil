@@ -56,10 +56,13 @@ constraint = {
         stickiness_param = { "sticky on" ~ context_value }
         group_id_param = { "with group_id of" ~ string }
 
-context_value = { user_id | app_name | environment | property  }
+context_value = { user_id | session_id | remote_address | app_name | environment | property | random }
     user_id         = { "user_id" }
+    session_id      = { "session_id" }
+    remote_address  = { "remote_address" }
     app_name        = { "app_name" }
     environment     = { "environment" }
+    random          = { "random()" }
     property        = { "context[" ~ string ~ "]" }
 
 

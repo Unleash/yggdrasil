@@ -1,8 +1,10 @@
 # Yggdrasil
 
+![world tree image](worldtree.webp "Title")
+
 ##### One SDK core connecting all the realms of Unleash.
 
-Yggdrasil is a Rust project designed to create the core of the Unleash domain logic in a single language (in this case Rust).
+Yggdrasil is a Rust project designed to create the core of the Unleash SDK domain logic in a single language (in this case Rust).
 
 ## Building the Core
 

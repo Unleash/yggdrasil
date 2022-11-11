@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::strategy_parser::compile_rule;
-use crate::IPAddress;
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
@@ -13,8 +12,21 @@ pub struct InnerContext {
     pub session_id: Option<String>,
     pub environment: Option<String>,
     pub app_name: Option<String>,
-    pub remote_address: Option<IPAddress>,
+    pub remote_address: Option<String>,
     pub properties: Option<HashMap<String, String>>,
+}
+
+impl Default for InnerContext {
+    fn default() -> Self {
+        Self {
+            user_id: None,
+            session_id: None,
+            environment: None,
+            app_name: None,
+            remote_address: None,
+            properties: None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -142,22 +154,104 @@ pub fn upgrade(strategies: &Vec<Strategy>) -> String {
 }
 
 fn upgrade_strategy(strategy: &Strategy) -> String {
-    match strategy.name.as_str() {
+    let strategy_rule = match strategy.name.as_str() {
         "default" => "true".into(),
         "userWithId" => upgrade_user_id_strategy(strategy),
+        "gradualRolloutUserId" => upgrade_user_id_rollout_strategy(strategy),
+        "gradualRolloutSessionId" => upgrade_session_id_rollout_strategy(strategy),
+        "gradualRolloutRandom" => upgrade_random(strategy),
+        "remoteAddress" => upgrade_remote_address(strategy),
         _ => "true".into(),
+    };
+
+    let constraints = upgrade_constraints(&strategy.constraints);
+
+    format!("({})", strategy_rule)
+}
+
+trait PropResolver {
+    fn get_param(&self, key: &str) -> Option<&String>;
+}
+
+impl PropResolver for Strategy {
+    fn get_param(&self, key: &str) -> Option<&String> {
+        self.parameters
+            .as_ref()
+            .map(|params| params.get(key))
+            .unwrap_or(None)
     }
-    .into()
 }
 
 fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
-    match &strategy.parameters {
-        Some(parameters) => match parameters.get("userIds") {
-            Some(user_ids) => format!("user_id in [{}]", user_ids),
-            None => "".into(),
-        },
+    match strategy.get_param("userIds") {
+        Some(user_ids) => format!("user_id in [{}]", user_ids),
         None => "".into(),
     }
 }
 
-fn upgrade_constraint(constraint: &Constraint) {}
+fn upgrade_remote_address(strategy: &Strategy) -> String {
+    match strategy.get_param("IPs") {
+        Some(addresses) => {
+            let ips = addresses
+                .split(",")
+                .collect::<Vec<&str>>()
+                .iter()
+                .map(|x| x.trim())
+                .map(|x| format!("\"{}\"", x))
+                .collect::<Vec<String>>()
+                .join(", ");
+            format!("remote_address in [{}]", ips)
+        }
+        None => "".into(),
+    }
+}
+
+fn upgrade_session_id_rollout_strategy(strategy: &Strategy) -> String {
+    let percentage = strategy.get_param("percentage");
+    let group_id = strategy.get_param("groupId");
+    match (percentage, group_id) {
+        (Some(percentage), Some(group_id)) => {
+            format!(
+                "{}% sticky on session_id with group_id of \"{}\"",
+                percentage, group_id
+            )
+        }
+        _ => "".into(),
+    }
+}
+
+fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
+    let percentage = strategy.get_param("percentage");
+    let group_id = strategy.get_param("groupId");
+    match (percentage, group_id) {
+        (Some(percentage), Some(group_id)) => {
+            format!(
+                "{}% sticky on user_id with group_id of \"{}\"",
+                percentage, group_id
+            )
+        }
+        _ => "".into(),
+    }
+}
+
+fn upgrade_random(strategy: &Strategy) -> String {
+    match strategy.get_param("percentage") {
+        Some(percent) => format!("random() < {}", percent),
+        None => "".into(),
+    }
+}
+
+fn upgrade_constraints(constraints: &Option<Vec<Constraint>>) {
+    if constraints.is_none() {
+        return;
+    }
+    let constraints = constraints.as_ref().unwrap();
+    constraints.iter().map(|x| upgrade_constraint(x));
+}
+
+fn upgrade_constraint(constraint: &Constraint) -> String {
+    let context_name = constraint.context_name.clone();
+    let values = constraint.values.clone();
+    let op = constraint.operator.clone();
+    "".into()
+}

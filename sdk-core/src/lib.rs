@@ -222,13 +222,13 @@ mod test {
 
     #[test_case("01-simple-examples.json"; "Basic client spec")]
     #[test_case("02-user-with-id-strategy.json"; "User Id with strategy")]
-    // #[test_case("03-gradual-rollout-user-id-strategy.json"; "Gradual Rollout user id strategy")]
-    // #[test_case("04-gradual-rollout-session-id-strategy.json"; "Gradual Rollout session-id strategy")]
-    // #[test_case("05-gradual-rollout-random-strategy.json"; "Gradual Rollout random")]
-    // #[test_case("06-remote-address-strategy.json"; "Remote address")]
-    // #[test_case("07-multiple-strategies.json"; "Multiple strategies")]
+    #[test_case("03-gradual-rollout-user-id-strategy.json"; "Gradual Rollout user id strategy")]
+    #[test_case("04-gradual-rollout-session-id-strategy.json"; "Gradual Rollout session-id strategy")]
+    #[test_case("05-gradual-rollout-random-strategy.json"; "Gradual Rollout random")]
+    #[test_case("06-remote-address-strategy.json"; "Remote address")]
+    #[test_case("07-multiple-strategies.json"; "Multiple strategies")]
     // #[test_case("08-variants.json"; "Variants")]
-    // #[test_case("09-strategy-constraints.json"; "Strategy constraints")]
+    #[test_case("09-strategy-constraints.json"; "Strategy constraints")]
     // #[test_case("10-flexible-rollout-strategy.json"; "Flexible rollout strategy")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);

@@ -1,5 +1,6 @@
 extern crate pest;
 
+use std::collections::HashSet;
 use std::io::Cursor;
 use std::num::ParseFloatError;
 
@@ -9,6 +10,7 @@ use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
+use rand::Rng;
 use semver::Version;
 
 #[derive(Parser)]
@@ -47,6 +49,11 @@ fn context_value(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String
         Rule::user_id => Box::new(|context: &Context| context.user_id.clone()),
         Rule::app_name => Box::new(|context: &Context| context.app_name.clone()),
         Rule::environment => Box::new(|context: &Context| context.environment.clone()),
+        Rule::session_id => Box::new(|context: &Context| context.session_id.clone()),
+        Rule::remote_address => Box::new(|context: &Context| context.remote_address.clone()),
+        Rule::random => {
+            Box::new(|_: &Context| Some(rand::thread_rng().gen_range(0..99).to_string()))
+        }
         Rule::property => context_property(child.into_inner()),
         _ => unreachable!(),
     }
@@ -95,15 +102,17 @@ fn semver(node: Pair<Rule>) -> Version {
 fn percentage(node: Pair<Rule>) -> u8 {
     let mut chars = node.as_str().chars();
     chars.next_back();
-
     chars.as_str().parse::<u8>().unwrap()
 }
 
-fn group_id_param(node: Pairs<Rule>) -> String {
+fn group_id_param(mut node: Pairs<Rule>) -> String {
+    string(node.next().unwrap())
+}
+
+fn string(node: Pair<Rule>) -> String {
     let mut chars = node.as_str().chars();
     chars.next();
     chars.next_back();
-
     chars.as_str().into()
 }
 
@@ -177,10 +186,15 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
 
     Box::new(move |context: &Context| {
         let stickiness = match &stickiness_getter {
-            Some(stickiness_getter) => stickiness_getter(&context),
-            None => Some("".to_string()), //This should be userId || sessionId || random
-        }
-        .unwrap_or("".to_string());
+            Some(custom_stickiness) => custom_stickiness(&context),
+            None => context.user_id.clone().or(context.session_id.clone()),
+        };
+
+        let stickiness = if let Some(stickiness) = stickiness {
+            stickiness
+        } else {
+            return false;
+        };
 
         let group_id = match &group_id {
             Some(group_id) => group_id.clone(),
@@ -207,7 +221,6 @@ fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
         Rule::numeric_list => {
             let values = harvest_list(list.into_inner());
             Box::new(move |context: &Context| {
-                println!("EXECUTING THING");
                 let context_value = context_getter(context);
                 match context_value {
                     Some(context_value) => {
@@ -218,8 +231,26 @@ fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
                 }
             })
         }
+        Rule::string_list => {
+            let values = harvest_set(list.into_inner());
+            Box::new(move |context: &Context| {
+                let context_value = context_getter(context);
+                match context_value {
+                    Some(context_value) => {
+                        values.contains(&context_value)
+                    }
+                    None => false,
+                }
+            })
+        },
         _ => unreachable!(),
     }
+}
+
+fn harvest_set(node: Pairs<Rule>) -> HashSet<String> {
+    node.into_iter()
+        .map(|x| string(x))
+        .collect::<HashSet<String>>()
 }
 
 fn harvest_list(node: Pairs<Rule>) -> Vec<f64> {
@@ -263,6 +294,7 @@ fn eval(expression: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
 }
 
 pub fn compile_rule(rule: &str) -> Result<Box<dyn Fn(&Context) -> bool>, Error<Rule>> {
+    println!("Compiling rule {}", rule);
     let parse_result = Strategy::parse(Rule::strategy, rule);
     parse_result.map(|mut x| eval(x.next().unwrap().into_inner()))
 }
@@ -367,6 +399,15 @@ mod tests {
         assert_eq!(rule(&context), expected);
     }
 
+    #[test]
+    fn test_random_parses() {
+        let rule = "random() < 100";
+        let rule = compile_rule(rule).expect("");
+        let context = Context::default();
+
+        assert_eq!(rule(&context), true);
+    }
+
     #[test_case("true", true)]
     #[test_case("false", false)]
     #[test_case("true or false", true)]
@@ -447,5 +488,14 @@ mod tests {
         let context = context_from_user_id("6");
 
         assert_eq!(rule(&context), expected);
+    }
+
+    //Annoying cases that failed in the spec test
+    #[test]
+    fn gradual_rollout_user_id_disabled_with_no_user() {
+        let rule_test = "100% sticky on user_id with group_id of \"AB12A\"";
+        let rule = compile_rule(rule_test).unwrap();
+
+        assert_eq!(rule(&Context::default()), false);
     }
 }

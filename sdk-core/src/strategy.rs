@@ -266,23 +266,23 @@ impl Strategy {
                 let random = rand::thread_rng().gen_range(0..100);
                 params.percentage >= random
             }
-            "remoteAddress" => {
-                let params = RemoteAddressParams::from(self.parameters.as_ref());
-                let remote_address = &context.remote_address;
-                match remote_address {
-                    Some(remote_address) => {
-                        for ip in &params.ips {
-                            if ip.contains(&remote_address.0) {
-                                return true;
-                            }
-                        }
-                        false
-                    }
+            // "remoteAddress" => {
+            //     let params = RemoteAddressParams::from(self.parameters.as_ref());
+            //     let remote_address = &context.remote_address;
+            //     match remote_address {
+            //         Some(remote_address) => {
+            //             for ip in &params.ips {
+            //                 if ip.contains(&remote_address.0) {
+            //                     return true;
+            //                 }
+            //             }
+            //             false
+            //         }
 
-                    None => false,
-                };
-                false
-            }
+            //         None => false,
+            //     };
+            //     false
+            // }
             "flexibleRollout" => {
                 let params = FlexibleRolloutParams::from(self.parameters.as_ref());
                 false
