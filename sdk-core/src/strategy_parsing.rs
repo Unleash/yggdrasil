@@ -34,12 +34,18 @@ pub fn normalized_hash(group: &str, identifier: &str, modulus: u32) -> std::io::
 }
 
 #[derive(Debug)]
-enum Comparator {
+enum OrdinalComparator {
     Lte,
     Lt,
     Gte,
     Gt,
     Eq,
+}
+
+#[derive(Debug)]
+enum ContentComparator {
+    In,
+    NotIn,
 }
 
 //Context lifting properties - these resolve properties from the context
@@ -80,13 +86,21 @@ fn context_property(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<Str
     })
 }
 
-fn ordinal(node: Pair<Rule>) -> Comparator {
+fn ordinal(node: Pair<Rule>) -> OrdinalComparator {
     match node.as_str() {
-        "<" => Comparator::Lt,
-        "<=" => Comparator::Lte,
-        "==" => Comparator::Eq,
-        ">" => Comparator::Gt,
-        ">=" => Comparator::Gte,
+        "<" => OrdinalComparator::Lt,
+        "<=" => OrdinalComparator::Lte,
+        "==" => OrdinalComparator::Eq,
+        ">" => OrdinalComparator::Gt,
+        ">=" => OrdinalComparator::Gte,
+        _ => unreachable!(),
+    }
+}
+
+fn content(node: Pair<Rule>) -> ContentComparator {
+    match node.as_str() {
+        "in" => ContentComparator::In,
+        "not_in" => ContentComparator::NotIn,
         _ => unreachable!(),
     }
 }
@@ -128,11 +142,11 @@ fn numeric_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
             Some(context_value) => {
                 let context_value: f64 = context_value.parse().unwrap();
                 match ordinal_operation {
-                    Comparator::Lte => context_value <= number,
-                    Comparator::Lt => context_value < number,
-                    Comparator::Gte => context_value >= number,
-                    Comparator::Gt => context_value > number,
-                    Comparator::Eq => (context_value - number).abs() < f64::EPSILON,
+                    OrdinalComparator::Lte => context_value <= number,
+                    OrdinalComparator::Lt => context_value < number,
+                    OrdinalComparator::Gte => context_value >= number,
+                    OrdinalComparator::Gt => context_value > number,
+                    OrdinalComparator::Eq => (context_value - number).abs() < f64::EPSILON,
                 }
             }
             None => false,
@@ -152,11 +166,11 @@ fn semver_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
             Some(context_value) => {
                 let context_value = context_value.parse::<Version>().unwrap();
                 match ordinal_operation {
-                    Comparator::Lte => context_value <= semver,
-                    Comparator::Lt => context_value < semver,
-                    Comparator::Gte => context_value >= semver,
-                    Comparator::Gt => context_value > semver,
-                    Comparator::Eq => context_value == semver,
+                    OrdinalComparator::Lte => context_value <= semver,
+                    OrdinalComparator::Lt => context_value < semver,
+                    OrdinalComparator::Gte => context_value >= semver,
+                    OrdinalComparator::Gt => context_value > semver,
+                    OrdinalComparator::Eq => context_value == semver,
                 }
             }
             None => false,
@@ -185,15 +199,18 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     };
 
     Box::new(move |context: &Context| {
-        let stickiness = match &stickiness_getter {
-            Some(custom_stickiness) => custom_stickiness(&context),
-            None => context.user_id.clone().or(context.session_id.clone()),
-        };
 
-        let stickiness = if let Some(stickiness) = stickiness {
-            stickiness
-        } else {
-            return false;
+        let stickiness = match &stickiness_getter {
+            Some(stickiness_getter) => {
+                let custom_stickiness= stickiness_getter(&context);
+                // If we're sticky on a property that isn't on the context then
+                // short circuit this strategy's evaluation to false
+                if custom_stickiness.is_none() {
+                    return false;
+                }
+                custom_stickiness
+            },
+            None => context.user_id.clone().or(context.session_id.clone()),
         };
 
         let group_id = match &group_id {
@@ -203,10 +220,21 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
             }
         };
 
-        let hash = normalized_hash(&group_id, &stickiness, 100);
+        let hash = if let Some(stickiness) = stickiness {
+            normalized_hash(&group_id, &stickiness, 100)
+        } else {
+            // The original code does something different here - if we're using the
+            // default strategy it generates a string of a number between 1 and 101
+            // then uses that as the hash. This instead doesn't do that and just
+            // uses a random number in place of the hash. Pretty sure it's the same thing
+            Ok(rand::thread_rng().gen_range(0..99) as u32)
+        };
+
         if let Ok(hash) = hash {
             hash <= percent_rollout.into()
         } else {
+            // This should probably never occur, it only happens if we
+            // don't feed enough input to the hashing function
             false
         }
     })
@@ -214,10 +242,14 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
 
 fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     let context_getter = context_value(node.next().unwrap().into_inner());
-    let _ = node.next(); //For now we discard this node, it's always contains
+    let comparator = content(node.next().unwrap());
     let list = node.next().unwrap();
 
     match list.as_rule() {
+        Rule::empty_list => Box::new(move |_content: &Context| match comparator {
+            ContentComparator::In => false,
+            ContentComparator::NotIn => true,
+        }),
         Rule::numeric_list => {
             let values = harvest_list(list.into_inner());
             Box::new(move |context: &Context| {
@@ -225,7 +257,10 @@ fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
                 match context_value {
                     Some(context_value) => {
                         let context_value: f64 = context_value.parse().unwrap();
-                        values.contains(&context_value)
+                        match comparator {
+                            ContentComparator::In => values.contains(&context_value),
+                            ContentComparator::NotIn => !values.contains(&context_value),
+                        }
                     }
                     None => false,
                 }
@@ -235,14 +270,19 @@ fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
             let values = harvest_set(list.into_inner());
             Box::new(move |context: &Context| {
                 let context_value = context_getter(context);
-                match context_value {
-                    Some(context_value) => {
-                        values.contains(&context_value)
-                    }
-                    None => false,
+
+                match comparator {
+                    ContentComparator::In => match context_value {
+                        Some(context_value) => values.contains(&context_value),
+                        None => false,
+                    },
+                    ContentComparator::NotIn => match context_value {
+                        Some(context_value) => !values.contains(&context_value),
+                        None => true,
+                    },
                 }
             })
-        },
+        }
         _ => unreachable!(),
     }
 }
@@ -321,6 +361,8 @@ mod tests {
     #[test_case("4", "user_id < 5 or user_id > 5", true)]
     #[test_case("2", "user_id < 1 and user_id > 1", false)]
     #[test_case("5", "user_id < 6 and user_id > 2", true)]
+    #[test_case("0", "(true and (true and (true)))", true)]
+    #[test_case("0", "(true and (true and (false)))", false)]
     fn can_chain_operators(user_id: &str, rule: &str, expected: bool) {
         run_test(user_id, rule, expected);
     }
@@ -415,7 +457,6 @@ mod tests {
     #[test_case("false or false", false)]
     #[test_case("false or true", true)]
     #[test_case("false and true", false)]
-    // #[test_case("not (true and false)", true)]
     fn run_boolean_constraint(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6".into());
@@ -483,6 +524,7 @@ mod tests {
 
     #[test_case("user_id in [1, 3, 6]", true)]
     #[test_case("user_id in [1, 3, 5]", false)]
+    #[test_case("user_id not_in [1, 3, 5]", true)]
     fn run_numeric_list_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6");
@@ -490,12 +532,40 @@ mod tests {
         assert_eq!(rule(&context), expected);
     }
 
-    //Annoying cases that failed in the spec test
+    #[test]
+    fn not_in_is_always_true_when_no_context_value() {
+        let rule = "app_name not_in [\"\"]";
+        let rule = compile_rule(rule).expect("");
+
+        let context = Context::default();
+
+        assert_eq!(rule(&context), true);
+    }
+
+    //This needs to be swapped out for an arbitrary string test
+    #[test]
+    fn dashes_are_valid_characters() {
+        let rule_text = "app_name not_in [\"web\", \"sun-app\"]";
+        let rule = compile_rule(rule_text).unwrap();
+
+        assert_eq!(rule(&Context::default()), true);
+    }
+
+    #[test]
+    fn empty_lists_are_tolerated() {
+        let rule_text = "app_name not_in []";
+        let rule = compile_rule(rule_text).unwrap();
+
+        assert_eq!(rule(&Context::default()), true);
+    }
+
+    //Annoying cases that failed in the spec test and are worth teasing out
     #[test]
     fn gradual_rollout_user_id_disabled_with_no_user() {
-        let rule_test = "100% sticky on user_id with group_id of \"AB12A\"";
-        let rule = compile_rule(rule_test).unwrap();
+        let rule_text = "100% sticky on context[\"customField\"] with group_id of \"Feature.flexible.rollout.custom.stickiness_100\"";
+        let rule = compile_rule(rule_text).unwrap();
 
         assert_eq!(rule(&Context::default()), false);
     }
+
 }

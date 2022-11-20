@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::net::IpAddr;
 #[macro_use]
 extern crate lazy_static;
@@ -6,13 +7,39 @@ extern crate pest_derive;
 
 pub mod state;
 pub mod strategy;
-pub mod strategy_parser;
+pub mod strategy_parsing;
+pub mod strategy_upgrade;
 
-use rand::Rng;
 use serde::de;
-use state::{compile_state, CompiledState, State, Toggle, Variant, VariantDef};
-use state::{CompiledToggle, InnerContext};
-use strategy::normalized_hash;
+use state::InnerContext;
+use state::{State, Toggle, Variant, VariantDef};
+use strategy_parsing::compile_rule;
+use strategy_upgrade::upgrade;
+
+pub type CompiledState = HashMap<String, CompiledToggle>;
+
+pub struct CompiledToggle {
+    pub enabled: bool,
+    pub compiled_strategy: Box<dyn Fn(&InnerContext) -> bool>,
+    pub variants: Vec<VariantDef>,
+}
+
+pub fn compile_state(state: &State) -> HashMap<String, CompiledToggle> {
+    let mut compiled_state = HashMap::new();
+    for toggle in &state.features {
+        let rule = upgrade(&toggle.strategies);
+        compiled_state.insert(
+            toggle.name.clone(),
+            CompiledToggle {
+                enabled: toggle.enabled,
+                compiled_strategy: compile_rule(rule.as_str()).unwrap(),
+                variants: toggle.variants.clone(),
+            },
+        );
+    }
+
+    compiled_state
+}
 
 #[derive(Debug)]
 pub struct IPAddress(pub IpAddr);
@@ -47,7 +74,7 @@ impl EngineState {
     fn get_toggle(&self, name: String) -> Option<&CompiledToggle> {
         match &self.compiled_state {
             Some(state) => state.get(&name),
-            None => None
+            None => None,
         }
     }
 
@@ -229,7 +256,9 @@ mod test {
     #[test_case("07-multiple-strategies.json"; "Multiple strategies")]
     // #[test_case("08-variants.json"; "Variants")]
     #[test_case("09-strategy-constraints.json"; "Strategy constraints")]
-    // #[test_case("10-flexible-rollout-strategy.json"; "Flexible rollout strategy")]
+    #[test_case("10-flexible-rollout-strategy.json"; "Flexible rollout strategy")]
+    #[test_case("11-strategy-constraints-edge-cases.json"; "Strategy constraint edge cases")]
+    #[test_case("12-custom-stickiness.json"; "Custom stickiness")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::new();

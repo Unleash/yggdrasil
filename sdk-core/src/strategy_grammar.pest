@@ -3,7 +3,7 @@ num = @{ int ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ int)? }
 
 percentage = { ("100" | (ASCII_DIGIT ~ ASCII_DIGIT?)) ~ "%" }
 
-string = @{ "\"" ~ ( ASCII_ALPHANUMERIC | "." )* ~ "\"" }
+string = @{ "\"" ~ ( ASCII_ALPHANUMERIC | "."| DASH_PUNCTUATION | "_" )* ~ "\"" }
 
 semver = @{ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ semver_patch? ~ semver_build? }
     semver_patch    = @{ "-" ~ semver_fragment }
@@ -13,6 +13,10 @@ semver = @{ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ semver_pa
 boolean = { "true" | "false" }
 
 numeric_list = { "[" ~ num ~ ( "," ~ num )* ~ "]" }
+// a special type that handles an empty list, this is because we
+// can't infer the inner types of an empty list but practically this
+// doesn't matter since they should resolve cleanly to a true/false
+empty_list = { "[]" }
 string_list = { "[" ~ string ~ ( "," ~ string )* ~ "]" }
 semver_list = { "[" ~ semver ~ ( "," ~ semver )* ~ "]" }
 
@@ -37,7 +41,7 @@ string_list_operation = { in_any | not_in_any | starts_with | ends_with | contai
     ends_with   = { "ends_with_any" }
     contains_any    = { "contains_any" }
 
-list_operation = { "in" }
+list_operation = { "in" | "not_in" }
 
 constraint = {
     rollout_constraint
@@ -49,11 +53,11 @@ constraint = {
 }
     default_strategy_constraint = { boolean }
     string_fragment_constraint = { context_value ~ string_list_operation ~ string_list }
-    list_constraint = { context_value ~ list_operation ~ ( numeric_list | string_list ) }
+    list_constraint = { context_value ~ list_operation ~ ( numeric_list | string_list | empty_list ) }
     numeric_constraint = { context_value ~ ordinal_operation ~ num }
     semver_constraint = { context_value ~ ordinal_operation ~ semver }
     rollout_constraint = { percentage ~ stickiness_param? ~ group_id_param?}
-        stickiness_param = { "sticky on" ~ context_value }
+        stickiness_param = { "sticky on " ~ context_value }
         group_id_param = { "with group_id of" ~ string }
 
 context_value = { user_id | session_id | remote_address | app_name | environment | property | random }
