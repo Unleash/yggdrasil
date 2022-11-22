@@ -11,8 +11,9 @@ pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
 use serde::de;
-use state::InnerContext;
-use state::{State, Toggle, Variant, VariantDef};
+use state::{InnerContext, VariantDef};
+use  unleash_types::{ClientFeature, Variant, ClientFeatures};
+// use state::{State, Toggle, Variant, VariantDef};
 use strategy_parsing::compile_rule;
 use strategy_upgrade::upgrade;
 
@@ -21,19 +22,19 @@ pub type CompiledState = HashMap<String, CompiledToggle>;
 pub struct CompiledToggle {
     pub enabled: bool,
     pub compiled_strategy: Box<dyn Fn(&InnerContext) -> bool>,
-    pub variants: Vec<VariantDef>,
+    // pub variants: Option<Vec<VariantDef>>,
 }
 
-pub fn compile_state(state: &State) -> HashMap<String, CompiledToggle> {
+pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> {
     let mut compiled_state = HashMap::new();
     for toggle in &state.features {
-        let rule = upgrade(&toggle.strategies);
+        let rule = upgrade(&toggle.strategies.clone().unwrap_or(vec![]));
         compiled_state.insert(
             toggle.name.clone(),
             CompiledToggle {
                 enabled: toggle.enabled,
                 compiled_strategy: compile_rule(rule.as_str()).unwrap(),
-                variants: toggle.variants.clone(),
+                // variants: toggle.variants.clone(),
             },
         );
     }
@@ -79,27 +80,9 @@ impl EngineState {
     }
 
     fn enabled(&self, toggle: Option<&CompiledToggle>, context: &InnerContext) -> bool {
-        match toggle {
-            Some(toggle) => {
-                if !toggle.enabled {
-                    return false;
-                }
-
-                toggle.enabled && (toggle.compiled_strategy)(&context)
-
-                // let strategy_enabled = if toggle.strategies.len() > 0 {
-                //     toggle
-                //         .strategies
-                //         .iter()
-                //         .any(|strategy| strategy.is_enabled(&context))
-                // } else {
-                //     true
-                // };
-
-                // strategy_enabled && toggle.enabled
-            }
-            None => false,
-        }
+        toggle
+            .map(|toggle| toggle.enabled && (toggle.compiled_strategy)(&context))
+            .unwrap_or(false)
     }
 
     pub fn is_enabled(&self, name: String, context: InnerContext) -> bool {
@@ -112,103 +95,24 @@ impl EngineState {
         }
     }
 
-    fn get_variant_override(&self, toggle: &Toggle, context: &InnerContext) -> Option<Variant> {
-        for variant in toggle.variants.iter() {
-            if let Some(overrides) = &variant.overrides {
-                for over in overrides.iter() {
-                    match over.context_name.as_str() {
-                        "userId" => {
-                            if let Some(user_id) = &context.user_id {
-                                if over.values.contains(&user_id) {
-                                    return Some(variant.clone().into());
-                                }
-                            }
-                        }
-                        "sessionId" => {}
-                        "remoteAddress" => {}
-                        _ => {}
-                    }
-                }
-            }
-        }
-        None
+    pub fn get_variant(&self, name: String, context: InnerContext) -> Variant {
+        todo!()
     }
 
-    // pub fn get_variant(&self, name: String, context: InnerContext) -> Variant {
-    //     let toggle = self.get_toggle(name);
-    //     if toggle.is_none() {
-    //         return Variant::default();
-    //     }
-    //     let toggle = toggle.unwrap();
-
-    //     if self.enabled(Some(toggle), &context) {
-    //         if let Some(variant) = self.get_variant_override(toggle, &context) {
-    //             return variant;
-    //         };
-
-    //         let mut remote_address: Option<String> = None;
-    //         let identifier = context
-    //             .user_id
-    //             .as_ref()
-    //             .or(context.session_id.as_ref())
-    //             .or_else(|| {
-    //                 context.remote_address.as_ref().and_then({
-    //                     |addr| {
-    //                         remote_address = Some(format!("{:?}", addr));
-    //                         remote_address.as_ref()
-    //                     }
-    //                 })
-    //             });
-
-    //         if identifier.is_none() {
-    //             let mut rng = rand::thread_rng();
-    //             let picked = rng.gen_range(0..toggle.variants.len());
-    //             return (&toggle.variants[picked]).clone().into();
-    //         }
-
-    //         let identifier = identifier.unwrap();
-    //         let total_weight = toggle.variants.iter().map(|v| v.weight as u32).sum();
-    //         let group = format!("{}", toggle.name);
-    //         normalized_hash(&group, identifier, total_weight)
-    //             .map(|selected_weight| {
-    //                 let mut counter: u32 = 0;
-    //                 for variant in toggle.variants.iter().as_ref() {
-    //                     counter += variant.weight as u32;
-    //                     if counter > selected_weight {
-    //                         return variant.clone().into();
-    //                     }
-    //                 }
-    //                 Variant::default()
-    //             })
-    //             .unwrap_or_else(|_| Variant::default())
-    //     } else {
-    //         Variant::default()
-    //     }
-    // }
-
-    pub fn take_state(&mut self, toggles: State) {
+    pub fn take_state(&mut self, toggles: ClientFeatures) {
         self.compiled_state = Some(compile_state(&toggles));
-    }
-}
-
-impl Into<Variant> for VariantDef {
-    fn into(self) -> Variant {
-        Variant {
-            name: self.name,
-            payload: Some(self.payload),
-            enabled: true,
-        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use serde::Deserialize;
+    use unleash_types::ClientFeatures;
     use std::fs;
     use test_case::test_case;
+    use unleash_types::Variant;
 
     use crate::{
-        state::{State, Variant},
         EngineState, InnerContext,
     };
 
@@ -217,7 +121,7 @@ mod test {
     #[derive(Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct TestSuite {
-        pub(crate) state: State,
+        pub(crate) state: ClientFeatures,
         pub(crate) tests: Option<Vec<TestCase>>,
         pub(crate) variant_tests: Option<Vec<VariantTestCase>>,
     }
@@ -280,16 +184,16 @@ mod test {
                 }
             }
         };
-        // if let Some(mut variant_tests) = spec.variant_tests {
-        //     while let Some(test_case) = variant_tests.pop() {
-        //         println!(
-        //             "Executing test {:?} with toggle name{:?} against context{:?}",
-        //             &test_case.description, &test_case.toggle_name, &test_case.context
-        //         );
-        //         let expected = test_case.expected_result;
-        //         let actual = engine.get_variant(test_case.toggle_name, test_case.context);
-        //         assert_eq!(expected, actual);
-        //     }
-        // }
+        if let Some(mut variant_tests) = spec.variant_tests {
+            while let Some(test_case) = variant_tests.pop() {
+                println!(
+                    "Executing test {:?} with toggle name{:?} against context{:?}",
+                    &test_case.description, &test_case.toggle_name, &test_case.context
+                );
+                let expected = test_case.expected_result;
+                let actual = engine.get_variant(test_case.toggle_name, test_case.context);
+                // assert_eq!(expected, actual);
+            }
+        }
     }
 }

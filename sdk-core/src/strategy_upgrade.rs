@@ -1,4 +1,4 @@
-use crate::state::{Constraint, Operator, Strategy};
+use unleash_types::{ClientFeature, Constraint, Operator, Strategy};
 
 pub fn upgrade(strategies: &Vec<Strategy>) -> String {
     if strategies.is_empty() {
@@ -165,6 +165,7 @@ fn upgrade_operator(op: &Operator) -> String {
     match op {
         Operator::In => "in",
         Operator::NotIn => "not_in",
+        _ => todo!(),
     }
     .into()
 }
@@ -195,6 +196,7 @@ mod tests {
             parameters: Some(parameters),
             constraints: None,
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);
@@ -211,6 +213,7 @@ mod tests {
             parameters: Some(parameters),
             constraints: Some(vec![]),
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);
@@ -224,6 +227,8 @@ mod tests {
             values: Some(vec!["7".into()]),
             value: None,
             operator: Operator::In,
+            case_insensitive: false,
+            inverted: false,
         };
 
         let strategy = Strategy {
@@ -231,6 +236,7 @@ mod tests {
             parameters: None,
             constraints: Some(vec![constraint]),
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);
@@ -244,6 +250,8 @@ mod tests {
             values: Some(vec!["7".into()]),
             value: None,
             operator: Operator::In,
+            case_insensitive: false,
+            inverted: false,
         };
 
         let strategy = Strategy {
@@ -251,6 +259,7 @@ mod tests {
             parameters: None,
             constraints: Some(vec![constraint.clone(), constraint.clone()]),
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);
@@ -267,6 +276,7 @@ mod tests {
             parameters: None,
             constraints: None,
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy.clone(), strategy.clone()]);
@@ -280,6 +290,8 @@ mod tests {
             values: Some(vec!["7".into()]),
             value: None,
             operator: Operator::In,
+            case_insensitive: false,
+            inverted: false,
         };
 
         let strategy = Strategy {
@@ -287,6 +299,7 @@ mod tests {
             parameters: None,
             constraints: Some(vec![constraint.clone(), constraint.clone()]),
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy.clone(), strategy.clone()]);
@@ -306,6 +319,8 @@ mod tests {
             values: Some(vec!["norway".into()]),
             value: None,
             operator: Operator::In,
+            case_insensitive: false,
+            inverted: false,
         };
 
         let strategy = Strategy {
@@ -313,6 +328,7 @@ mod tests {
             parameters: None,
             constraints: Some(vec![constraint]),
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);
@@ -335,6 +351,7 @@ mod tests {
             parameters: Some(parameters),
             constraints: None,
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);
@@ -356,6 +373,7 @@ mod tests {
             parameters: Some(parameters),
             constraints: None,
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);
@@ -374,6 +392,7 @@ mod tests {
             parameters: Some(parameters),
             constraints: None,
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);
@@ -394,6 +413,7 @@ mod tests {
             parameters: Some(parameters),
             constraints: None,
             segments: None,
+            sort_order: Some(1),
         };
 
         let output = upgrade(&vec![strategy]);

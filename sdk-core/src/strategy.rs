@@ -7,7 +7,7 @@ use ipnet::IpNet;
 use murmur3::murmur3_32;
 use rand::Rng;
 
-use crate::state::{Constraint, Operator, Strategy};
+use unleash_types::{Constraint, Operator, Strategy};
 use crate::InnerContext;
 
 pub fn normalized_hash(group: &str, identifier: &str, modulus: u32) -> std::io::Result<u32> {
@@ -221,80 +221,6 @@ fn check_constraint(constraint: &Constraint, context: &InnerContext) -> bool {
             let constraint_value = constraint_value.as_ref().unwrap();
             !constraint_value.contains(&context_value)
         }
-    }
-}
-
-impl Strategy {
-    pub fn is_enabled(&self, context: &InnerContext) -> bool {
-        if !check_constraints(&self.constraints, context) {
-            return false;
-        };
-        match self.name.as_str() {
-            "userWithId" => {
-                let params = UserWithIdParams::from(self.parameters.as_ref());
-
-                match &context.user_id {
-                    Some(user_id) => params.user_ids.contains(&user_id.parse::<u32>().expect("")),
-                    None => false,
-                }
-            }
-            "gradualRolloutUserId" => {
-                let params = GradualRolloutUserIdParams::from(self.parameters.as_ref());
-                let user_id = &context.user_id;
-
-                match user_id {
-                    Some(user_id) => match normalized_hash(&params.group_id, &user_id, 100) {
-                        Ok(normalized_user_id) => params.percentage >= normalized_user_id,
-                        Err(_) => false,
-                    },
-                    None => false,
-                }
-            }
-            "gradualRolloutSessionId" => {
-                let params = GradualRolloutSessionParams::from(self.parameters.as_ref());
-                let session_id = &context.session_id;
-                match session_id {
-                    Some(session_id) => match normalized_hash(&params.group_id, &session_id, 100) {
-                        Ok(normalized_user_id) => params.percentage >= normalized_user_id,
-                        Err(_) => false,
-                    },
-                    None => false,
-                }
-            }
-            "gradualRolloutRandom" => {
-                let params = GradualRolloutRandomParams::from(self.parameters.as_ref());
-                let random = rand::thread_rng().gen_range(0..100);
-                params.percentage >= random
-            }
-            // "remoteAddress" => {
-            //     let params = RemoteAddressParams::from(self.parameters.as_ref());
-            //     let remote_address = &context.remote_address;
-            //     match remote_address {
-            //         Some(remote_address) => {
-            //             for ip in &params.ips {
-            //                 if ip.contains(&remote_address.0) {
-            //                     return true;
-            //                 }
-            //             }
-            //             false
-            //         }
-
-            //         None => false,
-            //     };
-            //     false
-            // }
-            "flexibleRollout" => {
-                let params = FlexibleRolloutParams::from(self.parameters.as_ref());
-                false
-            }
-            "default" => true,
-            _ => {
-                println!(
-                    "Unknown strategy type: {:?}, defaulting to disabled",
-                    self.name
-                );
-                true
-            }
-        }
+        _ => todo!()
     }
 }
