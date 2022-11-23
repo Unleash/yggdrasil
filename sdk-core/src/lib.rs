@@ -10,12 +10,11 @@ pub mod strategy;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
-use serde::de;
-use state::{InnerContext, VariantDef};
-use  unleash_types::{ClientFeature, Variant, ClientFeatures};
-// use state::{State, Toggle, Variant, VariantDef};
+use serde::{de, Deserialize};
+use state::InnerContext;
 use strategy_parsing::compile_rule;
 use strategy_upgrade::upgrade;
+use unleash_types::client_features::{ClientFeature, ClientFeatures, Payload, Variant};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
@@ -95,8 +94,8 @@ impl EngineState {
         }
     }
 
-    pub fn get_variant(&self, name: String, context: InnerContext) -> Variant {
-        todo!()
+    pub fn get_variant(&self, name: String, context: InnerContext) -> VariantDef {
+        VariantDef::default()
     }
 
     pub fn take_state(&mut self, toggles: ClientFeatures) {
@@ -104,17 +103,32 @@ impl EngineState {
     }
 }
 
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct VariantDef {
+    name: String,
+    payload: Option<Payload>,
+    enabled: bool,
+}
+
+impl Default for VariantDef {
+    fn default() -> Self {
+        Self {
+            name: "disabled".into(),
+            payload: None,
+            enabled: false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use serde::Deserialize;
-    use unleash_types::ClientFeatures;
     use std::fs;
     use test_case::test_case;
-    use unleash_types::Variant;
+    use unleash_types::client_features::ClientFeatures;
+    use unleash_types::client_features::Variant;
 
-    use crate::{
-        EngineState, InnerContext,
-    };
+    use crate::{EngineState, InnerContext, VariantDef};
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
 
@@ -141,7 +155,7 @@ mod test {
         pub(crate) description: String,
         pub(crate) context: InnerContext,
         pub(crate) toggle_name: String,
-        pub(crate) expected_result: Variant,
+        pub(crate) expected_result: VariantDef,
     }
 
     fn load_spec(spec_name: &str) -> TestSuite {
@@ -158,11 +172,11 @@ mod test {
     #[test_case("05-gradual-rollout-random-strategy.json"; "Gradual Rollout random")]
     #[test_case("06-remote-address-strategy.json"; "Remote address")]
     #[test_case("07-multiple-strategies.json"; "Multiple strategies")]
-    // #[test_case("08-variants.json"; "Variants")]
+    #[test_case("08-variants.json"; "Variants")]
     #[test_case("09-strategy-constraints.json"; "Strategy constraints")]
     #[test_case("10-flexible-rollout-strategy.json"; "Flexible rollout strategy")]
     #[test_case("11-strategy-constraints-edge-cases.json"; "Strategy constraint edge cases")]
-    #[test_case("12-custom-stickiness.json"; "Custom stickiness")]
+    // #[test_case("12-custom-stickiness.json"; "Custom stickiness")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::new();
@@ -192,7 +206,7 @@ mod test {
                 );
                 let expected = test_case.expected_result;
                 let actual = engine.get_variant(test_case.toggle_name, test_case.context);
-                // assert_eq!(expected, actual);
+                assert_eq!(expected, actual);
             }
         }
     }

@@ -7,8 +7,8 @@ use ipnet::IpNet;
 use murmur3::murmur3_32;
 use rand::Rng;
 
-use unleash_types::{Constraint, Operator, Strategy};
 use crate::InnerContext;
+use unleash_types::client_features::{Constraint, Operator, Strategy};
 
 pub fn normalized_hash(group: &str, identifier: &str, modulus: u32) -> std::io::Result<u32> {
     let mut reader = Cursor::new(format!("{}:{}", &group, &identifier));
@@ -221,6 +221,6 @@ fn check_constraint(constraint: &Constraint, context: &InnerContext) -> bool {
             let constraint_value = constraint_value.as_ref().unwrap();
             !constraint_value.contains(&context_value)
         }
-        _ => todo!()
+        _ => todo!(),
     }
 }
