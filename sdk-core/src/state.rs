@@ -1,5 +1,5 @@
 use serde::{Deserialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -20,7 +20,7 @@ impl Default for InnerContext {
             environment: None,
             app_name: None,
             remote_address: None,
-            properties: None,
+            properties: Some(HashMap::new()),
         }
     }
 }

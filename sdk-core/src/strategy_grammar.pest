@@ -10,6 +10,12 @@ semver = @{ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ semver_pa
     semver_build    = @{ "+" ~ semver_fragment }
         semver_fragment = @{ (ASCII_ALPHANUMERIC | "-")+ ~ ("." ~ (ASCII_ALPHANUMERIC | "-")+)* }
 
+date = @{ quad_fragment ~ "-" ~ pair_fragment ~ "-" ~ pair_fragment ~ "T" ~ pair_fragment ~ ":" ~ pair_fragment ~ ":" ~ pair_fragment ~ "." ~ trip_fragment ~ timezone_fragment }
+    quad_fragment = @{ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT }
+    trip_fragment = @{ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT }
+    pair_fragment = @{ ASCII_DIGIT ~ ASCII_DIGIT }
+    timezone_fragment = @{ "Z" | (("+" | "-") ~ pair_fragment ~ ":" ~ pair_fragment) }
+
 boolean = { "true" | "false" }
 
 numeric_list = { "[" ~ num ~ ( "," ~ num )* ~ "]" }
@@ -34,26 +40,40 @@ ordinal_operation = { lte | gte | lt | eq | gt }
     eq      = { "==" }
     gt      = { ">" }
 
-string_list_operation = { in_any | not_in_any | starts_with | ends_with | contains_any }
-    in_any      = { "in_any" }
-    not_in_any  = { "not_in_any" }
+string_list_operation = { starts_with | ends_with | contains_any }
     starts_with = { "starts_with_any" }
     ends_with   = { "ends_with_any" }
     contains_any    = { "contains_any" }
 
+string_list_operation_without_case = {
+    starts_with_ignore_case
+    | ends_with_ignore_case
+    | contains_any_ignore_case
+}
+    starts_with_ignore_case     = { "starts_with_any_ignore_case" }
+    ends_with_ignore_case       = { "ends_with_any_ignore_case" }
+    contains_any_ignore_case    = { "contains_any_ignore_case" }
+
 list_operation = { "in" | "not_in" }
 
+invert_operation = { "!" }
+
 constraint = {
-    rollout_constraint
-    | semver_constraint
-    | numeric_constraint
-    | default_strategy_constraint
-    | string_fragment_constraint
-    | list_constraint
+    invert_operation* ~
+    (
+        rollout_constraint
+        | date_constraint
+        | semver_constraint
+        | numeric_constraint
+        | default_strategy_constraint
+        | string_fragment_constraint
+        | list_constraint
+    )
 }
     default_strategy_constraint = { boolean }
-    string_fragment_constraint = { context_value ~ string_list_operation ~ string_list }
+    string_fragment_constraint = { context_value ~ ( string_list_operation_without_case | string_list_operation ) ~ string_list }
     list_constraint = { context_value ~ list_operation ~ ( numeric_list | string_list | empty_list ) }
+    date_constraint = { context_value ~ ordinal_operation ~ date }
     numeric_constraint = { context_value ~ ordinal_operation ~ num }
     semver_constraint = { context_value ~ ordinal_operation ~ semver }
     rollout_constraint = { percentage ~ stickiness_param? ~ group_id_param?}

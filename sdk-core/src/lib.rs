@@ -174,7 +174,7 @@ fn check_for_variant_override(variants: &Vec<Variant>, context: &InnerContext) -
                                 return Some(variant.clone());
                             }
                         }
-                    }
+                    } //TODO: This needs to handle all the variant override cases... also... why aren't the spec tests failing this?
                     _ => {}
                 }
             }
@@ -256,6 +256,7 @@ mod test {
     #[test_case("10-flexible-rollout-strategy.json"; "Flexible rollout strategy")]
     #[test_case("11-strategy-constraints-edge-cases.json"; "Strategy constraint edge cases")]
     #[test_case("12-custom-stickiness.json"; "Custom stickiness")]
+    // #[test_case("13-constraint-operators.json"; "Advanced constraints")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::new();
