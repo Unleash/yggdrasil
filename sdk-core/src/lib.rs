@@ -257,6 +257,7 @@ mod test {
     #[test_case("11-strategy-constraints-edge-cases.json"; "Strategy constraint edge cases")]
     #[test_case("12-custom-stickiness.json"; "Custom stickiness")]
     #[test_case("13-constraint-operators.json"; "Advanced constraints")]
+    #[test_case("14-constraint-semver-operators.json"; "Semver constraints")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::new();

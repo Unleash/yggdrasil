@@ -158,7 +158,7 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
     let context_name = upgrade_context_name(&constraint.context_name);
     let op = upgrade_operator(&constraint.operator, constraint.case_insensitive);
     if op.is_none() {
-        return "false".into()
+        return "false".into();
     }
     let op = op.unwrap();
     let inversion = if constraint.inverted { "!" } else { "" };
@@ -177,6 +177,18 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
             .unwrap_or("".to_string());
         format!("[{}]", values)
     } else {
+        if constraint.operator == Operator::SemverEq
+            || constraint.operator == Operator::SemverLt
+            || constraint.operator == Operator::SemverGt
+        {
+            // A silly special case where we want to ingest
+            // broken semver operators so we can reject them.
+            // Handling this in the grammar feels awful so we're
+            // just not going to
+            if constraint.value.as_ref().unwrap().chars().next() == Some('v') {
+                return "false".into();
+            }
+        }
         constraint.value.clone().unwrap()
     };
 
@@ -200,14 +212,14 @@ fn upgrade_operator(op: &Operator, case_insensitive: bool) -> Option<String> {
             } else {
                 Some("starts_with_any".into())
             }
-        },
+        }
         Operator::StrContains => {
             if case_insensitive {
                 Some("contains_any_ignore_case".into())
             } else {
                 Some("contains_any".into())
             }
-        },
+        }
         Operator::NumEq => Some("==".into()),
         Operator::NumGt => Some(">".into()),
         Operator::NumGte => Some(">=".into()),
@@ -474,12 +486,36 @@ mod tests {
         assert_eq!(output.as_str(), "55%");
     }
 
-    #[test_case(Operator::StrEndsWith, false, "user_id ends_with_any [\"some\", \"thing\"]")]
-    #[test_case(Operator::StrStartsWith, false, "user_id starts_with_any [\"some\", \"thing\"]")]
-    #[test_case(Operator::StrContains, false, "user_id contains_any [\"some\", \"thing\"]")]
-    #[test_case(Operator::StrEndsWith, true, "user_id ends_with_any_ignore_case [\"some\", \"thing\"]")]
-    #[test_case(Operator::StrStartsWith, true, "user_id starts_with_any_ignore_case [\"some\", \"thing\"]")]
-    #[test_case(Operator::StrContains, true, "user_id contains_any_ignore_case [\"some\", \"thing\"]")]
+    #[test_case(
+        Operator::StrEndsWith,
+        false,
+        "user_id ends_with_any [\"some\", \"thing\"]"
+    )]
+    #[test_case(
+        Operator::StrStartsWith,
+        false,
+        "user_id starts_with_any [\"some\", \"thing\"]"
+    )]
+    #[test_case(
+        Operator::StrContains,
+        false,
+        "user_id contains_any [\"some\", \"thing\"]"
+    )]
+    #[test_case(
+        Operator::StrEndsWith,
+        true,
+        "user_id ends_with_any_ignore_case [\"some\", \"thing\"]"
+    )]
+    #[test_case(
+        Operator::StrStartsWith,
+        true,
+        "user_id starts_with_any_ignore_case [\"some\", \"thing\"]"
+    )]
+    #[test_case(
+        Operator::StrContains,
+        true,
+        "user_id contains_any_ignore_case [\"some\", \"thing\"]"
+    )]
     fn upgrades_string_list_operator(op: Operator, case_insensitive: bool, expected: &str) {
         let constraint = Constraint {
             context_name: "userId".into(),
@@ -518,7 +554,7 @@ mod tests {
 
     #[test_case(true, "!user_id <= 7")]
     #[test_case(false, "user_id <= 7")]
-    fn handles_negation(is_inverted: bool, expected: &str){
+    fn handles_negation(is_inverted: bool, expected: &str) {
         let constraint = Constraint {
             context_name: "userId".into(),
             operator: Operator::NumLte,
