@@ -143,37 +143,90 @@ fn upgrade_constraints(constraints: &Option<Vec<Constraint>>) -> Option<String> 
     Some(format!("{}", squashed_rules))
 }
 
-fn upgrade_constraint(constraint: &Constraint) -> String {
-    let context_name = upgrade_context_name(&constraint.context_name);
-    let op = upgrade_operator(&constraint.operator);
-    let values = constraint
-        .values
-        .clone()
-        .map(|values| {
-            values
-                .iter()
-                .map(|x| format!("\"{}\"", x))
-                .collect::<Vec<String>>()
-                .join(", ")
-        })
-        .unwrap_or("".to_string());
-
-    format!("{context_name} {op} [{values}]")
+fn is_stringy(op: &Operator) -> bool {
+    match op {
+        Operator::NotIn => true,
+        Operator::In => true,
+        Operator::StrEndsWith => true,
+        Operator::StrStartsWith => true,
+        Operator::StrContains => true,
+        _ => false,
+    }
 }
 
-fn upgrade_operator(op: &Operator) -> String {
-    match op {
-        Operator::In => "in",
-        Operator::NotIn => "not_in",
-        _ => todo!(),
+fn upgrade_constraint(constraint: &Constraint) -> String {
+    let context_name = upgrade_context_name(&constraint.context_name);
+    let op = upgrade_operator(&constraint.operator, constraint.case_insensitive);
+    if op.is_none() {
+        return "false".into()
     }
-    .into()
+    let op = op.unwrap();
+    let inversion = if constraint.inverted { "!" } else { "" };
+
+    let value = if is_stringy(&constraint.operator) {
+        let values = constraint
+            .values
+            .clone()
+            .map(|values| {
+                values
+                    .iter()
+                    .map(|x| format!("\"{}\"", x))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            })
+            .unwrap_or("".to_string());
+        format!("[{}]", values)
+    } else {
+        constraint.value.clone().unwrap()
+    };
+
+    format!("{inversion}{context_name} {op} {value}")
+}
+
+fn upgrade_operator(op: &Operator, case_insensitive: bool) -> Option<String> {
+    match op {
+        Operator::In => Some("in".into()),
+        Operator::NotIn => Some("not_in".into()),
+        Operator::StrEndsWith => {
+            if case_insensitive {
+                Some("ends_with_any_ignore_case".into())
+            } else {
+                Some("ends_with_any".into())
+            }
+        }
+        Operator::StrStartsWith => {
+            if case_insensitive {
+                Some("starts_with_any_ignore_case".into())
+            } else {
+                Some("starts_with_any".into())
+            }
+        },
+        Operator::StrContains => {
+            if case_insensitive {
+                Some("contains_any_ignore_case".into())
+            } else {
+                Some("contains_any".into())
+            }
+        },
+        Operator::NumEq => Some("==".into()),
+        Operator::NumGt => Some(">".into()),
+        Operator::NumGte => Some(">=".into()),
+        Operator::NumLt => Some("<".into()),
+        Operator::NumLte => Some("<=".into()),
+        Operator::DateAfter => Some(">".into()),
+        Operator::DateBefore => Some("<".into()),
+        Operator::SemverEq => Some("==".into()),
+        Operator::SemverLt => Some("<".into()),
+        Operator::SemverGt => Some(">".into()),
+        Operator::Unknown(_) => None,
+    }
 }
 
 fn upgrade_context_name(context_name: &str) -> String {
     match context_name {
         "userId" => "user_id".into(),
         "sessionId" => "session_id".into(),
+        "currentTime" => "current_time".into(),
         "environment" => "environment".into(),
         "appName" => "app_name".into(),
         "remoteAddress" => "remote_address".into(),
@@ -185,6 +238,7 @@ fn upgrade_context_name(context_name: &str) -> String {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use test_case::test_case;
 
     #[test]
     fn strategy_with_no_constraints_has_no_effect() {
@@ -418,5 +472,62 @@ mod tests {
 
         let output = upgrade(&vec![strategy]);
         assert_eq!(output.as_str(), "55%");
+    }
+
+    #[test_case(Operator::StrEndsWith, false, "user_id ends_with_any [\"some\", \"thing\"]")]
+    #[test_case(Operator::StrStartsWith, false, "user_id starts_with_any [\"some\", \"thing\"]")]
+    #[test_case(Operator::StrContains, false, "user_id contains_any [\"some\", \"thing\"]")]
+    #[test_case(Operator::StrEndsWith, true, "user_id ends_with_any_ignore_case [\"some\", \"thing\"]")]
+    #[test_case(Operator::StrStartsWith, true, "user_id starts_with_any_ignore_case [\"some\", \"thing\"]")]
+    #[test_case(Operator::StrContains, true, "user_id contains_any_ignore_case [\"some\", \"thing\"]")]
+    fn upgrades_string_list_operator(op: Operator, case_insensitive: bool, expected: &str) {
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: op,
+            case_insensitive: case_insensitive,
+            inverted: false,
+            values: Some(vec!["some".into(), "thing".into()]),
+            value: None,
+        };
+        let rule = upgrade_constraint(&constraint);
+        assert_eq!(rule.as_str(), expected);
+    }
+
+    // These look janky but we don't actually care about the content
+    // of the rule in the upgrader, only that the format is correct
+    #[test_case(Operator::NumLte, "user_id <= 7")]
+    #[test_case(Operator::NumLt, "user_id < 7")]
+    #[test_case(Operator::NumGte, "user_id >= 7")]
+    #[test_case(Operator::NumGt, "user_id > 7")]
+    #[test_case(Operator::SemverLt, "user_id < 7")]
+    #[test_case(Operator::SemverGt, "user_id > 7")]
+    #[test_case(Operator::DateAfter, "user_id > 7")]
+    #[test_case(Operator::DateBefore, "user_id < 7")]
+    fn comparator_constraint(op: Operator, expected: &str) {
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: op,
+            case_insensitive: false,
+            inverted: false,
+            values: None,
+            value: Some("7".into()),
+        };
+        let rule = upgrade_constraint(&constraint);
+        assert_eq!(rule.as_str(), expected);
+    }
+
+    #[test_case(true, "!user_id <= 7")]
+    #[test_case(false, "user_id <= 7")]
+    fn handles_negation(is_inverted: bool, expected: &str){
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: Operator::NumLte,
+            case_insensitive: false,
+            inverted: is_inverted,
+            values: None,
+            value: Some("7".into()),
+        };
+        let rule = upgrade_constraint(&constraint);
+        assert_eq!(rule.as_str(), expected);
     }
 }

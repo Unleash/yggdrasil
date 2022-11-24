@@ -84,6 +84,7 @@ fn context_value(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String
         Rule::environment => Box::new(|context: &Context| context.environment.clone()),
         Rule::session_id => Box::new(|context: &Context| context.session_id.clone()),
         Rule::remote_address => Box::new(|context: &Context| context.remote_address.clone()),
+        Rule::current_time => Box::new(|context: &Context| context.current_time.clone()),
         Rule::random => {
             Box::new(|_: &Context| Some(rand::thread_rng().gen_range(0..99).to_string()))
         }
@@ -216,30 +217,32 @@ fn numeric_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Cont
     })
 }
 
-fn date_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn date_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let ordinal_operation = to_ordinal_comparator(node.next().unwrap());
     let date = date(node.next().unwrap());
 
     Box::new(move |context: &Context| {
         let context_value = context_getter(context);
+        println!("Checking against context {:?}", context);
         match context_value {
             Some(context_value) => {
                 let context_value: DateTime<Utc> = context_value.parse().unwrap();
+                println!("DOing the thing {:?}", context_value);
                 match ordinal_operation {
                     OrdinalComparator::Lte => context_value <= date,
                     OrdinalComparator::Lt => context_value < date,
                     OrdinalComparator::Gte => context_value >= date,
                     OrdinalComparator::Gt => context_value > date,
                     OrdinalComparator::Eq => context_value == date,
-                }
+                }.invert(inverted)
             }
             None => false,
         }
     })
 }
 
-fn semver_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn semver_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let ordinal_operation = to_ordinal_comparator(node.next().unwrap());
     let semver = semver(node.next().unwrap());
@@ -256,7 +259,7 @@ fn semver_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
                     OrdinalComparator::Gte => context_value >= semver,
                     OrdinalComparator::Gt => context_value > semver,
                     OrdinalComparator::Eq => context_value == semver,
-                }
+                }.invert(inverted)
             }
             None => false,
         }
@@ -324,15 +327,15 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     })
 }
 
-fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let comparator = to_content_comparator(node.next().unwrap());
     let list = node.next().unwrap();
 
     match list.as_rule() {
         Rule::empty_list => Box::new(move |_context: &Context| match comparator {
-            ContentComparator::In => false,
-            ContentComparator::NotIn => true,
+            ContentComparator::In => false.invert(inverted),
+            ContentComparator::NotIn => true.invert(inverted),
         }),
         Rule::numeric_list => {
             let values = harvest_list(list.into_inner());
@@ -342,8 +345,12 @@ fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
                     Some(context_value) => {
                         let context_value: f64 = context_value.parse().unwrap();
                         match comparator {
-                            ContentComparator::In => values.contains(&context_value),
-                            ContentComparator::NotIn => !values.contains(&context_value),
+                            ContentComparator::In => {
+                                values.contains(&context_value).invert(inverted)
+                            }
+                            ContentComparator::NotIn => {
+                                !values.contains(&context_value).invert(inverted)
+                            }
                         }
                     }
                     None => false,
@@ -357,11 +364,11 @@ fn list_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
 
                 match comparator {
                     ContentComparator::In => match context_value {
-                        Some(context_value) => values.contains(&context_value),
+                        Some(context_value) => values.contains(&context_value).invert(inverted),
                         None => false,
                     },
                     ContentComparator::NotIn => match context_value {
-                        Some(context_value) => !values.contains(&context_value),
+                        Some(context_value) => !values.contains(&context_value).invert(inverted),
                         None => true,
                     },
                 }
@@ -392,7 +399,7 @@ fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> Box<dyn Fn(
     Box::new(move |_: &Context| enabled.invert(inverted))
 }
 
-fn string_fragment_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let comparator_details = to_string_comparator(node.next().unwrap());
     let comparator = comparator_details.comparator_type;
@@ -413,7 +420,7 @@ fn string_fragment_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> 
                 StringComparator::ContainsAny => list.iter().any(|item| value.contains(item)),
                 StringComparator::StartsWithAny => list.iter().any(|item| value.starts_with(item)),
                 StringComparator::EndsWithAny => list.iter().any(|item| value.ends_with(item)),
-            }
+            }.invert(inverted)
         } else {
             false
         }
@@ -431,15 +438,17 @@ fn constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     };
 
     match child.as_rule() {
-        Rule::date_constraint => date_constraint(child.into_inner()),
+        Rule::date_constraint => date_constraint(inverted, child.into_inner()),
         Rule::numeric_constraint => numeric_constraint(inverted, child.into_inner()),
-        Rule::semver_constraint => semver_constraint(child.into_inner()),
-        Rule::rollout_constraint => rollout_constraint(child.into_inner()),
+        Rule::semver_constraint => semver_constraint(inverted, child.into_inner()),
+        Rule::rollout_constraint => rollout_constraint(child.into_inner()), //TODO: Do we need to support inversion here?
         Rule::default_strategy_constraint => {
             default_strategy_constraint(inverted, child.into_inner())
         }
-        Rule::string_fragment_constraint => string_fragment_constraint(child.into_inner()),
-        Rule::list_constraint => list_constraint(child.into_inner()),
+        Rule::string_fragment_constraint => {
+            string_fragment_constraint(inverted, child.into_inner())
+        }
+        Rule::list_constraint => list_constraint(inverted, child.into_inner()),
         _ => unreachable!(),
     }
 }
@@ -476,6 +485,7 @@ mod tests {
     fn context_from_user_id(user_id: &str) -> Context {
         Context {
             user_id: Some(user_id.into()),
+            current_time: None,
             properties: Some(HashMap::new()),
             session_id: None,
             environment: None,
@@ -610,6 +620,7 @@ mod tests {
         context_property.insert("squirrels".into(), "-2".into());
 
         let context = Context {
+            current_time: None,
             user_id: Some("6".into()),
             properties: Some(context_property),
             session_id: None,
@@ -733,5 +744,26 @@ mod tests {
         let rule = compile_rule(rule_text).unwrap();
 
         assert_eq!(rule(&Context::default()), false);
+    }
+
+    #[test]
+    fn date_constraint_respects_timezones() {
+        let mut context = Context::default();
+        context.app_name = Some("2022-01-22T11:30:00.000Z".into());
+
+        let rule_text =
+            "app_name > 2022-01-22T13:00:00.000+02:00 and app_name < 2022-01-22T14:00:00.000+02:00";
+        let rule = compile_rule(rule_text).unwrap();
+        assert_eq!(rule(&context), true);
+    }
+
+    #[test]
+    fn inversion_works_on_string_any_rules() {
+        let mut context = Context::default();
+        context.app_name = Some("email".into());
+
+        let rule_text = "!app_name contains_any [\"@another.com\"]";
+        let rule = compile_rule(rule_text).unwrap();
+        assert_eq!(rule(&context), true);
     }
 }

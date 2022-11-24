@@ -3,7 +3,7 @@ num = @{ int ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ int)? }
 
 percentage = { ("100" | (ASCII_DIGIT ~ ASCII_DIGIT?)) ~ "%" }
 
-string = @{ "\"" ~ ( ASCII_ALPHANUMERIC | "."| DASH_PUNCTUATION | "_" )* ~ "\"" }
+string = @{ "\"" ~ ( ASCII_ALPHANUMERIC | "."| DASH_PUNCTUATION | "_" | "@" )* ~ "\"" }
 
 semver = @{ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ semver_patch? ~ semver_build? }
     semver_patch    = @{ "-" ~ semver_fragment }
@@ -80,11 +80,12 @@ constraint = {
         stickiness_param = { "sticky on " ~ context_value }
         group_id_param = { "with group_id of" ~ string }
 
-context_value = { user_id | session_id | remote_address | app_name | environment | property | random }
+context_value = { user_id | session_id | remote_address | app_name | environment | current_time | property | random }
     user_id         = { "user_id" }
     session_id      = { "session_id" }
     remote_address  = { "remote_address" }
     app_name        = { "app_name" }
+    current_time    = { "current_time" }
     environment     = { "environment" }
     random          = { "random()" }
     property        = { "context[" ~ string ~ "]" }

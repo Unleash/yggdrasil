@@ -60,6 +60,7 @@ impl From<&Context> for InnerContext {
         InnerContext {
             user_id: None,
             session_id: None,
+            current_time: None,
             remote_address: None,
             environment: None,
             app_name: None,
