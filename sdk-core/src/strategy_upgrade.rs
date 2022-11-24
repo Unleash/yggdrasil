@@ -1,4 +1,4 @@
-use unleash_types::client_features::{ClientFeature, Constraint, Operator, Strategy};
+use unleash_types::client_features::{Constraint, Operator, Strategy};
 
 pub fn upgrade(strategies: &Vec<Strategy>) -> String {
     if strategies.is_empty() {
