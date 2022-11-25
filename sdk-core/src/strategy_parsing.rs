@@ -471,7 +471,6 @@ fn eval(expression: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
 }
 
 pub fn compile_rule(rule: &str) -> Result<Box<dyn Fn(&Context) -> bool>, Error<Rule>> {
-    println!("Compiling rule {}", rule);
     let parse_result = Strategy::parse(Rule::strategy, rule);
     parse_result.map(|mut x| eval(x.next().unwrap().into_inner()))
 }

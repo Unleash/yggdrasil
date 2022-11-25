@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap};
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
