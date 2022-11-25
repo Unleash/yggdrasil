@@ -1,4 +1,4 @@
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::{collections::HashMap, hash::Hash};
 
 #[derive(Deserialize, Debug, Clone)]
@@ -25,4 +25,10 @@ impl Default for InnerContext {
             properties: Some(HashMap::new()),
         }
     }
+}
+
+#[derive(Debug)]
+pub enum SdkError {
+    StrategyEvaluationError,
+    StrategyParseError,
 }

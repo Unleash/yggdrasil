@@ -1,12 +1,16 @@
-use unleash_types::client_features::{Constraint, Operator, Strategy};
+use std::collections::HashMap;
 
-pub fn upgrade(strategies: &Vec<Strategy>) -> String {
+use unleash_types::client_features::{Constraint, Operator, Segment, Strategy};
+
+use crate::state::SdkError;
+
+pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) -> String {
     if strategies.is_empty() {
         return "true".into();
     }
     let rule_text = strategies
         .iter()
-        .map(|x| upgrade_strategy(x))
+        .map(|x| upgrade_strategy(x, &segment_map))
         .collect::<Vec<String>>()
         .join(" or ");
     rule_text
@@ -25,7 +29,7 @@ impl PropResolver for Strategy {
     }
 }
 
-fn upgrade_strategy(strategy: &Strategy) -> String {
+fn upgrade_strategy(strategy: &Strategy, segment_map: &HashMap<i32, Segment>) -> String {
     let strategy_rule = match strategy.name.as_str() {
         "default" => "true".into(),
         "userWithId" => upgrade_user_id_strategy(strategy),
@@ -37,7 +41,32 @@ fn upgrade_strategy(strategy: &Strategy) -> String {
         _ => "true".into(),
     };
 
-    let constraints = upgrade_constraints(&strategy.constraints);
+    let segments = strategy
+        .segments
+        .as_ref()
+        .map(|segment| {
+            segment.iter().map(|segment_id| {
+                segment_map
+                    .get(segment_id)
+                    .map(|segment| segment.constraints.clone())
+                    .ok_or(SdkError::StrategyEvaluationError)
+            })
+        })
+        .map(|iter| iter.collect::<Result<Vec<Vec<Constraint>>, SdkError>>())
+        .unwrap_or(Ok(vec![]));
+
+    if segments.is_err() {
+        return "false".into(); // We have a broken segment so default the entire strategy to false
+    }
+
+    let mut segment_constraints: Vec<Constraint> =
+        segments.unwrap().into_iter().flatten().collect();
+
+    let mut raw_constraints = vec![];
+    raw_constraints.append(&mut strategy.constraints.clone().unwrap_or(vec![]));
+    raw_constraints.append(&mut segment_constraints);
+
+    let constraints = upgrade_constraints(raw_constraints);
     match constraints {
         Some(constraints) => format!("({} and ({}))", strategy_rule, constraints),
         None => strategy_rule,
@@ -127,11 +156,7 @@ fn upgrade_random(strategy: &Strategy) -> String {
     }
 }
 
-fn upgrade_constraints(constraints: &Option<Vec<Constraint>>) -> Option<String> {
-    if constraints.is_none() {
-        return None;
-    };
-    let constraints = constraints.as_ref().unwrap();
+fn upgrade_constraints(constraints: Vec<Constraint>) -> Option<String> {
     if constraints.is_empty() {
         return None;
     };
@@ -265,7 +290,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(output, "user_id in [123, 222, 88]".to_string())
     }
 
@@ -282,7 +307,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(output, "user_id in [123, 222, 88]".to_string())
     }
 
@@ -305,7 +330,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(output, "(true and (user_id in [\"7\"]))".to_string())
     }
 
@@ -328,7 +353,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(
             output,
             "(true and (user_id in [\"7\"] and user_id in [\"7\"]))".to_string()
@@ -345,7 +370,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy.clone()]);
+        let output = upgrade(&vec![strategy.clone(), strategy.clone()], &HashMap::new());
         assert_eq!(output, "true or true".to_string())
     }
 
@@ -368,13 +393,13 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy.clone()]);
+        let output = upgrade(&vec![strategy.clone(), strategy.clone()], &HashMap::new());
         assert_eq!(output.as_str(), "(true and (user_id in [\"7\"] and user_id in [\"7\"])) or (true and (user_id in [\"7\"] and user_id in [\"7\"]))")
     }
 
     #[test]
     fn no_strategy_is_always_true() {
-        let output = upgrade(&vec![]);
+        let output = upgrade(&vec![], &HashMap::new());
         assert_eq!(output.as_str(), "true")
     }
 
@@ -397,7 +422,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             "(true and (context[\"country\"] in [\"norway\"]))"
@@ -420,7 +445,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             "55% sticky on user_id with group_id of \"Feature.flexibleRollout.userId.55\""
@@ -442,7 +467,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(output.as_str(), "55% sticky on user_id");
     }
 
@@ -461,7 +486,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             "55% with group_id of \"Feature.flexibleRollout.userId.55\""
@@ -482,7 +507,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy]);
+        let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(output.as_str(), "55%");
     }
 

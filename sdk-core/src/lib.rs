@@ -13,7 +13,7 @@ use serde::{de, Deserialize};
 use state::InnerContext;
 use strategy_parsing::{compile_rule, normalized_hash};
 use strategy_upgrade::upgrade;
-use unleash_types::client_features::{ClientFeatures, Payload, Variant};
+use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
@@ -24,10 +24,23 @@ pub struct CompiledToggle {
     pub variants: Option<Vec<Variant>>,
 }
 
+fn build_segment_map(segments: &Option<Vec<Segment>>) -> HashMap<i32, Segment> {
+    segments
+        .as_ref()
+        .map(|segments| {
+            segments
+                .iter()
+                .map(|segment| (segment.id, segment.clone()))
+                .collect::<HashMap<i32, Segment>>()
+        })
+        .unwrap_or(HashMap::new())
+}
+
 pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> {
     let mut compiled_state = HashMap::new();
+    let segment_map = build_segment_map(&state.segments);
     for toggle in &state.features {
-        let rule = upgrade(&toggle.strategies.clone().unwrap_or(vec![]));
+        let rule = upgrade(&toggle.strategies.clone().unwrap_or(vec![]), &segment_map);
         compiled_state.insert(
             toggle.name.clone(),
             CompiledToggle {
@@ -258,6 +271,7 @@ mod test {
     #[test_case("12-custom-stickiness.json"; "Custom stickiness")]
     #[test_case("13-constraint-operators.json"; "Advanced constraints")]
     #[test_case("14-constraint-semver-operators.json"; "Semver constraints")]
+    #[test_case("15-global-constraints.json"; "Segments")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::new();
