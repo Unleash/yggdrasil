@@ -5,6 +5,7 @@ use std::io::Cursor;
 use std::num::ParseFloatError;
 
 use crate::InnerContext as Context;
+use crate::sendable_closures::{SendableContextResolver, SendableFragment};
 use chrono::{DateTime, Utc};
 use murmur3::murmur3_32;
 use pest::error::Error;
@@ -34,6 +35,10 @@ pub fn normalized_hash(group: &str, identifier: &str, modulus: u32) -> std::io::
     murmur3_32(&mut reader, 0).map(|hash_result| hash_result % modulus)
 }
 
+pub type RuleFragment = Box<dyn SendableFragment + Send + Sync + 'static>;
+
+pub type ContextResolver = Box<dyn SendableContextResolver + Send + Sync + 'static>;
+
 trait Invertible {
     fn invert(&self, inverted: bool) -> bool;
 }
@@ -48,7 +53,7 @@ impl Invertible for bool {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum OrdinalComparator {
     Lte,
     Lt,
@@ -57,13 +62,13 @@ enum OrdinalComparator {
     Eq,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum ContentComparator {
     In,
     NotIn,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum StringComparator {
     StartsWithAny,
     EndsWithAny,
@@ -76,7 +81,7 @@ struct StringComparatorType {
 }
 
 //Context lifting properties - these resolve properties from the context
-fn context_value(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String>> {
+fn context_value(mut node: Pairs<Rule>) -> ContextResolver {
     let child = node.next().unwrap();
     match child.as_rule() {
         Rule::user_id => Box::new(|context: &Context| context.user_id.clone()),
@@ -96,11 +101,11 @@ fn context_value(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String
 // This is a special property, it's functionally identical to 'context_value'
 // and our rule here does nothing but call 'context_value' to resolve the value
 // this only gets a special place so that our syntax in the grammar is nice
-fn stickiness_param(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String>> {
+fn stickiness_param(mut node: Pairs<Rule>) -> ContextResolver {
     context_value(node.next().unwrap().into_inner())
 }
 
-fn context_property(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> Option<String>> {
+fn context_property(mut node: Pairs<Rule>) -> ContextResolver {
     let mut chars = node.next().unwrap().as_str().chars();
     chars.next();
     chars.next_back();
@@ -193,7 +198,7 @@ fn string(node: Pair<Rule>) -> String {
 }
 
 //Constraints
-fn numeric_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn numeric_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let ordinal_operation = to_ordinal_comparator(node.next().unwrap());
     let number = numeric(node.next().unwrap());
@@ -211,38 +216,37 @@ fn numeric_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Cont
                     OrdinalComparator::Eq => (context_value - number).abs() < f64::EPSILON,
                 }
                 .invert(inverted)
-            }
+            },
             None => false,
         }
     })
 }
 
-fn date_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn date_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let ordinal_operation = to_ordinal_comparator(node.next().unwrap());
     let date = date(node.next().unwrap());
 
     Box::new(move |context: &Context| {
         let context_value = context_getter(context);
-        println!("Checking against context {:?}", context);
         match context_value {
             Some(context_value) => {
                 let context_value: DateTime<Utc> = context_value.parse().unwrap();
-                println!("DOing the thing {:?}", context_value);
                 match ordinal_operation {
                     OrdinalComparator::Lte => context_value <= date,
                     OrdinalComparator::Lt => context_value < date,
                     OrdinalComparator::Gte => context_value >= date,
                     OrdinalComparator::Gt => context_value > date,
                     OrdinalComparator::Eq => context_value == date,
-                }.invert(inverted)
+                }
+                .invert(inverted)
             }
             None => false,
         }
     })
 }
 
-fn semver_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn semver_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let ordinal_operation = to_ordinal_comparator(node.next().unwrap());
     let semver = semver(node.next().unwrap());
@@ -259,14 +263,15 @@ fn semver_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Conte
                     OrdinalComparator::Gte => context_value >= semver,
                     OrdinalComparator::Gt => context_value > semver,
                     OrdinalComparator::Eq => context_value == semver,
-                }.invert(inverted)
+                }
+                .invert(inverted)
             }
             None => false,
         }
     })
 }
 
-fn rollout_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
     let percent_rollout = percentage(node.next().unwrap());
 
     let second = node.next();
@@ -327,7 +332,7 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     })
 }
 
-fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let comparator = to_content_comparator(node.next().unwrap());
     let list = node.next().unwrap();
@@ -394,12 +399,15 @@ fn harvest_list(node: Pairs<Rule>) -> Vec<f64> {
     nodes.unwrap()
 }
 
-fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
     let enabled: bool = node.as_str().chars().as_str().parse().unwrap();
     Box::new(move |_: &Context| enabled.invert(inverted))
 }
 
-fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn string_fragment_constraint(
+    inverted: bool,
+    mut node: Pairs<Rule>,
+) -> RuleFragment {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let comparator_details = to_string_comparator(node.next().unwrap());
     let comparator = comparator_details.comparator_type;
@@ -420,14 +428,15 @@ fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> Box<dyn 
                 StringComparator::ContainsAny => list.iter().any(|item| value.contains(item)),
                 StringComparator::StartsWithAny => list.iter().any(|item| value.starts_with(item)),
                 StringComparator::EndsWithAny => list.iter().any(|item| value.ends_with(item)),
-            }.invert(inverted)
+            }
+            .invert(inverted)
         } else {
             false
         }
     })
 }
 
-fn constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
     let first = node.next();
     let second = node.next();
 
@@ -453,7 +462,7 @@ fn constraint(mut node: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
     }
 }
 
-fn eval(expression: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
+fn eval(expression: Pairs<Rule>) -> RuleFragment {
     PRATT_PARSER
         .map_primary(|primary| match primary.as_rule() {
             Rule::constraint => constraint(primary.into_inner()),
@@ -470,7 +479,7 @@ fn eval(expression: Pairs<Rule>) -> Box<dyn Fn(&Context) -> bool> {
         .parse(expression)
 }
 
-pub fn compile_rule(rule: &str) -> Result<Box<dyn Fn(&Context) -> bool>, Error<Rule>> {
+pub fn compile_rule(rule: &str) -> Result<RuleFragment, Error<Rule>> {
     let parse_result = Strategy::parse(Rule::strategy, rule);
     parse_result.map(|mut x| eval(x.next().unwrap().into_inner()))
 }

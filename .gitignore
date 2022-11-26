@@ -2,4 +2,5 @@
 /Cargo.lock
 **/venv
 **/.vscode
+/dotnet-sdk/obj
 /client-specification

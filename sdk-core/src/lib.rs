@@ -8,10 +8,11 @@ extern crate pest_derive;
 pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
+mod sendable_closures;
 
 use serde::{de, Deserialize};
 use state::InnerContext;
-use strategy_parsing::{compile_rule, normalized_hash};
+use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::upgrade;
 use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
 
@@ -20,7 +21,7 @@ pub type CompiledState = HashMap<String, CompiledToggle>;
 pub struct CompiledToggle {
     pub name: String,
     pub enabled: bool,
-    pub compiled_strategy: Box<dyn Fn(&InnerContext) -> bool>,
+    pub compiled_strategy: RuleFragment,
     pub variants: Option<Vec<Variant>>,
 }
 
