@@ -99,7 +99,7 @@ impl EngineState {
             .unwrap_or(false)
     }
 
-    pub fn is_enabled(&self, name: String, context: InnerContext) -> bool {
+    pub fn is_enabled(&self, name: String, context: &InnerContext) -> bool {
         match &self.compiled_state {
             Some(_) => {
                 let toggle = self.get_toggle(name);
@@ -199,9 +199,9 @@ fn check_for_variant_override(variants: &Vec<Variant>, context: &InnerContext) -
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct VariantDef {
-    name: String,
-    payload: Option<Payload>,
-    enabled: bool,
+    pub name: String,
+    pub payload: Option<Payload>,
+    pub enabled: bool,
 }
 
 impl Default for VariantDef {
@@ -285,7 +285,7 @@ mod test {
                     &test_case.description, &test_case.toggle_name, &test_case.context
                 );
                 let expected = test_case.expected_result;
-                let actual = engine.is_enabled(test_case.toggle_name, test_case.context);
+                let actual = engine.is_enabled(test_case.toggle_name, &test_case.context);
                 if expected != actual {
                     panic!(
                         "Test case: '{}' does not match. Expected: {}, actual: {}",

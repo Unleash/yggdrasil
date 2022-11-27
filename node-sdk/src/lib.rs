@@ -49,7 +49,7 @@ impl UnleashEngine {
     #[wasm_bindgen(method, js_name = isEnabled)]
     pub fn is_enabled(&self, name: String, context: &Context) -> bool {
         let context = context.into();
-        self.engine_state.is_enabled(name, context)
+        self.engine_state.is_enabled(name, &context)
     }
 
     pub fn take_state() {}

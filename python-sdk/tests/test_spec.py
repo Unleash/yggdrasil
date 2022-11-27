@@ -25,11 +25,7 @@ def load_specs():
 
 
 def iter_spec():
-    count = 0
     for spec in load_specs():
-        count += 1
-        if count > 5:
-            break
         name, state, tests, variant_tests = load_spec(spec)
 
         for test in tests:
@@ -53,12 +49,13 @@ except FileNotFoundError:
 def to_context(context):
     user_id = context.get("userId")
     session_id = context.get("sessionId")
-    environment = context.get("sessionId")
-    app_name = context.get("sessionId")
-    remote_address = context.get("remote_address")
+    environment = context.get("environment")
+    app_name = context.get("appName")
+    remote_address = context.get("remoteAddress")
+    current_time = context.get("currentTime")
     properties = context.get("properties")
     return Context(
-        user_id, session_id, remote_address, environment, app_name, properties
+        user_id, session_id, remote_address, environment, app_name, current_time, properties
     )
 
 
@@ -77,4 +74,4 @@ def test_spec(spec):
         expected = test_data["expectedResult"]
 
         variant = unleash_engine.get_variant(toggle_name, context)
-        assert variant == expected
+        assert variant.name == expected["name"]

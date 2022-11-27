@@ -4,8 +4,8 @@ use std::collections::HashSet;
 use std::io::Cursor;
 use std::num::ParseFloatError;
 
-use crate::InnerContext as Context;
 use crate::sendable_closures::{SendableContextResolver, SendableFragment};
+use crate::InnerContext as Context;
 use chrono::{DateTime, Utc};
 use murmur3::murmur3_32;
 use pest::error::Error;
@@ -216,7 +216,7 @@ fn numeric_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
                     OrdinalComparator::Eq => (context_value - number).abs() < f64::EPSILON,
                 }
                 .invert(inverted)
-            },
+            }
             None => false,
         }
     })
@@ -404,10 +404,7 @@ fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragmen
     Box::new(move |_: &Context| enabled.invert(inverted))
 }
 
-fn string_fragment_constraint(
-    inverted: bool,
-    mut node: Pairs<Rule>,
-) -> RuleFragment {
+fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let comparator_details = to_string_comparator(node.next().unwrap());
     let comparator = comparator_details.comparator_type;
