@@ -10,7 +10,7 @@ pub mod strategy_parsing;
 pub mod strategy_upgrade;
 mod sendable_closures;
 
-use serde::{de, Deserialize};
+use serde::{de, Deserialize, Serialize};
 use state::InnerContext;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::upgrade;
@@ -197,9 +197,10 @@ fn check_for_variant_override(variants: &Vec<Variant>, context: &InnerContext) -
     None
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct VariantDef {
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub payload: Option<Payload>,
     pub enabled: bool,
 }
