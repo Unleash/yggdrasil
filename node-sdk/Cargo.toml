@@ -1,7 +1,7 @@
 [package]
 authors = ["sighphyre <liquidwicked64@gmail.com>"]
 edition = "2018"
-name = "node-sdk"
+name = "unleash-node-core"
 version = "0.1.0"
 
 [lib]

@@ -1,6 +1,6 @@
 import test from "ava";
 import fs from "fs";
-import { UnleashEngine } from "node-sdk";
+import { UnleashEngine } from "unleash-node-core";
 
 const SPEC_PATH = `../client-specification/specifications/`;
 
