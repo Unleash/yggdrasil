@@ -4,4 +4,4 @@ This SDK doesn't use FFI like the others, instead it compiles the underlying Rus
 
 ## Development
 
-To run the build, execute `wasm-pack build --target nodejs`. To run the tests, first you'll need to link the WASM code to the JS test harness, so navigate to the `pkg` folder and run `yarn link`, then navigate back to the root of this SDK and run `yarn link unleash-node-core`, then install packages normally with yarn and finally run `yarn test`.
+To run the tests, first you'll need to link the WASM code to the JS test harness, so navigate to the `pkg` folder and run `yarn link`, then navigate back to the root of this SDK and run `yarn link unleash-node-core`, then install packages normally with yarn and finally run `yarn test`. To run the build, execute `yarn build`.
