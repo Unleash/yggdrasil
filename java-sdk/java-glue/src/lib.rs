@@ -12,7 +12,7 @@ pub extern "system" fn Java_io_getunleash_javasdk_UnleashEngine_createEngine(
     _env: JNIEnv,
     _obj: JObject,
 ) -> jlong {
-    Box::into_raw(Box::new(EngineState::new())) as jlong
+    Box::into_raw(Box::new(EngineState::default())) as jlong
 }
 
 #[no_mangle]

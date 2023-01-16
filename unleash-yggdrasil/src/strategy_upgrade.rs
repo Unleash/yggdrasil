@@ -169,14 +169,14 @@ fn upgrade_constraints(constraints: Vec<Constraint>) -> Option<String> {
 }
 
 fn is_stringy(op: &Operator) -> bool {
-    match op {
-        Operator::NotIn => true,
-        Operator::In => true,
-        Operator::StrEndsWith => true,
-        Operator::StrStartsWith => true,
-        Operator::StrContains => true,
-        _ => false,
-    }
+    matches!(
+        op,
+        Operator::NotIn
+            | Operator::In
+            | Operator::StrEndsWith
+            | Operator::StrStartsWith
+            | Operator::StrContains
+    )
 }
 
 fn upgrade_constraint(constraint: &Constraint) -> String {
@@ -199,7 +199,7 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
                     .collect::<Vec<String>>()
                     .join(", ")
             })
-            .unwrap_or("".to_string());
+            .unwrap_or_else(|| "".to_string());
         format!("[{}]", values)
     } else {
         if constraint.operator == Operator::SemverEq

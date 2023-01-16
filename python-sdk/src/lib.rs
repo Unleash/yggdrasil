@@ -86,9 +86,9 @@ impl From<&Context> for InnerContext {
 #[pymethods]
 impl UnleashEngine {
     #[new]
-    pub fn new() -> UnleashEngine {
+    pub fn default() -> UnleashEngine {
         UnleashEngine {
-            engine_state: EngineState::new(),
+            engine_state: EngineState::default(),
         }
     }
 

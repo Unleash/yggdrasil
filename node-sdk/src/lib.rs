@@ -19,9 +19,10 @@ pub struct UnleashEngine {
 #[wasm_bindgen]
 impl UnleashEngine {
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::new_without_default)] //Clippy is being silly here, this becomes a JS constructor and default has no meaning
     pub fn new() -> UnleashEngine {
         UnleashEngine {
-            engine_state: EngineState::new(),
+            engine_state: EngineState::default(),
         }
     }
 

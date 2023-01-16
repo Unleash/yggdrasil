@@ -5,10 +5,10 @@ extern crate lazy_static;
 #[macro_use]
 extern crate pest_derive;
 
+mod sendable_closures;
 pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
-mod sendable_closures;
 
 use serde::{de, Deserialize, Serialize};
 use state::InnerContext;
@@ -80,7 +80,7 @@ pub struct EngineState {
 }
 
 impl EngineState {
-    pub fn new() -> EngineState {
+    pub fn default() -> EngineState {
         EngineState {
             compiled_state: None,
         }
@@ -152,7 +152,7 @@ impl EngineState {
     }
 }
 
-fn get_variant_stickiness(variants: &Vec<Variant>, context: &InnerContext) -> Option<String> {
+fn get_variant_stickiness(variants: &[Variant], context: &InnerContext) -> Option<String> {
     let custom_stickiness = variants
         .get(0)
         .and_then(|variant| variant.stickiness.clone());
@@ -171,7 +171,10 @@ fn get_variant_stickiness(variants: &Vec<Variant>, context: &InnerContext) -> Op
                 .cloned(),
         }
     } else {
-        context.user_id.clone().or(context.session_id.clone())
+        context
+            .user_id
+            .clone()
+            .or_else(|| context.session_id.clone())
     }
 }
 
@@ -179,6 +182,8 @@ fn check_for_variant_override(variants: &Vec<Variant>, context: &InnerContext) -
     for variant in variants {
         if let Some(overrides) = &variant.overrides {
             for o in overrides {
+                #[allow(clippy::single_match)]
+                //Clippy is technically correct here but this match statement needs more arms to be feature complete
                 match o.context_name.as_ref() as &str {
                     "userId" => {
                         if let Some(val) = &context.user_id {
@@ -274,7 +279,7 @@ mod test {
     #[test_case("15-global-constraints.json"; "Segments")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
-        let mut engine = EngineState::new();
+        let mut engine = EngineState::default();
         engine.take_state(spec.state);
 
         if let Some(mut tests) = spec.tests {

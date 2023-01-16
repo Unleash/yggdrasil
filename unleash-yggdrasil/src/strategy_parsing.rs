@@ -302,7 +302,7 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
                 }
                 custom_stickiness
             }
-            None => context.user_id.clone().or(context.session_id.clone()),
+            None => context.user_id.clone().or_else(||context.session_id.clone()),
         };
 
         let group_id = match &group_id {
@@ -476,6 +476,7 @@ fn eval(expression: Pairs<Rule>) -> RuleFragment {
         .parse(expression)
 }
 
+#[allow(clippy::result_large_err)] //Valid complaint on Clippy's part but this should be on the cold path and not a major issue
 pub fn compile_rule(rule: &str) -> Result<RuleFragment, Error<Rule>> {
     let parse_result = Strategy::parse(Rule::strategy, rule);
     parse_result.map(|mut x| eval(x.next().unwrap().into_inner()))
