@@ -10,7 +10,7 @@ pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) 
     }
     let rule_text = strategies
         .iter()
-        .map(|x| upgrade_strategy(x, &segment_map))
+        .map(|x| upgrade_strategy(x, segment_map))
         .collect::<Vec<String>>()
         .join(" or ");
     rule_text
@@ -63,7 +63,7 @@ fn upgrade_strategy(strategy: &Strategy, segment_map: &HashMap<i32, Segment>) ->
         segments.unwrap().into_iter().flatten().collect();
 
     let mut raw_constraints = vec![];
-    raw_constraints.append(&mut strategy.constraints.clone().unwrap_or(vec![]));
+    raw_constraints.append(&mut strategy.constraints.clone().unwrap_or_default());
     raw_constraints.append(&mut segment_constraints);
 
     let constraints = upgrade_constraints(raw_constraints);
@@ -108,7 +108,7 @@ fn upgrade_remote_address(strategy: &Strategy) -> String {
     match strategy.get_param("IPs") {
         Some(addresses) => {
             let ips = addresses
-                .split(",")
+                .split(',')
                 .collect::<Vec<&str>>()
                 .iter()
                 .map(|x| x.trim())
@@ -162,10 +162,10 @@ fn upgrade_constraints(constraints: Vec<Constraint>) -> Option<String> {
     };
     let constraint_rules = constraints
         .iter()
-        .map(|x| upgrade_constraint(x))
+        .map(upgrade_constraint)
         .collect::<Vec<String>>();
     let squashed_rules = constraint_rules.join(" and ");
-    Some(format!("{}", squashed_rules))
+    Some(squashed_rules)
 }
 
 fn is_stringy(op: &Operator) -> bool {
@@ -210,7 +210,7 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
             // broken semver operators so we can reject them.
             // Handling this in the grammar feels awful so we're
             // just not going to
-            if constraint.value.as_ref().unwrap().chars().next() == Some('v') {
+            if constraint.value.as_ref().unwrap().starts_with('v') {
                 return "false".into();
             }
         }
@@ -348,7 +348,7 @@ mod tests {
         let strategy = Strategy {
             name: "default".into(),
             parameters: None,
-            constraints: Some(vec![constraint.clone(), constraint.clone()]),
+            constraints: Some(vec![constraint.clone(), constraint]),
             segments: None,
             sort_order: Some(1),
         };
@@ -370,7 +370,7 @@ mod tests {
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy.clone()], &HashMap::new());
+        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new());
         assert_eq!(output, "true or true".to_string())
     }
 
@@ -388,12 +388,12 @@ mod tests {
         let strategy = Strategy {
             name: "default".into(),
             parameters: None,
-            constraints: Some(vec![constraint.clone(), constraint.clone()]),
+            constraints: Some(vec![constraint.clone(), constraint]),
             segments: None,
             sort_order: Some(1),
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy.clone()], &HashMap::new());
+        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new());
         assert_eq!(output.as_str(), "(true and (user_id in [\"7\"] and user_id in [\"7\"])) or (true and (user_id in [\"7\"] and user_id in [\"7\"]))")
     }
 
@@ -545,7 +545,7 @@ mod tests {
         let constraint = Constraint {
             context_name: "userId".into(),
             operator: op,
-            case_insensitive: case_insensitive,
+            case_insensitive,
             inverted: false,
             values: Some(vec!["some".into(), "thing".into()]),
             value: None,

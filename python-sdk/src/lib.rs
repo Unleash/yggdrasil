@@ -1,8 +1,8 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap};
 
 use pyo3::prelude::*;
-use unleash_yggdrasil::{state::InnerContext, EngineState, IPAddress, VariantDef};
-use serde::{de, Deserialize};
+use unleash_yggdrasil::{state::InnerContext, EngineState, VariantDef};
+
 
 #[pyclass]
 struct UnleashEngine {
@@ -59,7 +59,7 @@ impl From<VariantDef> for Variant {
         let mut payload = HashMap::new();
         if let Some(payload_content) = variant.payload {
             payload.insert("type".into(), payload_content.payload_type.clone());
-            payload.insert("value".into(), payload_content.value.clone());
+            payload.insert("value".into(), payload_content.value);
         }
         Variant {
             name: variant.name,

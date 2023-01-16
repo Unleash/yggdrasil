@@ -113,7 +113,7 @@ fn context_property(mut node: Pairs<Rule>) -> ContextResolver {
 
     Box::new(move |context: &Context| -> Option<String> {
         match &context.properties {
-            Some(props) => props.get(&context_name).map(|x| x.clone()),
+            Some(props) => props.get(&context_name).cloned(),
             None => None,
         }
     })
@@ -294,7 +294,7 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
     Box::new(move |context: &Context| {
         let stickiness = match &stickiness_getter {
             Some(stickiness_getter) => {
-                let custom_stickiness = stickiness_getter(&context);
+                let custom_stickiness = stickiness_getter(context);
                 // If we're sticky on a property that isn't on the context then
                 // short circuit this strategy's evaluation to false
                 if custom_stickiness.is_none() {
@@ -385,12 +385,12 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
 
 fn harvest_set(node: Pairs<Rule>) -> HashSet<String> {
     node.into_iter()
-        .map(|x| string(x))
+        .map(string)
         .collect::<HashSet<String>>()
 }
 
 fn harvest_string_list(node: Pairs<Rule>) -> Vec<String> {
-    node.into_iter().map(|x| string(x)).collect::<Vec<String>>()
+    node.into_iter().map(string).collect::<Vec<String>>()
 }
 
 fn harvest_list(node: Pairs<Rule>) -> Vec<f64> {
@@ -602,7 +602,7 @@ mod tests {
     #[test_case("false and true", false)]
     fn run_boolean_constraint(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = context_from_user_id("6".into());
+        let context = context_from_user_id("6");
 
         assert_eq!(rule(&context), expected);
     }
@@ -611,7 +611,7 @@ mod tests {
     #[test_case("99%", true)]
     fn run_rollout_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = context_from_user_id("6".into());
+        let context = context_from_user_id("6");
 
         assert_eq!(rule(&context), expected);
     }
