@@ -1,18 +1,17 @@
 [package]
+edition = "2021"
 name = "python-sdk"
 version = "0.1.0"
-edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
-name = "python_sdk"
 crate-type = ["cdylib"]
+name = "python_sdk"
 
 [dependencies]
-pyo3 = { version = "0.17.1", features = ["extension-module"] }
-sdk-core = {path = "../sdk-core"}
+pyo3 = {version = "0.17.1", features = ["extension-module"]}
 serde_json = "1.0.68"
-
+unleash-yggdrasil = {path = "../unleash-yggdrasil"}
 
 [dependencies.serde]
 features = ["derive"]

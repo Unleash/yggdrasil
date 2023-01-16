@@ -1,7 +1,7 @@
 use std::{collections::HashMap, hash::Hash};
 
 use pyo3::prelude::*;
-use sdk_core::{state::InnerContext, EngineState, IPAddress, VariantDef};
+use unleash_yggdrasil::{state::InnerContext, EngineState, IPAddress, VariantDef};
 use serde::{de, Deserialize};
 
 #[pyclass]

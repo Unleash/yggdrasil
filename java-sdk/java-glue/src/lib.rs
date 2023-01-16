@@ -4,7 +4,7 @@ use jni::{
     JNIEnv,
 };
 
-use sdk_core::{state::InnerContext, EngineState};
+use unleash_yggdrasil::{state::InnerContext, EngineState};
 use unleash_types::client_features::ClientFeatures;
 
 #[no_mangle]

@@ -1,6 +1,6 @@
 mod utils;
 
-use sdk_core::{state::InnerContext, EngineState};
+use unleash_yggdrasil::{state::InnerContext, EngineState};
 use serde_wasm_bindgen;
 use unleash_types::client_features::ClientFeatures;
 use wasm_bindgen::prelude::*;

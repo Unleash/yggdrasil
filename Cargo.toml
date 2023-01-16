@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-  "sdk-core",
+  "unleash-yggdrasil",
   "node-sdk",
   "python-sdk",
   "bindings",
