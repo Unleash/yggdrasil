@@ -70,9 +70,9 @@ enum ContentComparator {
 
 #[derive(Debug, Clone)]
 enum StringComparator {
-    StartsWithAny,
-    EndsWithAny,
-    ContainsAny,
+    StartsWith,
+    EndsWith,
+    Contains,
 }
 
 struct StringComparatorType {
@@ -142,27 +142,27 @@ fn to_string_comparator(node: Pair<Rule>) -> StringComparatorType {
     match node.as_str() {
         "starts_with_any" => StringComparatorType {
             ignore_case: false,
-            comparator_type: StringComparator::StartsWithAny,
+            comparator_type: StringComparator::StartsWith,
         },
         "ends_with_any" => StringComparatorType {
             ignore_case: false,
-            comparator_type: StringComparator::EndsWithAny,
+            comparator_type: StringComparator::EndsWith,
         },
         "contains_any" => StringComparatorType {
             ignore_case: false,
-            comparator_type: StringComparator::ContainsAny,
+            comparator_type: StringComparator::Contains,
         },
         "starts_with_any_ignore_case" => StringComparatorType {
             ignore_case: true,
-            comparator_type: StringComparator::StartsWithAny,
+            comparator_type: StringComparator::StartsWith,
         },
         "ends_with_any_ignore_case" => StringComparatorType {
             ignore_case: true,
-            comparator_type: StringComparator::EndsWithAny,
+            comparator_type: StringComparator::EndsWith,
         },
         "contains_any_ignore_case" => StringComparatorType {
             ignore_case: true,
-            comparator_type: StringComparator::ContainsAny,
+            comparator_type: StringComparator::Contains,
         },
         _ => unreachable!(),
     }
@@ -422,9 +422,9 @@ fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFrag
         }
         if let Some(value) = value {
             match comparator {
-                StringComparator::ContainsAny => list.iter().any(|item| value.contains(item)),
-                StringComparator::StartsWithAny => list.iter().any(|item| value.starts_with(item)),
-                StringComparator::EndsWithAny => list.iter().any(|item| value.ends_with(item)),
+                StringComparator::Contains => list.iter().any(|item| value.contains(item)),
+                StringComparator::StartsWith => list.iter().any(|item| value.starts_with(item)),
+                StringComparator::EndsWith => list.iter().any(|item| value.ends_with(item)),
             }
             .invert(inverted)
         } else {
