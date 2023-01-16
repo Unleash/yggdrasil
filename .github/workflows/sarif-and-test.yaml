@@ -51,8 +51,12 @@ jobs:
           category: clippy
           wait-for-processing: true
       - name: Get client spec
-        run: |
-          git clone --depth 5 --branch v4.2.2 https://github.com/Unleash/client-specification.git client-specification
+        use: actions/checkout@v3
+        with:
+          repository: Unleash/client-specification
+          branch: v4.2.2
+          path: client-specification
+          fetch-depth: 5
       - name: Run tests
         run: |
           cargo test
