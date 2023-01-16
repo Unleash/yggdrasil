@@ -1,0 +1,55 @@
+---
+name: Clippy analysis (Code Quality)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Runs on schedule at 1745 UTC every Tuesday
+    - cron: '45 17 * * 2'
+
+jobs:
+  rust-clippy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: ⚡ Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.rustup
+            target
+          key: debug-${{ runner.os }}-stable
+          restore-keys: |
+            debug-${{ runner.os }}-
+      - name: Install rust
+        run: |
+          rustup install stable
+          rustup default stable
+          rustup show
+      - name: Install required cargo packages for reporting format
+        run: cargo install clippy-sarif sarif-fmt
+      - name: Run rust-clippy
+        run: |
+          cargo clippy --all-features --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        continue-on-error: true
+      - name: Upload analysis results to Github
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: rust-clippy-results.sarif
+          category: clippy
+          wait-for-processing: true
+      - name: Run tests
+        run: |
+          cargo test
