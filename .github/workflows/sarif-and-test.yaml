@@ -51,7 +51,7 @@ jobs:
           category: clippy
           wait-for-processing: true
       - name: Get client spec
-        use: actions/checkout@v3
+        uses: actions/checkout@v3
         with:
           repository: Unleash/client-specification
           branch: v4.2.2
