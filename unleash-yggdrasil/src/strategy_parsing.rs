@@ -70,9 +70,9 @@ enum ContentComparator {
 
 #[derive(Debug, Clone)]
 enum StringComparator {
-    StartsWithAny,
-    EndsWithAny,
-    ContainsAny,
+    StartsWith,
+    EndsWith,
+    Contains,
 }
 
 struct StringComparatorType {
@@ -113,7 +113,7 @@ fn context_property(mut node: Pairs<Rule>) -> ContextResolver {
 
     Box::new(move |context: &Context| -> Option<String> {
         match &context.properties {
-            Some(props) => props.get(&context_name).map(|x| x.clone()),
+            Some(props) => props.get(&context_name).cloned(),
             None => None,
         }
     })
@@ -142,27 +142,27 @@ fn to_string_comparator(node: Pair<Rule>) -> StringComparatorType {
     match node.as_str() {
         "starts_with_any" => StringComparatorType {
             ignore_case: false,
-            comparator_type: StringComparator::StartsWithAny,
+            comparator_type: StringComparator::StartsWith,
         },
         "ends_with_any" => StringComparatorType {
             ignore_case: false,
-            comparator_type: StringComparator::EndsWithAny,
+            comparator_type: StringComparator::EndsWith,
         },
         "contains_any" => StringComparatorType {
             ignore_case: false,
-            comparator_type: StringComparator::ContainsAny,
+            comparator_type: StringComparator::Contains,
         },
         "starts_with_any_ignore_case" => StringComparatorType {
             ignore_case: true,
-            comparator_type: StringComparator::StartsWithAny,
+            comparator_type: StringComparator::StartsWith,
         },
         "ends_with_any_ignore_case" => StringComparatorType {
             ignore_case: true,
-            comparator_type: StringComparator::EndsWithAny,
+            comparator_type: StringComparator::EndsWith,
         },
         "contains_any_ignore_case" => StringComparatorType {
             ignore_case: true,
-            comparator_type: StringComparator::ContainsAny,
+            comparator_type: StringComparator::Contains,
         },
         _ => unreachable!(),
     }
@@ -294,7 +294,7 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
     Box::new(move |context: &Context| {
         let stickiness = match &stickiness_getter {
             Some(stickiness_getter) => {
-                let custom_stickiness = stickiness_getter(&context);
+                let custom_stickiness = stickiness_getter(context);
                 // If we're sticky on a property that isn't on the context then
                 // short circuit this strategy's evaluation to false
                 if custom_stickiness.is_none() {
@@ -302,7 +302,7 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
                 }
                 custom_stickiness
             }
-            None => context.user_id.clone().or(context.session_id.clone()),
+            None => context.user_id.clone().or_else(||context.session_id.clone()),
         };
 
         let group_id = match &group_id {
@@ -385,12 +385,12 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
 
 fn harvest_set(node: Pairs<Rule>) -> HashSet<String> {
     node.into_iter()
-        .map(|x| string(x))
+        .map(string)
         .collect::<HashSet<String>>()
 }
 
 fn harvest_string_list(node: Pairs<Rule>) -> Vec<String> {
-    node.into_iter().map(|x| string(x)).collect::<Vec<String>>()
+    node.into_iter().map(string).collect::<Vec<String>>()
 }
 
 fn harvest_list(node: Pairs<Rule>) -> Vec<f64> {
@@ -422,9 +422,9 @@ fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFrag
         }
         if let Some(value) = value {
             match comparator {
-                StringComparator::ContainsAny => list.iter().any(|item| value.contains(item)),
-                StringComparator::StartsWithAny => list.iter().any(|item| value.starts_with(item)),
-                StringComparator::EndsWithAny => list.iter().any(|item| value.ends_with(item)),
+                StringComparator::Contains => list.iter().any(|item| value.contains(item)),
+                StringComparator::StartsWith => list.iter().any(|item| value.starts_with(item)),
+                StringComparator::EndsWith => list.iter().any(|item| value.ends_with(item)),
             }
             .invert(inverted)
         } else {
@@ -476,6 +476,7 @@ fn eval(expression: Pairs<Rule>) -> RuleFragment {
         .parse(expression)
 }
 
+#[allow(clippy::result_large_err)] //Valid complaint on Clippy's part but this should be on the cold path and not a major issue
 pub fn compile_rule(rule: &str) -> Result<RuleFragment, Error<Rule>> {
     let parse_result = Strategy::parse(Rule::strategy, rule);
     parse_result.map(|mut x| eval(x.next().unwrap().into_inner()))
@@ -602,7 +603,7 @@ mod tests {
     #[test_case("false and true", false)]
     fn run_boolean_constraint(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = context_from_user_id("6".into());
+        let context = context_from_user_id("6");
 
         assert_eq!(rule(&context), expected);
     }
@@ -611,7 +612,7 @@ mod tests {
     #[test_case("99%", true)]
     fn run_rollout_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = context_from_user_id("6".into());
+        let context = context_from_user_id("6");
 
         assert_eq!(rule(&context), expected);
     }

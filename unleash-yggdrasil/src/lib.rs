@@ -5,10 +5,10 @@ extern crate lazy_static;
 #[macro_use]
 extern crate pest_derive;
 
+mod sendable_closures;
 pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
-mod sendable_closures;
 
 use serde::{de, Deserialize, Serialize};
 use state::InnerContext;
@@ -34,14 +34,14 @@ fn build_segment_map(segments: &Option<Vec<Segment>>) -> HashMap<i32, Segment> {
                 .map(|segment| (segment.id, segment.clone()))
                 .collect::<HashMap<i32, Segment>>()
         })
-        .unwrap_or(HashMap::new())
+        .unwrap_or_default()
 }
 
 pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> {
     let mut compiled_state = HashMap::new();
     let segment_map = build_segment_map(&state.segments);
     for toggle in &state.features {
-        let rule = upgrade(&toggle.strategies.clone().unwrap_or(vec![]), &segment_map);
+        let rule = upgrade(&toggle.strategies.clone().unwrap_or_default(), &segment_map);
         compiled_state.insert(
             toggle.name.clone(),
             CompiledToggle {
@@ -80,7 +80,7 @@ pub struct EngineState {
 }
 
 impl EngineState {
-    pub fn new() -> EngineState {
+    pub fn default() -> EngineState {
         EngineState {
             compiled_state: None,
         }
@@ -95,7 +95,7 @@ impl EngineState {
 
     fn enabled(&self, toggle: Option<&CompiledToggle>, context: &InnerContext) -> bool {
         toggle
-            .map(|toggle| toggle.enabled && (toggle.compiled_strategy)(&context))
+            .map(|toggle| toggle.enabled && (toggle.compiled_strategy)(context))
             .unwrap_or(false)
     }
 
@@ -103,7 +103,7 @@ impl EngineState {
         match &self.compiled_state {
             Some(_) => {
                 let toggle = self.get_toggle(name);
-                self.enabled(toggle, &context)
+                self.enabled(toggle, context)
             }
             None => false,
         }
@@ -111,11 +111,11 @@ impl EngineState {
 
     pub fn get_variant(&self, name: String, context: &InnerContext) -> VariantDef {
         let toggle = self.get_toggle(name);
-        let enabled = self.enabled(toggle, &context);
+        let enabled = self.enabled(toggle, context);
         match (toggle, enabled) {
             (Some(toggle), true) => match toggle.variants.as_ref() {
                 Some(variants) => {
-                    if let Some(found_override) = check_for_variant_override(variants, &context) {
+                    if let Some(found_override) = check_for_variant_override(variants, context) {
                         return VariantDef {
                             name: found_override.name,
                             payload: found_override.payload,
@@ -130,7 +130,7 @@ impl EngineState {
 
                     let mut total_weight = 0;
                     for variant in variants {
-                        total_weight = total_weight + variant.weight;
+                        total_weight += variant.weight;
                         if total_weight > target {
                             return VariantDef {
                                 name: variant.name.clone(),
@@ -152,11 +152,10 @@ impl EngineState {
     }
 }
 
-fn get_variant_stickiness(variants: &Vec<Variant>, context: &InnerContext) -> Option<String> {
+fn get_variant_stickiness(variants: &[Variant], context: &InnerContext) -> Option<String> {
     let custom_stickiness = variants
         .get(0)
-        .map(|variant| variant.stickiness.clone())
-        .flatten();
+        .and_then(|variant| variant.stickiness.clone());
 
     if let Some(custom_stickiness) = custom_stickiness {
         match custom_stickiness.as_str() {
@@ -168,12 +167,14 @@ fn get_variant_stickiness(variants: &Vec<Variant>, context: &InnerContext) -> Op
             _ => context
                 .properties
                 .as_ref()
-                .map(|props| props.get(&custom_stickiness))
-                .flatten()
+                .and_then(|props| props.get(&custom_stickiness))
                 .cloned(),
         }
     } else {
-        context.user_id.clone().or(context.session_id.clone())
+        context
+            .user_id
+            .clone()
+            .or_else(|| context.session_id.clone())
     }
 }
 
@@ -181,6 +182,8 @@ fn check_for_variant_override(variants: &Vec<Variant>, context: &InnerContext) -
     for variant in variants {
         if let Some(overrides) = &variant.overrides {
             for o in overrides {
+                #[allow(clippy::single_match)]
+                //Clippy is technically correct here but this match statement needs more arms to be feature complete
                 match o.context_name.as_ref() as &str {
                     "userId" => {
                         if let Some(val) = &context.user_id {
@@ -197,7 +200,7 @@ fn check_for_variant_override(variants: &Vec<Variant>, context: &InnerContext) -
     None
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub struct VariantDef {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -276,7 +279,7 @@ mod test {
     #[test_case("15-global-constraints.json"; "Segments")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
-        let mut engine = EngineState::new();
+        let mut engine = EngineState::default();
         engine.take_state(spec.state);
 
         if let Some(mut tests) = spec.tests {

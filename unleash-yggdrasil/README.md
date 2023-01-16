@@ -8,7 +8,7 @@ The heart of Yggdrasil is the `EngineState` struct, this is a lightweight struct
 
 ``` rust
 
-let engine = EngineState::new();
+let engine = EngineState::default();
 
 ```
 
