@@ -2,6 +2,8 @@
 edition = "2021"
 name = "unleash-yggdrasil"
 version = "0.1.0"
+description = "This is the Unleash SDK domain logic extracted into a library to facilitate building your own Unleash SDKs in anything, anywhere."
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
