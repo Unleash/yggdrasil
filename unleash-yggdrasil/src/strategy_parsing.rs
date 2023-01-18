@@ -688,9 +688,13 @@ mod tests {
     }
 
     //This needs to be swapped out for an arbitrary string test
-    #[test]
-    fn dashes_are_valid_characters() {
-        let rule_text = "app_name not_in [\"web\", \"sun-app\"]";
+    #[test_case("app_name not_in [\"Ær dette en helt ålreit string før eller siden fo Østhus\"]" ; "Norwegian characters")]
+    #[test_case("app_name not_in [\"Ελληνικά\"]" ; "Greek characters")]
+    #[test_case("app_name not_in [\"おはようございます\"]" ; "Japanese characters")]
+    #[test_case("app_name not_in [\"😃💁\"]"; "Teenager characters" )]
+    #[test_case("app_name not_in [\".&-/\"]"; "Limited punctuation characters" )]
+    fn arbitrary_unicode_is_handled(input: &str) {
+        let rule_text = input;
         let rule = compile_rule(rule_text).unwrap();
 
         assert_eq!(rule(&Context::default()), true);
