@@ -5,7 +5,7 @@ use std::io::Cursor;
 use std::num::ParseFloatError;
 
 use crate::sendable_closures::{SendableContextResolver, SendableFragment};
-use crate::InnerContext as Context;
+use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
 use murmur3::murmur3_32;
 use pest::error::Error;
@@ -302,14 +302,15 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
                 }
                 custom_stickiness
             }
-            None => context.user_id.clone().or_else(||context.session_id.clone()),
+            None => context
+                .user_id
+                .clone()
+                .or_else(|| context.session_id.clone()),
         };
 
         let group_id = match &group_id {
             Some(group_id) => group_id.clone(),
-            None => {
-                "".to_string() //Need to find a way to resolve the toggle name here
-            }
+            None => context.toggle_name.clone(),
         };
 
         let hash = if let Some(stickiness) = stickiness {
@@ -384,9 +385,7 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
 }
 
 fn harvest_set(node: Pairs<Rule>) -> HashSet<String> {
-    node.into_iter()
-        .map(string)
-        .collect::<HashSet<String>>()
+    node.into_iter().map(string).collect::<HashSet<String>>()
 }
 
 fn harvest_string_list(node: Pairs<Rule>) -> Vec<String> {
@@ -497,6 +496,25 @@ mod tests {
             environment: None,
             app_name: None,
             remote_address: None,
+            toggle_name: "".into(),
+        }
+    }
+
+    // This needs the toggle name for it to actually be useful for the parsing engine so it makes no sense
+    // to have a default implementation exposed in the library but it does make testing a lot easier for this
+    // test module
+    impl Default for Context {
+        fn default() -> Self {
+            Self {
+                user_id: Default::default(),
+                session_id: Default::default(),
+                environment: Default::default(),
+                app_name: Default::default(),
+                current_time: Default::default(),
+                remote_address: Default::default(),
+                properties: Default::default(),
+                toggle_name: Default::default(),
+            }
         }
     }
 
@@ -633,6 +651,7 @@ mod tests {
             environment: None,
             app_name: None,
             remote_address: None,
+            toggle_name: "".into(),
         };
 
         let rule = compile_rule(rule).expect("");

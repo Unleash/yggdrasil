@@ -11,7 +11,7 @@ pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
 use serde::{de, Deserialize, Serialize};
-use state::InnerContext;
+use {state::InnerContext, state::EnrichedContext};
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::upgrade;
 use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
@@ -94,9 +94,12 @@ impl EngineState {
     }
 
     fn enabled(&self, toggle: Option<&CompiledToggle>, context: &InnerContext) -> bool {
-        toggle
-            .map(|toggle| toggle.enabled && (toggle.compiled_strategy)(context))
-            .unwrap_or(false)
+        if let Some(toggle) = toggle {
+            let context = context.with_toggle_name(toggle.name.clone());
+            toggle.enabled && (toggle.compiled_strategy)(&context)
+        } else {
+            false
+        }
     }
 
     pub fn is_enabled(&self, name: String, context: &InnerContext) -> bool {

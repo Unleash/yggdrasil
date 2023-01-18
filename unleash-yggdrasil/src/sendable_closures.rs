@@ -3,7 +3,7 @@
 // compiler happy. But they're ugly. So they're getting a home
 // here so they're out of sight. Thankfully they should never change
 
-use crate::InnerContext as Context;
+use crate::EnrichedContext as Context;
 
 pub trait SendableContextResolver: Fn(&Context) -> Option<String> {
     fn clone_boxed(&self) -> Box<dyn SendableContextResolver + Send + Sync + 'static>;
