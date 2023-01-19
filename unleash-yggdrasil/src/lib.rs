@@ -139,7 +139,7 @@ impl EngineState {
                                     .or_else(|| context.session_id.clone())
                             })
                             .map(|stickiness| {
-                                normalized_hash(&toggle.name, &stickiness, total_weight as u32)
+                                normalized_hash(&toggle.name, &stickiness, total_weight)
                                     .unwrap()
                             })
                             .unwrap_or_else(|| rand::thread_rng().gen_range(0..99) as u32),
