@@ -5,16 +5,19 @@ extern crate lazy_static;
 #[macro_use]
 extern crate pest_derive;
 
+mod error;
 mod sendable_closures;
 pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
+use error::YggdrasilError;
+use rand::Rng;
 use serde::{de, Deserialize, Serialize};
-use {state::InnerContext, state::EnrichedContext};
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::upgrade;
 use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
+use {state::EnrichedContext, state::InnerContext};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
@@ -125,15 +128,27 @@ impl EngineState {
                             enabled: true,
                         };
                     }
-                    let total_weight: i32 = variants.iter().map(|var| var.weight).sum();
+                    let total_weight: u32 = variants.iter().map(|var| var.weight as u32).sum();
 
-                    let stickiness = get_variant_stickiness(variants, context).unwrap();
-                    let target = normalized_hash(&toggle.name, &stickiness, total_weight as u32)
-                        .unwrap() as i32;
+                    let target = match get_custom_stickiness(variants, context) {
+                        Ok(stickiness) => stickiness
+                            .or_else(|| {
+                                context
+                                    .user_id
+                                    .clone()
+                                    .or_else(|| context.session_id.clone())
+                            })
+                            .map(|stickiness| {
+                                normalized_hash(&toggle.name, &stickiness, total_weight as u32)
+                                    .unwrap()
+                            })
+                            .unwrap_or_else(|| rand::thread_rng().gen_range(0..99) as u32),
+                        Err(_) => return VariantDef::default(),
+                    };
 
                     let mut total_weight = 0;
                     for variant in variants {
-                        total_weight += variant.weight;
+                        total_weight += variant.weight as u32;
                         if total_weight > target {
                             return VariantDef {
                                 name: variant.name.clone(),
@@ -155,13 +170,16 @@ impl EngineState {
     }
 }
 
-fn get_variant_stickiness(variants: &[Variant], context: &InnerContext) -> Option<String> {
+fn get_custom_stickiness(
+    variants: &[Variant],
+    context: &InnerContext,
+) -> Result<Option<String>, YggdrasilError> {
     let custom_stickiness = variants
         .get(0)
         .and_then(|variant| variant.stickiness.clone());
 
     if let Some(custom_stickiness) = custom_stickiness {
-        match custom_stickiness.as_str() {
+        let stickiness = match custom_stickiness.as_str() {
             "userId" => context.user_id.clone(),
             "sessionId" => context.session_id.clone(),
             "environment" => context.environment.clone(),
@@ -172,12 +190,14 @@ fn get_variant_stickiness(variants: &[Variant], context: &InnerContext) -> Optio
                 .as_ref()
                 .and_then(|props| props.get(&custom_stickiness))
                 .cloned(),
+        };
+        if stickiness.is_none() {
+            Err(YggdrasilError::StickinessExpectedButNotFound)
+        } else {
+            Ok(stickiness)
         }
     } else {
-        context
-            .user_id
-            .clone()
-            .or_else(|| context.session_id.clone())
+        Ok(None)
     }
 }
 
@@ -224,11 +244,11 @@ impl Default for VariantDef {
 #[cfg(test)]
 mod test {
     use serde::Deserialize;
-    use std::fs;
+    use std::{collections::HashMap, fs};
     use test_case::test_case;
-    use unleash_types::client_features::ClientFeatures;
+    use unleash_types::client_features::{ClientFeatures, Variant, WeightType};
 
-    use crate::{EngineState, InnerContext, VariantDef};
+    use crate::{CompiledToggle, EngineState, InnerContext, VariantDef};
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
 
@@ -312,5 +332,32 @@ mod test {
                 assert_eq!(expected, actual);
             }
         }
+    }
+
+    #[test]
+    pub fn stickiness_for_variants_falls_back_to_random_if_no_context_property_present() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "cool-animals".to_string(),
+            CompiledToggle {
+                name: "cool-animals".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: Some(vec![Variant {
+                    name: "iguana".into(),
+                    weight: 100,
+                    weight_type: Some(WeightType::Fix),
+                    stickiness: Some("userId".into()),
+                    payload: None,
+                    overrides: None,
+                }]),
+            },
+        );
+        let state = EngineState {
+            compiled_state: Some(compiled_state),
+        };
+        let context = InnerContext::default();
+
+        state.get_variant("cool-animals".into(), &context);
     }
 }
