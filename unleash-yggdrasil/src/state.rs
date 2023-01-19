@@ -15,6 +15,32 @@ pub struct InnerContext {
     pub properties: Option<HashMap<String, String>>,
 }
 
+pub struct EnrichedContext {
+    pub user_id: Option<String>,
+    pub session_id: Option<String>,
+    pub environment: Option<String>,
+    pub app_name: Option<String>,
+    pub current_time: Option<String>,
+    pub remote_address: Option<String>,
+    pub properties: Option<HashMap<String, String>>,
+    pub(crate) toggle_name: String,
+}
+
+impl InnerContext {
+    pub fn with_toggle_name(&self, toggle_name: String) -> EnrichedContext {
+        EnrichedContext {
+            user_id: self.user_id.clone(),
+            session_id: self.session_id.clone(),
+            environment: self.environment.clone(),
+            app_name: self.app_name.clone(),
+            current_time: self.current_time.clone(),
+            remote_address: self.remote_address.clone(),
+            properties: self.properties.clone(),
+            toggle_name,
+        }
+    }
+}
+
 // I know this looks silly but it's also important for two reasons:
 // The first is that the client spec tests have a test case that has a context defined like:
 // {
