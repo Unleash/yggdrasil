@@ -22,22 +22,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: ⚡ Cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.rustup
-            target
-          key: debug-${{ runner.os }}-stable
-          restore-keys: |
-            debug-${{ runner.os }}-
       - name: Install rust
         run: |
-          rustup install stable
-          rustup default stable
+          rustup set auto-self-update disable
+          rustup toolchain install stable --profile default
           rustup show
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
       - name: Install required cargo packages for reporting format
         run: cargo install clippy-sarif sarif-fmt
       - name: Run rust-clippy
