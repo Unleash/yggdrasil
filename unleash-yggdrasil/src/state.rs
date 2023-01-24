@@ -21,8 +21,8 @@ impl EnrichedContext {
             app_name: context.app_name.clone(),
             current_time: context.current_time.clone(),
             remote_address: context.remote_address.clone(),
-            properties: context.properties.clone(),
-            toggle_name: toggle_name,
+            properties: context.properties,
+            toggle_name,
         }
     }
 }
