@@ -1,6 +1,7 @@
 mod utils;
 
-use unleash_yggdrasil::{state::InnerContext, EngineState};
+use unleash_types::client_features::Context as InnerContext;
+use unleash_yggdrasil::EngineState;
 
 use unleash_types::client_features::ClientFeatures;
 use wasm_bindgen::prelude::*;
