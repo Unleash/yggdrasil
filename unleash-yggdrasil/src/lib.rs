@@ -14,10 +14,11 @@ pub mod strategy_upgrade;
 use error::YggdrasilError;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
+use state::EnrichedContext;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::upgrade;
 use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
-use {state::EnrichedContext, state::InnerContext};
+pub use unleash_types::client_features::Context;
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
@@ -96,16 +97,16 @@ impl EngineState {
         }
     }
 
-    fn enabled(&self, toggle: Option<&CompiledToggle>, context: &InnerContext) -> bool {
+    fn enabled(&self, toggle: Option<&CompiledToggle>, context: &Context) -> bool {
         if let Some(toggle) = toggle {
-            let context = context.with_toggle_name(toggle.name.clone());
+            let context = EnrichedContext::from(context.clone(), toggle.name.clone());
             toggle.enabled && (toggle.compiled_strategy)(&context)
         } else {
             false
         }
     }
 
-    pub fn is_enabled(&self, name: String, context: &InnerContext) -> bool {
+    pub fn is_enabled(&self, name: String, context: &Context) -> bool {
         match &self.compiled_state {
             Some(_) => {
                 let toggle = self.get_toggle(name);
@@ -115,7 +116,7 @@ impl EngineState {
         }
     }
 
-    pub fn get_variant(&self, name: String, context: &InnerContext) -> VariantDef {
+    pub fn get_variant(&self, name: String, context: &Context) -> VariantDef {
         let toggle = self.get_toggle(name);
         let enabled = self.enabled(toggle, context);
         match (toggle, enabled) {
@@ -139,8 +140,7 @@ impl EngineState {
                                     .or_else(|| context.session_id.clone())
                             })
                             .map(|stickiness| {
-                                normalized_hash(&toggle.name, &stickiness, total_weight)
-                                    .unwrap()
+                                normalized_hash(&toggle.name, &stickiness, total_weight).unwrap()
                             })
                             .unwrap_or_else(|| rand::thread_rng().gen_range(0..99) as u32),
                         Err(_) => return VariantDef::default(),
@@ -172,7 +172,7 @@ impl EngineState {
 
 fn get_custom_stickiness(
     variants: &[Variant],
-    context: &InnerContext,
+    context: &Context,
 ) -> Result<Option<String>, YggdrasilError> {
     let custom_stickiness = variants
         .get(0)
@@ -201,7 +201,7 @@ fn get_custom_stickiness(
     }
 }
 
-fn check_for_variant_override(variants: &Vec<Variant>, context: &InnerContext) -> Option<Variant> {
+fn check_for_variant_override(variants: &Vec<Variant>, context: &Context) -> Option<Variant> {
     for variant in variants {
         if let Some(overrides) = &variant.overrides {
             for o in overrides {
@@ -248,7 +248,7 @@ mod test {
     use test_case::test_case;
     use unleash_types::client_features::{ClientFeatures, Variant, WeightType};
 
-    use crate::{CompiledToggle, EngineState, InnerContext, VariantDef};
+    use crate::{CompiledToggle, Context, EngineState, VariantDef};
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
 
@@ -264,7 +264,7 @@ mod test {
     #[serde(rename_all = "camelCase")]
     pub(crate) struct TestCase {
         pub(crate) description: String,
-        pub(crate) context: InnerContext,
+        pub(crate) context: Context,
         pub(crate) toggle_name: String,
         pub(crate) expected_result: bool,
     }
@@ -273,7 +273,7 @@ mod test {
     #[serde(rename_all = "camelCase")]
     pub(crate) struct VariantTestCase {
         pub(crate) description: String,
-        pub(crate) context: InnerContext,
+        pub(crate) context: Context,
         pub(crate) toggle_name: String,
         pub(crate) expected_result: VariantDef,
     }
@@ -356,7 +356,7 @@ mod test {
         let state = EngineState {
             compiled_state: Some(compiled_state),
         };
-        let context = InnerContext::default();
+        let context = Context::default();
 
         state.get_variant("cool-animals".into(), &context);
     }

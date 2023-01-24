@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -45,12 +46,12 @@ public class UnleashEngineTest {
         }
     }
 
-    public List<String> getAllSpecs() throws Exception {
-        try (FileInputStream inputStream = new FileInputStream("../")) {
-            InputStreamReader reader = new InputStreamReader(inputStream);
-            
-        }
-    }
+    // public List<String> getAllSpecs() throws Exception {
+    //     try (FileInputStream inputStream = new FileInputStream("../")) {
+    //         InputStreamReader reader = new InputStreamReader(inputStream);
+
+    //     }
+    // }
 
     public SpecDefinition getSpec(String fileName) throws Exception {
         try (FileInputStream inputStream = new FileInputStream(

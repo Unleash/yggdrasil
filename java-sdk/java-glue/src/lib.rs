@@ -4,8 +4,9 @@ use jni::{
     JNIEnv,
 };
 
-use unleash_yggdrasil::{state::InnerContext, EngineState};
 use unleash_types::client_features::ClientFeatures;
+use unleash_types::client_features::Context;
+use unleash_yggdrasil::EngineState;
 
 #[no_mangle]
 pub extern "system" fn Java_io_getunleash_javasdk_UnleashEngine_createEngine(
@@ -59,7 +60,7 @@ pub extern "system" fn Java_io_getunleash_javasdk_UnleashEngine_enabled(
         .into();
 
     let context = env.get_string(context).ok().map(|context| {
-        serde_json::from_str::<InnerContext>(
+        serde_json::from_str::<Context>(
             context.to_str().expect("Could not get context from Java"),
         )
         .expect("Cannot deserialize context")

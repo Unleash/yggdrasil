@@ -1,8 +1,8 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use pyo3::prelude::*;
-use unleash_yggdrasil::{state::InnerContext, EngineState, VariantDef};
-
+use unleash_types::client_features::Context as InnerContext;
+use unleash_yggdrasil::{EngineState, VariantDef};
 
 #[pyclass]
 struct UnleashEngine {
