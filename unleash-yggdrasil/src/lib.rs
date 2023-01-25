@@ -17,10 +17,12 @@ use serde::{de, Deserialize, Serialize};
 use state::EnrichedContext;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::upgrade;
-use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
 pub use unleash_types::client_features::Context;
+use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
+
+pub const SUPPORTED_SPEC_VERSION: &str = "4.2.2";
 
 pub struct CompiledToggle {
     pub name: String,
