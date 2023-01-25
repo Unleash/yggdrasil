@@ -17,8 +17,8 @@ use serde::{de, Deserialize, Serialize};
 use state::EnrichedContext;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::upgrade;
-use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
 pub use unleash_types::client_features::Context;
+use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
@@ -79,17 +79,12 @@ impl<'de> de::Deserialize<'de> for IPAddress {
     }
 }
 
+#[derive(Default)]
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
 }
 
 impl EngineState {
-    pub fn default() -> EngineState {
-        EngineState {
-            compiled_state: None,
-        }
-    }
-
     fn get_toggle(&self, name: String) -> Option<&CompiledToggle> {
         match &self.compiled_state {
             Some(state) => state.get(&name),
