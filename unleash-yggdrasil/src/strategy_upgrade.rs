@@ -99,7 +99,14 @@ fn upgrade_flexible_rollout_strategy(strategy: &Strategy) -> String {
 
 fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
     match strategy.get_param("userIds") {
-        Some(user_ids) => format!("user_id in [{}]", user_ids),
+        Some(user_ids) => {
+            let user_ids = user_ids
+                .split(',')
+                .map(|id| format!("\"{}\"", id.trim()))
+                .collect::<Vec<String>>()
+                .join(",");
+            format!("user_id in [{}]", user_ids)
+        }
         None => "".into(),
     }
 }
@@ -291,7 +298,7 @@ mod tests {
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
-        assert_eq!(output, "user_id in [123, 222, 88]".to_string())
+        assert_eq!(output, "user_id in [\"123\",\"222\",\"88\"]".to_string())
     }
 
     #[test]
@@ -308,7 +315,7 @@ mod tests {
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
-        assert_eq!(output, "user_id in [123, 222, 88]".to_string())
+        assert_eq!(output, "user_id in [\"123\",\"222\",\"88\"]".to_string())
     }
 
     #[test]
