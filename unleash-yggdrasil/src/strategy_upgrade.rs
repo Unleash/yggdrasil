@@ -101,7 +101,7 @@ fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
     match strategy.get_param("userIds") {
         Some(user_ids) => {
             let user_ids = user_ids
-                .split(",")
+                .split(',')
                 .map(|id| format!("\"{}\"", id.trim()))
                 .collect::<Vec<String>>()
                 .join(",");
