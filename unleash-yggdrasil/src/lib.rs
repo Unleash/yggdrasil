@@ -22,6 +22,8 @@ use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
+pub const SUPPORTED_SPEC_VERSION: &str = "4.2.2";
+
 pub struct CompiledToggle {
     pub name: String,
     pub enabled: bool,
