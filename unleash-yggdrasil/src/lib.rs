@@ -124,6 +124,9 @@ impl EngineState {
         match (toggle, enabled) {
             (Some(toggle), true) => match toggle.variants.as_ref() {
                 Some(variants) => {
+                    if variants.is_empty() {
+                        return VariantDef::default();
+                    }
                     if let Some(found_override) = check_for_variant_override(variants, context) {
                         return VariantDef {
                             name: found_override.name,
@@ -361,5 +364,28 @@ mod test {
         let context = Context::default();
 
         state.get_variant("cool-animals".into(), &context);
+    }
+
+    #[test]
+    pub fn get_variant_resolves_to_default_variant_when_variants_is_empty() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "test".to_string(),
+            CompiledToggle {
+                name: "test".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: Some(vec![]),
+            },
+        );
+        let state = EngineState {
+            compiled_state: Some(compiled_state),
+        };
+        let context = Context::default();
+
+        assert_eq!(
+            state.get_variant("test".into(), &context),
+            VariantDef::default()
+        );
     }
 }
