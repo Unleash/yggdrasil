@@ -81,17 +81,12 @@ impl<'de> de::Deserialize<'de> for IPAddress {
     }
 }
 
+#[derive(Default)]
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
 }
 
 impl EngineState {
-    pub fn default() -> EngineState {
-        EngineState {
-            compiled_state: None,
-        }
-    }
-
     fn get_toggle(&self, name: String) -> Option<&CompiledToggle> {
         match &self.compiled_state {
             Some(state) => state.get(&name),
