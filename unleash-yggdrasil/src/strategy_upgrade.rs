@@ -68,7 +68,7 @@ fn upgrade_strategy(strategy: &Strategy, segment_map: &HashMap<i32, Segment>) ->
 
     let constraints = upgrade_constraints(raw_constraints);
     match constraints {
-        Some(constraints) => format!("({} and ({}))", strategy_rule, constraints),
+        Some(constraints) => format!("({strategy_rule} and ({constraints}))"),
         None => strategy_rule,
     }
 }
@@ -79,16 +79,16 @@ fn upgrade_flexible_rollout_strategy(strategy: &Strategy) -> String {
         Some(rollout) => {
             //should probably validate at this point that the rollout looks like a percent
 
-            let mut rule: String = format!("{}%", rollout);
+            let mut rule: String = format!("{rollout}%");
 
             if let Some(stickiness) = strategy.get_param("stickiness") {
                 if stickiness.as_str() != "default" {
-                    rule = format!("{} sticky on {}", rule, upgrade_context_name(stickiness));
+                    rule = format!("{rule} sticky on {}", upgrade_context_name(stickiness));
                 }
             }
 
             if let Some(group_id) = strategy.get_param("groupId") {
-                rule = format!("{} with group_id of \"{}\"", rule, group_id);
+                rule = format!("{rule} with group_id of \"{group_id}\"");
             }
 
             rule
@@ -105,7 +105,7 @@ fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
                 .map(|id| format!("\"{}\"", id.trim()))
                 .collect::<Vec<String>>()
                 .join(",");
-            format!("user_id in [{}]", user_ids)
+            format!("user_id in [{user_ids}]")
         }
         None => "".into(),
     }
@@ -119,10 +119,10 @@ fn upgrade_remote_address(strategy: &Strategy) -> String {
                 .collect::<Vec<&str>>()
                 .iter()
                 .map(|x| x.trim())
-                .map(|x| format!("\"{}\"", x))
+                .map(|x| format!("\"{x}\""))
                 .collect::<Vec<String>>()
                 .join(", ");
-            format!("remote_address in [{}]", ips)
+            format!("remote_address in [{ips}]")
         }
         None => "".into(),
     }
@@ -133,10 +133,7 @@ fn upgrade_session_id_rollout_strategy(strategy: &Strategy) -> String {
     let group_id = strategy.get_param("groupId");
     match (percentage, group_id) {
         (Some(percentage), Some(group_id)) => {
-            format!(
-                "{}% sticky on session_id with group_id of \"{}\"",
-                percentage, group_id
-            )
+            format!("{percentage}% sticky on session_id with group_id of \"{group_id}\"")
         }
         _ => "".into(),
     }
@@ -147,10 +144,7 @@ fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
     let group_id = strategy.get_param("groupId");
     match (percentage, group_id) {
         (Some(percentage), Some(group_id)) => {
-            format!(
-                "{}% sticky on user_id with group_id of \"{}\"",
-                percentage, group_id
-            )
+            format!("{percentage}% sticky on user_id with group_id of \"{group_id}\"")
         }
         _ => "".into(),
     }
@@ -158,7 +152,7 @@ fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
 
 fn upgrade_random(strategy: &Strategy) -> String {
     match strategy.get_param("percentage") {
-        Some(percent) => format!("random() < {}", percent),
+        Some(percent) => format!("random() < {percent}"),
         None => "".into(),
     }
 }
@@ -202,12 +196,12 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
             .map(|values| {
                 values
                     .iter()
-                    .map(|x| format!("\"{}\"", x))
+                    .map(|x| format!("\"{x}\""))
                     .collect::<Vec<String>>()
                     .join(", ")
             })
             .unwrap_or_else(|| "".to_string());
-        format!("[{}]", values)
+        format!("[{values}]")
     } else {
         if constraint.operator == Operator::SemverEq
             || constraint.operator == Operator::SemverLt
@@ -274,7 +268,7 @@ fn upgrade_context_name(context_name: &str) -> String {
         "environment" => "environment".into(),
         "appName" => "app_name".into(),
         "remoteAddress" => "remote_address".into(),
-        _ => format!("context[\"{}\"]", context_name),
+        _ => format!("context[\"{context_name}\"]"),
     }
 }
 
