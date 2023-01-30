@@ -279,7 +279,7 @@ mod test {
     }
 
     fn load_spec(spec_name: &str) -> TestSuite {
-        let spec_path = format!("{}/{}", SPEC_FOLDER, spec_name);
+        let spec_path = format!("{SPEC_FOLDER}/{spec_name}");
         let spec_data =
             fs::read_to_string(spec_path).expect("Should have been able to read the file");
         serde_json::from_str(&spec_data).expect("Failed to parse client spec")

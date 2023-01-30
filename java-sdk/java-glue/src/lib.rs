@@ -13,7 +13,7 @@ pub extern "system" fn Java_io_getunleash_javasdk_UnleashEngine_createEngine(
     _env: JNIEnv,
     _obj: JObject,
 ) -> jlong {
-    Box::into_raw(Box::new(EngineState::default())) as jlong
+    Box::into_raw(Box::<EngineState>::default()) as jlong
 }
 
 #[no_mangle]
@@ -60,10 +60,8 @@ pub extern "system" fn Java_io_getunleash_javasdk_UnleashEngine_enabled(
         .into();
 
     let context = env.get_string(context).ok().map(|context| {
-        serde_json::from_str::<Context>(
-            context.to_str().expect("Could not get context from Java"),
-        )
-        .expect("Cannot deserialize context")
+        serde_json::from_str::<Context>(context.to_str().expect("Could not get context from Java"))
+            .expect("Cannot deserialize context")
     });
 
     unsafe {
