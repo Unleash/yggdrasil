@@ -9,7 +9,7 @@ edition = "2021"
 jni = "0.19.0"
 unleash-yggdrasil = {path = "../../unleash-yggdrasil"}
 serde_json = "1.0.68"
-unleash-types = "0.7.0"
+unleash-types = "0.8.0"
 
 [lib]
 crate_type = ["cdylib"]
