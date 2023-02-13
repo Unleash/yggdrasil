@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::sync::atomic::AtomicU32;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -11,14 +12,17 @@ pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
+use chrono::{DateTime, Utc};
 use error::YggdrasilError;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
 use state::EnrichedContext;
+use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::upgrade;
 pub use unleash_types::client_features::Context;
-use unleash_types::client_features::{ClientFeatures, Payload, Segment, Variant};
+use unleash_types::client_features::{ClientFeatures, Override, Payload, Segment, Variant};
+use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
@@ -28,7 +32,47 @@ pub struct CompiledToggle {
     pub name: String,
     pub enabled: bool,
     pub compiled_strategy: RuleFragment,
-    pub variants: Option<Vec<Variant>>,
+    pub variants: Vec<CompiledVariant>,
+    pub yes: AtomicU32,
+    pub no: AtomicU32,
+    pub default_variant: AtomicU32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CompiledVariant {
+    pub name: String,
+    pub weight: i32,
+    pub stickiness: Option<String>,
+    pub payload: Option<Payload>,
+    pub overrides: Option<Vec<Override>>,
+    pub count: AtomicU32,
+}
+
+impl Default for CompiledToggle {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            enabled: Default::default(),
+            compiled_strategy: Box::new(|_| true),
+            variants: Default::default(),
+            yes: Default::default(),
+            no: Default::default(),
+            default_variant: Default::default(),
+        }
+    }
+}
+
+impl From<&Variant> for CompiledVariant {
+    fn from(value: &Variant) -> Self {
+        CompiledVariant {
+            name: value.name.clone(),
+            weight: value.weight,
+            stickiness: value.stickiness.clone(),
+            payload: value.payload.clone(),
+            overrides: value.overrides.clone(),
+            count: AtomicU32::new(0),
+        }
+    }
 }
 
 fn build_segment_map(segments: &Option<Vec<Segment>>) -> HashMap<i32, Segment> {
@@ -53,13 +97,24 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
             CompiledToggle {
                 name: toggle.name.clone(),
                 enabled: toggle.enabled,
-                variants: toggle.variants.clone(),
+                variants: compile_variants(&toggle.variants),
                 compiled_strategy: compile_rule(rule.as_str()).unwrap(),
+                yes: AtomicU32::new(0),
+                no: AtomicU32::new(0),
+                default_variant: AtomicU32::new(0),
             },
         );
     }
 
     compiled_state
+}
+
+fn compile_variants(variants: &Option<Vec<Variant>>) -> Vec<CompiledVariant> {
+    if let Some(variants) = variants {
+        variants.iter().map(CompiledVariant::from).collect()
+    } else {
+        vec![]
+    }
 }
 
 #[derive(Debug)]
@@ -81,9 +136,18 @@ impl<'de> de::Deserialize<'de> for IPAddress {
     }
 }
 
-#[derive(Default)]
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
+    pub started: DateTime<Utc>,
+}
+
+impl Default for EngineState {
+    fn default() -> Self {
+        Self {
+            compiled_state: Default::default(),
+            started: Utc::now(),
+        }
+    }
 }
 
 impl EngineState {
@@ -94,84 +158,144 @@ impl EngineState {
         }
     }
 
-    fn enabled(&self, toggle: Option<&CompiledToggle>, context: &Context) -> bool {
-        if let Some(toggle) = toggle {
-            let context = EnrichedContext::from(context.clone(), toggle.name.clone());
-            toggle.enabled && (toggle.compiled_strategy)(&context)
+    fn harvest_metrics(&mut self) -> Option<MetricBucket> {
+        if let Some(state) = &self.compiled_state {
+            let metrics: HashMap<String, ToggleStats> = state
+                .values()
+                .map(|toggle| {
+                    let yes = toggle.yes.swap(0, Ordering::Relaxed);
+                    let no = toggle.no.swap(0, Ordering::Relaxed);
+
+                    let mut variants: HashMap<String, u32> = toggle
+                        .variants
+                        .iter()
+                        .map(|variant| {
+                            (
+                                variant.name.clone(),
+                                variant.count.swap(0, Ordering::Relaxed),
+                            )
+                        })
+                        .collect();
+
+                    variants.insert(
+                        VariantDef::default().name,
+                        toggle.default_variant.swap(0, Ordering::Relaxed),
+                    );
+
+                    (toggle.name.clone(), ToggleStats { yes, no, variants })
+                })
+                .collect();
+            let timestamp = Utc::now();
+            let bucket = MetricBucket {
+                toggles: metrics,
+                start: self.started,
+                stop: timestamp,
+            };
+            self.started = timestamp;
+            Some(bucket)
         } else {
-            false
+            None
         }
     }
 
-    pub fn is_enabled(&self, name: String, context: &Context) -> bool {
-        match &self.compiled_state {
-            Some(_) => {
-                let toggle = self.get_toggle(name);
-                self.enabled(toggle, context)
-            }
-            None => false,
+    pub fn get_metrics(&mut self) -> Option<MetricBucket> {
+        self.harvest_metrics()
+    }
+
+    fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
+        let context = EnrichedContext::from(context.clone(), toggle.name.clone());
+        let is_enabled = toggle.enabled && (toggle.compiled_strategy)(&context);
+        if is_enabled {
+            toggle.yes.fetch_add(1, Ordering::Relaxed);
+        } else {
+            toggle.no.fetch_add(1, Ordering::Relaxed);
         }
+        is_enabled
+    }
+
+    pub fn is_enabled(&self, name: String, context: &Context) -> bool {
+        self.compiled_state
+            .as_ref()
+            .and_then(|_| {
+                self.get_toggle(name)
+                    .map(|toggle| self.enabled(toggle, context))
+            })
+            .unwrap_or_default()
+    }
+
+    fn resolve_variant<'a>(
+        &self,
+        toggle: &CompiledToggle,
+        variants: &'a Vec<CompiledVariant>,
+        context: &Context,
+    ) -> Option<&'a CompiledVariant> {
+        if variants.is_empty() {
+            return None;
+        }
+        if let Some(found_override) = check_for_variant_override(variants, context) {
+            return Some(found_override);
+        }
+        let total_weight: u32 = variants.iter().map(|var| var.weight as u32).sum();
+        let target = match get_custom_stickiness(variants, context) {
+            Ok(stickiness) => stickiness
+                .or_else(|| {
+                    context
+                        .user_id
+                        .clone()
+                        .or_else(|| context.session_id.clone())
+                })
+                .map(|stickiness| normalized_hash(&toggle.name, &stickiness, total_weight).unwrap())
+                .unwrap_or_else(|| rand::thread_rng().gen_range(0..99) as u32),
+            Err(_) => return None,
+        };
+
+        let mut total_weight = 0;
+        for variant in variants {
+            total_weight += variant.weight as u32;
+            if total_weight > target {
+                return Some(variant);
+            }
+        }
+        None
     }
 
     pub fn get_variant(&self, name: String, context: &Context) -> VariantDef {
         let toggle = self.get_toggle(name);
-        let enabled = self.enabled(toggle, context);
-        match (toggle, enabled) {
-            (Some(toggle), true) => match toggle.variants.as_ref() {
-                Some(variants) => {
-                    if variants.is_empty() {
-                        return VariantDef::default();
-                    }
-                    if let Some(found_override) = check_for_variant_override(variants, context) {
-                        return VariantDef {
-                            name: found_override.name,
-                            payload: found_override.payload,
-                            enabled: true,
-                        };
-                    }
-                    let total_weight: u32 = variants.iter().map(|var| var.weight as u32).sum();
 
-                    let target = match get_custom_stickiness(variants, context) {
-                        Ok(stickiness) => stickiness
-                            .or_else(|| {
-                                context
-                                    .user_id
-                                    .clone()
-                                    .or_else(|| context.session_id.clone())
-                            })
-                            .map(|stickiness| {
-                                normalized_hash(&toggle.name, &stickiness, total_weight).unwrap()
-                            })
-                            .unwrap_or_else(|| rand::thread_rng().gen_range(0..99) as u32),
-                        Err(_) => return VariantDef::default(),
-                    };
+        toggle
+            .map(|toggle| {
+                let variant = self.resolve_variant(toggle, &toggle.variants, context);
+                let enabled = self.enabled(toggle, context);
 
-                    let mut total_weight = 0;
-                    for variant in variants {
-                        total_weight += variant.weight as u32;
-                        if total_weight > target {
-                            return VariantDef {
-                                name: variant.name.clone(),
-                                payload: variant.payload.clone(),
-                                enabled: true,
-                            };
-                        }
+                if !enabled {
+                    toggle.default_variant.fetch_add(1, Ordering::Relaxed);
+                    return VariantDef::default();
+                };
+
+                if let Some(variant) = variant {
+                    variant.count.fetch_add(1, Ordering::Relaxed);
+                    VariantDef {
+                        name: variant.name.clone(),
+                        payload: variant.payload.clone(),
+                        enabled,
                     }
+                } else {
+                    toggle.default_variant.fetch_add(1, Ordering::Relaxed);
                     VariantDef::default()
                 }
-                None => VariantDef::default(),
-            },
-            _ => VariantDef::default(), //either the toggle doesn't exist or it evaluates to false
-        }
+            })
+            .unwrap_or_default()
     }
 
-    pub fn take_state(&mut self, toggles: ClientFeatures) {
+    pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<MetricBucket> {
+        let metrics = self.harvest_metrics();
         self.compiled_state = Some(compile_state(&toggles));
+        metrics
     }
 }
 
 fn get_custom_stickiness(
-    variants: &[Variant],
+    variants: &[CompiledVariant],
     context: &Context,
 ) -> Result<Option<String>, YggdrasilError> {
     let custom_stickiness = variants
@@ -201,7 +325,10 @@ fn get_custom_stickiness(
     }
 }
 
-fn check_for_variant_override(variants: &Vec<Variant>, context: &Context) -> Option<Variant> {
+fn check_for_variant_override<'a>(
+    variants: &'a Vec<CompiledVariant>,
+    context: &Context,
+) -> Option<&'a CompiledVariant> {
     for variant in variants {
         if let Some(overrides) = &variant.overrides {
             for o in overrides {
@@ -211,7 +338,7 @@ fn check_for_variant_override(variants: &Vec<Variant>, context: &Context) -> Opt
                     "userId" => {
                         if let Some(val) = &context.user_id {
                             if o.values.contains(val) {
-                                return Some(variant.clone());
+                                return Some(variant);
                             }
                         }
                     } //TODO: This needs to handle all the variant override cases... also... why aren't the spec tests failing this?
@@ -244,11 +371,11 @@ impl Default for VariantDef {
 #[cfg(test)]
 mod test {
     use serde::Deserialize;
-    use std::{collections::HashMap, fs};
+    use std::{collections::HashMap, fs, sync::atomic::AtomicU32};
     use test_case::test_case;
-    use unleash_types::client_features::{ClientFeatures, Variant, WeightType};
+    use unleash_types::client_features::ClientFeatures;
 
-    use crate::{CompiledToggle, Context, EngineState, VariantDef};
+    use crate::{CompiledToggle, CompiledVariant, Context, EngineState, VariantDef};
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
 
@@ -342,19 +469,20 @@ mod test {
             CompiledToggle {
                 name: "cool-animals".into(),
                 enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                variants: Some(vec![Variant {
+                variants: vec![CompiledVariant {
                     name: "iguana".into(),
                     weight: 100,
-                    weight_type: Some(WeightType::Fix),
                     stickiness: Some("userId".into()),
                     payload: None,
                     overrides: None,
-                }]),
+                    count: AtomicU32::new(0),
+                }],
+                ..CompiledToggle::default()
             },
         );
         let state = EngineState {
             compiled_state: Some(compiled_state),
+            ..Default::default()
         };
         let context = Context::default();
 
@@ -370,11 +498,13 @@ mod test {
                 name: "test".into(),
                 enabled: true,
                 compiled_strategy: Box::new(|_| true),
-                variants: Some(vec![]),
+                variants: vec![],
+                ..CompiledToggle::default()
             },
         );
         let state = EngineState {
             compiled_state: Some(compiled_state),
+            ..Default::default()
         };
         let context = Context::default();
 
@@ -382,5 +512,137 @@ mod test {
             state.get_variant("test".into(), &context),
             VariantDef::default()
         );
+    }
+
+    #[test]
+    pub fn checking_a_toggle_also_increments_metrics() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|context| context.user_id == Some("7".into())),
+                variants: vec![],
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+        let context_with_user_id_of_7 = Context {
+            user_id: Some("7".into()),
+            ..Context::default()
+        };
+
+        let blank_context = Context::default();
+
+        state.is_enabled("some-toggle".into(), &context_with_user_id_of_7);
+        state.is_enabled("some-toggle".into(), &context_with_user_id_of_7);
+
+        //No user id, no enabled state, this should increment the "no" metric
+        state.is_enabled("some-toggle".into(), &blank_context);
+
+        let metrics = state.get_metrics().unwrap();
+        assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 2);
+        assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
+    }
+
+    #[test]
+    pub fn checking_a_variant_also_increments_metrics_including_toggle_metrics() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|context| context.user_id == Some("7".into())),
+                variants: vec![CompiledVariant {
+                    name: "test-variant".into(),
+                    weight: 100,
+                    stickiness: None,
+                    payload: None,
+                    overrides: None,
+                    count: AtomicU32::new(0),
+                }],
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+        let context_with_user_id_of_7 = Context {
+            user_id: Some("7".into()),
+            ..Context::default()
+        };
+
+        state.get_variant("some-toggle".into(), &blank_context);
+        state.get_variant("some-toggle".into(), &context_with_user_id_of_7);
+
+        let metrics = state.get_metrics().unwrap();
+        let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
+
+        let variant_metric = metrics
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .variants
+            .get("test-variant")
+            .unwrap();
+
+        let disabled_variant_metric = metrics
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .variants
+            .get("disabled")
+            .unwrap();
+
+        assert_eq!(variant_metric, &1);
+        assert_eq!(disabled_variant_metric, &1);
+        assert_eq!(toggle_metric.yes, 1);
+
+        assert_eq!(toggle_metric.no, 1);
+    }
+
+    #[test]
+    pub fn take_state_yields_unhandled_metrics() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+
+        state.is_enabled("some-toggle".into(), &blank_context);
+
+        let metrics = state
+            .take_state(ClientFeatures {
+                version: 2,
+                features: vec![],
+                segments: None,
+                query: None,
+            })
+            .unwrap();
+        let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
+
+        assert_eq!(toggle_metric.yes, 1);
     }
 }

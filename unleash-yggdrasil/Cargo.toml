@@ -17,7 +17,7 @@ pest_derive = "2.0"
 lazy_static = "1.4.0"
 semver = "1.0.5"
 convert_case = "0.6.0"
-unleash-types = "0.8.2"
+unleash-types = {path="../../unleash-types"}
 chrono = "0.4.23"
 
 [dependencies.serde]
