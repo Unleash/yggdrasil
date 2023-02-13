@@ -94,7 +94,7 @@ impl UnleashEngine {
 
     pub fn take_state(&mut self, state: String) {
         let toggles = serde_json::from_str(&state).expect("Failed to parse client spec");
-        self.engine_state.take_state(toggles)
+        self.engine_state.take_state(toggles);
     }
 
     pub fn is_enabled(&self, name: String, context: &Context) -> bool {
