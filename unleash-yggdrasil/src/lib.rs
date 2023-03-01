@@ -213,6 +213,15 @@ impl EngineState {
         is_enabled
     }
 
+    pub fn resolve_all(&self, context: &Context) -> Option<HashMap<String, bool>> {
+        self.compiled_state.as_ref().map(|state| {
+            state
+                .iter()
+                .map(|(name, toggle)| (name.clone(), self.enabled(toggle, context)))
+                .collect()
+        })
+    }
+
     pub fn is_enabled(&self, name: String, context: &Context) -> bool {
         self.compiled_state
             .as_ref()
@@ -644,5 +653,40 @@ mod test {
         let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
 
         assert_eq!(toggle_metric.yes, 1);
+    }
+
+    #[test]
+    fn resolves_all_toggles() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        compiled_state.insert(
+            "some-toggle-other".to_string(),
+            CompiledToggle {
+                name: "some-toggle-other".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+
+        let state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+        let toggles = state.resolve_all(&blank_context).unwrap();
+
+        assert_eq!(toggles.len(), 2);
     }
 }
