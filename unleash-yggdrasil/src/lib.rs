@@ -160,6 +160,7 @@ impl Default for EngineState {
 pub struct ResolvedToggle {
     pub enabled: bool,
     pub impression_data: bool,
+    pub project: String,
     pub variant: VariantDef,
 }
 
@@ -237,6 +238,7 @@ impl EngineState {
                             enabled: self.enabled(toggle, context),
                             impression_data: toggle.impression_data,
                             variant: self.get_variant(name, context),
+                            project: toggle.project.clone(),
                         },
                     )
                 })
