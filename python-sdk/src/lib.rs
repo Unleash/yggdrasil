@@ -99,12 +99,12 @@ impl UnleashEngine {
 
     pub fn is_enabled(&self, name: String, context: &Context) -> bool {
         let context = context.into();
-        self.engine_state.is_enabled(name, &context)
+        self.engine_state.is_enabled(&name, &context)
     }
 
     pub fn get_variant(&self, name: String, context: &Context) -> Variant {
         let context = context.into();
-        self.engine_state.get_variant(name, &context).into()
+        self.engine_state.get_variant(&name, &context).into()
     }
 }
 

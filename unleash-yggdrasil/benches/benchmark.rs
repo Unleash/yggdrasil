@@ -4,7 +4,7 @@ use unleash_types::client_features::{
 };
 use unleash_yggdrasil::{Context, EngineState};
 
-fn is_enabled(engine: &EngineState, toggle_name: String, context: &Context) {
+fn is_enabled(engine: &EngineState, toggle_name: &str, context: &Context) {
     engine.is_enabled(toggle_name, context);
 }
 
@@ -30,7 +30,7 @@ fn benchmark_with_no_strategy(c: &mut Criterion) {
         properties: None,
     };
     c.bench_function("basic evaluation with no strategies", |b| {
-        b.iter(|| is_enabled(&engine, black_box("test".to_string()), black_box(&context)))
+        b.iter(|| is_enabled(&engine, black_box("test"), black_box(&context)))
     });
 }
 
@@ -70,7 +70,7 @@ fn benchmark_with_single_constraint(c: &mut Criterion) {
         properties: None,
     };
     c.bench_function("basic evaluation with one strategy", |b| {
-        b.iter(|| is_enabled(&engine, black_box("test".to_string()), black_box(&context)))
+        b.iter(|| is_enabled(&engine, black_box("test"), black_box(&context)))
     });
 }
 
@@ -120,7 +120,7 @@ fn benchmark_with_two_constraints(c: &mut Criterion) {
         properties: None,
     };
     c.bench_function("basic evaluation with two strategies", |b| {
-        b.iter(|| is_enabled(&engine, black_box("test".to_string()), black_box(&context)))
+        b.iter(|| is_enabled(&engine, black_box("test"), black_box(&context)))
     });
 }
 

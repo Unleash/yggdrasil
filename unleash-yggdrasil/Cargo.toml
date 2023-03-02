@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "unleash-yggdrasil"
-version = "0.4.5"
+version = "0.5.0"
 description = "This is the Unleash SDK domain logic extracted into a library to facilitate building your own Unleash SDKs in anything, anywhere."
 license = "MIT"
 

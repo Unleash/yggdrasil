@@ -36,6 +36,8 @@ pub struct CompiledToggle {
     pub yes: AtomicU32,
     pub no: AtomicU32,
     pub default_variant: AtomicU32,
+    pub impression_data: bool,
+    pub project: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -58,6 +60,8 @@ impl Default for CompiledToggle {
             yes: Default::default(),
             no: Default::default(),
             default_variant: Default::default(),
+            impression_data: false,
+            project: "default".to_string(),
         }
     }
 }
@@ -102,6 +106,8 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
                 yes: AtomicU32::new(0),
                 no: AtomicU32::new(0),
                 default_variant: AtomicU32::new(0),
+                impression_data: toggle.impression_data.unwrap_or_default(),
+                project: toggle.project.clone().unwrap_or("default".to_string()),
             },
         );
     }
@@ -150,10 +156,17 @@ impl Default for EngineState {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct ResolvedToggle {
+    pub enabled: bool,
+    pub impression_data: bool,
+    pub variant: VariantDef,
+}
+
 impl EngineState {
-    fn get_toggle(&self, name: String) -> Option<&CompiledToggle> {
+    fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
         match &self.compiled_state {
-            Some(state) => state.get(&name),
+            Some(state) => state.get(name),
             None => None,
         }
     }
@@ -213,7 +226,25 @@ impl EngineState {
         is_enabled
     }
 
-    pub fn is_enabled(&self, name: String, context: &Context) -> bool {
+    pub fn resolve_all(&self, context: &Context) -> Option<HashMap<String, ResolvedToggle>> {
+        self.compiled_state.as_ref().map(|state| {
+            state
+                .iter()
+                .map(|(name, toggle)| {
+                    (
+                        name.clone(),
+                        ResolvedToggle {
+                            enabled: self.enabled(toggle, context),
+                            impression_data: toggle.impression_data,
+                            variant: self.get_variant(name, context),
+                        },
+                    )
+                })
+                .collect()
+        })
+    }
+
+    pub fn is_enabled(&self, name: &str, context: &Context) -> bool {
         self.compiled_state
             .as_ref()
             .and_then(|_| {
@@ -259,7 +290,7 @@ impl EngineState {
         None
     }
 
-    pub fn get_variant(&self, name: String, context: &Context) -> VariantDef {
+    pub fn get_variant(&self, name: &str, context: &Context) -> VariantDef {
         let toggle = self.get_toggle(name);
 
         toggle
@@ -350,7 +381,7 @@ fn check_for_variant_override<'a>(
     None
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct VariantDef {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -439,7 +470,7 @@ mod test {
                     &test_case.description, &test_case.toggle_name, &test_case.context
                 );
                 let expected = test_case.expected_result;
-                let actual = engine.is_enabled(test_case.toggle_name, &test_case.context);
+                let actual = engine.is_enabled(&test_case.toggle_name, &test_case.context);
                 if expected != actual {
                     panic!(
                         "Test case: '{}' does not match. Expected: {}, actual: {}",
@@ -455,7 +486,7 @@ mod test {
                     &test_case.description, &test_case.toggle_name, &test_case.context
                 );
                 let expected = test_case.expected_result;
-                let actual = engine.get_variant(test_case.toggle_name, &test_case.context);
+                let actual = engine.get_variant(&test_case.toggle_name, &test_case.context);
                 assert_eq!(expected, actual);
             }
         }
@@ -644,5 +675,56 @@ mod test {
         let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
 
         assert_eq!(toggle_metric.yes, 1);
+    }
+
+    #[test]
+    fn resolves_all_toggles() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![CompiledVariant {
+                    name: "test-variant".into(),
+                    weight: 100,
+                    stickiness: None,
+                    payload: None,
+                    overrides: None,
+                    count: AtomicU32::new(0),
+                }],
+                ..CompiledToggle::default()
+            },
+        );
+
+        compiled_state.insert(
+            "some-toggle-other".to_string(),
+            CompiledToggle {
+                name: "some-toggle-other".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+        let toggles = state.resolve_all(&blank_context).unwrap();
+        let resolved_variant = toggles.get("some-toggle").unwrap().variant.name.clone();
+        let unresolved_variant = toggles
+            .get("some-toggle-other")
+            .unwrap()
+            .variant
+            .name
+            .clone();
+
+        assert_eq!(resolved_variant, "test-variant".to_string());
+        assert_eq!(unresolved_variant, "disabled".to_string());
+        assert_eq!(toggles.len(), 2);
     }
 }

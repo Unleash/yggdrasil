@@ -67,6 +67,6 @@ pub extern "system" fn Java_io_getunleash_javasdk_UnleashEngine_enabled(
     unsafe {
         let engine = &*(ptr as *mut EngineState);
 
-        engine.is_enabled(toggle_name, &context.expect("This should work but doesn't")) as jboolean
+        engine.is_enabled(&toggle_name, &context.expect("This should work but doesn't")) as jboolean
     }
 }
