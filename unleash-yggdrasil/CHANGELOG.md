@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v0.5.2 (2023-03-02)
 
+<csr-id-66bf3d804482c0def165f2ebe282ac72c8917c57/>
+<csr-id-1e4681329b1ca5436966c22c0e892b7a024496b9/>
+<csr-id-d996bcb37c9e0571ccc32dd130408b9b655cc406/>
+<csr-id-5ec32accf621858f74fc454d4e99616eb96b7a38/>
+<csr-id-ee13f4ed2a6a1a13f70533fe568400bd2411742e/>
+<csr-id-36e55c6ce33f0710e7f41f72dab86e01ddff6707/>
+<csr-id-083f83994e44840647e6615164ebd17d781fd236/>
+<csr-id-e1619d527175c197ff36bdaf9e57f6bbef0e17bf/>
+<csr-id-6e73b31448a39ecf1b194fb24039f7b3d6bf533c/>
+<csr-id-01d5aefc52b07c2616116518b5de68d6ac36788c/>
+<csr-id-6e9688a251cc7a5ce77eb6ceef41a9038b9ff0a4/>
+<csr-id-45787e38e529427bd8e351a3c69f38f84e98657f/>
+
 ### Chore
 
  - <csr-id-66bf3d804482c0def165f2ebe282ac72c8917c57/> bump version to 0.5.1
@@ -22,20 +35,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-6e9688a251cc7a5ce77eb6ceef41a9038b9ff0a4/> update unleash-types to 0.4.1 to deal with variant weight type response from unleash
  - <csr-id-45787e38e529427bd8e351a3c69f38f84e98657f/> bump version to 0.2.0
 
+### Chore
+
+ - <csr-id-9b015f543b914e028b54717b2c79b4c04a8f3d8c/> include changelog to prep for smart release
+
 ### New Features
+
+<csr-id-0b5437ff5e6417bf8c2886ed97aad77c3b5b698a/>
+<csr-id-d3f94be8ea473a8f3d465daa24bddbee487c8d45/>
+<csr-id-2b6f88924d8c7a6dd592ac816fd0a86fb223db37/>
+<csr-id-941bb90e5c97cd14e843f55ed946005a2de811ea/>
 
  - <csr-id-7f402c238163d83cd8329dc8c4cbd005c4182a9e/> expose project on resolved toggle
  - <csr-id-1617775d48207454bda7bc373de2bf0da7dd04cc/> add resolve all features method
    * chore: move to version 0.5.0
-   
-   * feat: adds a new function on the engine to resolve all features states currently loaded
- - <csr-id-0b5437ff5e6417bf8c2886ed97aad77c3b5b698a/> implement metrics gathering for core
- - <csr-id-d3f94be8ea473a8f3d465daa24bddbee487c8d45/> allow the engine to report the version of the Unleash client spec that it supports
- - <csr-id-2b6f88924d8c7a6dd592ac816fd0a86fb223db37/> improve sad path handling of variants
-   * fix: pass the toggle name through to the rule engine so that group id can be properly calculated
-   
-   * fix: add fallback handling for get_variant in cases where custom stickiness is defined but no context property is present for it
- - <csr-id-941bb90e5c97cd14e843f55ed946005a2de811ea/> Add unicode support for the rule parser, this should now tolerate strings that contain unicode and a subset of punctuation
+* feat: adds a new function on the engine to resolve all features states currently loaded
+* fix: pass the toggle name through to the rule engine so that group id can be properly calculated
+* fix: add fallback handling for get_variant in cases where custom stickiness is defined but no context property is present for it
 
 ### Bug Fixes
 
@@ -47,8 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 27 commits contributed to the release over the course of 44 calendar days.
- - 21 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 29 commits contributed to the release over the course of 44 calendar days.
+ - 22 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 25 unique issues were worked on: [#11](https://github.com/sighphyre/yggdrasil/issues/11), [#12](https://github.com/sighphyre/yggdrasil/issues/12), [#13](https://github.com/sighphyre/yggdrasil/issues/13), [#14](https://github.com/sighphyre/yggdrasil/issues/14), [#15](https://github.com/sighphyre/yggdrasil/issues/15), [#16](https://github.com/sighphyre/yggdrasil/issues/16), [#17](https://github.com/sighphyre/yggdrasil/issues/17), [#18](https://github.com/sighphyre/yggdrasil/issues/18), [#19](https://github.com/sighphyre/yggdrasil/issues/19), [#2](https://github.com/sighphyre/yggdrasil/issues/2), [#20](https://github.com/sighphyre/yggdrasil/issues/20), [#21](https://github.com/sighphyre/yggdrasil/issues/21), [#23](https://github.com/sighphyre/yggdrasil/issues/23), [#24](https://github.com/sighphyre/yggdrasil/issues/24), [#25](https://github.com/sighphyre/yggdrasil/issues/25), [#27](https://github.com/sighphyre/yggdrasil/issues/27), [#28](https://github.com/sighphyre/yggdrasil/issues/28), [#29](https://github.com/sighphyre/yggdrasil/issues/29), [#30](https://github.com/sighphyre/yggdrasil/issues/30), [#4](https://github.com/sighphyre/yggdrasil/issues/4), [#5](https://github.com/sighphyre/yggdrasil/issues/5), [#6](https://github.com/sighphyre/yggdrasil/issues/6), [#7](https://github.com/sighphyre/yggdrasil/issues/7), [#8](https://github.com/sighphyre/yggdrasil/issues/8), [#9](https://github.com/sighphyre/yggdrasil/issues/9)
 
 ### Commit Details
@@ -108,7 +124,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#9](https://github.com/sighphyre/yggdrasil/issues/9)**
     - Bump version to 0.2.0 ([`45787e3`](https://github.com/sighphyre/yggdrasil/commit/45787e38e529427bd8e351a3c69f38f84e98657f))
  * **Uncategorized**
+    - Include changelog to prep for smart release ([`9b015f5`](https://github.com/sighphyre/yggdrasil/commit/9b015f543b914e028b54717b2c79b4c04a8f3d8c))
+    - Release unleash-yggdrasil v0.5.2 ([`e15c4a4`](https://github.com/sighphyre/yggdrasil/commit/e15c4a46403461c4cedba6a2875ae7b8a075d4ee))
     - Add description and license to core ([`750e204`](https://github.com/sighphyre/yggdrasil/commit/750e204ed3be475580c869c1a603c0e4da6af9bd))
     - Rename sdk-core to unleash-yggdrasil in preparation for publishing ([`d798951`](https://github.com/sighphyre/yggdrasil/commit/d798951a5e34bde13974feaa8e189a5771712789))
 </details>
+
+<csr-unknown>
+ implement metrics gathering for core allow the engine to report the version of the Unleash client spec that it supports improve sad path handling of variants Add unicode support for the rule parser, this should now tolerate strings that contain unicode and a subset of punctuation<csr-unknown/>
 
