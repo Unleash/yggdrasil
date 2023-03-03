@@ -358,6 +358,24 @@ fn get_custom_stickiness(
     }
 }
 
+fn lookup_override_context<'a>(
+    variant_override: &Override,
+    context: &'a Context,
+) -> Option<&'a String> {
+    match variant_override.context_name.as_ref() as &str {
+        "userId" => context.user_id.as_ref(),
+        "sessionId" => context.session_id.as_ref(),
+        "environment" => context.environment.as_ref(),
+        "appName" => context.app_name.as_ref(),
+        "currentTime" => context.current_time.as_ref(),
+        "remoteAddress" => context.remote_address.as_ref(),
+        _ => context
+            .properties
+            .as_ref()
+            .and_then(|props| props.get(&variant_override.context_name)),
+    }
+}
+
 fn check_for_variant_override<'a>(
     variants: &'a Vec<CompiledVariant>,
     context: &Context,
@@ -365,17 +383,11 @@ fn check_for_variant_override<'a>(
     for variant in variants {
         if let Some(overrides) = &variant.overrides {
             for o in overrides {
-                #[allow(clippy::single_match)]
-                //Clippy is technically correct here but this match statement needs more arms to be feature complete
-                match o.context_name.as_ref() as &str {
-                    "userId" => {
-                        if let Some(val) = &context.user_id {
-                            if o.values.contains(val) {
-                                return Some(variant);
-                            }
-                        }
-                    } //TODO: This needs to handle all the variant override cases... also... why aren't the spec tests failing this?
-                    _ => {}
+                let context_property = lookup_override_context(o, context);
+                if let Some(context_property) = context_property {
+                    if o.values.contains(context_property) {
+                        return Some(variant);
+                    }
                 }
             }
         }
@@ -406,9 +418,12 @@ mod test {
     use serde::Deserialize;
     use std::{collections::HashMap, fs, sync::atomic::AtomicU32};
     use test_case::test_case;
-    use unleash_types::client_features::ClientFeatures;
+    use unleash_types::client_features::{ClientFeatures, Override};
 
-    use crate::{CompiledToggle, CompiledVariant, Context, EngineState, VariantDef};
+    use crate::{
+        check_for_variant_override, CompiledToggle, CompiledVariant, Context, EngineState,
+        VariantDef,
+    };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
 
@@ -728,5 +743,75 @@ mod test {
         assert_eq!(resolved_variant, "test-variant".to_string());
         assert_eq!(unresolved_variant, "disabled".to_string());
         assert_eq!(toggles.len(), 2);
+    }
+
+    // The client spec doesn't actually enforce anything except userId for variant overrides, so this is
+    // getting its own test set until the client spec can take over that responsibility
+    #[test_case("userId", "7", &["7"], true; "Basic example")]
+    #[test_case("userId", "7", &["7", "8"], true; "With multiple values")]
+    #[test_case("userId", "7", &["2", "9"], false; "Expected not to match against missing property")]
+    #[test_case("sessionId", "7", &["2", "7"], true; "Resolves against session id")]
+    #[test_case("remoteAddress", "7", &["2", "7"], true; "Resolves against remote address")]
+    #[test_case("environment", "7", &["2", "7"], true; "Resolves against environment")]
+    #[test_case("currentTime", "7", &["2", "7"], true; "Resolves against currentTime")]
+    #[test_case("appName", "7", &["2", "7"], true; "Resolves against app name")]
+    #[test_case("someArbContext", "7", &["2", "7"], true; "Resolves against arbitrary context field")]
+    fn variant_override_resolves_with_arbitrary_context_fields(
+        context_name: &str,
+        context_values: &str,
+        override_values: &[&str],
+        expected: bool,
+    ) {
+        let context = to_context(context_name, context_values);
+
+        let variants = vec![CompiledVariant {
+            name: "test".into(),
+            weight: 1000,
+            stickiness: None,
+            payload: None,
+            overrides: Some(vec![Override {
+                context_name: context_name.into(),
+                values: override_values.iter().map(|s| s.to_string()).collect(),
+            }]),
+            count: 0.into(),
+        }];
+        let result = check_for_variant_override(&variants, &context);
+        assert_eq!(result.is_some(), expected);
+    }
+
+    fn to_context(name: &str, value: &str) -> Context {
+        match name {
+            "userId" => Context {
+                user_id: Some(value.into()),
+                ..Context::default()
+            },
+            "sessionId" => Context {
+                session_id: Some(value.into()),
+                ..Context::default()
+            },
+            "environment" => Context {
+                environment: Some(value.into()),
+                ..Context::default()
+            },
+            "appName" => Context {
+                app_name: Some(value.into()),
+                ..Context::default()
+            },
+            "currentTime" => Context {
+                current_time: Some(value.into()),
+                ..Context::default()
+            },
+            "remoteAddress" => Context {
+                remote_address: Some(value.into()),
+                ..Context::default()
+            },
+            _ => {
+                let mut context = Context::default();
+                let mut props = HashMap::new();
+                props.insert(name.into(), value.into());
+                context.properties = Some(props);
+                context
+            }
+        }
     }
 }
