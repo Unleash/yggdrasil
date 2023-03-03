@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.3 (2023-03-03)
+
+### New Features
+
+ - <csr-id-6f8bd369287000d248608a3ac4b2d062326c8cab/> add support for variants overrides on arbitrary context fields
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 day passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#31](https://github.com/sighphyre/yggdrasil/issues/31)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#31](https://github.com/sighphyre/yggdrasil/issues/31)**
+    - Add support for variants overrides on arbitrary context fields ([`6f8bd36`](https://github.com/sighphyre/yggdrasil/commit/6f8bd369287000d248608a3ac4b2d062326c8cab))
+</details>
+
 ## v0.5.2 (2023-03-02)
 
 <csr-id-66bf3d804482c0def165f2ebe282ac72c8917c57/>
@@ -19,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-01d5aefc52b07c2616116518b5de68d6ac36788c/>
 <csr-id-6e9688a251cc7a5ce77eb6ceef41a9038b9ff0a4/>
 <csr-id-45787e38e529427bd8e351a3c69f38f84e98657f/>
+<csr-id-9b015f543b914e028b54717b2c79b4c04a8f3d8c/>
 
 ### Chore
 
@@ -63,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 29 commits contributed to the release over the course of 44 calendar days.
+ - 30 commits contributed to the release over the course of 44 calendar days.
  - 22 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 25 unique issues were worked on: [#11](https://github.com/sighphyre/yggdrasil/issues/11), [#12](https://github.com/sighphyre/yggdrasil/issues/12), [#13](https://github.com/sighphyre/yggdrasil/issues/13), [#14](https://github.com/sighphyre/yggdrasil/issues/14), [#15](https://github.com/sighphyre/yggdrasil/issues/15), [#16](https://github.com/sighphyre/yggdrasil/issues/16), [#17](https://github.com/sighphyre/yggdrasil/issues/17), [#18](https://github.com/sighphyre/yggdrasil/issues/18), [#19](https://github.com/sighphyre/yggdrasil/issues/19), [#2](https://github.com/sighphyre/yggdrasil/issues/2), [#20](https://github.com/sighphyre/yggdrasil/issues/20), [#21](https://github.com/sighphyre/yggdrasil/issues/21), [#23](https://github.com/sighphyre/yggdrasil/issues/23), [#24](https://github.com/sighphyre/yggdrasil/issues/24), [#25](https://github.com/sighphyre/yggdrasil/issues/25), [#27](https://github.com/sighphyre/yggdrasil/issues/27), [#28](https://github.com/sighphyre/yggdrasil/issues/28), [#29](https://github.com/sighphyre/yggdrasil/issues/29), [#30](https://github.com/sighphyre/yggdrasil/issues/30), [#4](https://github.com/sighphyre/yggdrasil/issues/4), [#5](https://github.com/sighphyre/yggdrasil/issues/5), [#6](https://github.com/sighphyre/yggdrasil/issues/6), [#7](https://github.com/sighphyre/yggdrasil/issues/7), [#8](https://github.com/sighphyre/yggdrasil/issues/8), [#9](https://github.com/sighphyre/yggdrasil/issues/9)
 
@@ -124,12 +150,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#9](https://github.com/sighphyre/yggdrasil/issues/9)**
     - Bump version to 0.2.0 ([`45787e3`](https://github.com/sighphyre/yggdrasil/commit/45787e38e529427bd8e351a3c69f38f84e98657f))
  * **Uncategorized**
+    - Release unleash-yggdrasil v0.5.2 ([`2a4a0fa`](https://github.com/sighphyre/yggdrasil/commit/2a4a0faa1cbfb594e51b242818fc3f96b4ddc187))
     - Include changelog to prep for smart release ([`9b015f5`](https://github.com/sighphyre/yggdrasil/commit/9b015f543b914e028b54717b2c79b4c04a8f3d8c))
     - Release unleash-yggdrasil v0.5.2 ([`e15c4a4`](https://github.com/sighphyre/yggdrasil/commit/e15c4a46403461c4cedba6a2875ae7b8a075d4ee))
     - Add description and license to core ([`750e204`](https://github.com/sighphyre/yggdrasil/commit/750e204ed3be475580c869c1a603c0e4da6af9bd))
     - Rename sdk-core to unleash-yggdrasil in preparation for publishing ([`d798951`](https://github.com/sighphyre/yggdrasil/commit/d798951a5e34bde13974feaa8e189a5771712789))
 </details>
-
-<csr-unknown>
- implement metrics gathering for core allow the engine to report the version of the Unleash client spec that it supports improve sad path handling of variants Add unicode support for the rule parser, this should now tolerate strings that contain unicode and a subset of punctuation<csr-unknown/>
 
