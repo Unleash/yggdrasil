@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.4 (2023-04-19)
+
+### Other
+
+ - <csr-id-0c1edd38338e9ad0659ed80218aabd8235c36899/> Bump unleash types to 0.10.0
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 46 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#33](https://github.com/sighphyre/yggdrasil/issues/33)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#33](https://github.com/sighphyre/yggdrasil/issues/33)**
+    - Bump unleash types to 0.10.0 ([`0c1edd3`](https://github.com/sighphyre/yggdrasil/commit/0c1edd38338e9ad0659ed80218aabd8235c36899))
+</details>
+
 ## v0.5.3 (2023-03-03)
 
 ### New Features
@@ -15,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 day passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#31](https://github.com/sighphyre/yggdrasil/issues/31)
@@ -28,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#31](https://github.com/sighphyre/yggdrasil/issues/31)**
     - Add support for variants overrides on arbitrary context fields ([`6f8bd36`](https://github.com/sighphyre/yggdrasil/commit/6f8bd369287000d248608a3ac4b2d062326c8cab))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.5.3 ([`b58f062`](https://github.com/sighphyre/yggdrasil/commit/b58f06258e4f8540a93afe9dd3b5f264d84adc77))
 </details>
 
 ## v0.5.2 (2023-03-02)
