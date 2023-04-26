@@ -6,14 +6,12 @@ extern crate lazy_static;
 #[macro_use]
 extern crate pest_derive;
 
-mod error;
 mod sendable_closures;
 pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
 use chrono::{DateTime, Utc};
-use error::YggdrasilError;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
 use state::EnrichedContext;
@@ -269,18 +267,14 @@ impl EngineState {
             return Some(found_override);
         }
         let total_weight: u32 = variants.iter().map(|var| var.weight as u32).sum();
-        let target = match get_custom_stickiness(variants, context) {
-            Ok(stickiness) => stickiness
-                .or_else(|| {
-                    context
-                        .user_id
-                        .clone()
-                        .or_else(|| context.session_id.clone())
-                })
-                .map(|stickiness| normalized_hash(&toggle.name, &stickiness, total_weight).unwrap())
-                .unwrap_or_else(|| rand::thread_rng().gen_range(0..99) as u32),
-            Err(_) => return None,
-        };
+
+        let stickiness = variants
+            .get(0)
+            .and_then(|variant| variant.stickiness.clone());
+
+        let target = get_seed(stickiness, context)
+            .map(|seed| normalized_hash(&toggle.name, &seed, total_weight).unwrap())
+            .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight) as u32);
 
         let mut total_weight = 0;
         for variant in variants {
@@ -327,16 +321,13 @@ impl EngineState {
     }
 }
 
-fn get_custom_stickiness(
-    variants: &[CompiledVariant],
-    context: &Context,
-) -> Result<Option<String>, YggdrasilError> {
-    let custom_stickiness = variants
-        .get(0)
-        .and_then(|variant| variant.stickiness.clone());
-
-    if let Some(custom_stickiness) = custom_stickiness {
-        let stickiness = match custom_stickiness.as_str() {
+fn get_seed(stickiness: Option<String>, context: &Context) -> Option<String> {
+    match stickiness.as_deref() {
+        Some("default") | None => context
+            .user_id
+            .clone()
+            .or_else(|| context.session_id.clone()),
+        Some(custom_stickiness) => match custom_stickiness {
             "userId" => context.user_id.clone(),
             "sessionId" => context.session_id.clone(),
             "environment" => context.environment.clone(),
@@ -345,16 +336,9 @@ fn get_custom_stickiness(
             _ => context
                 .properties
                 .as_ref()
-                .and_then(|props| props.get(&custom_stickiness))
+                .and_then(|props| props.get(custom_stickiness))
                 .cloned(),
-        };
-        if stickiness.is_none() {
-            Err(YggdrasilError::StickinessExpectedButNotFound)
-        } else {
-            Ok(stickiness)
-        }
-    } else {
-        Ok(None)
+        },
     }
 }
 
@@ -421,8 +405,8 @@ mod test {
     use unleash_types::client_features::{ClientFeatures, Override};
 
     use crate::{
-        check_for_variant_override, CompiledToggle, CompiledVariant, Context, EngineState,
-        VariantDef,
+        check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
+        EngineState, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -692,6 +676,36 @@ mod test {
         let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
 
         assert_eq!(toggle_metric.yes, 1);
+    }
+
+    #[test_case(Some("default"), Some("sessionId"), Some("userId"), Some("userId"); "should return userId for default stickiness")]
+    #[test_case(None, Some("sessionId"), Some("userId"), Some("userId"); "should use default stickiness if none is defined")]
+    #[test_case(Some("userId"), Some("sessionId"), None, None; "should use custom userId stickiness")]
+    #[test_case(Some("sessionId"), Some("sessionId"), Some("userId"), Some("sessionId"); "should use custom sessionId stickiness")]
+    #[test_case(Some("random"), Some("sessionId"), Some("userId"), None; "should return no seed for random stickiness")]
+    #[test_case(Some("customId"), Some("sessionId"), Some("userId"), Some("customId"); "should use custom stickiness")]
+    pub fn test_get_seed(
+        stickiness: Option<&str>,
+        session_id: Option<&str>,
+        user_id: Option<&str>,
+        expected: Option<&str>,
+    ) {
+        let mut context = Context {
+            session_id: session_id.map(String::from),
+            user_id: user_id.map(String::from),
+            ..Default::default()
+        };
+
+        context
+            .properties
+            .as_mut()
+            .unwrap()
+            .insert("customId".to_string(), "customId".to_string());
+
+        assert_eq!(
+            get_seed(stickiness.map(String::from), &context),
+            expected.map(String::from)
+        );
     }
 
     #[test]
