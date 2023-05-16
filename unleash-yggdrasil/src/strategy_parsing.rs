@@ -100,9 +100,8 @@ fn context_value(mut node: Pairs<Rule>) -> ContextResolver {
 
 pub(crate) fn coalesce_context_property(mut node: Pairs<Rule>) -> ContextResolver {
     let mut stickiness_resolvers = vec![];
-    let mut context_resolvers = node.next().unwrap().into_inner();
 
-    while let Some(child) = context_resolvers.next() {
+    while let Some(child) = node.next() {
         stickiness_resolvers.push(context_value(child.into_inner()))
     }
 
