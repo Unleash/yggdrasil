@@ -98,17 +98,17 @@ fn context_value(mut node: Pairs<Rule>) -> ContextResolver {
     }
 }
 
-pub(crate) fn coalesce_context_property(mut node: Pairs<Rule>) -> ContextResolver {
+pub(crate) fn coalesce_context_property(node: Pairs<Rule>) -> ContextResolver {
     let mut stickiness_resolvers = vec![];
 
-    while let Some(child) = node.next() {
+    for child in node {
         stickiness_resolvers.push(context_value(child.into_inner()))
     }
 
     Box::new(move |context: &Context| {
         stickiness_resolvers
             .iter()
-            .find_map(|resolver| resolver(&context))
+            .find_map(|resolver| resolver(context))
     })
 }
 
