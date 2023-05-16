@@ -98,11 +98,19 @@ fn context_value(mut node: Pairs<Rule>) -> ContextResolver {
     }
 }
 
-// This is a special property, it's functionally identical to 'context_value'
-// and our rule here does nothing but call 'context_value' to resolve the value
-// this only gets a special place so that our syntax in the grammar is nice
-fn stickiness_param(mut node: Pairs<Rule>) -> ContextResolver {
-    context_value(node.next().unwrap().into_inner())
+pub(crate) fn coalesce_context_property(mut node: Pairs<Rule>) -> ContextResolver {
+    let mut stickiness_resolvers = vec![];
+    let mut context_resolvers = node.next().unwrap().into_inner();
+
+    while let Some(child) = context_resolvers.next() {
+        stickiness_resolvers.push(context_value(child.into_inner()))
+    }
+
+    Box::new(move |context: &Context| {
+        stickiness_resolvers
+            .iter()
+            .find_map(|resolver| resolver(&context))
+    })
 }
 
 fn context_property(mut node: Pairs<Rule>) -> ContextResolver {
@@ -274,39 +282,15 @@ fn semver_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
 fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
     let percent_rollout = percentage(node.next().unwrap());
 
-    let second = node.next();
-    let third = node.next();
-
-    let (stickiness_getter, group_id) = match (second, third) {
-        (Some(second), Some(third)) => {
-            let sticky = stickiness_param(second.into_inner());
-            let group_id = group_id_param(third.into_inner());
-            (Some(sticky), Some(group_id))
-        }
-        (Some(second), None) => match second.as_rule() {
-            Rule::stickiness_param => (Some(stickiness_param(second.into_inner())), None),
-            Rule::group_id_param => (None, Some(group_id_param(second.into_inner()))),
-            _ => unreachable!(),
-        },
-        _ => (None, None),
-    };
+    let stickiness_resolver = coalesce_context_property(node.next().unwrap().into_inner());
+    let group_id = node.next().map(|node| group_id_param(node.into_inner()));
 
     Box::new(move |context: &Context| {
-        let stickiness = match &stickiness_getter {
-            Some(stickiness_getter) => {
-                let custom_stickiness = stickiness_getter(context);
-                // If we're sticky on a property that isn't on the context then
-                // short circuit this strategy's evaluation to false
-                if custom_stickiness.is_none() {
-                    return false;
-                }
-                custom_stickiness
-            }
-            None => context
-                .user_id
-                .clone()
-                .or_else(|| context.session_id.clone()),
-        };
+        let stickiness = stickiness_resolver(context);
+
+        if stickiness.is_none() {
+            return false;
+        }
 
         let group_id = match &group_id {
             Some(group_id) => group_id.clone(),
@@ -605,7 +589,7 @@ mod tests {
 
     #[test]
     fn test_random_parses() {
-        let rule = "random() < 100";
+        let rule = "random < 100";
         let rule = compile_rule(rule).expect("");
         let context = Context::default();
 
@@ -626,8 +610,8 @@ mod tests {
         assert_eq!(rule(&context), expected);
     }
 
-    #[test_case("100%", true)]
-    #[test_case("99%", true)]
+    #[test_case("100% sticky on random", true)]
+    #[test_case("99% sticky on random", true)]
     fn run_rollout_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6");
@@ -670,20 +654,37 @@ mod tests {
         assert_eq!(rule(&context), expected);
     }
 
-    #[test_case("55% with group_id of \"Feature.flexibleRollout.userId.55\"", true)]
-    fn run_rollout_test_with_group_id_and_no_sticky(rule: &str, expected: bool) {
-        let rule = compile_rule(rule).expect("");
-        let context = context_from_user_id("25");
-
-        assert_eq!(rule(&context), expected);
-    }
-
     #[test_case("100% sticky on user_id", true)]
     fn run_rollout_test_with_stickiness(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6");
 
         assert_eq!(rule(&context), expected);
+    }
+
+    #[test_case("sticky on user_id | session_id", Some("42"); "Picks first if present")]
+    #[test_case("sticky on environment | app_name | session_id", Some("7"); "Falls back multiple times to non null values")]
+    #[test_case("sticky on environment | context[\"lies\"] | context[\"present\"] ", Some("1"); "Respects custom context")]
+    #[test_case("sticky on environment | context[\"lies\"]", None; "Falls back to None eventually")]
+    fn run_null_coalesce_test(rule: &str, expected: Option<&str>) {
+        let expected = expected.map(|s| s.to_string());
+
+        let mut props = HashMap::new();
+        props.insert("present".into(), "1".into());
+
+        let context = Context {
+            user_id: Some("42".into()),
+            session_id: Some("7".into()),
+            properties: Some(props),
+            ..Context::default()
+        };
+
+        let mut parse_result = Strategy::parse(Rule::stickiness_param, rule).unwrap();
+        let stickiness_lookup =
+            coalesce_context_property(parse_result.next().unwrap().into_inner());
+        let result: Option<String> = stickiness_lookup(&context);
+
+        assert_eq!(result, expected);
     }
 
     #[test_case("user_id in [1, 3, 6]", true)]
