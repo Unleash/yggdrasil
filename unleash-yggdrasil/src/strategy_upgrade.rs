@@ -4,6 +4,8 @@ use unleash_types::client_features::{Constraint, Operator, Segment, Strategy};
 
 use crate::state::SdkError;
 
+const DEFAULT_STICKINESS: &str = "user_id | session_id | random";
+
 pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) -> String {
     if strategies.is_empty() {
         return "true".into();
@@ -81,11 +83,10 @@ fn upgrade_flexible_rollout_strategy(strategy: &Strategy) -> String {
 
             let mut rule: String = format!("{rollout}%");
 
-            if let Some(stickiness) = strategy.get_param("stickiness") {
-                if stickiness.as_str() != "default" {
-                    rule = format!("{rule} sticky on {}", upgrade_context_name(stickiness));
-                }
-            }
+            rule = format!(
+                "{rule} sticky on {}",
+                upgrade_stickiness(strategy.get_param("stickiness"))
+            );
 
             if let Some(group_id) = strategy.get_param("groupId") {
                 rule = format!("{rule} with group_id of \"{group_id}\"");
@@ -152,7 +153,7 @@ fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
 
 fn upgrade_random(strategy: &Strategy) -> String {
     match strategy.get_param("percentage") {
-        Some(percent) => format!("random() < {percent}"),
+        Some(percent) => format!("random < {percent}"),
         None => "".into(),
     }
 }
@@ -257,6 +258,18 @@ fn upgrade_operator(op: &Operator, case_insensitive: bool) -> Option<String> {
         Operator::SemverLt => Some("<".into()),
         Operator::SemverGt => Some(">".into()),
         Operator::Unknown(_) => None,
+    }
+}
+
+fn upgrade_stickiness(stickiness_param: Option<&String>) -> String {
+    if let Some(stickiness_param) = stickiness_param {
+        match stickiness_param.as_ref() {
+            "random" => "random".into(),
+            "default" => DEFAULT_STICKINESS.into(),
+            _ => upgrade_context_name(stickiness_param),
+        }
+    } else {
+        DEFAULT_STICKINESS.into()
     }
 }
 
@@ -490,7 +503,7 @@ mod tests {
         let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
-            "55% with group_id of \"Feature.flexibleRollout.userId.55\""
+            "55% sticky on user_id | session_id | random with group_id of \"Feature.flexibleRollout.userId.55\""
         );
     }
 
@@ -509,7 +522,60 @@ mod tests {
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
-        assert_eq!(output.as_str(), "55%");
+        assert_eq!(
+            output.as_str(),
+            "55% sticky on user_id | session_id | random"
+        );
+    }
+
+    #[test]
+    fn upgrades_flexible_rollout_with_default_stickiness() {
+        let mut parameters = HashMap::new();
+
+        parameters.insert("rollout".into(), "55".into());
+        parameters.insert("stickiness".into(), "default".into());
+        parameters.insert("groupId".into(), "Feature.flexibleRollout.userId.55".into());
+
+        let strategy = Strategy {
+            name: "flexibleRollout".into(),
+            parameters: Some(parameters),
+            constraints: None,
+            segments: None,
+            sort_order: Some(1),
+        };
+
+        let output = upgrade(&vec![strategy], &HashMap::new());
+        assert_eq!(
+            output.as_str(),
+            format!(
+                "55% sticky on user_id | session_id | random with group_id of \"Feature.flexibleRollout.userId.55\""
+            )
+        );
+    }
+
+    #[test]
+    fn upgrades_flexible_rollout_with_random_stickiness() {
+        let mut parameters = HashMap::new();
+
+        parameters.insert("rollout".into(), "55".into());
+        parameters.insert("stickiness".into(), "random".into());
+        parameters.insert("groupId".into(), "Feature.flexibleRollout.userId.55".into());
+
+        let strategy = Strategy {
+            name: "flexibleRollout".into(),
+            parameters: Some(parameters),
+            constraints: None,
+            segments: None,
+            sort_order: Some(1),
+        };
+
+        let output = upgrade(&vec![strategy], &HashMap::new());
+        assert_eq!(
+            output.as_str(),
+            format!(
+                "55% sticky on random with group_id of \"Feature.flexibleRollout.userId.55\""
+            )
+        );
     }
 
     #[test_case(

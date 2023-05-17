@@ -274,7 +274,7 @@ impl EngineState {
 
         let target = get_seed(stickiness, context)
             .map(|seed| normalized_hash(&toggle.name, &seed, total_weight).unwrap())
-            .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight) as u32);
+            .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight));
 
         let mut total_weight = 0;
         for variant in variants {
