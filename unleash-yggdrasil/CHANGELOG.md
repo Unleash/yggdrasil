@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.6 (2023-05-17)
+
+### Bug Fixes
+
+ - <csr-id-afb1cf8512def7cfdbea4dde9e667fe4424e1bdf/> redesigns the way stickiness is handled in the grammar to support default and random
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 15 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#36](https://github.com/sighphyre/yggdrasil/issues/36)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#36](https://github.com/sighphyre/yggdrasil/issues/36)**
+    - Redesigns the way stickiness is handled in the grammar to support default and random ([`afb1cf8`](https://github.com/sighphyre/yggdrasil/commit/afb1cf8512def7cfdbea4dde9e667fe4424e1bdf))
+</details>
+
 ## v0.5.5 (2023-05-02)
 
 ### Bug Fixes
@@ -15,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 13 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#34](https://github.com/sighphyre/yggdrasil/issues/34)
@@ -28,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#34](https://github.com/sighphyre/yggdrasil/issues/34)**
     - Fix variant stickiness ([`acf5cc1`](https://github.com/sighphyre/yggdrasil/commit/acf5cc1007262675b0f5a03589ad0a62fd2c4fa6))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.5.5 ([`c445d78`](https://github.com/sighphyre/yggdrasil/commit/c445d78f98b559778649cf89bb95cbc59d027ff3))
 </details>
 
 ## v0.5.4 (2023-04-19)
