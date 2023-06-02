@@ -5,7 +5,7 @@ percentage = { ("100" | (ASCII_DIGIT ~ ASCII_DIGIT?)) ~ "%" }
 
 string = @{ "\"" ~ ( unicode_characters | punctuation_characters )* ~ "\"" }
     unicode_characters = { LETTER | MARK | NUMBER | SYMBOL | SEPARATOR | DASH_PUNCTUATION }
-    punctuation_characters = { "." | "&" | "/" | "_" | "@" }
+    punctuation_characters = { "." | "&" | "/" | "_" | "@" | "!" }
 
 semver = @{ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ semver_patch? ~ semver_build? }
     semver_patch    = @{ "-" ~ semver_fragment }
