@@ -572,9 +572,7 @@ mod tests {
         let output = upgrade(&vec![strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
-            format!(
-                "55% sticky on random with group_id of \"Feature.flexibleRollout.userId.55\""
-            )
+            format!("55% sticky on random with group_id of \"Feature.flexibleRollout.userId.55\"")
         );
     }
 

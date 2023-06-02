@@ -798,4 +798,10 @@ mod tests {
         let rule = compile_rule(rule_text).unwrap();
         assert_eq!(rule(&context), true);
     }
+
+    #[test]
+    fn escaping_strings_works() {
+        let rule = "user_id in [\"Nobody likes \\\"scare quotes\\\"\"]";
+        compile_rule(rule).unwrap();
+    }
 }
