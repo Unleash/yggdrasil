@@ -714,6 +714,7 @@ mod tests {
     #[test_case("app_name not_in [\"おはようございます\"]" ; "Japanese characters")]
     #[test_case("app_name not_in [\"😃💁\"]"; "Teenager characters" )]
     #[test_case("app_name not_in [\".&-/\"]"; "Limited punctuation characters" )]
+    #[test_case("app_name not_in [\"Exclamation marks are cool!\"]"; "Exclamation marks" )]
     fn arbitrary_unicode_is_handled(input: &str) {
         let rule_text = input;
         let rule = compile_rule(rule_text).unwrap();
@@ -796,5 +797,11 @@ mod tests {
         let rule_text = "!app_name contains_any [\"@another.com\"]";
         let rule = compile_rule(rule_text).unwrap();
         assert_eq!(rule(&context), true);
+    }
+
+    #[test]
+    fn escaping_strings_works() {
+        let rule = "user_id in [\"Nobody likes \\\"scare quotes\\\"\"]";
+        compile_rule(rule).unwrap();
     }
 }
