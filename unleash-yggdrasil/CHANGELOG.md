@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.7 (2023-06-05)
+
+### Bug Fixes
+
+ - <csr-id-280670e46cf654838d67817ade2b8963aaeb6198/> support for arbitrary strings
+   * fix: allow grammar to parse more or less any string that doesn't contain the character sequence "
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 18 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#37](https://github.com/sighphyre/yggdrasil/issues/37)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#37](https://github.com/sighphyre/yggdrasil/issues/37)**
+    - Support for arbitrary strings ([`280670e`](https://github.com/sighphyre/yggdrasil/commit/280670e46cf654838d67817ade2b8963aaeb6198))
+</details>
+
 ## v0.5.6 (2023-05-17)
 
 ### Bug Fixes
@@ -15,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 15 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#36](https://github.com/sighphyre/yggdrasil/issues/36)
@@ -28,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#36](https://github.com/sighphyre/yggdrasil/issues/36)**
     - Redesigns the way stickiness is handled in the grammar to support default and random ([`afb1cf8`](https://github.com/sighphyre/yggdrasil/commit/afb1cf8512def7cfdbea4dde9e667fe4424e1bdf))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.5.6 ([`796dccb`](https://github.com/sighphyre/yggdrasil/commit/796dccbd5e1d28e47d293cab1c6a07d0c8b2cc16))
 </details>
 
 ## v0.5.5 (2023-05-02)
