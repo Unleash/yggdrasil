@@ -5,5 +5,5 @@ members = [
   "node-sdk",
   "python-sdk",
   "bindings",
-  "java-sdk/java-glue",
+  "yggdrasilffi",
 ]
