@@ -2,7 +2,7 @@
 
 ## Build
 
-We we gradle here:
+We use gradle here:
 
 ```bash
 gradle build
