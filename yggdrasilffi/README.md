@@ -12,7 +12,7 @@ cargo build
 
 ## Generate Headers
 
-For languages that need the C ABI you can use cbindgen to generate the headers.
+For languages that need the C ABI, like PHP and Go, you can use cbindgen to generate the headers.
 
 
 ```bash
