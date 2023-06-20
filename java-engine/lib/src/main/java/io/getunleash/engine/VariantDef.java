@@ -1,4 +1,4 @@
-package unleash.engine;
+package io.getunleash.engine;
 
 public class VariantDef {
     public String name;
