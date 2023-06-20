@@ -103,7 +103,3 @@ func NewContext(userID, sessionID, environment, appName, currentTime, remoteAddr
 		Properties:    properties,
 	}
 }
-
-func main() {
-	ptr := C.engine_new()
-}
