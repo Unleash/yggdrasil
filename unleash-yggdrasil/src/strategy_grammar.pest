@@ -10,7 +10,7 @@ semver = @{ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ "."  ~ ASCII_DIGIT+ ~ semver_pa
     semver_build    = @{ "+" ~ semver_fragment }
         semver_fragment = @{ (ASCII_ALPHANUMERIC | "-")+ ~ ("." ~ (ASCII_ALPHANUMERIC | "-")+)* }
 
-date = @{ quad_fragment ~ "-" ~ pair_fragment ~ "-" ~ pair_fragment ~ "T" ~ pair_fragment ~ ":" ~ pair_fragment ~ ":" ~ pair_fragment ~ "." ~ trip_fragment ~ timezone_fragment }
+date = @{ quad_fragment ~ "-" ~ pair_fragment ~ "-" ~ pair_fragment ~ "T" ~ pair_fragment ~ ":" ~ pair_fragment ~ ":" ~ pair_fragment ~ ("." ~ trip_fragment)? ~ timezone_fragment }
     quad_fragment = @{ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT }
     trip_fragment = @{ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT }
     pair_fragment = @{ ASCII_DIGIT ~ ASCII_DIGIT }

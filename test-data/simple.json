@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "features": [
+    {
+      "name": "Feature.A",
+      "description": "Enabled toggle",
+      "enabled": true,
+      "strategies": [
+        {
+          "name": "default"
+        }
+      ]
+    },
+    {
+      "name": "Feature.B",
+      "description": "Disabled toggle",
+      "enabled": false,
+      "strategies": [
+        {
+          "name": "default"
+        }
+      ]
+    },
+    {
+      "name": "Feature.C",
+      "enabled": true,
+      "strategies": []
+    }
+  ]
+}

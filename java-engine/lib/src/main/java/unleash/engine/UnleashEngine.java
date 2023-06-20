@@ -3,70 +3,60 @@
  */
 package unleash.engine;
 
-import com.sun.jna.*;
-import com.sun.jna.ptr.*;
-import java.util.List;
-import java.util.Arrays;
+import java.nio.file.Paths;
 
-public interface UnleashEngine extends Library {
-    UnleashEngine INSTANCE = (UnleashEngine) Native.loadLibrary(
-        "/home/simon/dev/yggdrasil/target/release/libyggdrasilffi.so", UnleashEngine.class);
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.jna.*;
+
+interface UnleashFFI extends Library {
+
+    String libPath = System.getenv("YGGDRASIL_LIB_PATH");
+
+    String combinedPath = Paths.get(libPath, "libyggdrasilffi.so").toString();
+
+    UnleashFFI INSTANCE = Native.load(combinedPath, UnleashFFI.class);
 
     Pointer engine_new();
+
     void engine_free(Pointer ptr);
-    String engine_take_state(Pointer ptr, String toggles);
-    boolean engine_is_enabled(Pointer ptr, String input, FFIContext.ByValue context);
-    Pointer engine_get_variant(Pointer ptr, String name, FFIContext.ByValue context);
+
+    Pointer engine_take_state(Pointer ptr, String toggles);
+
+    boolean engine_is_enabled(Pointer ptr, String name, String context);
+
+    Pointer engine_get_variant(Pointer ptr, String name, String context);
+
     void engine_free_variant_def(Pointer variant_def_ptr);
+}
 
-    public static class Payload extends Structure {
-        public static class ByValue extends Payload implements Structure.ByValue {}
+public class UnleashEngine {
+    private Pointer ptr;
+    private ObjectMapper mapper = new ObjectMapper();
 
-        public static class ByReference extends Payload implements Structure.ByReference {}
-
-        public Pointer payload_type;
-        public Pointer value;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return Arrays.asList("payload_type", "value");
-        }
+    public UnleashEngine() {
+        ptr = UnleashFFI.INSTANCE.engine_new();
     }
 
-    public static class VariantDef extends Structure {
-        public static class ByValue extends VariantDef implements Structure.ByValue {}
-
-        public static class ByReference extends VariantDef implements Structure.ByReference {}
-
-        public Pointer name;
-        public Pointer payload;
-        public boolean enabled;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return Arrays.asList("name", "payload", "enabled");
-        }
+    public void free() {
+        UnleashFFI.INSTANCE.engine_free(ptr);
     }
 
-    public static class FFIContext extends Structure {
-        public static class ByValue extends FFIContext implements Structure.ByValue {}
+    public void takeState(String toggles) {
+        UnleashFFI.INSTANCE.engine_take_state(ptr, toggles);
+    }
 
-        public static class ByReference extends FFIContext implements Structure.ByReference {}
+    public boolean isEnabled(String name, Context context) throws JsonProcessingException {
+        String jsonContext = mapper.writeValueAsString(context);
+        return UnleashFFI.INSTANCE.engine_is_enabled(ptr, name, jsonContext);
+    }
 
-        public Pointer user_id;
-        public Pointer session_id;
-        public Pointer environment;
-        public Pointer app_name;
-        public Pointer current_time;
-        public Pointer remote_address;
-        public Pointer properties_keys;
-        public Pointer properties_values;
-        public long properties_len;
-        public Pointer toggle_name;
-
-        @Override
-        protected List<String> getFieldOrder() {
-            return Arrays.asList("user_id", "session_id", "environment", "app_name", "current_time", "remote_address", "properties_keys", "properties_values", "properties_len", "toggle_name");
-        }
+    public VariantDef getVariant(String name, Context context) throws JsonMappingException, JsonProcessingException {
+        String jsonContext = mapper.writeValueAsString(context);
+        Pointer variantDefPtr = UnleashFFI.INSTANCE.engine_get_variant(ptr, name, jsonContext);
+        String variantJson = variantDefPtr.getString(0);
+        UnleashFFI.INSTANCE.engine_free_variant_def(variantDefPtr);
+        return mapper.readValue(variantJson, VariantDef.class);
     }
 }

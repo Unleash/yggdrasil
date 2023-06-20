@@ -1,9 +1,21 @@
 **/target
 /Cargo.lock
 **/node_modules
-**/venv
+**/**/venv
 **/.vscode
 **/*.class
+**/__pycache__/
+**/bin/
 **/*.dumpstream
 **/obj
+**/vendor
 /client-specification
+
+## Specific files we want to ignore
+/yggdrasilffi/unleash_engine.h
+/go-engine/go-engine
+/go-engine/libyggdrasilffi.so
+/go-engine/unleash_engine.h
+/php-engine/unleash_engine.h
+/php-engine/libyggdrasilffi.so
+

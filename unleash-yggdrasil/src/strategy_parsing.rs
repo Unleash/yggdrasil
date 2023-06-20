@@ -761,6 +761,19 @@ mod tests {
         assert_eq!(rule(&context), expected);
     }
 
+    #[test]
+    fn handles_dates_with_truncated_milliseconds() {
+        let rule = "current_time > 2022-01-29T13:00:00Z";
+
+        let rule = compile_rule(rule).expect("");
+        let mut context = Context::default();
+        let mut props = HashMap::new();
+        props.insert("cutoff".into(), "2022-01-25T13:00:00.000Z".into());
+        context.properties = Some(props);
+
+        assert_eq!(rule(&context), false);
+    }
+
     #[test_case("!user_id > 8", false)]
     fn run_invert_rest(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");

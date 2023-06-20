@@ -1,35 +1,47 @@
 use std::{
-    collections::HashMap,
-    ffi::{c_char, CStr, CString},
+    ffi::{c_char, CStr, CString, NulError},
+    str::Utf8Error,
 };
 
 use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
 use unleash_yggdrasil::{Context, EngineState};
 
-#[repr(C)]
-pub struct FFIContext {
-    pub user_id: *const c_char,
-    pub session_id: *const c_char,
-    pub environment: *const c_char,
-    pub app_name: *const c_char,
-    pub current_time: *const c_char,
-    pub remote_address: *const c_char,
-    pub properties_keys: *const *const c_char,
-    pub properties_values: *const *const c_char,
-    pub properties_len: usize,
+#[derive(Debug)]
+enum FFIError {
+    Utf8Error,
+    NulError,
+    InvalidJson,
 }
 
-#[repr(C)]
-pub struct FFIPayload {
-    pub payload_type: *const c_char,
-    pub value: *const c_char,
+impl From<Utf8Error> for FFIError {
+    fn from(_: Utf8Error) -> Self {
+        FFIError::Utf8Error
+    }
+}
+
+impl From<NulError> for FFIError {
+    fn from(_: NulError) -> Self {
+        FFIError::NulError
+    }
+}
+
+impl From<serde_json::Error> for FFIError {
+    fn from(_: serde_json::Error) -> Self {
+        FFIError::InvalidJson
+    }
 }
 
 #[repr(C)]
 pub struct FFIVariantDef {
-    pub name: *const c_char,
-    pub payload: Option<*mut FFIPayload>,
-    pub enabled: bool,
+    name: *mut c_char,
+    payload: *mut FFIPayload,
+    enabled: bool,
+}
+
+#[repr(C)]
+pub struct FFIPayload {
+    payload_type: *mut c_char,
+    value: *mut c_char,
 }
 
 #[no_mangle]
@@ -60,185 +72,104 @@ pub extern "C" fn engine_take_state(ptr: *mut libc::c_void, json: *const c_char)
         CStr::from_ptr(json)
     };
 
-    let str_slice: &str = c_str.to_str().unwrap();
-    let toggles: ClientFeatures = serde_json::from_str(str_slice).unwrap();
+    match take_state(state, c_str) {
+        Ok(c_string) => c_string,
+        Err(err) => {
+            println!("Error in engine_take_state: {:?}", err);
+            std::ptr::null()
+        }
+    }
+}
+
+fn take_state(state: &mut EngineState, c_str: &CStr) -> Result<*mut i8, FFIError> {
+    let str_slice: &str = c_str.to_str()?;
+    let toggles: ClientFeatures = serde_json::from_str(str_slice)?;
 
     let metric_bucket: Option<MetricBucket> = state.take_state(toggles);
-    let json_str: String = serde_json::to_string(&metric_bucket).unwrap();
-    let c_string = CString::new(json_str).unwrap();
-    c_string.into_raw()
+    let json_str: String = serde_json::to_string(&metric_bucket)?;
+    let c_string = CString::new(json_str)?;
+    Ok(c_string.into_raw())
 }
 
 #[no_mangle]
 pub extern "C" fn engine_is_enabled(
     ptr: *mut libc::c_void,
     toggle_name: *const c_char,
-    context: *const FFIContext,
+    context: *const c_char,
 ) -> bool {
     let state = unsafe {
         assert!(!ptr.is_null());
         &mut *(ptr as *mut EngineState)
     };
 
-    let c_str = unsafe {
+    let c_toggle_name = unsafe {
         assert!(!toggle_name.is_null());
         CStr::from_ptr(toggle_name)
     };
 
-    let toggle_name: &str = c_str.to_str().unwrap();
+    let c_context = unsafe {
+        assert!(!context.is_null());
+        CStr::from_ptr(context)
+    };
 
-    let context = unsafe { &*context };
-    let context = context.into();
+    match is_enabled(state, c_toggle_name, c_context) {
+        Ok(is_enabled) => is_enabled,
+        Err(err) => {
+            println!("Error in engine_is_enabled: {:?}", err);
+            false
+        }
+    }
+}
 
-    state.is_enabled(&toggle_name, &context)
+fn is_enabled(
+    state: &mut EngineState,
+    c_toggle_name: &CStr,
+    c_context: &CStr,
+) -> Result<bool, FFIError> {
+    let toggle_name: &str = c_toggle_name.to_str()?;
+    let context_str: &str = c_context.to_str()?;
+    let context: Context = serde_json::from_str(&context_str)?;
+
+    Ok(state.is_enabled(&toggle_name, &context))
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn engine_get_variant(
     ptr: *mut libc::c_void,
-    toggle_name: *const c_char,
-    context: *mut FFIContext,
-) -> *mut FFIVariantDef {
-    let state = unsafe {
-        assert!(!ptr.is_null());
-        &mut *(ptr as *mut EngineState)
-    };
+    toggle_name_pointer: *const c_char,
+    context_pointer: *const c_char,
+) -> *mut c_char {
+    let state = &*(ptr as *mut EngineState);
+    let c_toggle_name = CStr::from_ptr(toggle_name_pointer);
+    let c_context_str = CStr::from_ptr(context_pointer);
 
-    let toggle_name = CStr::from_ptr(toggle_name).to_str().unwrap();
-    let context = unsafe { &*context };
-    let context = context.into();
+    match get_variant(state, c_toggle_name, c_context_str) {
+        Ok(c_string) => c_string.into_raw(),
+        Err(err) => {
+            println!("Error in engine_get_variant: {:?}", err);
+            std::ptr::null_mut()
+        }
+    }
+}
 
-    let variant_def = state.get_variant(toggle_name, &context);
-    let ffi_variant_def = FFIVariantDef {
-        name: CString::new(variant_def.name).unwrap().into_raw(),
-        payload: match variant_def.payload {
-            Some(payload) => Some(Box::into_raw(Box::new(FFIPayload {
-                payload_type: CString::new(payload.payload_type).unwrap().into_raw(),
-                value: CString::new(payload.value).unwrap().into_raw(),
-            }))),
-            None => None,
-        },
-        enabled: variant_def.enabled,
-    };
-    Box::into_raw(Box::new(ffi_variant_def))
+fn get_variant(
+    state: &EngineState,
+    c_toggle_name: &CStr,
+    c_context_str: &CStr,
+) -> Result<CString, FFIError> {
+    let toggle_name = c_toggle_name.to_str()?;
+    let context_str: &str = c_context_str.to_str()?;
+    let context: Context = serde_json::from_str(&context_str)?;
+
+    let variant = state.get_variant(toggle_name, &context);
+    let json = serde_json::to_string(&variant)?;
+    Ok(CString::new(json)?)
 }
 
 #[no_mangle]
-pub extern "C" fn engine_free_variant_def(ptr: *mut FFIVariantDef) {
-    if !ptr.is_null() {
-        unsafe {
-            let variant_def = Box::from_raw(ptr);
-            if !variant_def.name.is_null() {
-                let name_ptr = variant_def.name as *mut c_char;
-                drop(CString::from_raw(name_ptr));
-            }
-
-            if let Some(payload_ptr) = variant_def.payload {
-                let payload = Box::from_raw(payload_ptr);
-                if !payload.payload_type.is_null() {
-                    let payload_type_ptr = payload.payload_type as *mut c_char;
-                    drop(CString::from_raw(payload_type_ptr));
-                }
-                if !payload.value.is_null() {
-                    let value_ptr = payload.value as *mut c_char;
-                    drop(CString::from_raw(value_ptr));
-                }
-            }
-        }
+pub unsafe extern "C" fn engine_free_variant_def(ptr: *mut c_char) {
+    if ptr.is_null() {
+        return;
     }
-}
-
-// This is about as safe as running into a TNT factory while you're on fire
-// but without tanking performance this is the most effective way to do this.
-// We're trusting the caller to behave in a sensible way here. So long as this is
-// wrapped by something we trust it should be okay.
-//
-// This conversation impl makes a few assumptions:
-// 1) The caller sends us a valid pointer for each context value
-// 2) The caller restructures the properties hashmap into two separate arrays and a length
-// 2.1) Those arrays are equal in length
-// 2.2) Those arrays contain only valid UTF-8 strings, this means valid keys with null properties are not allowed
-// 2.3) The len property is correct i.e. matches the length of the original hashmap
-// 3) The caller will not free any of this memory while we are still using it
-// 4) The caller is responsible for controlling concurrency primitives; this cannot be made thread safe here
-// Violating any of these assumptions will result in a segfault, or, in the case of 4, unpredictable and bad things
-//
-// This also makes the assumption that the caller will free the allocated memory of the
-// underlying strings after returning. If the caller does not do that, this will result in a memory leak
-//
-// The caller in this context is the host language FFI wrapper, not the Rust code that consumes this
-impl<'a> Into<Context> for &'a FFIContext {
-    fn into(self) -> Context {
-        let properties = unsafe {
-            let keys = std::slice::from_raw_parts(self.properties_keys, self.properties_len);
-            let values = std::slice::from_raw_parts(self.properties_values, self.properties_len);
-
-            keys.iter()
-                .zip(values.iter())
-                .filter_map(|(&k, &v)| {
-                    if k.is_null() || v.is_null() {
-                        None
-                    } else {
-                        let key = CStr::from_ptr(k).to_string_lossy().into_owned();
-                        let value = CStr::from_ptr(v).to_string_lossy().into_owned();
-                        Some((key, value))
-                    }
-                })
-                .collect::<HashMap<_, _>>()
-        };
-
-        Context {
-            user_id: if self.user_id.is_null() {
-                None
-            } else {
-                Some(unsafe { CStr::from_ptr(self.user_id).to_string_lossy().into_owned() })
-            },
-            session_id: if self.session_id.is_null() {
-                None
-            } else {
-                Some(unsafe {
-                    CStr::from_ptr(self.session_id)
-                        .to_string_lossy()
-                        .into_owned()
-                })
-            },
-            environment: if self.environment.is_null() {
-                None
-            } else {
-                Some(unsafe {
-                    CStr::from_ptr(self.environment)
-                        .to_string_lossy()
-                        .into_owned()
-                })
-            },
-            app_name: if self.app_name.is_null() {
-                None
-            } else {
-                Some(unsafe { CStr::from_ptr(self.app_name).to_string_lossy().into_owned() })
-            },
-            current_time: if self.current_time.is_null() {
-                None
-            } else {
-                Some(unsafe {
-                    CStr::from_ptr(self.current_time)
-                        .to_string_lossy()
-                        .into_owned()
-                })
-            },
-            remote_address: if self.remote_address.is_null() {
-                None
-            } else {
-                Some(unsafe {
-                    CStr::from_ptr(self.remote_address)
-                        .to_string_lossy()
-                        .into_owned()
-                })
-            },
-            properties: if self.properties_keys.is_null() || self.properties_values.is_null() {
-                None
-            } else {
-                Some(properties)
-            },
-        }
-    }
+    drop(CString::from_raw(ptr));
 }

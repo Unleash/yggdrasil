@@ -6,86 +6,117 @@ package unleash.engine;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.File;
 import java.io.IOException;
-import java.net.URL;
+import java.nio.file.Paths;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-import com.sun.jna.Pointer;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 class UnleashEngineTest {
-    private Pointer ptr;
-    private String simpleFeatures; // Assume this is set up to be your feature JSON
 
-    public static String readJsonFile(String filePath) {
-        ObjectMapper objectMapper = new ObjectMapper();
+    private String simpleFeatures = loadFeaturesFromFile(
+            "../../../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
+                                                                                     // feature JSON
+
+    public static String loadFeaturesFromFile(String filePath) {
+        ObjectMapper mapper = new ObjectMapper();
         try {
-            URL url = JSONReader.class.getResource(filePath);
-            // JsonNode jsonNode = objectMapper.readTree(new File(url.getFile()));
-            // JsonNode state = jsonNode.get("state");
-            // return state.toString();
+            JsonNode jsonNode = mapper.readTree(Paths.get(filePath).toFile());
+            JsonNode state = jsonNode.get("state");
+            return state.toString();
         } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
-        return null;
-    }
-
-    @BeforeEach
-    void setUp() {
-        ptr = UnleashEngine.INSTANCE.engine_new();
-        assertNotNull(ptr);
-    }
-
-    @AfterEach
-    void tearDown() {
-        UnleashEngine.INSTANCE.engine_free(ptr);
     }
 
     @Test
     void testTakeState() {
-        // Assuming engine_take_state returns a String representing the MetricBucket
-        // String metricBucket = UnleashEngine.INSTANCE.engine_take_state(ptr,
-        // simpleFeatures);
-        // assertNotNull(metricBucket);
+        UnleashEngine engine = new UnleashEngine();
+        engine.takeState(simpleFeatures);
     }
 
-    // @Test
-    // void testIsEnabled() {
-    // UnleashEngine.INSTANCE.engine_take_state(ptr, simpleFeatures);
-    // // Assuming FFIContext is a JNA Structure equivalent to FFIContext in Rust
-    // FFIContext context = new FFIContext(); // You may need to set up context
-    // properties here
-    // boolean result = UnleashEngine.INSTANCE.engine_is_enabled(ptr, "Feature.A",
-    // context);
-    // assertTrue(result);
-    // }
+    @Test
+    void testIsEnabled() throws Exception {
+        UnleashEngine engine = new UnleashEngine();
+        engine.takeState(simpleFeatures);
 
-    // @Test
-    // void testMetricBucketCount() {
-    // UnleashEngine.INSTANCE.engine_take_state(ptr, simpleFeatures);
-    // FFIContext context = new FFIContext();
-    // UnleashEngine.INSTANCE.engine_is_enabled(ptr, "Feature.A", context);
-    // String metricBucket = UnleashEngine.INSTANCE.engine_take_state(ptr,
-    // simpleFeatures);
-    // // Here you would parse metricBucket into some MetricBucket object and assert
-    // on
-    // // it
-    // }
+        Context context = new Context();
+        boolean result = engine.isEnabled("Feature.A", context);
+        assertTrue(result);
+    }
 
-    // @Test
-    // void testGetVariant() {
-    // UnleashEngine.INSTANCE.engine_take_state(ptr, simpleFeatures);
-    // FFIContext context = new FFIContext();
-    // // Assuming FFIVariantDef is a JNA Structure equivalent to FFIVariantDef in
-    // Rust
-    // FFIVariantDef result = UnleashEngine.INSTANCE.engine_get_variant(ptr,
-    // "Feature.A", context);
-    // assertNotNull(result);
-    // assertEquals("disabled", result.name);
-    // assertFalse(result.enabled);
-    // assertNull(result.payload);
-    // }
+    @Test
+    void testGetVariant() throws Exception {
+        UnleashEngine engine = new UnleashEngine();
+        engine.takeState(simpleFeatures);
+
+        Context context = new Context();
+        VariantDef variant = engine.getVariant("Feature.A", context);
+
+        assertEquals("disabled", variant.name);
+        assertFalse(variant.enabled);
+    }
+
+    @Test
+    public void testClientSpec() throws Exception {
+        UnleashEngine unleashEngine = new UnleashEngine();
+        ObjectMapper objectMapper = new ObjectMapper();
+        File basePath = Paths.get("..", "..", "..", "client-specification", "specifications").toFile();
+        File indexFile = new File(basePath, "index.json");
+        List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<>() {
+        });
+
+        for (String suite : testSuites) {
+            File suiteFile = new File(basePath, suite);
+            Map<String, Object> suiteData = objectMapper.readValue(suiteFile, new TypeReference<>() {
+            });
+
+            unleashEngine.takeState(objectMapper.writeValueAsString(suiteData.get("state")));
+
+            List<Map<String, Object>> tests = (List<Map<String, Object>>) suiteData.get("tests");
+            if (tests != null) {
+                for (Map<String, Object> test : tests) {
+                    String contextJson = objectMapper.writeValueAsString(test.get("context"));
+                    Context context = objectMapper.readValue(contextJson, Context.class);
+                    String toggleName = (String) test.get("toggleName");
+                    boolean expectedResult = (Boolean) test.get("expectedResult");
+
+                    boolean result = unleashEngine.isEnabled(toggleName, context);
+
+                    assertEquals(expectedResult, result,
+                            String.format("Failed test '%s': expected %b, got %b",
+                                    test.get("description"), expectedResult,
+                                    result));
+                }
+            }
+
+            List<Map<String, Object>> variantTests = (List<Map<String, Object>>) suiteData.get("variantTests");
+            if (variantTests != null) {
+                for (Map<String, Object> test : variantTests) {
+                    String contextJson = objectMapper.writeValueAsString(test.get("context"));
+                    Context context = objectMapper.readValue(contextJson, Context.class);
+                    String toggleName = (String) test.get("toggleName");
+
+                    VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
+                    VariantDef result = unleashEngine.getVariant(toggleName, context);
+
+                    String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
+                    String resultJson = objectMapper.writeValueAsString(result);
+
+                    assertEquals(expectedResultJson, resultJson,
+                            String.format("Failed test '%s': expected %b, got %b",
+                                    test.get("description"), expectedResultJson,
+                                    resultJson));
+                }
+            }
+
+            System.out.println(String.format("Completed specification '%s'", suite));
+        }
+    }
 }

@@ -3,7 +3,5 @@
 members = [
   "unleash-yggdrasil",
   "node-sdk",
-  "python-sdk",
-  "bindings",
   "yggdrasilffi",
 ]
