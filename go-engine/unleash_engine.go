@@ -106,5 +106,4 @@ func NewContext(userID, sessionID, environment, appName, currentTime, remoteAddr
 
 func main() {
 	ptr := C.engine_new()
-	fmt.Println("Hi", ptr)
 }
