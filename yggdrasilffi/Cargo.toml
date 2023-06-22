@@ -1,0 +1,17 @@
+[package]
+edition = "2021"
+name = "yggdrasilffi"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib"]
+name = "yggdrasilffi"
+
+[dependencies]
+libc = "0.2"
+serde_json = "1.0.68"
+unleash-types = "0.10.0"
+unleash-yggdrasil = {path = "../unleash-yggdrasil"}
