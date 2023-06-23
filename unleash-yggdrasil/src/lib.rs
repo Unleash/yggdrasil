@@ -244,6 +244,17 @@ impl EngineState {
         })
     }
 
+    pub fn resolve(&self, name: &str, context: &Context) -> Option<ResolvedToggle> {
+        self.compiled_state.as_ref().and_then(|state| {
+            state.get(name).map(|compiled_toggle| ResolvedToggle {
+                enabled: self.enabled(compiled_toggle, context),
+                impression_data: compiled_toggle.impression_data,
+                variant: self.get_variant(name, context),
+                project: compiled_toggle.project.clone(),
+            })
+        })
+    }
+
     pub fn is_enabled(&self, name: &str, context: &Context) -> bool {
         self.compiled_state
             .as_ref()
@@ -757,6 +768,50 @@ mod test {
         assert_eq!(resolved_variant, "test-variant".to_string());
         assert_eq!(unresolved_variant, "disabled".to_string());
         assert_eq!(toggles.len(), 2);
+    }
+
+    #[test]
+    fn resolves_single_toggles() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![CompiledVariant {
+                    name: "test-variant".into(),
+                    weight: 100,
+                    stickiness: None,
+                    payload: None,
+                    overrides: None,
+                    count: AtomicU32::new(0),
+                }],
+                ..CompiledToggle::default()
+            },
+        );
+
+        compiled_state.insert(
+            "some-toggle-other".to_string(),
+            CompiledToggle {
+                name: "some-toggle-other".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+        let toggle = state.resolve("some-toggle", &blank_context).unwrap();
+        let resolved_variant = toggle.variant.name.clone();
+
+        assert_eq!(toggle.enabled, true);
+        assert_eq!(resolved_variant, "test-variant".to_string());
     }
 
     // The client spec doesn't actually enforce anything except userId for variant overrides, so this is
