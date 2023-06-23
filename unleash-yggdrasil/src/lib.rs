@@ -245,17 +245,14 @@ impl EngineState {
     }
 
     pub fn resolve(&self, name: &str, context: &Context) -> Option<ResolvedToggle> {
-        self.compiled_state
-            .as_ref()
-            .map(|state| {
-                state.get(name).map(|compiled_toggle| ResolvedToggle {
-                    enabled: self.enabled(compiled_toggle, context),
-                    impression_data: compiled_toggle.impression_data,
-                    variant: self.get_variant(name, context),
-                    project: compiled_toggle.project.clone(),
-                })
+        self.compiled_state.as_ref().and_then(|state| {
+            state.get(name).map(|compiled_toggle| ResolvedToggle {
+                enabled: self.enabled(compiled_toggle, context),
+                impression_data: compiled_toggle.impression_data,
+                variant: self.get_variant(name, context),
+                project: compiled_toggle.project.clone(),
             })
-            .flatten()
+        })
     }
 
     pub fn is_enabled(&self, name: &str, context: &Context) -> bool {
