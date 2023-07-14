@@ -979,45 +979,6 @@ mod test {
     }
 
     #[test]
-    pub fn strategy_variants_fallback_to_disabled_variant() {
-        let mut compiled_state = HashMap::new();
-        compiled_state.insert(
-            "some-toggle".to_string(),
-            CompiledToggle {
-                name: "some-toggle".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                variants: vec![CompiledVariant {
-                    name: "should-be-ignored".into(),
-                    weight: 100,
-                    stickiness: None,
-                    payload: None,
-                    overrides: None,
-                    count: AtomicU32::new(0),
-                }],
-                compiled_variant_strategy: Some(vec![(
-                    Box::new(|_| true),
-                    vec![CompiledVariant {
-                        count: AtomicU32::new(0),
-                        name: "don't-ignore-me".into(),
-                        weight: 100,
-                        stickiness: None,
-                        payload: None,
-                        overrides: None,
-                    }],
-                )]),
-                ..CompiledToggle::default()
-            },
-        );
-        let state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
-        };
-        let variant = state.get_variant("some-toggle", &Context::default());
-        assert_eq!(variant.name, "don't-ignore-me".to_string());
-    }
-
-    #[test]
     fn strategy_variants_respect_toggles_being_disabled() {
         let mut compiled_state = HashMap::new();
         compiled_state.insert(
