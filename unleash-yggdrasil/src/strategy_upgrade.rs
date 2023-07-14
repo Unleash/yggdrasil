@@ -29,7 +29,12 @@ pub fn build_variant_rules(
             (
                 upgrade_strategy(strategy, segment_map),
                 strategy.variants.clone().unwrap(),
-                "default".to_string(),
+                strategy
+                    .parameters
+                    .as_ref()
+                    .and_then(|params| params.get("stickiness"))
+                    .cloned()
+                    .unwrap_or_else(|| "default".to_string()),
             )
         })
         .collect::<Vec<(String, Vec<StrategyVariant>, String)>>()
