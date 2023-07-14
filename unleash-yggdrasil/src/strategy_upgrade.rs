@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use unleash_types::client_features::{Constraint, Operator, Segment, Strategy};
+use unleash_types::client_features::{Constraint, Operator, Segment, Strategy, StrategyVariant};
 
 use crate::state::SdkError;
 
@@ -16,6 +16,23 @@ pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) 
         .collect::<Vec<String>>()
         .join(" or ");
     rule_text
+}
+
+pub fn build_variant_rules(
+    strategies: &[Strategy],
+    segment_map: &HashMap<i32, Segment>,
+) -> Vec<(String, Vec<StrategyVariant>, String)> {
+    strategies
+        .iter()
+        .filter(|strategy| strategy.variants.is_some())
+        .map(|strategy| {
+            (
+                upgrade_strategy(strategy, segment_map),
+                strategy.variants.clone().unwrap(),
+                "default".to_string(),
+            )
+        })
+        .collect::<Vec<(String, Vec<StrategyVariant>, String)>>()
 }
 
 trait PropResolver {
@@ -302,6 +319,7 @@ mod tests {
             constraints: None,
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -319,6 +337,7 @@ mod tests {
             constraints: Some(vec![]),
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -342,6 +361,7 @@ mod tests {
             constraints: Some(vec![constraint]),
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -365,6 +385,7 @@ mod tests {
             constraints: Some(vec![constraint.clone(), constraint]),
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -382,6 +403,7 @@ mod tests {
             constraints: None,
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new());
@@ -405,6 +427,7 @@ mod tests {
             constraints: Some(vec![constraint.clone(), constraint]),
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new());
@@ -434,6 +457,7 @@ mod tests {
             constraints: Some(vec![constraint]),
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -457,6 +481,7 @@ mod tests {
             constraints: None,
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -479,6 +504,7 @@ mod tests {
             constraints: None,
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -498,6 +524,7 @@ mod tests {
             constraints: None,
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -519,6 +546,7 @@ mod tests {
             constraints: None,
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -542,6 +570,7 @@ mod tests {
             constraints: None,
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());
@@ -567,6 +596,7 @@ mod tests {
             constraints: None,
             segments: None,
             sort_order: Some(1),
+            variants: None,
         };
 
         let output = upgrade(&vec![strategy], &HashMap::new());

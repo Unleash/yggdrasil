@@ -44,6 +44,7 @@ fn benchmark_with_single_constraint(c: &mut Criterion) {
             strategies: Some(vec![Strategy {
                 name: "default".into(),
                 segments: None,
+                variants: None,
                 constraints: Some(vec![Constraint {
                     context_name: "userId".into(),
                     operator: Operator::In,
@@ -102,6 +103,7 @@ fn benchmark_with_two_constraints(c: &mut Criterion) {
                         value: None,
                     },
                 ]),
+                variants: None,
                 parameters: None,
                 sort_order: None,
             }]),
@@ -154,6 +156,7 @@ fn benchmark_engine_ingestion(c: &mut Criterion) {
                 ]),
                 parameters: None,
                 sort_order: None,
+                variants: None,
             }]),
             ..ClientFeature::default()
         }],
