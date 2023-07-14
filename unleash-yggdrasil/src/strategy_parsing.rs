@@ -486,6 +486,7 @@ mod tests {
     // This needs the toggle name for it to actually be useful for the parsing engine so it makes no sense
     // to have a default implementation exposed in the library but it does make testing a lot easier for this
     // test module
+    #[allow(clippy::derivable_impls)]
     impl Default for Context {
         fn default() -> Self {
             Self {
@@ -793,8 +794,10 @@ mod tests {
 
     #[test]
     fn date_constraint_respects_timezones() {
-        let mut context = Context::default();
-        context.app_name = Some("2022-01-22T11:30:00.000Z".into());
+        let context = Context {
+            app_name: Some("2022-01-22T11:30:00.000Z".into()),
+            ..Context::default()
+        };
 
         let rule_text =
             "app_name > 2022-01-22T13:00:00.000+02:00 and app_name < 2022-01-22T14:00:00.000+02:00";
@@ -804,8 +807,10 @@ mod tests {
 
     #[test]
     fn inversion_works_on_string_any_rules() {
-        let mut context = Context::default();
-        context.app_name = Some("email".into());
+        let context = Context {
+            app_name: Some("email".into()),
+            ..Context::default()
+        };
 
         let rule_text = "!app_name contains_any [\"@another.com\"]";
         let rule = compile_rule(rule_text).unwrap();
