@@ -13,5 +13,5 @@ name = "yggdrasilffi"
 [dependencies]
 libc = "0.2"
 serde_json = "1.0.68"
-unleash-types = "0.10.0"
+unleash-types = "0.10.4"
 unleash-yggdrasil = {path = "../unleash-yggdrasil"}

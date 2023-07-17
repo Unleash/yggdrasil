@@ -486,6 +486,7 @@ mod tests {
     // This needs the toggle name for it to actually be useful for the parsing engine so it makes no sense
     // to have a default implementation exposed in the library but it does make testing a lot easier for this
     // test module
+    #[allow(clippy::derivable_impls)]
     impl Default for Context {
         fn default() -> Self {
             Self {
@@ -592,7 +593,7 @@ mod tests {
         let rule = compile_rule(rule).expect("");
         let context = Context::default();
 
-        assert_eq!(rule(&context), true);
+        assert!(rule(&context));
     }
 
     #[test_case("true", true)]
@@ -705,7 +706,7 @@ mod tests {
 
         let context = Context::default();
 
-        assert_eq!(rule(&context), true);
+        assert!(rule(&context));
     }
 
     //This needs to be swapped out for an arbitrary string test
@@ -719,7 +720,7 @@ mod tests {
         let rule_text = input;
         let rule = compile_rule(rule_text).unwrap();
 
-        assert_eq!(rule(&Context::default()), true);
+        assert!(rule(&Context::default()));
     }
 
     #[test]
@@ -727,7 +728,7 @@ mod tests {
         let rule_text = "app_name not_in []";
         let rule = compile_rule(rule_text).unwrap();
 
-        assert_eq!(rule(&Context::default()), true);
+        assert!(rule(&Context::default()));
     }
 
     #[test_case("user_id starts_with_any [\"some\"]", true)]
@@ -771,7 +772,7 @@ mod tests {
         props.insert("cutoff".into(), "2022-01-25T13:00:00.000Z".into());
         context.properties = Some(props);
 
-        assert_eq!(rule(&context), false);
+        assert!(!rule(&context));
     }
 
     #[test_case("!user_id > 8", false)]
@@ -788,28 +789,32 @@ mod tests {
         let rule_text = "100% sticky on context[\"customField\"] with group_id of \"Feature.flexible.rollout.custom.stickiness_100\"";
         let rule = compile_rule(rule_text).unwrap();
 
-        assert_eq!(rule(&Context::default()), false);
+        assert!(!rule(&Context::default()));
     }
 
     #[test]
     fn date_constraint_respects_timezones() {
-        let mut context = Context::default();
-        context.app_name = Some("2022-01-22T11:30:00.000Z".into());
+        let context = Context {
+            app_name: Some("2022-01-22T11:30:00.000Z".into()),
+            ..Context::default()
+        };
 
         let rule_text =
             "app_name > 2022-01-22T13:00:00.000+02:00 and app_name < 2022-01-22T14:00:00.000+02:00";
         let rule = compile_rule(rule_text).unwrap();
-        assert_eq!(rule(&context), true);
+        assert!(rule(&context));
     }
 
     #[test]
     fn inversion_works_on_string_any_rules() {
-        let mut context = Context::default();
-        context.app_name = Some("email".into());
+        let context = Context {
+            app_name: Some("email".into()),
+            ..Context::default()
+        };
 
         let rule_text = "!app_name contains_any [\"@another.com\"]";
         let rule = compile_rule(rule_text).unwrap();
-        assert_eq!(rule(&context), true);
+        assert!(rule(&context));
     }
 
     #[test]
