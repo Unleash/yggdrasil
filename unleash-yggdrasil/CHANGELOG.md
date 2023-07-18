@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.9 (2023-07-18)
+
+### Chore
+
+ - <csr-id-7707e875027b6e100205ae5e3a2fd416f4af17ea/> updated to new chrono and unleash-types
+
+### New Features
+
+ - <csr-id-135639fca552048221a626ff5e3beef1c35d7825/> add support for strategy variants
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release over the course of 18 calendar days.
+ - 23 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#40](https://github.com/sighphyre/yggdrasil/issues/40), [#41](https://github.com/sighphyre/yggdrasil/issues/41)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#40](https://github.com/sighphyre/yggdrasil/issues/40)**
+    - Updated to new chrono and unleash-types ([`7707e87`](https://github.com/sighphyre/yggdrasil/commit/7707e875027b6e100205ae5e3a2fd416f4af17ea))
+ * **[#41](https://github.com/sighphyre/yggdrasil/issues/41)**
+    - Add support for strategy variants ([`135639f`](https://github.com/sighphyre/yggdrasil/commit/135639fca552048221a626ff5e3beef1c35d7825))
+</details>
+
 ## v0.5.8 (2023-06-23)
 
 ### New Features
@@ -16,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 18 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#39](https://github.com/sighphyre/yggdrasil/issues/39)
@@ -30,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#39](https://github.com/sighphyre/yggdrasil/issues/39)**
     - Add single toggle resolve method ([`a14f972`](https://github.com/sighphyre/yggdrasil/commit/a14f97229ecf31eeef003d74b29b09e319f2d394))
  * **Uncategorized**
+    - Release unleash-yggdrasil v0.5.8 ([`64828b7`](https://github.com/sighphyre/yggdrasil/commit/64828b70dd0a26336ba3113e585dab077dcb15e1))
     - Basic FFI language bindings ([`b36de19`](https://github.com/sighphyre/yggdrasil/commit/b36de19e5c13add657273eff3c42ba204a31e860))
 </details>
 
