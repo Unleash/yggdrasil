@@ -20,3 +20,18 @@ Then you can run the tests with:
 ```bash
 rspec
 ```
+
+## Build
+
+You can build the gem with:
+
+```bash
+gem build unleash-engine.gemspec
+
+```
+
+Then you can install the gem for local development with:
+
+```
+gem install unleash-engine-0.0.1.gem
+```
