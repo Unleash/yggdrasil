@@ -198,10 +198,9 @@ pub struct ResolvedToggle {
 
 impl EngineState {
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
-        match &self.compiled_state {
-            Some(state) => state.get(name),
-            None => None,
-        }
+        self.compiled_state
+            .as_ref()
+            .and_then(|state| state.get(name))
     }
 
     pub fn count_toggle(&self, name: &String, enabled: bool) {
@@ -436,14 +435,14 @@ impl EngineState {
 
             if enabled {
                 self.check_variant_by_toggle(toggle, context)
-                    .unwrap_or_default()
             } else {
-                VariantDef::default()
+                None
             }
         } else {
             self.count_toggle(&name.into(), false);
-            VariantDef::default()
-        };
+            None
+        }
+        .unwrap_or_default();
 
         self.count_variant(&name.into(), &variant.name);
         variant
