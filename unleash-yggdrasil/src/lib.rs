@@ -203,7 +203,7 @@ impl EngineState {
             .and_then(|state| state.get(name))
     }
 
-    pub fn count_toggle(&self, name: &String, enabled: bool) {
+    pub fn count_toggle(&self, name: &str, enabled: bool) {
         self.toggle_metrics
             .entry(name.to_owned())
             .and_modify(|metric| {
@@ -231,7 +231,7 @@ impl EngineState {
             });
     }
 
-    pub fn count_variant(&self, toggle_name: &String, variant: &String) {
+    pub fn count_variant(&self, toggle_name: &str, variant: &str) {
         self.toggle_metrics
             .entry(toggle_name.to_owned())
             .and_modify(|metric| {
@@ -431,7 +431,7 @@ impl EngineState {
 
         let variant = if let Some(toggle) = toggle {
             let enabled = self.enabled(toggle, context);
-            self.count_toggle(&name.into(), enabled);
+            self.count_toggle(&name, enabled);
 
             if enabled {
                 self.check_variant_by_toggle(toggle, context)
@@ -439,12 +439,12 @@ impl EngineState {
                 None
             }
         } else {
-            self.count_toggle(&name.into(), false);
+            self.count_toggle(&name, false);
             None
         }
         .unwrap_or_default();
 
-        self.count_variant(&name.into(), &variant.name);
+        self.count_variant(&name, &variant.name);
         variant
     }
 
@@ -888,6 +888,112 @@ mod test {
 
         assert_eq!(missing_toggle_stats.yes, 0);
         assert_eq!(missing_toggle_stats.no, 10);
+    }
+
+    #[test]
+    pub fn check_enabled_and_count_metrics_yields_same_metrics_as_is_enabled() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let is_enabled = state.is_enabled("some-toggle", &Context::default());
+
+        let is_enabled_metrics = state
+            .get_metrics()
+            .unwrap()
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .yes;
+
+        let check_enabled = state
+            .check_enabled("some-toggle", &Context::default())
+            .unwrap();
+
+        state.count_toggle("some-toggle", check_enabled);
+
+        let count_toggle_metrics = state
+            .get_metrics()
+            .unwrap()
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .yes;
+
+        assert_eq!(is_enabled_metrics, 1);
+        assert_eq!(is_enabled_metrics, count_toggle_metrics);
+
+        assert!(is_enabled);
+        assert_eq!(is_enabled, check_enabled);
+    }
+
+    #[test]
+    pub fn check_variant_and_count_metrics_yields_same_metrics_as_get_variant() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let first_variant = state.get_variant("some-toggle", &Context::default());
+        let get_variant_metrics = state
+            .get_metrics()
+            .unwrap()
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .clone();
+
+        let second_variant = state
+            .check_variant("some-toggle", &Context::default())
+            .unwrap_or_default();
+
+        state.count_toggle("some-toggle", true);
+        state.count_variant("some-toggle", &second_variant.name);
+        let check_variant_metrics = state
+            .get_metrics()
+            .unwrap()
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .clone();
+
+        assert_eq!(first_variant, VariantDef::default());
+        assert_eq!(first_variant.name, second_variant.name);
+
+        assert_eq!(get_variant_metrics.variants.len(), 1);
+        assert_eq!(check_variant_metrics.variants.len(), 1);
+
+        assert_eq!(get_variant_metrics.variants.get("disabled").unwrap(), &1);
+        assert_eq!(check_variant_metrics.variants.get("disabled").unwrap(), &1);
+
+        assert_eq!(get_variant_metrics.yes, 1);
+        assert_eq!(check_variant_metrics.yes, 1);
+
+        assert_eq!(get_variant_metrics.no, 0);
+        assert_eq!(check_variant_metrics.no, 0);
     }
 
     #[test_case(Some("default"), Some("sessionId"), Some("userId"), Some("userId"); "should return userId for default stickiness")]
