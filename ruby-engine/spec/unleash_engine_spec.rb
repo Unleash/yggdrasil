@@ -16,8 +16,71 @@ RSpec.describe UnleashEngine do
       expect(is_enabled).to be_nil
     end
   end
-end
 
+  describe '#metrics' do
+    it 'should increment toggle count when it exists' do
+      suite_path = File.join('../client-specification/specifications', "01-simple-examples.json")
+      suite_data = JSON.parse(File.read(suite_path))
+
+      unleash_engine.take_state(suite_data['state'].to_json)
+
+      unleash_engine.count_toggle('Feature.A', true)
+      unleash_engine.count_toggle('Feature.A', false)
+
+      metrics =  unleash_engine.get_metrics() # This should clear the metrics buffer
+      metric = metrics["toggles"]["Feature.A"]
+
+      metrics =  unleash_engine.get_metrics()
+
+      expect(metric["yes"]).to eq(1)
+      expect(metric["no"]).to eq(1)
+
+      metrics =  unleash_engine.get_metrics()
+      expect(metrics).to be_nil
+    end
+
+    it 'should increment toggle count when it exists' do
+      suite_path = File.join('../client-specification/specifications', "01-simple-examples.json")
+      suite_data = JSON.parse(File.read(suite_path))
+
+      unleash_engine.take_state(suite_data['state'].to_json)
+
+      unleash_engine.count_toggle('Feature.A', true)
+      unleash_engine.count_toggle('Feature.A', false)
+
+      metrics =  unleash_engine.get_metrics()
+      metric = metrics["toggles"]["Feature.A"]
+
+      expect(metric["yes"]).to eq(1)
+      expect(metric["no"]).to eq(1)
+    end
+
+    it 'should increment toggle count when the toggle does not exist' do
+      unleash_engine.count_toggle('Feature.X', true)
+      unleash_engine.count_toggle('Feature.X', false)
+
+      metrics =  unleash_engine.get_metrics()
+      metric = metrics["toggles"]["Feature.X"]
+
+      expect(metric["yes"]).to eq(1)
+      expect(metric["no"]).to eq(1)
+    end
+
+    it 'should increment variant' do
+      suite_path = File.join('../client-specification/specifications', "01-simple-examples.json")
+      suite_data = JSON.parse(File.read(suite_path))
+
+      unleash_engine.take_state(suite_data['state'].to_json)
+
+      unleash_engine.count_variant('Feature.Q', "disabled")
+
+      metrics =  unleash_engine.get_metrics()
+      metric = metrics["toggles"]["Feature.Q"]
+
+      expect(metric["variants"]["disabled"]).to eq(1)
+    end
+  end
+end
 
 RSpec.describe 'Client Specification' do
   let(:unleash_engine) { UnleashEngine.new }

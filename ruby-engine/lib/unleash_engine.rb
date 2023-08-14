@@ -47,6 +47,9 @@ class UnleashEngine
   attach_function :engine_check_enabled, %i[pointer string string], :int
   attach_function :engine_check_variant, %i[pointer string string], :pointer
   attach_function :engine_free_variant_def, [:pointer], :void
+  attach_function :engine_count_toggle, %i[pointer string bool], :void
+  attach_function :engine_count_variant, %i[pointer string string], :void
+  attach_function :engine_get_metrics, [:pointer], :string
 
   def initialize
     @engine_state = UnleashEngine.engine_new
@@ -77,5 +80,18 @@ class UnleashEngine
     response = UnleashEngine.engine_check_enabled(@engine_state, toggle_name, context_json)
     return nil if response == -1
     return response == 1
+  end
+
+  def count_toggle(toggle_name, enabled)
+    UnleashEngine.engine_count_toggle(@engine_state, toggle_name, enabled)
+  end
+
+  def count_variant(toggle_name, variant_name)
+    UnleashEngine.engine_count_variant(@engine_state, toggle_name, variant_name)
+  end
+
+  def get_metrics
+    metrics_json = UnleashEngine.engine_get_metrics(@engine_state)
+    JSON.parse(metrics_json, symbolize_names: true)
   end
 end

@@ -225,3 +225,63 @@ pub unsafe extern "C" fn engine_free_variant_def(ptr: *mut c_char) {
     }
     drop(CString::from_raw(ptr));
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn engine_count_toggle(
+    pts: *mut libc::c_void,
+    toggle_name: *const c_char,
+    enabled: bool,
+) {
+    let state = unsafe {
+        assert!(!pts.is_null());
+        &mut *(pts as *mut EngineState)
+    };
+
+    let c_toggle_name = unsafe {
+        assert!(!toggle_name.is_null());
+        CStr::from_ptr(toggle_name)
+    };
+
+    let toggle_name = c_toggle_name.to_str().unwrap();
+
+    state.count_toggle(&toggle_name, enabled);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn engine_count_variant(
+    ptr: *mut libc::c_void,
+    toggle_name: *const c_char,
+    variant_name: *const c_char,
+) {
+    let state = unsafe {
+        assert!(!ptr.is_null());
+        &mut *(ptr as *mut EngineState)
+    };
+
+    let c_toggle_name = unsafe {
+        assert!(!toggle_name.is_null());
+        CStr::from_ptr(toggle_name)
+    };
+
+    let c_variant_name = unsafe {
+        assert!(!variant_name.is_null());
+        CStr::from_ptr(variant_name)
+    };
+
+    let toggle_name = c_toggle_name.to_str().unwrap();
+    let variant_name = c_variant_name.to_str().unwrap();
+
+    state.count_variant(&toggle_name, variant_name);
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn engine_get_metrics(ptr: *mut libc::c_void) -> *mut c_char {
+    let state = unsafe {
+        assert!(!ptr.is_null());
+        &mut *(ptr as *mut EngineState)
+    };
+
+    let metrics = state.get_metrics();
+    let json = serde_json::to_string(&metrics).unwrap();
+    CString::new(json).unwrap().into_raw()
+}
