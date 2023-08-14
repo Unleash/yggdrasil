@@ -5,6 +5,20 @@ require_relative '../lib/unleash_engine'
 index_file_path = '../client-specification/specifications/index.json'
 test_suites = JSON.parse(File.read(index_file_path))
 
+#tests to cover checking a toggle with a missing name
+
+RSpec.describe UnleashEngine do
+  let(:unleash_engine) { UnleashEngine.new }
+
+  describe '#checking a toggle' do
+    it 'that does not exist should yield a not found' do
+      is_enabled = unleash_engine.enabled?('missing-toggle', {})
+      expect(is_enabled).to be_nil
+    end
+  end
+end
+
+
 RSpec.describe 'Client Specification' do
   let(:unleash_engine) { UnleashEngine.new }
 
@@ -24,7 +38,7 @@ RSpec.describe 'Client Specification' do
           let(:expected_result) { test['expectedResult'] }
 
           it 'returns correct result for `is_enabled?` method' do
-            result = unleash_engine.enabled?(toggle_name, context)
+            result = unleash_engine.enabled?(toggle_name, context) || false
 
             expect(result).to eq(expected_result),
                               "Failed test '#{test['description']}': expected #{expected_result}, got #{result}"
@@ -41,7 +55,7 @@ RSpec.describe 'Client Specification' do
           let(:expected_result) { Variant.new(test['expectedResult']) }
 
           it 'returns correct result for `get_variant` method' do
-            result = unleash_engine.get_variant(toggle_name, context)
+            result = unleash_engine.get_variant(toggle_name, context).variant
 
             expect(result.name).to eq(expected_result.name),
                                    "Failed test '#{test['description']}': expected #{expected_result.name}, got #{result.name}"

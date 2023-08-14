@@ -14,6 +14,15 @@ def platform_specific_lib
   end
 end
 
+class VariantRespose
+  attr_accessor :code, :variant
+
+  def initialize(attributes = {})
+    self.code = attributes['code']
+    self.variant = Variant.new(attributes['variant'])
+  end
+end
+
 class Variant
   attr_accessor :enabled, :name, :payload
 
@@ -35,8 +44,8 @@ class UnleashEngine
   attach_function :engine_new, [], :pointer
   attach_function :engine_free, [:pointer], :void
   attach_function :engine_take_state, %i[pointer string], :string
-  attach_function :engine_is_enabled, %i[pointer string string], :bool
-  attach_function :engine_get_variant, %i[pointer string string], :pointer
+  attach_function :engine_check_enabled, %i[pointer string string], :int
+  attach_function :engine_check_variant, %i[pointer string string], :pointer
   attach_function :engine_free_variant_def, [:pointer], :void
 
   def initialize
@@ -49,22 +58,24 @@ class UnleashEngine
   end
 
   def take_state(toggles)
-    metric_bucket_json = UnleashEngine.engine_take_state(@engine_state, toggles)
-    JSON.parse(metric_bucket_json)
+    UnleashEngine.engine_take_state(@engine_state, toggles)
   end
 
   def get_variant(name, context)
-    context_json = context.to_json
-    variant_def_json_ptr = UnleashEngine.engine_get_variant(@engine_state, name, context_json)
-
+    context_json = (context || {}).to_json
+    variant_def_json_ptr = UnleashEngine.engine_check_variant(@engine_state, name, context_json)
     variant_def_json = variant_def_json_ptr.read_string
-    UnleashEngine.engine_free_variant_def(variant_def_json_ptr)
 
-    Variant.new(JSON.parse(variant_def_json))
+    variant_response = VariantRespose.new(JSON.parse(variant_def_json))
+
+    UnleashEngine.engine_free_variant_def(variant_def_json_ptr)
+    variant_response
   end
 
   def enabled?(toggle_name, context)
-    context_json = context.to_json
-    UnleashEngine.engine_is_enabled(@engine_state, toggle_name, context_json)
+    context_json = (context || {}).to_json
+    response = UnleashEngine.engine_check_enabled(@engine_state, toggle_name, context_json)
+    return nil if response == -1
+    return response == 1
   end
 end
