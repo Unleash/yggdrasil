@@ -3,7 +3,7 @@ use std::{
     str::Utf8Error,
 };
 
-use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
+use unleash_types::client_features::ClientFeatures;
 use unleash_yggdrasil::{Context, EngineState};
 
 #[derive(Debug)]
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn engine_take_state(
     };
 
     match take_state(state, c_str) {
-        Ok(c_string) => c_string,
+        Ok(()) => std::ptr::null(),
         Err(err) => {
             println!("Error in engine_take_state: {:?}", err);
             std::ptr::null()
@@ -96,14 +96,11 @@ pub unsafe extern "C" fn engine_take_state(
     }
 }
 
-fn take_state(state: &mut EngineState, c_str: &CStr) -> Result<*mut i8, FFIError> {
+fn take_state(state: &mut EngineState, c_str: &CStr) -> Result<(), FFIError> {
     let str_slice: &str = c_str.to_str()?;
     let toggles: ClientFeatures = serde_json::from_str(str_slice)?;
-
-    let metric_bucket: Option<MetricBucket> = state.take_state(toggles);
-    let json_str: String = serde_json::to_string(&metric_bucket)?;
-    let c_string = CString::new(json_str)?;
-    Ok(c_string.into_raw())
+    state.take_state(toggles);
+    Ok(())
 }
 
 /// Returns a boolean representing the state of the requested toggle for the given context

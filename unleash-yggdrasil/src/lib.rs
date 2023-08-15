@@ -12,6 +12,7 @@ pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
 use chrono::{DateTime, Utc};
+use dashmap::DashMap;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
 use state::EnrichedContext;
@@ -34,9 +35,6 @@ pub struct CompiledToggle {
     pub compiled_strategy: RuleFragment,
     pub compiled_variant_strategy: Option<Vec<(RuleFragment, Vec<CompiledVariant>)>>,
     pub variants: Vec<CompiledVariant>,
-    pub yes: AtomicU32,
-    pub no: AtomicU32,
-    pub default_variant: AtomicU32,
     pub impression_data: bool,
     pub project: String,
 }
@@ -48,7 +46,6 @@ pub struct CompiledVariant {
     pub stickiness: Option<String>,
     pub payload: Option<Payload>,
     pub overrides: Option<Vec<Override>>,
-    pub count: AtomicU32,
 }
 
 impl Default for CompiledToggle {
@@ -59,9 +56,6 @@ impl Default for CompiledToggle {
             compiled_strategy: Box::new(|_| true),
             compiled_variant_strategy: None,
             variants: Default::default(),
-            yes: Default::default(),
-            no: Default::default(),
-            default_variant: Default::default(),
             impression_data: false,
             project: "default".to_string(),
         }
@@ -76,7 +70,6 @@ impl From<&Variant> for CompiledVariant {
             stickiness: value.stickiness.clone(),
             payload: value.payload.clone(),
             overrides: value.overrides.clone(),
-            count: AtomicU32::new(0),
         }
     }
 }
@@ -113,7 +106,6 @@ fn compile_variant_rule(
                                 stickiness: Some(stickiness.clone()),
                                 payload: strategy_variant.payload.clone(),
                                 overrides: None,
-                                count: AtomicU32::new(0),
                             })
                             .collect(),
                     )
@@ -138,9 +130,6 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
                 compiled_variant_strategy: variant_rule,
                 variants: compile_variants(&toggle.variants),
                 compiled_strategy: compile_rule(rule.as_str()).unwrap(),
-                yes: AtomicU32::new(0),
-                no: AtomicU32::new(0),
-                default_variant: AtomicU32::new(0),
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
             },
@@ -177,8 +166,15 @@ impl<'de> de::Deserialize<'de> for IPAddress {
     }
 }
 
+struct Metric {
+    yes: AtomicU32,
+    no: AtomicU32,
+    variants: DashMap<String, AtomicU32>,
+}
+
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
+    toggle_metrics: DashMap<String, Metric>,
     pub started: DateTime<Utc>,
 }
 
@@ -186,6 +182,7 @@ impl Default for EngineState {
     fn default() -> Self {
         Self {
             compiled_state: Default::default(),
+            toggle_metrics: Default::default(),
             started: Utc::now(),
         }
     }
@@ -201,65 +198,111 @@ pub struct ResolvedToggle {
 
 impl EngineState {
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
-        match &self.compiled_state {
-            Some(state) => state.get(name),
-            None => None,
-        }
+        self.compiled_state
+            .as_ref()
+            .and_then(|state| state.get(name))
     }
 
-    fn harvest_metrics(&mut self) -> Option<MetricBucket> {
-        if let Some(state) = &self.compiled_state {
-            let metrics: HashMap<String, ToggleStats> = state
-                .values()
-                .map(|toggle| {
-                    let yes = toggle.yes.swap(0, Ordering::Relaxed);
-                    let no = toggle.no.swap(0, Ordering::Relaxed);
+    pub fn count_toggle(&self, name: &str, enabled: bool) {
+        self.toggle_metrics
+            .entry(name.to_owned())
+            .and_modify(|metric| {
+                if enabled {
+                    metric.yes.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    metric.no.fetch_add(1, Ordering::Relaxed);
+                }
+            })
+            .or_insert_with(|| {
+                let yes = AtomicU32::new(0);
+                let no = AtomicU32::new(0);
 
-                    let mut variants: HashMap<String, u32> = toggle
-                        .variants
-                        .iter()
-                        .map(|variant| {
-                            (
-                                variant.name.clone(),
-                                variant.count.swap(0, Ordering::Relaxed),
-                            )
-                        })
-                        .collect();
+                if enabled {
+                    yes.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    no.fetch_add(1, Ordering::Relaxed);
+                }
 
-                    variants.insert(
-                        VariantDef::default().name,
-                        toggle.default_variant.swap(0, Ordering::Relaxed),
-                    );
+                Metric {
+                    yes,
+                    no,
+                    variants: DashMap::default(),
+                }
+            });
+    }
 
-                    (toggle.name.clone(), ToggleStats { yes, no, variants })
-                })
-                .collect();
-            let timestamp = Utc::now();
-            let bucket = MetricBucket {
+    pub fn count_variant(&self, toggle_name: &str, variant: &str) {
+        self.toggle_metrics
+            .entry(toggle_name.to_owned())
+            .and_modify(|metric| {
+                metric
+                    .variants
+                    .entry(variant.to_string())
+                    .and_modify(|v| {
+                        v.fetch_add(1, Ordering::Relaxed);
+                    })
+                    .or_insert(AtomicU32::new(1));
+            })
+            .or_insert_with(|| {
+                let variants = DashMap::default();
+                variants.insert(variant.to_string(), AtomicU32::new(1));
+                Metric {
+                    yes: AtomicU32::new(0),
+                    no: AtomicU32::new(0),
+                    variants,
+                }
+            });
+    }
+
+    pub fn get_metrics(&mut self) -> Option<MetricBucket> {
+        let metrics: HashMap<String, ToggleStats> = self
+            .toggle_metrics
+            .iter()
+            .filter_map(|metric_pair| {
+                let toggle_name = metric_pair.key();
+                let metric_info = metric_pair.value();
+
+                let yes = metric_info.yes.swap(0, Ordering::Relaxed);
+                let no = metric_info.no.swap(0, Ordering::Relaxed);
+
+                let variants: HashMap<String, u32> = metric_info
+                    .variants
+                    .iter()
+                    .filter_map(|pair| {
+                        let variant_metric = pair.value();
+                        let variant_name = pair.key();
+
+                        let variant_count = variant_metric.swap(0, Ordering::Relaxed);
+                        if variant_count > 0 {
+                            Some((variant_name.clone(), variant_count))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                if yes > 0 || no > 0 || !variants.is_empty() {
+                    Some((toggle_name.clone(), ToggleStats { yes, no, variants }))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if !metrics.is_empty() {
+            Some(MetricBucket {
                 toggles: metrics,
                 start: self.started,
-                stop: timestamp,
-            };
-            self.started = timestamp;
-            Some(bucket)
+                stop: Utc::now(),
+            })
         } else {
             None
         }
     }
 
-    pub fn get_metrics(&mut self) -> Option<MetricBucket> {
-        self.harvest_metrics()
-    }
-
     fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
         let context = EnrichedContext::from(context.clone(), toggle.name.clone());
-        let is_enabled = toggle.enabled && (toggle.compiled_strategy)(&context);
-        if is_enabled {
-            toggle.yes.fetch_add(1, Ordering::Relaxed);
-        } else {
-            toggle.no.fetch_add(1, Ordering::Relaxed);
-        }
-        is_enabled
+        toggle.enabled && (toggle.compiled_strategy)(&context)
     }
 
     pub fn resolve_all(&self, context: &Context) -> Option<HashMap<String, ResolvedToggle>> {
@@ -267,10 +310,11 @@ impl EngineState {
             state
                 .iter()
                 .map(|(name, toggle)| {
+                    let enabled = self.enabled(toggle, context);
                     (
                         name.clone(),
                         ResolvedToggle {
-                            enabled: self.enabled(toggle, context),
+                            enabled,
                             impression_data: toggle.impression_data,
                             variant: self.get_variant(name, context),
                             project: toggle.project.clone(),
@@ -292,14 +336,20 @@ impl EngineState {
         })
     }
 
+    pub fn check_enabled(&self, name: &str, context: &Context) -> Option<bool> {
+        self.get_toggle(name)
+            .map(|toggle| self.enabled(toggle, context))
+    }
+
     pub fn is_enabled(&self, name: &str, context: &Context) -> bool {
-        self.compiled_state
-            .as_ref()
-            .and_then(|_| {
-                self.get_toggle(name)
-                    .map(|toggle| self.enabled(toggle, context))
-            })
-            .unwrap_or_default()
+        let is_enabled = self
+            .get_toggle(name)
+            .map(|toggle| self.enabled(toggle, context))
+            .unwrap_or_default();
+
+        self.count_toggle(name, is_enabled);
+
+        is_enabled
     }
 
     fn resolve_variant<'a>(
@@ -334,58 +384,72 @@ impl EngineState {
         None
     }
 
+    fn check_variant_by_toggle(
+        &self,
+        toggle: &CompiledToggle,
+        context: &Context,
+    ) -> Option<VariantDef> {
+        let strategy_variants =
+            toggle
+                .compiled_variant_strategy
+                .as_ref()
+                .and_then(|variant_strategies| {
+                    let context = EnrichedContext::from(context.clone(), toggle.name.clone());
+
+                    let resolved_strategy_variants: Option<&Vec<CompiledVariant>> =
+                        variant_strategies.iter().find_map(|(rule, rule_variants)| {
+                            (rule)(&context).then_some(rule_variants)
+                        });
+                    resolved_strategy_variants
+                });
+
+        let variant = if let Some(strategy_variants) = strategy_variants {
+            self.resolve_variant(toggle, strategy_variants, context)
+        } else {
+            self.resolve_variant(toggle, &toggle.variants, context)
+        };
+
+        variant.map(|variant| VariantDef {
+            name: variant.name.clone(),
+            payload: variant.payload.clone(),
+            enabled: true,
+        })
+    }
+
+    pub fn check_variant(&self, name: &str, context: &Context) -> Option<VariantDef> {
+        self.get_toggle(name).and_then(|toggle| {
+            if self.enabled(toggle, context) {
+                self.check_variant_by_toggle(toggle, context)
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn get_variant(&self, name: &str, context: &Context) -> VariantDef {
         let toggle = self.get_toggle(name);
 
-        toggle
-            .map(|toggle| {
-                let strategy_variants =
-                    toggle
-                        .compiled_variant_strategy
-                        .as_ref()
-                        .and_then(|variant_strategies| {
-                            let context =
-                                EnrichedContext::from(context.clone(), toggle.name.clone());
+        let variant = if let Some(toggle) = toggle {
+            let enabled = self.enabled(toggle, context);
+            self.count_toggle(name, enabled);
 
-                            let resolved_strategy_variants: Option<&Vec<CompiledVariant>> =
-                                variant_strategies.iter().find_map(|(rule, rule_variants)| {
-                                    (rule)(&context).then_some(rule_variants)
-                                });
-                            resolved_strategy_variants
-                        });
+            if enabled {
+                self.check_variant_by_toggle(toggle, context)
+            } else {
+                None
+            }
+        } else {
+            self.count_toggle(name, false);
+            None
+        }
+        .unwrap_or_default();
 
-                let variant = if let Some(strategy_variants) = strategy_variants {
-                    self.resolve_variant(toggle, strategy_variants, context)
-                } else {
-                    self.resolve_variant(toggle, &toggle.variants, context)
-                };
-
-                let enabled = self.enabled(toggle, context);
-
-                if !enabled {
-                    toggle.default_variant.fetch_add(1, Ordering::Relaxed);
-                    return VariantDef::default();
-                };
-
-                if let Some(variant) = variant {
-                    variant.count.fetch_add(1, Ordering::Relaxed);
-                    VariantDef {
-                        name: variant.name.clone(),
-                        payload: variant.payload.clone(),
-                        enabled,
-                    }
-                } else {
-                    toggle.default_variant.fetch_add(1, Ordering::Relaxed);
-                    VariantDef::default()
-                }
-            })
-            .unwrap_or_default()
+        self.count_variant(name, &variant.name);
+        variant
     }
 
-    pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<MetricBucket> {
-        let metrics = self.harvest_metrics();
+    pub fn take_state(&mut self, toggles: ClientFeatures) {
         self.compiled_state = Some(compile_state(&toggles));
-        metrics
     }
 }
 
@@ -468,7 +532,7 @@ impl Default for VariantDef {
 #[cfg(test)]
 mod test {
     use serde::Deserialize;
-    use std::{collections::HashMap, fs, sync::atomic::AtomicU32};
+    use std::{collections::HashMap, fs};
     use test_case::test_case;
     use unleash_types::client_features::{ClientFeatures, Override};
 
@@ -576,7 +640,6 @@ mod test {
                     stickiness: Some("userId".into()),
                     payload: None,
                     overrides: None,
-                    count: AtomicU32::new(0),
                 }],
                 ..CompiledToggle::default()
             },
@@ -663,7 +726,6 @@ mod test {
                     stickiness: None,
                     payload: None,
                     overrides: None,
-                    count: AtomicU32::new(0),
                 }],
                 ..CompiledToggle::default()
             },
@@ -710,7 +772,7 @@ mod test {
     }
 
     #[test]
-    pub fn take_state_yields_unhandled_metrics() {
+    pub fn no_valid_metrics_yields_none() {
         let mut compiled_state = HashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
@@ -727,21 +789,211 @@ mod test {
             ..Default::default()
         };
 
-        let blank_context = Context::default();
+        let metrics = state.get_metrics();
+        assert!(metrics.is_none());
+    }
 
-        state.is_enabled("some-toggle", &blank_context);
+    #[test]
+    pub fn getting_metrics_clears_existing_metrics() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
 
-        let metrics = state
-            .take_state(ClientFeatures {
-                version: 2,
-                features: vec![],
-                segments: None,
-                query: None,
-            })
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        state.is_enabled("some-toggle", &Context::default());
+
+        let metrics = state.get_metrics();
+        assert!(metrics.is_some());
+
+        let metrics = state.get_metrics();
+        assert!(metrics.is_none());
+    }
+
+    #[test]
+    pub fn unknown_features_and_variants_get_metrics() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        state.is_enabled("missing-toggle", &Context::default());
+        state.get_variant("missing-toggle", &Context::default());
+
+        let metrics = state.get_metrics().unwrap();
+
+        let some_toggle_stats = metrics.toggles.get("missing-toggle").unwrap();
+        assert_eq!(some_toggle_stats.yes, 0);
+        assert_eq!(some_toggle_stats.no, 2);
+        assert_eq!(some_toggle_stats.variants.len(), 1);
+    }
+
+    #[test]
+    pub fn multiple_toggle_checks_stack_metrics() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        for _ in 0..10 {
+            state.is_enabled("some-toggle", &Context::default());
+            state.get_variant("some-toggle", &Context::default());
+
+            state.is_enabled("missing-toggle", &Context::default());
+        }
+
+        let metrics = state.get_metrics().unwrap();
+
+        let some_toggle_stats = metrics.toggles.get("some-toggle").unwrap();
+        let missing_toggle_stats = metrics.toggles.get("missing-toggle").unwrap();
+
+        let disabled_variant_count = *some_toggle_stats.variants.get("disabled").unwrap();
+
+        assert_eq!(some_toggle_stats.yes, 20);
+        assert_eq!(some_toggle_stats.no, 0);
+        assert_eq!(some_toggle_stats.variants.len(), 1);
+        assert_eq!(disabled_variant_count, 10);
+
+        assert_eq!(missing_toggle_stats.yes, 0);
+        assert_eq!(missing_toggle_stats.no, 10);
+    }
+
+    #[test]
+    pub fn check_enabled_and_count_metrics_yields_same_metrics_as_is_enabled() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let is_enabled = state.is_enabled("some-toggle", &Context::default());
+
+        let is_enabled_metrics = state
+            .get_metrics()
+            .unwrap()
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .yes;
+
+        let check_enabled = state
+            .check_enabled("some-toggle", &Context::default())
             .unwrap();
-        let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
 
-        assert_eq!(toggle_metric.yes, 1);
+        state.count_toggle("some-toggle", check_enabled);
+
+        let count_toggle_metrics = state
+            .get_metrics()
+            .unwrap()
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .yes;
+
+        assert_eq!(is_enabled_metrics, 1);
+        assert_eq!(is_enabled_metrics, count_toggle_metrics);
+
+        assert!(is_enabled);
+        assert_eq!(is_enabled, check_enabled);
+    }
+
+    #[test]
+    pub fn check_variant_and_count_metrics_yields_same_metrics_as_get_variant() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let first_variant = state.get_variant("some-toggle", &Context::default());
+        let get_variant_metrics = state
+            .get_metrics()
+            .unwrap()
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .clone();
+
+        let second_variant = state
+            .check_variant("some-toggle", &Context::default())
+            .unwrap_or_default();
+
+        state.count_toggle("some-toggle", true);
+        state.count_variant("some-toggle", &second_variant.name);
+        let check_variant_metrics = state
+            .get_metrics()
+            .unwrap()
+            .toggles
+            .get("some-toggle")
+            .unwrap()
+            .clone();
+
+        assert_eq!(first_variant, VariantDef::default());
+        assert_eq!(first_variant.name, second_variant.name);
+
+        assert_eq!(get_variant_metrics.variants.len(), 1);
+        assert_eq!(check_variant_metrics.variants.len(), 1);
+
+        assert_eq!(get_variant_metrics.variants.get("disabled").unwrap(), &1);
+        assert_eq!(check_variant_metrics.variants.get("disabled").unwrap(), &1);
+
+        assert_eq!(get_variant_metrics.yes, 1);
+        assert_eq!(check_variant_metrics.yes, 1);
+
+        assert_eq!(get_variant_metrics.no, 0);
+        assert_eq!(check_variant_metrics.no, 0);
     }
 
     #[test_case(Some("default"), Some("sessionId"), Some("userId"), Some("userId"); "should return userId for default stickiness")]
@@ -789,7 +1041,6 @@ mod test {
                     stickiness: None,
                     payload: None,
                     overrides: None,
-                    count: AtomicU32::new(0),
                 }],
                 ..CompiledToggle::default()
             },
@@ -840,7 +1091,6 @@ mod test {
                     stickiness: None,
                     payload: None,
                     overrides: None,
-                    count: AtomicU32::new(0),
                 }],
                 ..CompiledToggle::default()
             },
@@ -897,7 +1147,6 @@ mod test {
                 context_name: context_name.into(),
                 values: override_values.iter().map(|s| s.to_string()).collect(),
             }]),
-            count: 0.into(),
         }];
         let result = check_for_variant_override(&variants, &context);
         assert_eq!(result.is_some(), expected);
@@ -954,12 +1203,10 @@ mod test {
                     stickiness: None,
                     payload: None,
                     overrides: None,
-                    count: AtomicU32::new(0),
                 }],
                 compiled_variant_strategy: Some(vec![(
                     Box::new(|_| true),
                     vec![CompiledVariant {
-                        count: AtomicU32::new(0),
                         name: "don't-ignore-me".into(),
                         weight: 100,
                         stickiness: None,
@@ -991,7 +1238,6 @@ mod test {
                 compiled_variant_strategy: Some(vec![(
                     Box::new(|_| true),
                     vec![CompiledVariant {
-                        count: AtomicU32::new(0),
                         name: "".into(),
                         weight: 100,
                         stickiness: None,
