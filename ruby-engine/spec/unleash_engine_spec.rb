@@ -18,66 +18,72 @@ RSpec.describe UnleashEngine do
   end
 
   describe '#metrics' do
-    it 'should increment toggle count when it exists' do
-      suite_path = File.join('../client-specification/specifications', "01-simple-examples.json")
+    it 'should clear metrics when get_metrics is called' do
+      feature_name = 'Feature.A'
+
+      suite_path = File.join('../client-specification/specifications', '01-simple-examples.json')
       suite_data = JSON.parse(File.read(suite_path))
 
       unleash_engine.take_state(suite_data['state'].to_json)
 
-      unleash_engine.count_toggle('Feature.A', true)
-      unleash_engine.count_toggle('Feature.A', false)
+      unleash_engine.count_toggle(feature_name, true)
+      unleash_engine.count_toggle(feature_name, false)
 
       metrics =  unleash_engine.get_metrics() # This should clear the metrics buffer
-      metric = metrics["toggles"]["Feature.A"]
 
-      metrics =  unleash_engine.get_metrics()
-
-      expect(metric["yes"]).to eq(1)
-      expect(metric["no"]).to eq(1)
+      metric = metrics[:toggles][feature_name.to_sym]
+      expect(metric[:yes]).to eq(1)
+      expect(metric[:no]).to eq(1)
 
       metrics =  unleash_engine.get_metrics()
       expect(metrics).to be_nil
     end
 
     it 'should increment toggle count when it exists' do
-      suite_path = File.join('../client-specification/specifications', "01-simple-examples.json")
+      toggle_name = 'Feature.A'
+
+      suite_path = File.join('../client-specification/specifications', '01-simple-examples.json')
       suite_data = JSON.parse(File.read(suite_path))
 
       unleash_engine.take_state(suite_data['state'].to_json)
 
-      unleash_engine.count_toggle('Feature.A', true)
-      unleash_engine.count_toggle('Feature.A', false)
+      unleash_engine.count_toggle(toggle_name, true)
+      unleash_engine.count_toggle(toggle_name, false)
 
       metrics =  unleash_engine.get_metrics()
-      metric = metrics["toggles"]["Feature.A"]
+      metric = metrics[:toggles][toggle_name.to_sym]
 
-      expect(metric["yes"]).to eq(1)
-      expect(metric["no"]).to eq(1)
+      expect(metric[:yes]).to eq(1)
+      expect(metric[:no]).to eq(1)
     end
 
     it 'should increment toggle count when the toggle does not exist' do
-      unleash_engine.count_toggle('Feature.X', true)
-      unleash_engine.count_toggle('Feature.X', false)
+      toggle_name = 'Feature.X'
+
+      unleash_engine.count_toggle(toggle_name, true)
+      unleash_engine.count_toggle(toggle_name, false)
 
       metrics =  unleash_engine.get_metrics()
-      metric = metrics["toggles"]["Feature.X"]
+      metric = metrics[:toggles][toggle_name.to_sym]
 
-      expect(metric["yes"]).to eq(1)
-      expect(metric["no"]).to eq(1)
+      expect(metric[:yes]).to eq(1)
+      expect(metric[:no]).to eq(1)
     end
 
     it 'should increment variant' do
-      suite_path = File.join('../client-specification/specifications', "01-simple-examples.json")
+      toggle_name = 'Feature.Q'
+
+      suite_path = File.join('../client-specification/specifications', '01-simple-examples.json')
       suite_data = JSON.parse(File.read(suite_path))
 
       unleash_engine.take_state(suite_data['state'].to_json)
 
-      unleash_engine.count_variant('Feature.Q', "disabled")
+      unleash_engine.count_variant(toggle_name, 'disabled')
 
       metrics =  unleash_engine.get_metrics()
-      metric = metrics["toggles"]["Feature.Q"]
+      metric = metrics[:toggles][toggle_name.to_sym]
 
-      expect(metric["variants"]["disabled"]).to eq(1)
+      expect(metric[:variants][:disabled]).to eq(1)
     end
   end
 end

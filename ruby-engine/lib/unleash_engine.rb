@@ -14,7 +14,7 @@ def platform_specific_lib
   end
 end
 
-class VariantRespose
+class VariantResponse
   attr_accessor :code, :variant
 
   def initialize(attributes = {})
@@ -69,7 +69,7 @@ class UnleashEngine
     variant_def_json_ptr = UnleashEngine.engine_check_variant(@engine_state, name, context_json)
     variant_def_json = variant_def_json_ptr.read_string
 
-    variant_response = VariantRespose.new(JSON.parse(variant_def_json))
+    variant_response = VariantResponse.new(JSON.parse(variant_def_json))
 
     UnleashEngine.engine_free_variant_def(variant_def_json_ptr)
     variant_response
