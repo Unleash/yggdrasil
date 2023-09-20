@@ -125,7 +125,11 @@ fn context_property(mut node: Pairs<Rule>) -> ContextResolver {
         }
     })
 }
+// ! in  ["a", "b"]
+// not_in  ["a", "b"]
 
+// ! not_in  ["a", "b"]
+// in  ["a", "b"]
 fn to_ordinal_comparator(node: Pair<Rule>) -> OrdinalComparator {
     match node.as_str() {
         "<" => OrdinalComparator::Lt,
@@ -141,6 +145,8 @@ fn to_content_comparator(node: Pair<Rule>) -> ContentComparator {
     match node.as_str() {
         "in" => ContentComparator::In,
         "not_in" => ContentComparator::NotIn,
+        "in_ignore_case" => ContentComparator::In,
+        "not_in_ignore_case" => ContentComparator::NotIn,
         _ => unreachable!(),
     }
 }
@@ -418,7 +424,7 @@ fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFrag
 fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
     let first = node.next();
     let second = node.next();
-
+    println!("constraint {:?} {:?}", first, second);
     let (inverted, child) = match (first, second) {
         (Some(_), Some(second)) => (true, second),
         (Some(first), None) => (false, first),
@@ -460,7 +466,9 @@ fn eval(expression: Pairs<Rule>) -> RuleFragment {
 
 #[allow(clippy::result_large_err)] //Valid complaint on Clippy's part but this should be on the cold path and not a major issue
 pub fn compile_rule(rule: &str) -> Result<RuleFragment, Error<Rule>> {
+    println!("rule {:?}", rule);
     let parse_result = Strategy::parse(Rule::strategy, rule);
+    println!("parse_result {:?}", parse_result);
     parse_result.map(|mut x| eval(x.next().unwrap().into_inner()))
 }
 
@@ -692,6 +700,8 @@ mod tests {
     #[test_case("user_id not_in [1, 3, 5]", true)]
     #[test_case("user_id in [\"dfsfsd\"]", false)]
     #[test_case("user_id not_in [\"dfsfsd\"]", true)]
+    #[test_case("user_id in_ignore_case [\"dfsfsd\"]", false)]
+    #[test_case("user_id not_in_ignore_case [\"dfsfaasd\"]", true)]
     fn run_numeric_list_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6");
@@ -738,6 +748,9 @@ mod tests {
     #[test_case("user_id contains_any_ignore_case [\"EMAIL\"]", true)]
     #[test_case("user_id ends_with_any_ignore_case [\".COM\"]", true)]
     #[test_case("user_id starts_with_any_ignore_case [\"SOME\"]", true)]
+    #[test_case("user_id in_ignore_case [\"some-email.com\"]", true)]
+    #[test_case("user_id in [\"noemail.com\",\"neither-this.com\"]", false)]
+    #[test_case("user_id not_in [\"notemail.com\"]", true)]
     fn run_string_operators_tests(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("some-email.com");

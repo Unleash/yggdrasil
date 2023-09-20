@@ -56,7 +56,7 @@ string_list_operation_without_case = {
     ends_with_ignore_case       = { "ends_with_any_ignore_case" }
     contains_any_ignore_case    = { "contains_any_ignore_case" }
 
-list_operation = { "in" | "not_in" }
+list_operation = { "in" | "not_in" | "in_ignore_case" | "not_in_ignore_case" }
 
 invert_operation = { "!" }
 
