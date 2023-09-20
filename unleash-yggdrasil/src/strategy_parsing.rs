@@ -66,6 +66,8 @@ enum OrdinalComparator {
 enum ContentComparator {
     In,
     NotIn,
+    InIgnoreCase,
+    NotInIgnoreCase,
 }
 
 #[derive(Debug, Clone)]
@@ -145,8 +147,8 @@ fn to_content_comparator(node: Pair<Rule>) -> ContentComparator {
     match node.as_str() {
         "in" => ContentComparator::In,
         "not_in" => ContentComparator::NotIn,
-        "in_ignore_case" => ContentComparator::In,
-        "not_in_ignore_case" => ContentComparator::NotIn,
+        "in_ignore_case" => ContentComparator::InIgnoreCase,
+        "not_in_ignore_case" => ContentComparator::NotInIgnoreCase,
         _ => unreachable!(),
     }
 }
@@ -329,8 +331,8 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
 
     match list.as_rule() {
         Rule::empty_list => Box::new(move |_context: &Context| match comparator {
-            ContentComparator::In => false.invert(inverted),
-            ContentComparator::NotIn => true.invert(inverted),
+            ContentComparator::In | ContentComparator::InIgnoreCase => false.invert(inverted),
+            ContentComparator::NotIn | ContentComparator::NotInIgnoreCase => true.invert(inverted),
         }),
         Rule::numeric_list => {
             let values = harvest_list(list.into_inner());
@@ -340,10 +342,10 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
                     Some(context_value) => {
                         let context_value: f64 = context_value.parse().unwrap();
                         match comparator {
-                            ContentComparator::In => {
+                            ContentComparator::In | ContentComparator::InIgnoreCase => {
                                 values.contains(&context_value).invert(inverted)
                             }
-                            ContentComparator::NotIn => {
+                            ContentComparator::NotIn | ContentComparator::NotInIgnoreCase => {
                                 !values.contains(&context_value).invert(inverted)
                             }
                         }
@@ -359,14 +361,30 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
 
                 match comparator {
                     ContentComparator::In => match context_value {
-                        Some(context_value) => values.contains(&context_value).invert(inverted),
+                        Some(context_value) => values.contains(&context_value),
                         None => false,
                     },
                     ContentComparator::NotIn => match context_value {
-                        Some(context_value) => !values.contains(&context_value).invert(inverted),
+                        Some(context_value) => !values.contains(&context_value),
+                        None => true,
+                    },
+                    ContentComparator::InIgnoreCase => match context_value {
+                        Some(context_value) => {
+                            let needle = context_value.to_lowercase();
+                            values.iter().find(|x| x.to_lowercase() == needle).is_some()
+                        }
+                        None => false,
+                    },
+
+                    ContentComparator::NotInIgnoreCase => match context_value {
+                        Some(context_value) => {
+                            let needle = context_value.to_lowercase();
+                            values.iter().find(|x| x.to_lowercase() == needle).is_none()
+                        }
                         None => true,
                     },
                 }
+                .invert(inverted)
             })
         }
         _ => unreachable!(),
@@ -424,7 +442,6 @@ fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFrag
 fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
     let first = node.next();
     let second = node.next();
-    println!("constraint {:?} {:?}", first, second);
     let (inverted, child) = match (first, second) {
         (Some(_), Some(second)) => (true, second),
         (Some(first), None) => (false, first),
@@ -466,9 +483,7 @@ fn eval(expression: Pairs<Rule>) -> RuleFragment {
 
 #[allow(clippy::result_large_err)] //Valid complaint on Clippy's part but this should be on the cold path and not a major issue
 pub fn compile_rule(rule: &str) -> Result<RuleFragment, Error<Rule>> {
-    println!("rule {:?}", rule);
     let parse_result = Strategy::parse(Rule::strategy, rule);
-    println!("parse_result {:?}", parse_result);
     parse_result.map(|mut x| eval(x.next().unwrap().into_inner()))
 }
 
@@ -748,9 +763,13 @@ mod tests {
     #[test_case("user_id contains_any_ignore_case [\"EMAIL\"]", true)]
     #[test_case("user_id ends_with_any_ignore_case [\".COM\"]", true)]
     #[test_case("user_id starts_with_any_ignore_case [\"SOME\"]", true)]
-    #[test_case("user_id in_ignore_case [\"some-email.com\"]", true)]
-    #[test_case("user_id in [\"noemail.com\",\"neither-this.com\"]", false)]
-    #[test_case("user_id not_in [\"notemail.com\"]", true)]
+    #[test_case("user_id in_ignore_case [\"some-EMAIL.com\"]", true)]
+    #[test_case("user_id in_ignore_case [\"noemail.com\",\"neither-THIS.com\"]", false)]
+    #[test_case("user_id not_in_ignore_case [\"notemail.com\"]", true)]
+    #[test_case(
+        "user_id not_in_ignore_case [\"notemail.com\",\"some-EMAIL.com\"]",
+        false
+    )]
     fn run_string_operators_tests(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("some-email.com");
