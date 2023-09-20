@@ -127,11 +127,7 @@ fn context_property(mut node: Pairs<Rule>) -> ContextResolver {
         }
     })
 }
-// ! in  ["a", "b"]
-// not_in  ["a", "b"]
 
-// ! not_in  ["a", "b"]
-// in  ["a", "b"]
 fn to_ordinal_comparator(node: Pair<Rule>) -> OrdinalComparator {
     match node.as_str() {
         "<" => OrdinalComparator::Lt,
