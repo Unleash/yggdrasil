@@ -378,10 +378,7 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
                     ContentComparator::NotInIgnoreCase => match context_value {
                         Some(context_value) => {
                             let needle = context_value.to_lowercase();
-                            values
-                                .iter()
-                                .any(|x| x.to_lowercase() == needle)
-                                .invert(inverted)
+                            (!values.iter().any(|x| x.to_lowercase() == needle)).invert(inverted)
                         }
                         None => true,
                     },
@@ -716,8 +713,6 @@ mod tests {
     #[test_case("user_id not_in [1, 3, 5]", true)]
     #[test_case("user_id in [\"dfsfsd\"]", false)]
     #[test_case("user_id not_in [\"dfsfsd\"]", true)]
-    #[test_case("user_id in_ignore_case [\"dfsfsd\"]", false)]
-    #[test_case("user_id not_in_ignore_case [\"dfsfaasd\"]", true)]
     fn run_numeric_list_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6");
@@ -757,24 +752,48 @@ mod tests {
         assert!(rule(&Context::default()));
     }
 
-    #[test_case("user_id starts_with_any [\"some\"]", true)]
-    #[test_case("user_id ends_with_any [\".com\"]", true)]
-    #[test_case("user_id contains_any [\"email\"]", true)]
-    #[test_case("user_id contains_any [\"EMAIL\"]", false)]
-    #[test_case("user_id contains_any_ignore_case [\"EMAIL\"]", true)]
-    #[test_case("user_id ends_with_any_ignore_case [\".COM\"]", true)]
-    #[test_case("user_id starts_with_any_ignore_case [\"SOME\"]", true)]
-    #[test_case("user_id in_ignore_case [\"some-EMAIL.com\"]", true)]
-    #[test_case("user_id in_ignore_case [\"noemail.com\",\"neither-THIS.com\"]", false)]
-    #[test_case("user_id not_in_ignore_case [\"notemail.com\"]", true)]
+    #[test_case("some-email.com", "user_id starts_with_any [\"some\"]", true)]
+    #[test_case("some-email.com", "user_id ends_with_any [\".com\"]", true)]
+    #[test_case("some-email.com", "user_id contains_any [\"email\"]", true)]
+    #[test_case("some-email.com", "user_id contains_any [\"EMAIL\"]", false)]
+    #[test_case("some-email.com", "user_id contains_any_ignore_case [\"EMAIL\"]", true)]
+    #[test_case("some-email.com", "user_id ends_with_any_ignore_case [\".COM\"]", true)]
     #[test_case(
+        "some-email.com",
+        "user_id starts_with_any_ignore_case [\"SOME\"]",
+        true
+    )]
+    #[test_case("some-email.com", "user_id in_ignore_case [\"some-EMAIL.com\"]", true)]
+    #[test_case(
+        "some-email.com",
+        "user_id in_ignore_case [\"noemail.com\",\"neither-THIS.com\"]",
+        false
+    )]
+    #[test_case(
+        "some-email.com",
+        "user_id not_in_ignore_case [\"notemail.com\"]",
+        true
+    )]
+    #[test_case(
+        "some-email.com",
         "user_id not_in_ignore_case [\"notemail.com\",\"some-EMAIL.com\"]",
         false
     )]
-    fn run_string_operators_tests(rule: &str, expected: bool) {
+    #[test_case(
+        "sOMeUSer-email.com",
+        "user_id not_in_ignore_case [\"someuser\"]",
+        true
+    )]
+    #[test_case(
+        "sOMeUSer-email.com",
+        "user_id in_ignore_case [\"someuser-EMAIL.com\"]",
+        true
+    )]
+    fn run_string_operators_tests(user_id: &str, rule: &str, expected: bool) {
+        println!("{:?} {:?}", rule, user_id);
         let rule = compile_rule(rule).expect("");
-        let context = context_from_user_id("some-email.com");
-
+        let context = context_from_user_id(user_id);
+        println!("{:#?}", &context.user_id);
         assert_eq!(rule(&context), expected);
     }
 
