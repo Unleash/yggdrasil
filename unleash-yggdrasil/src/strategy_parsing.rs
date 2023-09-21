@@ -357,17 +357,20 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
 
                 match comparator {
                     ContentComparator::In => match context_value {
-                        Some(context_value) => values.contains(&context_value),
+                        Some(context_value) => values.contains(&context_value).invert(inverted),
                         None => false,
                     },
                     ContentComparator::NotIn => match context_value {
-                        Some(context_value) => !values.contains(&context_value),
+                        Some(context_value) => !values.contains(&context_value).invert(inverted),
                         None => true,
                     },
                     ContentComparator::InIgnoreCase => match context_value {
                         Some(context_value) => {
                             let needle = context_value.to_lowercase();
-                            values.iter().find(|x| x.to_lowercase() == needle).is_some()
+                            values
+                                .iter()
+                                .any(|x| x.to_lowercase() == needle)
+                                .invert(inverted)
                         }
                         None => false,
                     },
@@ -375,12 +378,14 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
                     ContentComparator::NotInIgnoreCase => match context_value {
                         Some(context_value) => {
                             let needle = context_value.to_lowercase();
-                            values.iter().find(|x| x.to_lowercase() == needle).is_none()
+                            values
+                                .iter()
+                                .any(|x| x.to_lowercase() == needle)
+                                .invert(inverted)
                         }
                         None => true,
                     },
                 }
-                .invert(inverted)
             })
         }
         _ => unreachable!(),
