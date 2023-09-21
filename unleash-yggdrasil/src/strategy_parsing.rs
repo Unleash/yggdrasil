@@ -66,8 +66,6 @@ enum OrdinalComparator {
 enum ContentComparator {
     In,
     NotIn,
-    InIgnoreCase,
-    NotInIgnoreCase,
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +73,7 @@ enum StringComparator {
     StartsWith,
     EndsWith,
     Contains,
+    Equals,
 }
 
 struct StringComparatorType {
@@ -143,8 +142,6 @@ fn to_content_comparator(node: Pair<Rule>) -> ContentComparator {
     match node.as_str() {
         "in" => ContentComparator::In,
         "not_in" => ContentComparator::NotIn,
-        "in_ignore_case" => ContentComparator::InIgnoreCase,
-        "not_in_ignore_case" => ContentComparator::NotInIgnoreCase,
         _ => unreachable!(),
     }
 }
@@ -174,6 +171,10 @@ fn to_string_comparator(node: Pair<Rule>) -> StringComparatorType {
         "contains_any_ignore_case" => StringComparatorType {
             ignore_case: true,
             comparator_type: StringComparator::Contains,
+        },
+        "equals_any_ignore_case" => StringComparatorType {
+            ignore_case: true,
+            comparator_type: StringComparator::Equals,
         },
         _ => unreachable!(),
     }
@@ -327,8 +328,8 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
 
     match list.as_rule() {
         Rule::empty_list => Box::new(move |_context: &Context| match comparator {
-            ContentComparator::In | ContentComparator::InIgnoreCase => false.invert(inverted),
-            ContentComparator::NotIn | ContentComparator::NotInIgnoreCase => true.invert(inverted),
+            ContentComparator::In => false.invert(inverted),
+            ContentComparator::NotIn => true.invert(inverted),
         }),
         Rule::numeric_list => {
             let values = harvest_list(list.into_inner());
@@ -338,10 +339,10 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
                     Some(context_value) => {
                         let context_value: f64 = context_value.parse().unwrap();
                         match comparator {
-                            ContentComparator::In | ContentComparator::InIgnoreCase => {
+                            ContentComparator::In => {
                                 values.contains(&context_value).invert(inverted)
                             }
-                            ContentComparator::NotIn | ContentComparator::NotInIgnoreCase => {
+                            ContentComparator::NotIn => {
                                 !values.contains(&context_value).invert(inverted)
                             }
                         }
@@ -362,24 +363,6 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
                     },
                     ContentComparator::NotIn => match context_value {
                         Some(context_value) => !values.contains(&context_value).invert(inverted),
-                        None => true,
-                    },
-                    ContentComparator::InIgnoreCase => match context_value {
-                        Some(context_value) => {
-                            let needle = context_value.to_lowercase();
-                            values
-                                .iter()
-                                .any(|x| x.to_lowercase() == needle)
-                                .invert(inverted)
-                        }
-                        None => false,
-                    },
-
-                    ContentComparator::NotInIgnoreCase => match context_value {
-                        Some(context_value) => {
-                            let needle = context_value.to_lowercase();
-                            (!values.iter().any(|x| x.to_lowercase() == needle)).invert(inverted)
-                        }
                         None => true,
                     },
                 }
@@ -429,6 +412,7 @@ fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFrag
                 StringComparator::Contains => list.iter().any(|item| value.contains(item)),
                 StringComparator::StartsWith => list.iter().any(|item| value.starts_with(item)),
                 StringComparator::EndsWith => list.iter().any(|item| value.ends_with(item)),
+                StringComparator::Equals => list.iter().any(|item| &value == item),
             }
             .invert(inverted)
         } else {
@@ -763,37 +747,39 @@ mod tests {
         "user_id starts_with_any_ignore_case [\"SOME\"]",
         true
     )]
-    #[test_case("some-email.com", "user_id in_ignore_case [\"some-EMAIL.com\"]", true)]
     #[test_case(
         "some-email.com",
-        "user_id in_ignore_case [\"noemail.com\",\"neither-THIS.com\"]",
-        false
-    )]
-    #[test_case(
-        "some-email.com",
-        "user_id not_in_ignore_case [\"notemail.com\"]",
+        "user_id equals_any_ignore_case [\"some-EMAIL.com\"]",
         true
     )]
     #[test_case(
         "some-email.com",
-        "user_id not_in_ignore_case [\"notemail.com\",\"some-EMAIL.com\"]",
+        "user_id equals_any_ignore_case [\"noemail.com\",\"neither-THIS.com\"]",
+        false
+    )]
+    #[test_case(
+        "some-email.com",
+        "! user_id equals_any_ignore_case [\"notemail.com\"]",
+        true
+    )]
+    #[test_case(
+        "some-email.com",
+        "! user_id equals_any_ignore_case [\"notemail.com\",\"some-EMAIL.com\"]",
         false
     )]
     #[test_case(
         "sOMeUSer-email.com",
-        "user_id not_in_ignore_case [\"someuser\"]",
+        "! user_id equals_any_ignore_case [\"someuser\"]",
         true
     )]
     #[test_case(
         "sOMeUSer-email.com",
-        "user_id in_ignore_case [\"someuser-EMAIL.com\"]",
+        "user_id equals_any_ignore_case [\"someuser-EMAIL.com\"]",
         true
     )]
     fn run_string_operators_tests(user_id: &str, rule: &str, expected: bool) {
-        println!("{:?} {:?}", rule, user_id);
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id(user_id);
-        println!("{:#?}", &context.user_id);
         assert_eq!(rule(&context), expected);
     }
 
