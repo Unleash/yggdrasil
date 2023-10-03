@@ -42,7 +42,7 @@ class UnleashEngine
   attach_function :engine_take_state, %i[pointer string], :string
   attach_function :engine_check_enabled, %i[pointer string string], :pointer
   attach_function :engine_check_variant, %i[pointer string string], :pointer
-  attach_function :engine_free_variant_def, [:pointer], :void
+  attach_function :engine_free_response_message, [:pointer], :void
   attach_function :engine_count_toggle, %i[pointer string bool], :void
   attach_function :engine_count_variant, %i[pointer string string], :void
   attach_function :engine_get_metrics, [:pointer], :string
@@ -62,12 +62,11 @@ class UnleashEngine
 
   def get_variant(name, context)
     context_json = (context || {}).to_json
+
     variant_def_json_ptr = UnleashEngine.engine_check_variant(@engine_state, name, context_json)
     variant_def_json = variant_def_json_ptr.read_string
-
+    UnleashEngine.engine_free_response_message(variant_def_json_ptr)
     variant_response = JSON.parse(variant_def_json, symbolize_names: true)
-
-    UnleashEngine.engine_free_variant_def(variant_def_json_ptr)
 
     return nil if variant_response[:status_code] == TOGGLE_MISSING_RESPONSE
     return variant_response[:variant] if variant_response[:status_code] == ENABLED_RESPONSE
@@ -76,8 +75,10 @@ class UnleashEngine
   def enabled?(toggle_name, context)
     context_json = (context || {}).to_json
 
-    response_ptr = UnleashEngine.engine_check_enabled(@engine_state, toggle_name, context_json).read_string
-    response = JSON.parse(response_ptr)
+    response_ptr = UnleashEngine.engine_check_enabled(@engine_state, toggle_name, context_json)
+    response_json = response_ptr.read_string
+    UnleashEngine.engine_free_response_message(response_ptr)
+    response = JSON.parse(response_json)
 
     raise "Error: #{response['error_message']}" if response["status_code"] == ERROR_RESPONSE
     return nil if response["status_code"] == TOGGLE_MISSING_RESPONSE
