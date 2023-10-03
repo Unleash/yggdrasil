@@ -276,7 +276,7 @@ fn check_variant(
 /// This function must be called on every pointer returned by engine_get_variant_def otherwise this
 /// will leak memory
 #[no_mangle]
-pub unsafe extern "C" fn engine_free_variant_def(ptr: *mut c_char) {
+pub unsafe extern "C" fn engine_free_response_message(ptr: *mut c_char) {
     if ptr.is_null() {
         return;
     }
