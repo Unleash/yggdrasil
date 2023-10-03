@@ -347,7 +347,7 @@ impl EngineState {
             .map(|toggle| self.enabled(toggle, context))
             .unwrap_or_default();
 
-        self.count_toggle(&name.to_string(), is_enabled);
+        self.count_toggle(name, is_enabled);
 
         is_enabled
     }
@@ -431,7 +431,7 @@ impl EngineState {
 
         let variant = if let Some(toggle) = toggle {
             let enabled = self.enabled(toggle, context);
-            self.count_toggle(&name, enabled);
+            self.count_toggle(name, enabled);
 
             if enabled {
                 self.check_variant_by_toggle(toggle, context)
@@ -439,12 +439,12 @@ impl EngineState {
                 None
             }
         } else {
-            self.count_toggle(&name, false);
+            self.count_toggle(name, false);
             None
         }
         .unwrap_or_default();
 
-        self.count_variant(&name, &variant.name);
+        self.count_variant(name, &variant.name);
         variant
     }
 
