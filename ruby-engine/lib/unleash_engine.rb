@@ -1,6 +1,11 @@
 require 'ffi'
 require 'json'
 
+TOGGLE_MISSING_RESPONSE = 'NotFound'.freeze
+ERROR_RESPONSE = 'Error'.freeze
+ENABLED_RESPONSE = 'Enabled'.freeze
+DISABLED_RESPONSE = 'Disabled'.freeze
+
 def platform_specific_lib
   case RbConfig::CONFIG['host_os']
   when /darwin|mac os/
@@ -11,15 +16,6 @@ def platform_specific_lib
     'libyggdrasilffi.dll'
   else
     raise "unsupported platform #{RbConfig::CONFIG['host_os']}"
-  end
-end
-
-class VariantResponse
-  attr_accessor :code, :variant
-
-  def initialize(attributes = {})
-    self.code = attributes['code']
-    self.variant = Variant.new(attributes['variant'])
   end
 end
 
@@ -44,7 +40,7 @@ class UnleashEngine
   attach_function :engine_new, [], :pointer
   attach_function :engine_free, [:pointer], :void
   attach_function :engine_take_state, %i[pointer string], :string
-  attach_function :engine_check_enabled, %i[pointer string string], :int
+  attach_function :engine_check_enabled, %i[pointer string string], :pointer
   attach_function :engine_check_variant, %i[pointer string string], :pointer
   attach_function :engine_free_variant_def, [:pointer], :void
   attach_function :engine_count_toggle, %i[pointer string bool], :void
@@ -69,17 +65,23 @@ class UnleashEngine
     variant_def_json_ptr = UnleashEngine.engine_check_variant(@engine_state, name, context_json)
     variant_def_json = variant_def_json_ptr.read_string
 
-    variant_response = VariantResponse.new(JSON.parse(variant_def_json))
+    variant_response = JSON.parse(variant_def_json, symbolize_names: true)
 
     UnleashEngine.engine_free_variant_def(variant_def_json_ptr)
-    variant_response
+
+    return nil if variant_response[:status_code] == TOGGLE_MISSING_RESPONSE
+    return variant_response[:variant] if variant_response[:status_code] == ENABLED_RESPONSE
   end
 
   def enabled?(toggle_name, context)
     context_json = (context || {}).to_json
-    response = UnleashEngine.engine_check_enabled(@engine_state, toggle_name, context_json)
-    return nil if response == -1
-    return response == 1
+
+    response_ptr = UnleashEngine.engine_check_enabled(@engine_state, toggle_name, context_json).read_string
+    response = JSON.parse(response_ptr)
+
+    raise "Error: #{response['error_message']}" if response["status_code"] == ERROR_RESPONSE
+    return nil if response["status_code"] == TOGGLE_MISSING_RESPONSE
+    return response["status_code"] == ENABLED_RESPONSE
   end
 
   def count_toggle(toggle_name, enabled)

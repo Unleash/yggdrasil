@@ -93,18 +93,18 @@ RSpec.describe 'Client Specification' do
 
   test_suites.each do |suite|
     suite_path = File.join('../client-specification/specifications', suite)
-    suite_data = JSON.parse(File.read(suite_path))
+    suite_data = JSON.parse(File.read(suite_path), symbolize_names: true)
 
     describe "Suite '#{suite}'" do
       before(:each) do
-        unleash_engine.take_state(suite_data['state'].to_json)
+        unleash_engine.take_state(suite_data[:state].to_json)
       end
 
-      suite_data.fetch('tests', []).each do |test|
-        describe "Test '#{test['description']}'" do
-          let(:context) { test['context'] }
-          let(:toggle_name) { test['toggleName'] }
-          let(:expected_result) { test['expectedResult'] }
+      suite_data.fetch(:tests, []).each do |test|
+        describe "Test '#{test[:description]}'" do
+          let(:context) { test[:context] }
+          let(:toggle_name) { test[:toggleName] }
+          let(:expected_result) { test[:expectedResult] }
 
           it 'returns correct result for `is_enabled?` method' do
             result = unleash_engine.enabled?(toggle_name, context) || false
@@ -115,23 +115,24 @@ RSpec.describe 'Client Specification' do
         end
       end
 
-      suite_data.fetch('variantTests', []).each do |test|
-        next unless test['expectedResult']
+      suite_data.fetch(:variantTests, []).each do |test|
+        next unless test[:expectedResult]
 
-        describe "Variant Test '#{test['description']}'" do
-          let(:context) { test['context'] }
-          let(:toggle_name) { test['toggleName'] }
-          let(:expected_result) { Variant.new(test['expectedResult']) }
+        describe "Variant Test '#{test[:description]}'" do
+          let(:context) { test[:context] }
+          let(:toggle_name) { test[:toggleName] }
+          let(:expected_result) { test[:expectedResult] }
 
           it 'returns correct result for `get_variant` method' do
-            result = unleash_engine.get_variant(toggle_name, context).variant
+            result = unleash_engine.get_variant(toggle_name, context) || {
+              :name => 'disabled',
+              :payload => nil,
+              :enabled => false
+            }
 
-            expect(result.name).to eq(expected_result.name),
-                                   "Failed test '#{test['description']}': expected #{expected_result.name}, got #{result.name}"
-            expect(result.enabled).to eq(expected_result.enabled),
-                                      "Failed test '#{test['description']}': expected #{expected_result.enabled}, got #{result.enabled}"
-            expect(result.payload).to eq(expected_result.payload),
-                                      "Failed test '#{test['description']}': expected #{expected_result.payload}, got #{result.payload}"
+            expect(result[:name]).to eq(expected_result[:name])
+            expect(result[:payload]).to eq(expected_result[:payload])
+            expect(result[:enabled]).to eq(expected_result[:enabled])
           end
         end
       end

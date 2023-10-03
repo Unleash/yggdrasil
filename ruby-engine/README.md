@@ -2,17 +2,11 @@
 
 ## Running the tests
 
-First make sure that have built the native FFI code. That can be done with Cargo anywhere in this project:
+First make sure that you have built the native FFI code and it's located in the right place. This can be done with the build script in `build.sh`:
 
 
 ```bash
-cargo build --release
-```
-
-You'll also need to set the path to the Yggdrasil native library like so:
-
-```bash
-export YGGDRASIL_LIB_PATH=/home/{YOUR_NAME_HERE}/dev/yggdrasil/target/release
+./build.sh
 ```
 
 Then you can run the tests with:
