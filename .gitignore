@@ -9,6 +9,7 @@
 **/*.dumpstream
 **/obj
 **/vendor
+**/**.gem
 /client-specification
 
 ## Specific files we want to ignore
@@ -18,4 +19,4 @@
 /go-engine/unleash_engine.h
 /php-engine/unleash_engine.h
 /php-engine/libyggdrasilffi.so
-
+/ruby-engine/lib/libyggdrasilffi.so

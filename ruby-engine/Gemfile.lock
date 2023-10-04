@@ -2,8 +2,7 @@ GEM
   remote: https://rubygems.org/
   specs:
     ffi (1.15.5)
-    fiddle (1.0.6)
-    json (2.5.1)
+    fiddle (1.1.1)
 
 PLATFORMS
   x86_64-linux
@@ -11,7 +10,6 @@ PLATFORMS
 DEPENDENCIES
   ffi
   fiddle
-  json
 
 BUNDLED WITH
    2.4.13
