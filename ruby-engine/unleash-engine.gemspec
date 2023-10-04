@@ -2,7 +2,7 @@ Gem::Specification.new do |s|
     s.name        = 'unleash-engine'
     s.version     = '0.0.1'
     s.date        = '2023-06-28'
-    s.summary     = 'Unleash engine for evaulating feature toggles'
+    s.summary     = 'Unleash engine for evaluating feature toggles'
     s.description = '...'
     s.authors     = ['Your Name']
     s.email       = 'you@example.com'

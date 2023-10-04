@@ -19,4 +19,4 @@
 /go-engine/unleash_engine.h
 /php-engine/unleash_engine.h
 /php-engine/libyggdrasilffi.so
-/ruby-engine/lib/libyggdrasilffi.so
+/ruby-engine/lib/libyggdrasilffi.*

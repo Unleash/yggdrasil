@@ -36,39 +36,39 @@ class UnleashEngine
   extend FFI::Library
   ffi_lib File.expand_path(platform_specific_lib, __dir__)
 
-  attach_function :engine_new, [], :pointer
-  attach_function :engine_free, [:pointer], :void
+  attach_function :new_engine, [], :pointer
+  attach_function :free_engine, [:pointer], :void
 
-  attach_function :engine_take_state, %i[pointer string], :pointer
-  attach_function :engine_check_enabled, %i[pointer string string], :pointer
-  attach_function :engine_check_variant, %i[pointer string string], :pointer
-  attach_function :engine_get_metrics, [:pointer], :pointer
-  attach_function :engine_free_response_message, [:pointer], :void
+  attach_function :take_state, %i[pointer string], :pointer
+  attach_function :check_enabled, %i[pointer string string], :pointer
+  attach_function :check_variant, %i[pointer string string], :pointer
+  attach_function :get_metrics, [:pointer], :pointer
+  attach_function :free_response, [:pointer], :void
 
-  attach_function :engine_count_toggle, %i[pointer string bool], :void
-  attach_function :engine_count_variant, %i[pointer string string], :void
+  attach_function :count_toggle, %i[pointer string bool], :void
+  attach_function :count_variant, %i[pointer string string], :void
 
   def initialize
-    @engine_state = UnleashEngine.engine_new
-    ObjectSpace.define_finalizer(self, self.class.finalize(@engine_state))
+    @engine = UnleashEngine.new_engine
+    ObjectSpace.define_finalizer(self, self.class.finalize(@engine))
   end
 
-  def self.finalize(engine_state)
-    proc { UnleashEngine.engine_free(engine_state) }
+  def self.finalize(engine)
+    proc { UnleashEngine.free_engine(engine) }
   end
 
   def take_state(toggles)
-    response_ptr = UnleashEngine.engine_take_state(@engine_state, toggles)
+    response_ptr = UnleashEngine.take_state(@engine, toggles)
     take_toggles_response = JSON.parse(response_ptr.read_string, symbolize_names: true)
-    UnleashEngine.engine_free_response_message(response_ptr)
+    UnleashEngine.free_response(response_ptr)
   end
 
   def get_variant(name, context)
     context_json = (context || {}).to_json
 
-    variant_def_json_ptr = UnleashEngine.engine_check_variant(@engine_state, name, context_json)
+    variant_def_json_ptr = UnleashEngine.check_variant(@engine, name, context_json)
     variant_def_json = variant_def_json_ptr.read_string
-    UnleashEngine.engine_free_response_message(variant_def_json_ptr)
+    UnleashEngine.free_response(variant_def_json_ptr)
     variant_response = JSON.parse(variant_def_json, symbolize_names: true)
 
     return nil if variant_response[:status_code] == TOGGLE_MISSING_RESPONSE
@@ -78,9 +78,9 @@ class UnleashEngine
   def enabled?(toggle_name, context)
     context_json = (context || {}).to_json
 
-    response_ptr = UnleashEngine.engine_check_enabled(@engine_state, toggle_name, context_json)
+    response_ptr = UnleashEngine.check_enabled(@engine, toggle_name, context_json)
     response_json = response_ptr.read_string
-    UnleashEngine.engine_free_response_message(response_ptr)
+    UnleashEngine.free_response(response_ptr)
     response = JSON.parse(response_json, symbolize_names: true)
 
     raise "Error: #{response[:error_message]}" if response[:status_code] == ERROR_RESPONSE
@@ -89,17 +89,17 @@ class UnleashEngine
   end
 
   def count_toggle(toggle_name, enabled)
-    UnleashEngine.engine_count_toggle(@engine_state, toggle_name, enabled)
+    UnleashEngine.count_toggle(@engine, toggle_name, enabled)
   end
 
   def count_variant(toggle_name, variant_name)
-    UnleashEngine.engine_count_variant(@engine_state, toggle_name, variant_name)
+    UnleashEngine.count_variant(@engine, toggle_name, variant_name)
   end
 
   def get_metrics
-    metrics_ptr = UnleashEngine.engine_get_metrics(@engine_state)
+    metrics_ptr = UnleashEngine.get_metrics(@engine)
     metrics = JSON.parse(metrics_ptr.read_string, symbolize_names: true)
-    UnleashEngine.engine_free_response_message(metrics_ptr)
+    UnleashEngine.free_response(metrics_ptr)
     metrics[:value]
   end
 end
