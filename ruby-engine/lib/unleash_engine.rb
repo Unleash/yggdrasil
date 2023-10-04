@@ -3,8 +3,7 @@ require 'json'
 
 TOGGLE_MISSING_RESPONSE = 'NotFound'.freeze
 ERROR_RESPONSE = 'Error'.freeze
-ENABLED_RESPONSE = 'Enabled'.freeze
-DISABLED_RESPONSE = 'Disabled'.freeze
+OK_RESPONSE = 'Ok'.freeze
 
 def platform_specific_lib
   case RbConfig::CONFIG['host_os']
@@ -39,13 +38,15 @@ class UnleashEngine
 
   attach_function :engine_new, [], :pointer
   attach_function :engine_free, [:pointer], :void
-  attach_function :engine_take_state, %i[pointer string], :string
+
+  attach_function :engine_take_state, %i[pointer string], :string, :pointer
   attach_function :engine_check_enabled, %i[pointer string string], :pointer
   attach_function :engine_check_variant, %i[pointer string string], :pointer
+  attach_function :engine_get_metrics, [:pointer], :pointer
   attach_function :engine_free_response_message, [:pointer], :void
+
   attach_function :engine_count_toggle, %i[pointer string bool], :void
   attach_function :engine_count_variant, %i[pointer string string], :void
-  attach_function :engine_get_metrics, [:pointer], :string
 
   def initialize
     @engine_state = UnleashEngine.engine_new
@@ -57,7 +58,7 @@ class UnleashEngine
   end
 
   def take_state(toggles)
-    UnleashEngine.engine_take_state(@engine_state, toggles)
+    repsonse_ptr = UnleashEngine.engine_take_state(@engine_state, toggles)
   end
 
   def get_variant(name, context)
@@ -69,7 +70,7 @@ class UnleashEngine
     variant_response = JSON.parse(variant_def_json, symbolize_names: true)
 
     return nil if variant_response[:status_code] == TOGGLE_MISSING_RESPONSE
-    return variant_response[:variant] if variant_response[:status_code] == ENABLED_RESPONSE
+    return variant_response[:value] if variant_response[:status_code] == OK_RESPONSE
   end
 
   def enabled?(toggle_name, context)
@@ -78,11 +79,11 @@ class UnleashEngine
     response_ptr = UnleashEngine.engine_check_enabled(@engine_state, toggle_name, context_json)
     response_json = response_ptr.read_string
     UnleashEngine.engine_free_response_message(response_ptr)
-    response = JSON.parse(response_json)
+    response = JSON.parse(response_json, symbolize_names: true)
 
-    raise "Error: #{response['error_message']}" if response["status_code"] == ERROR_RESPONSE
-    return nil if response["status_code"] == TOGGLE_MISSING_RESPONSE
-    return response["status_code"] == ENABLED_RESPONSE
+    raise "Error: #{response[:error_message]}" if response[:status_code] == ERROR_RESPONSE
+    return nil if response[:status_code] == TOGGLE_MISSING_RESPONSE
+    return response[:value] == true
   end
 
   def count_toggle(toggle_name, enabled)
@@ -94,7 +95,8 @@ class UnleashEngine
   end
 
   def get_metrics
-    metrics_json = UnleashEngine.engine_get_metrics(@engine_state)
-    JSON.parse(metrics_json, symbolize_names: true)
+    metrics_ptr = UnleashEngine.engine_get_metrics(@engine_state)
+    metrics = JSON.parse(metrics_ptr.read_string, symbolize_names: true)
+    metrics[:value]
   end
 end

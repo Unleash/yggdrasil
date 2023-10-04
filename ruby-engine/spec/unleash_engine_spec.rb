@@ -5,8 +5,6 @@ require_relative '../lib/unleash_engine'
 index_file_path = '../client-specification/specifications/index.json'
 test_suites = JSON.parse(File.read(index_file_path))
 
-#tests to cover checking a toggle with a missing name
-
 RSpec.describe UnleashEngine do
   let(:unleash_engine) { UnleashEngine.new }
 
