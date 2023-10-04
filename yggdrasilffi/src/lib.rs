@@ -1,41 +1,52 @@
 use std::{
-    ffi::{c_char, CStr, CString, NulError},
+    ffi::{c_char, CStr, CString},
     str::Utf8Error,
 };
 
+use libc::c_void;
 use serde::{Deserialize, Serialize};
-use unleash_types::client_features::ClientFeatures;
+use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
 use unleash_yggdrasil::{Context, EngineState, VariantDef};
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
-struct EnabledResponse {
+#[derive(Serialize, Deserialize)]
+struct Response<T> {
     status_code: ResponseCode,
+    value: Option<T>,
     error_message: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-struct VariantResponse {
-    status_code: ResponseCode,
-    variant: Option<VariantDef>,
-    error_message: Option<String>,
+impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
+    fn from(value: Result<Option<T>, FFIError>) -> Self {
+        match value {
+            Ok(Some(enabled)) => Response {
+                status_code: ResponseCode::Ok,
+                value: Some(enabled),
+                error_message: None,
+            },
+            Ok(None) => Response {
+                status_code: ResponseCode::NotFound,
+                value: None,
+                error_message: None,
+            },
+            Err(e) => Response {
+                status_code: ResponseCode::Error,
+                value: None,
+                error_message: Some(format!("{:?}", e)),
+            },
+        }
+    }
 }
 
 #[derive(Debug)]
 enum FFIError {
     Utf8Error,
-    NulError,
     InvalidJson,
+    NullError(String),
 }
 
 impl From<Utf8Error> for FFIError {
     fn from(_: Utf8Error) -> Self {
         FFIError::Utf8Error
-    }
-}
-
-impl From<NulError> for FFIError {
-    fn from(_: NulError) -> Self {
-        FFIError::NulError
     }
 }
 
@@ -46,17 +57,16 @@ impl From<serde_json::Error> for FFIError {
 }
 
 #[no_mangle]
-pub extern "C" fn engine_new() -> *mut libc::c_void {
+pub extern "C" fn engine_new() -> *mut c_void {
     let state = EngineState::default();
-    Box::into_raw(Box::new(state)) as *mut libc::c_void
+    Box::into_raw(Box::new(state)) as *mut c_void
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 enum ResponseCode {
     Error = -2,
     NotFound = -1,
-    Disabled = 0,
-    Enabled = 1,
+    Ok = 1,
 }
 
 /// Frees the memory allocated for the engine
@@ -67,7 +77,7 @@ enum ResponseCode {
 /// This function must be called correctly to deallocate the memory allocated for the engine in
 /// the engine_new function, failure to do so will result in a leak.
 #[no_mangle]
-pub unsafe extern "C" fn engine_free(ptr: *mut libc::c_void) {
+pub unsafe extern "C" fn engine_free(ptr: *mut c_void) {
     if ptr.is_null() {
         return;
     }
@@ -83,45 +93,28 @@ pub unsafe extern "C" fn engine_free(ptr: *mut libc::c_void) {
 /// The caller is responsible for ensuring the pointer to the engine is a valid pointer
 /// and that the engine is not dropped while the pointer is still in use.
 #[no_mangle]
-pub unsafe extern "C" fn engine_take_state(
-    ptr: *mut libc::c_void,
-    json: *const c_char,
-) -> *const c_char {
-    let state = unsafe {
-        assert!(!ptr.is_null());
+pub unsafe extern "C" fn engine_take_state(ptr: *mut c_void, json: *const c_char) -> *const c_char {
+    let response: Response<()> = take_state(ptr, json).into();
+    let json = serde_json::to_string(&response).unwrap();
+    CString::new(json).unwrap().into_raw()
+}
+
+unsafe fn take_state(ptr: *mut c_void, json: *const c_char) -> Result<Option<()>, FFIError> {
+    let engine = if !ptr.is_null() {
         &mut *(ptr as *mut EngineState)
-    };
-
-    let c_str = unsafe {
-        assert!(!json.is_null());
-        CStr::from_ptr(json)
-    };
-
-    match take_state(state, c_str) {
-        Ok(()) => std::ptr::null(),
-        Err(err) => {
-            println!("Error in engine_take_state: {:?}", err);
-            std::ptr::null()
-        }
-    }
-}
-
-fn take_state(state: &mut EngineState, c_str: &CStr) -> Result<(), FFIError> {
-    let str_slice: &str = c_str.to_str()?;
-    let toggles: ClientFeatures = serde_json::from_str(str_slice)?;
-    state.take_state(toggles);
-    Ok(())
-}
-
-fn error_if_null(ptr: *mut libc::c_void) -> Option<EnabledResponse> {
-    if ptr.is_null() {
-        Some(EnabledResponse {
-            status_code: ResponseCode::Error,
-            error_message: Some("Null pointer to unleash engine".into()),
-        })
     } else {
-        None
-    }
+        return Err(FFIError::NullError("Null engine pointer".into()));
+    };
+
+    let toggles: ClientFeatures = if !json.is_null() {
+        let json = CStr::from_ptr(json).to_str()?;
+        serde_json::from_str(json)?
+    } else {
+        return Err(FFIError::NullError("Null json pointer".into()));
+    };
+
+    engine.take_state(toggles);
+    Ok(Some(()))
 }
 
 /// Checks if a toggle is enabled for a given context, this function will always return a JSON encoded response of type `EnabledResponse`
@@ -137,80 +130,40 @@ fn error_if_null(ptr: *mut libc::c_void) -> Option<EnabledResponse> {
 /// engine_free_response_message on the pointer returned by this method. Failure to do so will result in a leak.
 #[no_mangle]
 pub unsafe extern "C" fn engine_check_enabled(
-    ptr: *mut libc::c_void,
+    ptr: *mut c_void,
     toggle_name: *const c_char,
     context: *const c_char,
 ) -> *const c_char {
-    let state = unsafe {
-        if let Some(error) = error_if_null(ptr) {
-            let json = serde_json::to_string(&error).unwrap();
-            return CString::new(json).unwrap().into_raw();
-        }
-        &mut *(ptr as *mut EngineState)
-    };
-
-    let c_toggle_name = unsafe {
-        if toggle_name.is_null() {
-            let json = serde_json::to_string(&EnabledResponse {
-                error_message: Some("Null pointer to toggle name".into()),
-                status_code: ResponseCode::Error,
-            })
-            .unwrap();
-            return CString::new(json).unwrap().into_raw();
-        }
-        CStr::from_ptr(toggle_name)
-    };
-
-    let c_context = unsafe {
-        if context.is_null() {
-            let json = serde_json::to_string(&EnabledResponse {
-                error_message: Some("Null pointer to context".into()),
-                status_code: ResponseCode::Error,
-            })
-            .unwrap();
-            return CString::new(json).unwrap().into_raw();
-        }
-
-        CStr::from_ptr(context)
-    };
-
-    let enabled_state = match check_enabled(state, c_toggle_name, c_context) {
-        Ok(Some(enabled_state)) => EnabledResponse {
-            status_code: enabled_state,
-            error_message: None,
-        },
-        Ok(None) => EnabledResponse {
-            status_code: ResponseCode::NotFound,
-            error_message: None,
-        },
-        Err(_) => EnabledResponse {
-            status_code: ResponseCode::Error,
-            error_message: "Something went wrong in the core FFI layers, this is a fatal issue"
-                .to_string()
-                .into(),
-        },
-    };
-
+    let enabled_state: Response<bool> = check_enabled(ptr, toggle_name, context).into();
     let json = serde_json::to_string(&enabled_state).unwrap();
     CString::new(json).unwrap().into_raw()
 }
 
-fn check_enabled(
-    state: &EngineState,
-    c_toggle_name: &CStr,
-    c_context_str: &CStr,
-) -> Result<Option<ResponseCode>, FFIError> {
-    let toggle_name = c_toggle_name.to_str()?;
-    let context_str: &str = c_context_str.to_str()?;
-    let context: Context = serde_json::from_str(context_str)?;
+unsafe fn check_enabled(
+    ptr: *mut c_void,
+    toggle_name: *const c_char,
+    context: *const c_char,
+) -> Result<Option<bool>, FFIError> {
+    let engine = if !ptr.is_null() {
+        &mut *(ptr as *mut EngineState)
+    } else {
+        return Err(FFIError::NullError("Null engine pointer".into()));
+    };
 
-    Ok(state.check_enabled(toggle_name, &context).map(|enabled| {
-        if enabled {
-            ResponseCode::Enabled
-        } else {
-            ResponseCode::Disabled
-        }
-    }))
+    let toggle_name = if !toggle_name.is_null() {
+        CStr::from_ptr(toggle_name).to_str()?
+    } else {
+        return Err(FFIError::NullError("Null toggle name pointer".into()));
+    };
+
+    let context: Context = if !context.is_null() {
+        let context_str = CStr::from_ptr(context).to_str()?;
+        serde_json::from_str(context_str)?
+    } else {
+        return Err(FFIError::NullError("Null context pointer".into()));
+    };
+
+    Ok(engine.check_enabled(toggle_name, &context))
 }
 
 /// Calculates the variant for a toggle, this function will always return a JSON encoded response of type `VariantResponse`
@@ -226,63 +179,40 @@ fn check_enabled(
 /// engine_free_response_message on the pointer returned by this method. Failure to do so will result in a leak.
 #[no_mangle]
 pub unsafe extern "C" fn engine_check_variant(
-    ptr: *mut libc::c_void,
+    ptr: *mut c_void,
     toggle_name: *const c_char,
     context: *const c_char,
 ) -> *const c_char {
-    let state = unsafe {
-        assert!(!ptr.is_null());
-        &mut *(ptr as *mut EngineState)
-    };
-
-    let c_toggle_name = unsafe {
-        assert!(!toggle_name.is_null());
-        CStr::from_ptr(toggle_name)
-    };
-
-    let c_context = unsafe {
-        assert!(!context.is_null());
-        CStr::from_ptr(context)
-    };
-
-    let variant_state = match check_variant(state, c_toggle_name, c_context) {
-        Ok(Some(variant_state)) => VariantResponse {
-            status_code: if variant_state.enabled {
-                ResponseCode::Enabled
-            } else {
-                ResponseCode::Disabled
-            },
-            variant: Some(variant_state),
-            error_message: None,
-        },
-        Ok(None) => VariantResponse {
-            status_code: ResponseCode::NotFound,
-            variant: None,
-            error_message: None,
-        },
-        Err(_) => VariantResponse {
-            status_code: ResponseCode::Error,
-            variant: None,
-            error_message: "Something went wrong in the core FFI layers, this is a fatal issue"
-                .to_string()
-                .into(),
-        },
-    };
-
+    let variant_state: Response<VariantDef> = check_variant(ptr, toggle_name, context).into();
     let json = serde_json::to_string(&variant_state).unwrap();
     CString::new(json).unwrap().into_raw()
 }
 
-fn check_variant(
-    state: &EngineState,
-    c_toggle_name: &CStr,
-    c_context_str: &CStr,
+unsafe fn check_variant(
+    ptr: *mut c_void,
+    toggle_name: *const c_char,
+    context: *const c_char,
 ) -> Result<Option<VariantDef>, FFIError> {
-    let toggle_name = c_toggle_name.to_str()?;
-    let context_str: &str = c_context_str.to_str()?;
-    let context: Context = serde_json::from_str(context_str)?;
+    let engine = if !ptr.is_null() {
+        &mut *(ptr as *mut EngineState)
+    } else {
+        return Err(FFIError::NullError("Null engine pointer".into()));
+    };
 
-    Ok(state.check_variant(toggle_name, &context))
+    let toggle_name = if !toggle_name.is_null() {
+        CStr::from_ptr(toggle_name).to_str()?
+    } else {
+        return Err(FFIError::NullError("Null toggle name pointer".into()));
+    };
+
+    let context: Context = if !context.is_null() {
+        let context_str = CStr::from_ptr(context).to_str()?;
+        serde_json::from_str(context_str)?
+    } else {
+        return Err(FFIError::NullError("Null context pointer".into()));
+    };
+
+    Ok(engine.check_variant(toggle_name, &context))
 }
 
 /// Frees the memory allocated for a response message created by check_enabled and check_variant
@@ -310,23 +240,19 @@ pub unsafe extern "C" fn engine_free_response_message(ptr: *mut c_char) {
 /// This function does not allocate any resources which need to be manually freed later.
 #[no_mangle]
 pub unsafe extern "C" fn engine_count_toggle(
-    pts: *mut libc::c_void,
+    ptr: *mut c_void,
     toggle_name: *const c_char,
     enabled: bool,
 ) {
-    let state = unsafe {
-        assert!(!pts.is_null());
-        &mut *(pts as *mut EngineState)
-    };
+    if ptr.is_null() || toggle_name.is_null() {
+        return;
+    }
+    let state = &mut *(ptr as *mut EngineState);
+    let c_toggle_name = CStr::from_ptr(toggle_name);
 
-    let c_toggle_name = unsafe {
-        assert!(!toggle_name.is_null());
-        CStr::from_ptr(toggle_name)
-    };
-
-    let toggle_name = c_toggle_name.to_str().unwrap();
-
-    state.count_toggle(toggle_name, enabled);
+    if let Ok(toggle_name) = c_toggle_name.to_str() {
+        state.count_toggle(toggle_name, enabled);
+    }
 }
 
 /// Marks a variant as being counted for purposes of metrics. This function needs to be paired with a call
@@ -342,7 +268,7 @@ pub unsafe extern "C" fn engine_count_toggle(
 
 #[no_mangle]
 pub unsafe extern "C" fn engine_count_variant(
-    ptr: *mut libc::c_void,
+    ptr: *mut c_void,
     toggle_name: *const c_char,
     variant_name: *const c_char,
 ) {
@@ -353,10 +279,9 @@ pub unsafe extern "C" fn engine_count_variant(
     let c_toggle_name = CStr::from_ptr(toggle_name);
     let c_variant_name = CStr::from_ptr(variant_name);
 
-    let toggle_name = c_toggle_name.to_str().unwrap();
-    let variant_name = c_variant_name.to_str().unwrap();
-
-    state.count_variant(toggle_name, variant_name);
+    if let (Ok(toggle_name), Ok(variant_name)) = (c_toggle_name.to_str(), c_variant_name.to_str()) {
+        state.count_variant(toggle_name, variant_name);
+    }
 }
 
 /// Returns a JSON encoded string representing the number of times each toggle and variant has been
@@ -368,15 +293,20 @@ pub unsafe extern "C" fn engine_count_variant(
 /// time this function was called. If a non null response is returned, the caller is responsible for freeing
 /// the memory allocated for the returned string by calling engine_free_response_message on the returned pointer.
 #[no_mangle]
-pub unsafe extern "C" fn engine_get_metrics(ptr: *mut libc::c_void) -> *mut c_char {
-    let state = unsafe {
-        assert!(!ptr.is_null());
-        &mut *(ptr as *mut EngineState)
-    };
-
-    let metrics = state.get_metrics();
+pub unsafe extern "C" fn engine_get_metrics(ptr: *mut c_void) -> *mut c_char {
+    let metrics: Response<MetricBucket> = get_metrics(ptr).into();
     let json = serde_json::to_string(&metrics).unwrap();
     CString::new(json).unwrap().into_raw()
+}
+
+unsafe fn get_metrics(ptr: *mut c_void) -> Result<Option<MetricBucket>, FFIError> {
+    let engine = if !ptr.is_null() {
+        &mut *(ptr as *mut EngineState)
+    } else {
+        return Err(FFIError::NullError("Null engine pointer".into()));
+    };
+
+    Ok(engine.get_metrics())
 }
 
 #[cfg(test)]
@@ -386,7 +316,7 @@ mod tests {
     use unleash_types::client_features::{ClientFeature, ClientFeatures, Strategy};
     use unleash_yggdrasil::EngineState;
 
-    use crate::{engine_check_enabled, engine_new, EnabledResponse, ResponseCode};
+    use crate::{engine_check_enabled, engine_new, Response, ResponseCode};
 
     #[test]
     fn when_requesting_a_toggle_that_does_not_exist_then_a_response_with_no_error_and_not_found_is_returned(
@@ -402,7 +332,7 @@ mod tests {
         unsafe {
             let string_response = engine_check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
-            let enabled_response: EnabledResponse = serde_json::from_str(response).unwrap();
+            let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
             assert!(enabled_response.status_code == ResponseCode::NotFound);
             assert!(enabled_response.error_message.is_none());
@@ -446,9 +376,9 @@ mod tests {
 
             let string_response = engine_check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
-            let enabled_response: EnabledResponse = serde_json::from_str(response).unwrap();
+            let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
-            assert!(enabled_response.status_code == ResponseCode::Enabled);
+            assert!(enabled_response.status_code == ResponseCode::Ok);
             assert!(enabled_response.error_message.is_none());
         }
     }
@@ -466,7 +396,7 @@ mod tests {
 
             let string_response = engine_check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
-            let enabled_response: EnabledResponse = serde_json::from_str(response).unwrap();
+            let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
             assert!(enabled_response.status_code == ResponseCode::Error);
             assert!(enabled_response.error_message.is_some());
@@ -485,7 +415,7 @@ mod tests {
 
             let string_response = engine_check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
-            let enabled_response: EnabledResponse = serde_json::from_str(response).unwrap();
+            let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
             assert!(enabled_response.status_code == ResponseCode::Error);
             assert!(enabled_response.error_message.is_some());
@@ -504,7 +434,7 @@ mod tests {
 
             let string_response = engine_check_enabled(engine_ptr, toggle_name_ptr, context_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
-            let enabled_response: EnabledResponse = serde_json::from_str(response).unwrap();
+            let enabled_response: Response<bool> = serde_json::from_str(response).unwrap();
 
             assert!(enabled_response.status_code == ResponseCode::Error);
             assert!(enabled_response.error_message.is_some());
