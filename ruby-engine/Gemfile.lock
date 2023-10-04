@@ -1,7 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    ffi (1.15.5)
+    ffi (1.16.3)
     fiddle (1.1.1)
     get_process_mem (0.2.7)
       ffi (~> 1.0)
