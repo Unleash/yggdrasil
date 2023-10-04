@@ -113,13 +113,11 @@ pub extern "C" fn new_engine() -> *mut c_void {
 /// This function must be called correctly in order to deallocate the memory allocated for the engine in
 /// the `new_engine` function. Failure to do so will result in a leak.
 #[no_mangle]
-pub extern "C" fn free_engine(engine_ptr: *mut c_void) {
+pub unsafe extern "C" fn free_engine(engine_ptr: *mut c_void) {
     if engine_ptr.is_null() {
         return;
     }
-    unsafe {
-        drop(Box::from_raw(engine_ptr));
-    }
+    drop(Box::from_raw(engine_ptr as *mut EngineState));
 }
 
 /// Takes a JSON string representing a set of toggles. Returns a JSON string representing
@@ -137,7 +135,8 @@ pub extern "C" fn take_state(engine_ptr: *mut c_void, json_ptr: *const c_char) -
         let engine = get_engine(engine_ptr)?;
         let toggles: ClientFeatures = get_json(json_ptr)?;
 
-        Ok(Some(engine.take_state(toggles)))
+        engine.take_state(toggles);
+        Ok(Some(()))
     })();
 
     result_to_json_ptr(result)
@@ -212,13 +211,11 @@ pub extern "C" fn check_variant(
 /// the `check_enabled`, `check_variant`, `count_toggle`, `count_variant` and `get_metrics` functions.
 /// Failure to do so will result in a leak.
 #[no_mangle]
-pub extern "C" fn free_response(response_ptr: *mut c_char) {
+pub unsafe extern "C" fn free_response(response_ptr: *mut c_char) {
     if response_ptr.is_null() {
         return;
     }
-    unsafe {
-        drop(CString::from_raw(response_ptr));
-    }
+    drop(CString::from_raw(response_ptr));
 }
 
 /// Marks a toggle as being counted for purposes of metrics. This function needs to be paired with a call
@@ -243,7 +240,8 @@ pub extern "C" fn count_toggle(
         let engine = get_engine(engine_ptr)?;
         let toggle_name = get_str(toggle_name_ptr)?;
 
-        Ok(Some(engine.count_toggle(toggle_name, enabled)))
+        engine.count_toggle(toggle_name, enabled);
+        Ok(Some(()))
     })();
 
     result_to_json_ptr(result)
@@ -272,7 +270,8 @@ pub extern "C" fn count_variant(
         let toggle_name = get_str(toggle_name_ptr)?;
         let variant_name = get_str(variant_name_ptr)?;
 
-        Ok(Some(engine.count_variant(toggle_name, variant_name)))
+        engine.count_variant(toggle_name, variant_name);
+        Ok(Some(()))
     })();
 
     result_to_json_ptr(result)
