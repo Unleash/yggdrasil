@@ -39,7 +39,7 @@ class UnleashEngine
   attach_function :engine_new, [], :pointer
   attach_function :engine_free, [:pointer], :void
 
-  attach_function :engine_take_state, %i[pointer string], :string, :pointer
+  attach_function :engine_take_state, %i[pointer string], :pointer
   attach_function :engine_check_enabled, %i[pointer string string], :pointer
   attach_function :engine_check_variant, %i[pointer string string], :pointer
   attach_function :engine_get_metrics, [:pointer], :pointer
@@ -58,7 +58,9 @@ class UnleashEngine
   end
 
   def take_state(toggles)
-    repsonse_ptr = UnleashEngine.engine_take_state(@engine_state, toggles)
+    response_ptr = UnleashEngine.engine_take_state(@engine_state, toggles)
+    take_toggles_response = JSON.parse(response_ptr.read_string, symbolize_names: true)
+    UnleashEngine.engine_free_response_message(response_ptr)
   end
 
   def get_variant(name, context)
@@ -97,6 +99,7 @@ class UnleashEngine
   def get_metrics
     metrics_ptr = UnleashEngine.engine_get_metrics(@engine_state)
     metrics = JSON.parse(metrics_ptr.read_string, symbolize_names: true)
+    UnleashEngine.engine_free_response_message(metrics_ptr)
     metrics[:value]
   end
 end
