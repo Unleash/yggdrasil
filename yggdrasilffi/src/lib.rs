@@ -63,7 +63,7 @@ impl From<serde_json::Error> for FFIError {
     }
 }
 
-fn get_engine<'a>(engine_ptr: *mut c_void) -> Result<&'a mut EngineState, FFIError> {
+unsafe fn get_engine<'a>(engine_ptr: *mut c_void) -> Result<&'a mut EngineState, FFIError> {
     if engine_ptr.is_null() {
         Err(FFIError::NullError("Null engine pointer".into()))
     } else {
@@ -71,7 +71,7 @@ fn get_engine<'a>(engine_ptr: *mut c_void) -> Result<&'a mut EngineState, FFIErr
     }
 }
 
-fn get_str<'a>(ptr: *const c_char) -> Result<&'a str, FFIError> {
+unsafe fn get_str<'a>(ptr: *const c_char) -> Result<&'a str, FFIError> {
     if ptr.is_null() {
         Err(FFIError::NullError("Null pointer".into()))
     } else {
@@ -79,7 +79,7 @@ fn get_str<'a>(ptr: *const c_char) -> Result<&'a str, FFIError> {
     }
 }
 
-fn get_json<T: DeserializeOwned>(json_ptr: *const c_char) -> Result<T, FFIError> {
+unsafe fn get_json<T: DeserializeOwned>(json_ptr: *const c_char) -> Result<T, FFIError> {
     let json_str = get_str(json_ptr)?;
     serde_json::from_str(json_str).map_err(FFIError::from)
 }
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn free_engine(engine_ptr: *mut c_void) {
 /// but any invalid pointers will result in undefined behavior.
 /// These pointers should not be dropped for the lifetime of this function call.
 #[no_mangle]
-pub extern "C" fn take_state(engine_ptr: *mut c_void, json_ptr: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn take_state(engine_ptr: *mut c_void, json_ptr: *const c_char) -> *const c_char {
     let result: Result<Option<()>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
         let toggles: ClientFeatures = get_json(json_ptr)?;
@@ -154,7 +154,7 @@ pub extern "C" fn take_state(engine_ptr: *mut c_void, json_ptr: *const c_char) -
 /// The caller is responsible for freeing the allocated memory. This can be done by calling
 /// `free_response` and passing in the pointer returned by this method. Failure to do so will result in a leak.
 #[no_mangle]
-pub extern "C" fn check_enabled(
+pub unsafe extern "C" fn check_enabled(
     engine_ptr: *mut c_void,
     toggle_name_ptr: *const c_char,
     context_ptr: *const c_char,
@@ -182,7 +182,7 @@ pub extern "C" fn check_enabled(
 /// The caller is responsible for freeing the allocated memory. This can be done by calling
 /// `free_response` and passing in the pointer returned by this method. Failure to do so will result in a leak.
 #[no_mangle]
-pub extern "C" fn check_variant(
+pub unsafe extern "C" fn check_variant(
     engine_ptr: *mut c_void,
     toggle_name_ptr: *const c_char,
     context_ptr: *const c_char,
@@ -231,7 +231,7 @@ pub unsafe extern "C" fn free_response(response_ptr: *mut c_char) {
 /// The caller is responsible for freeing the allocated memory. This can be done by calling
 /// `free_response` and passing in the pointer returned by this method. Failure to do so will result in a leak.
 #[no_mangle]
-pub extern "C" fn count_toggle(
+pub unsafe extern "C" fn count_toggle(
     engine_ptr: *mut c_void,
     toggle_name_ptr: *const c_char,
     enabled: bool,
@@ -260,7 +260,7 @@ pub extern "C" fn count_toggle(
 /// The caller is responsible for freeing the allocated memory. This can be done by calling
 /// `free_response` and passing in the pointer returned by this method. Failure to do so will result in a leak.
 #[no_mangle]
-pub extern "C" fn count_variant(
+pub unsafe extern "C" fn count_variant(
     engine_ptr: *mut c_void,
     toggle_name_ptr: *const c_char,
     variant_name_ptr: *const c_char,
@@ -290,7 +290,7 @@ pub extern "C" fn count_variant(
 /// The caller is responsible for freeing the allocated memory, in case the response is not null. This can be done by calling
 /// `free_response` and passing in the pointer returned by this method. Failure to do so will result in a leak.
 #[no_mangle]
-pub extern "C" fn get_metrics(engine_ptr: *mut c_void) -> *mut c_char {
+pub unsafe extern "C" fn get_metrics(engine_ptr: *mut c_void) -> *mut c_char {
     let result: Result<Option<MetricBucket>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
 

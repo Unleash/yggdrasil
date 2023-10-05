@@ -89,11 +89,13 @@ class UnleashEngine
   end
 
   def count_toggle(toggle_name, enabled)
-    UnleashEngine.count_toggle(@engine, toggle_name, enabled)
+    response_ptr = UnleashEngine.count_toggle(@engine, toggle_name, enabled)
+    UnleashEngine.free_response(response_ptr)
   end
 
   def count_variant(toggle_name, variant_name)
-    UnleashEngine.count_variant(@engine, toggle_name, variant_name)
+    response_ptr = UnleashEngine.count_variant(@engine, toggle_name, variant_name)
+    UnleashEngine.free_response(response_ptr)
   end
 
   def get_metrics
