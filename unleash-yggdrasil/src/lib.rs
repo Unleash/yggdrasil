@@ -94,6 +94,9 @@ fn compile_variant_rule(
         build_variant_rules(&toggle.strategies.clone().unwrap_or_default(), segment_map)
             .iter()
             .map(|(rule_string, strategy_variants, stickiness)| {
+                if strategy_variants.is_empty() {
+                    return None;
+                };
                 let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
                 compiled_rule.map(|rule| {
                     (
@@ -1254,5 +1257,70 @@ mod test {
         };
         let variant = state.get_variant("some-toggle", &Context::default());
         assert_eq!(variant.name, "disabled".to_string());
+    }
+
+    #[test]
+    pub fn do_the_thing() {
+        let raw_state = r#"
+        {
+            "version": 2,
+            "features": [
+                {
+                    "name": "toggle1",
+                    "type": "release",
+                    "enabled": true,
+                    "project": "TestProject20",
+                    "stale": false,
+                    "strategies": [
+                        {
+                            "name": "flexibleRollout",
+                            "constraints": [],
+                            "parameters": {
+                                "groupId": "toggle1",
+                                "rollout": "100",
+                                "stickiness": "default"
+                            },
+                            "variants": []
+                        }
+                    ],
+                    "variants": [
+                        {
+                            "name": "another",
+                            "weight": 1000,
+                            "overrides": [],
+                            "stickiness": "default",
+                            "weightType": "variable"
+                        }
+                    ],
+                    "description": null,
+                    "impressionData": false
+                }
+            ],
+            "query": {
+                "environment": "development",
+                "inlineSegmentConstraints": true
+            },
+            "meta": {
+                "revisionId": 12137,
+                "etag": "\"76d8bb0e:12137\"",
+                "queryHash": "76d8bb0e"
+            }
+        }
+        "#;
+
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+        let context = Context {
+            user_id: Some("7".into()),
+            ..Context::default()
+        };
+
+        engine.take_state(feature_set);
+
+        let results = engine.resolve_all(&context);
+        let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
+
+        assert_eq!(targeted_toggle.enabled, true);
+        assert_eq!(targeted_toggle.variant.name, "another");
     }
 }
