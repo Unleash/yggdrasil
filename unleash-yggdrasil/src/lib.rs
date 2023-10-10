@@ -1260,7 +1260,7 @@ mod test {
     }
 
     #[test]
-    pub fn do_the_thing() {
+    pub fn empty_strategy_variants_do_not_block_non_strategy_variants_from_working() {
         let raw_state = r#"
         {
             "version": 2,
