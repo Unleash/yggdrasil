@@ -29,6 +29,12 @@ pub type CompiledState = HashMap<String, CompiledToggle>;
 
 pub const SUPPORTED_SPEC_VERSION: &str = "4.5.1";
 
+pub struct CompiledFeatureDependency {
+    pub feature: String,
+    pub enabled: Option<bool>,
+    pub variants: Option<Vec<String>>,
+}
+
 pub struct CompiledToggle {
     pub name: String,
     pub enabled: bool,
@@ -37,6 +43,7 @@ pub struct CompiledToggle {
     pub variants: Vec<CompiledVariant>,
     pub impression_data: bool,
     pub project: String,
+    pub dependencies: Option<Vec<CompiledFeatureDependency>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -58,6 +65,7 @@ impl Default for CompiledToggle {
             variants: Default::default(),
             impression_data: false,
             project: "default".to_string(),
+            dependencies: None,
         }
     }
 }
@@ -135,6 +143,7 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
                 compiled_strategy: compile_rule(rule.as_str()).unwrap(),
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
+                dependencies: None,
             },
         );
     }
@@ -303,9 +312,48 @@ impl EngineState {
         }
     }
 
+    fn is_parent_dependency_satisfied(&self, toggle: &CompiledToggle, context: &Context) -> bool {
+        match &toggle.dependencies {
+            None => true,
+            Some(dependencies) => {
+                if dependencies.is_empty() {
+                    return true;
+                }
+
+                dependencies.iter().all(|parent| {
+                    let Some(parent_toggle) = self.get_toggle(&parent.feature) else {
+                        return false;
+                    };
+
+                    if parent_toggle
+                        .dependencies
+                        .as_ref()
+                        .is_some_and(|deps| !deps.is_empty())
+                    {
+                        return false;
+                    }
+
+                    if parent.enabled.is_some_and(|boolean| boolean) {
+                        match parent.variants.as_ref() {
+                            Some(variants) => {
+                                variants.contains(&self.get_variant(&parent.feature, &context).name)
+                            }
+                            None => self.is_enabled(&parent.feature, &context),
+                        }
+                    } else {
+                        !self.is_enabled(&parent.feature, &context)
+                    }
+                })
+            }
+        }
+    }
+
     fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
-        let context = EnrichedContext::from(context.clone(), toggle.name.clone());
-        toggle.enabled && (toggle.compiled_strategy)(&context)
+        let enriched_context = EnrichedContext::from(context.clone(), toggle.name.clone());
+        match self.is_parent_dependency_satisfied(toggle, context) {
+            false => false,
+            true => toggle.enabled && (toggle.compiled_strategy)(&enriched_context),
+        }
     }
 
     pub fn resolve_all(&self, context: &Context) -> Option<HashMap<String, ResolvedToggle>> {
