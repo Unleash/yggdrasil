@@ -12,7 +12,7 @@ Easy enough - run `cargo build` from the root of the project. You'll need an up 
 
 To run the client specs, you'll first need to clone them:
 
-`git clone --depth 5 --branch v4.3.1 https://github.com/Unleash/client-specification.git client-specification`
+`git clone --depth 5 --branch v4.5.1 https://github.com/Unleash/client-specification.git client-specification`
 
 ## Node
 

@@ -27,7 +27,7 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "4.3.1";
+pub const SUPPORTED_SPEC_VERSION: &str = "4.5.1";
 
 pub struct CompiledToggle {
     pub name: String,
@@ -595,6 +595,7 @@ mod test {
     #[test_case("14-constraint-semver-operators.json"; "Semver constraints")]
     #[test_case("15-global-constraints.json"; "Segments")]
     #[test_case("16-strategy-variants.json"; "Strategy variants")]
+    #[test_case("17-dependent-features.json"; "Dependent features")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::default();
