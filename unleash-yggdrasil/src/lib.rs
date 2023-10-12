@@ -1411,10 +1411,9 @@ mod test {
         let blank_context = Context::default();
 
         state.is_enabled("some-toggle", &blank_context);
-        state.is_enabled("parent-flag", &blank_context);
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
-        assert_eq!(metrics.toggles.get("parent-flag").unwrap().yes, 1);
+        assert!(metrics.toggles.get("parent-flag").is_none());
     }
 }
