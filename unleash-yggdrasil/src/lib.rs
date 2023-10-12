@@ -319,21 +319,20 @@ impl EngineState {
         }
 
         toggle.dependencies.iter().all(|parent| {
-            println!("Checking parent: {:?}", parent);
             let Some(parent_toggle) = self.get_toggle(&parent.feature) else {
                 return false;
             };
 
-            if parent_toggle.dependencies.is_empty() {
+            if !parent_toggle.dependencies.is_empty() {
                 return false;
             }
 
-            if parent.enabled.is_some_and(|boolean| boolean) {
+            if parent.enabled.unwrap_or(true) {
                 match parent.variants.as_ref() {
-                    Some(variants) => {
+                    Some(variants) if !variants.is_empty() => {
                         variants.contains(&self.get_variant(&parent.feature, &context).name)
                     }
-                    None => self.enabled(&parent_toggle, &context),
+                    _ => self.enabled(&parent_toggle, &context),
                 }
             } else {
                 !self.enabled(&parent_toggle, &context)
@@ -343,10 +342,6 @@ impl EngineState {
 
     fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
         let enriched_context = EnrichedContext::from(context.clone(), toggle.name.clone());
-        println!(
-            "Checking toggle: {}. Deps: {:?}",
-            toggle.name, &toggle.dependencies
-        );
         match self.is_parent_dependency_satisfied(toggle, context) {
             false => false,
             true => toggle.enabled && (toggle.compiled_strategy)(&enriched_context),
