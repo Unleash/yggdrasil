@@ -137,19 +137,12 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
                 compiled_strategy: compile_rule(rule.as_str()).unwrap(),
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
-                dependencies: compile_dependencies(&toggle.dependencies),
+                dependencies: toggle.dependencies.clone().unwrap_or_default(),
             },
         );
     }
 
     compiled_state
-}
-
-fn compile_dependencies(dependencies: &Option<Vec<FeatureDependency>>) -> Vec<FeatureDependency> {
-    match dependencies {
-        Some(variants) => variants.clone(),
-        _ => vec![],
-    }
 }
 
 fn compile_variants(variants: &Option<Vec<Variant>>) -> Vec<CompiledVariant> {
@@ -342,10 +335,9 @@ impl EngineState {
 
     fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
         let enriched_context = EnrichedContext::from(context.clone(), toggle.name.clone());
-        match self.is_parent_dependency_satisfied(toggle, context) {
-            false => false,
-            true => toggle.enabled && (toggle.compiled_strategy)(&enriched_context),
-        }
+        toggle.enabled
+            && self.is_parent_dependency_satisfied(toggle, context)
+            && (toggle.compiled_strategy)(&enriched_context)
     }
 
     pub fn resolve_all(&self, context: &Context) -> Option<HashMap<String, ResolvedToggle>> {
