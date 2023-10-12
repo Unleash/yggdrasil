@@ -307,10 +307,6 @@ impl EngineState {
     }
 
     fn is_parent_dependency_satisfied(&self, toggle: &CompiledToggle, context: &Context) -> bool {
-        if toggle.dependencies.is_empty() {
-            return true;
-        }
-
         toggle.dependencies.iter().all(|parent| {
             let Some(parent_toggle) = self.get_toggle(&parent.feature) else {
                 return false;
