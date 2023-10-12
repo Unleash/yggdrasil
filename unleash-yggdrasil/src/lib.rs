@@ -21,7 +21,7 @@ use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
 pub use unleash_types::client_features::Context;
 use unleash_types::client_features::{
-    ClientFeature, ClientFeatures, Override, Payload, Segment, Variant,
+    ClientFeature, ClientFeatures, FeatureDependency, Override, Payload, Segment, Variant,
 };
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
@@ -29,10 +29,21 @@ pub type CompiledState = HashMap<String, CompiledToggle>;
 
 pub const SUPPORTED_SPEC_VERSION: &str = "4.5.1";
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CompiledFeatureDependency {
     pub feature: String,
     pub enabled: Option<bool>,
     pub variants: Option<Vec<String>>,
+}
+
+impl From<&FeatureDependency> for CompiledFeatureDependency {
+    fn from(value: &FeatureDependency) -> Self {
+        Self {
+            feature: value.feature.clone(),
+            enabled: value.enabled,
+            variants: value.variants.clone(),
+        }
+    }
 }
 
 pub struct CompiledToggle {
@@ -43,7 +54,7 @@ pub struct CompiledToggle {
     pub variants: Vec<CompiledVariant>,
     pub impression_data: bool,
     pub project: String,
-    pub dependencies: Option<Vec<CompiledFeatureDependency>>,
+    pub dependencies: Vec<CompiledFeatureDependency>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -65,7 +76,7 @@ impl Default for CompiledToggle {
             variants: Default::default(),
             impression_data: false,
             project: "default".to_string(),
-            dependencies: None,
+            dependencies: Default::default(),
         }
     }
 }
@@ -143,12 +154,25 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
                 compiled_strategy: compile_rule(rule.as_str()).unwrap(),
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
-                dependencies: None,
+                dependencies: compile_dependencies(&toggle.dependencies),
             },
         );
     }
 
     compiled_state
+}
+
+fn compile_dependencies(
+    dependencies: &Option<Vec<FeatureDependency>>,
+) -> Vec<CompiledFeatureDependency> {
+    if let Some(variants) = dependencies {
+        variants
+            .iter()
+            .map(CompiledFeatureDependency::from)
+            .collect()
+    } else {
+        vec![]
+    }
 }
 
 fn compile_variants(variants: &Option<Vec<Variant>>) -> Vec<CompiledVariant> {
@@ -313,43 +337,39 @@ impl EngineState {
     }
 
     fn is_parent_dependency_satisfied(&self, toggle: &CompiledToggle, context: &Context) -> bool {
-        match &toggle.dependencies {
-            None => true,
-            Some(dependencies) => {
-                if dependencies.is_empty() {
-                    return true;
-                }
-
-                dependencies.iter().all(|parent| {
-                    let Some(parent_toggle) = self.get_toggle(&parent.feature) else {
-                        return false;
-                    };
-
-                    if parent_toggle
-                        .dependencies
-                        .as_ref()
-                        .is_some_and(|deps| !deps.is_empty())
-                    {
-                        return false;
-                    }
-
-                    if parent.enabled.is_some_and(|boolean| boolean) {
-                        match parent.variants.as_ref() {
-                            Some(variants) => {
-                                variants.contains(&self.get_variant(&parent.feature, &context).name)
-                            }
-                            None => self.enabled(&parent_toggle, &context),
-                        }
-                    } else {
-                        !self.enabled(&parent_toggle, &context)
-                    }
-                })
-            }
+        if toggle.dependencies.is_empty() {
+            return true;
         }
+
+        toggle.dependencies.iter().all(|parent| {
+            println!("Checking parent: {:?}", parent);
+            let Some(parent_toggle) = self.get_toggle(&parent.feature) else {
+                return false;
+            };
+
+            if parent_toggle.dependencies.is_empty() {
+                return false;
+            }
+
+            if parent.enabled.is_some_and(|boolean| boolean) {
+                match parent.variants.as_ref() {
+                    Some(variants) => {
+                        variants.contains(&self.get_variant(&parent.feature, &context).name)
+                    }
+                    None => self.enabled(&parent_toggle, &context),
+                }
+            } else {
+                !self.enabled(&parent_toggle, &context)
+            }
+        })
     }
 
     fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
         let enriched_context = EnrichedContext::from(context.clone(), toggle.name.clone());
+        println!(
+            "Checking toggle: {}. Deps: {:?}",
+            toggle.name, &toggle.dependencies
+        );
         match self.is_parent_dependency_satisfied(toggle, context) {
             false => false,
             true => toggle.enabled && (toggle.compiled_strategy)(&enriched_context),
@@ -409,7 +429,7 @@ impl EngineState {
         variants: &'a Vec<CompiledVariant>,
         context: &Context,
     ) -> Option<&'a CompiledVariant> {
-        if variants.is_empty() {
+        if variants.is_empty() || !self.is_parent_dependency_satisfied(&toggle, &context) {
             return None;
         }
         if let Some(found_override) = check_for_variant_override(variants, context) {
@@ -1383,11 +1403,11 @@ mod test {
                 enabled: true,
                 compiled_strategy: Box::new(|_| true),
                 variants: vec![],
-                dependencies: Some(vec![CompiledFeatureDependency {
+                dependencies: vec![CompiledFeatureDependency {
                     feature: "parent-flag".into(),
                     enabled: Some(true),
                     variants: None,
-                }]),
+                }],
                 ..CompiledToggle::default()
             },
         );
