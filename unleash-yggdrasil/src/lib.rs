@@ -320,15 +320,20 @@ impl EngineState {
                 return false;
             }
 
+            let parent_enabled = self.enabled(parent_toggle, context);
             if parent.enabled.unwrap_or(true) {
                 match parent.variants.as_ref() {
                     Some(variants) if !variants.is_empty() => {
-                        variants.contains(&self.get_variant(&parent.feature, context).name)
+                        parent_enabled
+                            && self
+                                .check_variant_by_toggle(parent_toggle, context)
+                                .map(|variant| variants.contains(&variant.name))
+                                .unwrap_or(true)
                     }
-                    _ => self.enabled(parent_toggle, context),
+                    _ => parent_enabled,
                 }
             } else {
-                !self.enabled(parent_toggle, context)
+                !parent_enabled
             }
         })
     }
