@@ -338,10 +338,10 @@ impl EngineState {
                             Some(variants) => {
                                 variants.contains(&self.get_variant(&parent.feature, &context).name)
                             }
-                            None => self.is_enabled(&parent.feature, &context),
+                            None => self.enabled(&parent_toggle, &context),
                         }
                     } else {
-                        !self.is_enabled(&parent.feature, &context)
+                        !self.enabled(&parent_toggle, &context)
                     }
                 })
             }
