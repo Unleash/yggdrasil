@@ -17,7 +17,7 @@ pest_derive = "2.0"
 lazy_static = "1.4.0"
 semver = "1.0.17"
 convert_case = "0.6.0"
-unleash-types = "0.10.4"
+unleash-types = "0.10.5"
 chrono = "0.4.26"
 dashmap = "5.5.0"
 
