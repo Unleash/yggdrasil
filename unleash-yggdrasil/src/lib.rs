@@ -29,23 +29,6 @@ pub type CompiledState = HashMap<String, CompiledToggle>;
 
 pub const SUPPORTED_SPEC_VERSION: &str = "4.5.1";
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CompiledFeatureDependency {
-    pub feature: String,
-    pub enabled: Option<bool>,
-    pub variants: Option<Vec<String>>,
-}
-
-impl From<&FeatureDependency> for CompiledFeatureDependency {
-    fn from(value: &FeatureDependency) -> Self {
-        Self {
-            feature: value.feature.clone(),
-            enabled: value.enabled,
-            variants: value.variants.clone(),
-        }
-    }
-}
-
 pub struct CompiledToggle {
     pub name: String,
     pub enabled: bool,
@@ -54,7 +37,7 @@ pub struct CompiledToggle {
     pub variants: Vec<CompiledVariant>,
     pub impression_data: bool,
     pub project: String,
-    pub dependencies: Vec<CompiledFeatureDependency>,
+    pub dependencies: Vec<FeatureDependency>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -162,16 +145,10 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
     compiled_state
 }
 
-fn compile_dependencies(
-    dependencies: &Option<Vec<FeatureDependency>>,
-) -> Vec<CompiledFeatureDependency> {
-    if let Some(variants) = dependencies {
-        variants
-            .iter()
-            .map(CompiledFeatureDependency::from)
-            .collect()
-    } else {
-        vec![]
+fn compile_dependencies(dependencies: &Option<Vec<FeatureDependency>>) -> Vec<FeatureDependency> {
+    match dependencies {
+        Some(variants) => variants.clone(),
+        _ => vec![],
     }
 }
 
@@ -605,11 +582,11 @@ mod test {
     use serde::Deserialize;
     use std::{collections::HashMap, fs};
     use test_case::test_case;
-    use unleash_types::client_features::{ClientFeatures, Override};
+    use unleash_types::client_features::{ClientFeatures, FeatureDependency, Override};
 
     use crate::{
-        check_for_variant_override, get_seed, CompiledFeatureDependency, CompiledToggle,
-        CompiledVariant, Context, EngineState, VariantDef,
+        check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
+        EngineState, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -1403,7 +1380,7 @@ mod test {
                 enabled: true,
                 compiled_strategy: Box::new(|_| true),
                 variants: vec![],
-                dependencies: vec![CompiledFeatureDependency {
+                dependencies: vec![FeatureDependency {
                     feature: "parent-flag".into(),
                     enabled: Some(true),
                     variants: None,
