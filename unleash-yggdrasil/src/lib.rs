@@ -401,7 +401,7 @@ impl EngineState {
         variants: &'a Vec<CompiledVariant>,
         context: &Context,
     ) -> Option<&'a CompiledVariant> {
-        if variants.is_empty() || !self.is_parent_dependency_satisfied(&toggle, &context) {
+        if variants.is_empty() {
             return None;
         }
         if let Some(found_override) = check_for_variant_override(variants, context) {
