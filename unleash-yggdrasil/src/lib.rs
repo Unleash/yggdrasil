@@ -588,8 +588,8 @@ mod test {
     use unleash_types::client_features::{ClientFeatures, Override};
 
     use crate::{
-        check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
-        EngineState, VariantDef,
+        check_for_variant_override, get_seed, CompiledFeatureDependency, CompiledToggle,
+        CompiledVariant, Context, EngineState, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -1371,5 +1371,49 @@ mod test {
 
         assert_eq!(targeted_toggle.enabled, true);
         assert_eq!(targeted_toggle.variant.name, "another");
+    }
+
+    #[test]
+    pub fn metrics_are_not_recorded_for_parent_flags() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![],
+                dependencies: Some(vec![CompiledFeatureDependency {
+                    feature: "parent-flag".into(),
+                    enabled: None,
+                    variants: None,
+                }]),
+                ..CompiledToggle::default()
+            },
+        );
+
+        compiled_state.insert(
+            "parent-flag".to_string(),
+            CompiledToggle {
+                name: "parent-flag".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![],
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+
+        state.is_enabled("some-toggle", &blank_context);
+
+        let metrics = state.get_metrics().unwrap();
+        assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
+        assert_eq!(metrics.toggles.get("parent-flag").unwrap().yes, 0);
     }
 }
