@@ -21,13 +21,13 @@ use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
 pub use unleash_types::client_features::Context;
 use unleash_types::client_features::{
-    ClientFeature, ClientFeatures, Override, Payload, Segment, Variant,
+    ClientFeature, ClientFeatures, FeatureDependency, Override, Payload, Segment, Variant,
 };
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "4.3.1";
+pub const SUPPORTED_SPEC_VERSION: &str = "4.5.2";
 
 pub struct CompiledToggle {
     pub name: String,
@@ -37,6 +37,7 @@ pub struct CompiledToggle {
     pub variants: Vec<CompiledVariant>,
     pub impression_data: bool,
     pub project: String,
+    pub dependencies: Vec<FeatureDependency>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -58,6 +59,7 @@ impl Default for CompiledToggle {
             variants: Default::default(),
             impression_data: false,
             project: "default".to_string(),
+            dependencies: Default::default(),
         }
     }
 }
@@ -135,6 +137,7 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
                 compiled_strategy: compile_rule(rule.as_str()).unwrap(),
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
+                dependencies: toggle.dependencies.clone().unwrap_or_default(),
             },
         );
     }
@@ -303,9 +306,43 @@ impl EngineState {
         }
     }
 
+    fn is_parent_dependency_satisfied(&self, toggle: &CompiledToggle, context: &Context) -> bool {
+        toggle.dependencies.iter().all(|parent_dependency| {
+            let Some(compiled_parent) = self.get_toggle(&parent_dependency.feature) else {
+                return false;
+            };
+
+            if !compiled_parent.dependencies.is_empty() {
+                return false;
+            }
+
+            let parent_enabled = self.enabled(compiled_parent, context);
+            let expected_parent_enabled_state = parent_dependency.enabled.unwrap_or(true);
+            let parent_variant = self.check_variant_by_toggle(compiled_parent, context);
+
+            let is_variant_dependency_satisfied = {
+                if let (Some(expected_variants), Some(actual_variant)) =
+                    (&parent_dependency.variants, parent_variant)
+                {
+                    expected_variants.is_empty() || expected_variants.contains(&actual_variant.name)
+                } else {
+                    true
+                }
+            };
+
+            if !is_variant_dependency_satisfied {
+                return false;
+            }
+
+            parent_enabled == expected_parent_enabled_state
+        })
+    }
+
     fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
-        let context = EnrichedContext::from(context.clone(), toggle.name.clone());
-        toggle.enabled && (toggle.compiled_strategy)(&context)
+        let enriched_context = EnrichedContext::from(context.clone(), toggle.name.clone());
+        toggle.enabled
+            && self.is_parent_dependency_satisfied(toggle, context)
+            && (toggle.compiled_strategy)(&enriched_context)
     }
 
     pub fn resolve_all(&self, context: &Context) -> Option<HashMap<String, ResolvedToggle>> {
@@ -537,7 +574,7 @@ mod test {
     use serde::Deserialize;
     use std::{collections::HashMap, fs};
     use test_case::test_case;
-    use unleash_types::client_features::{ClientFeatures, Override};
+    use unleash_types::client_features::{ClientFeatures, FeatureDependency, Override};
 
     use crate::{
         check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
@@ -595,6 +632,7 @@ mod test {
     #[test_case("14-constraint-semver-operators.json"; "Semver constraints")]
     #[test_case("15-global-constraints.json"; "Segments")]
     #[test_case("16-strategy-variants.json"; "Strategy variants")]
+    #[test_case("17-dependent-features.json"; "Dependent features")]
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::default();
@@ -1322,5 +1360,155 @@ mod test {
 
         assert_eq!(targeted_toggle.enabled, true);
         assert_eq!(targeted_toggle.variant.name, "another");
+    }
+
+    #[test]
+    pub fn metrics_are_not_recorded_for_parent_flags() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![],
+                dependencies: vec![FeatureDependency {
+                    feature: "parent-flag".into(),
+                    enabled: Some(true),
+                    variants: None,
+                }],
+                ..CompiledToggle::default()
+            },
+        );
+
+        compiled_state.insert(
+            "parent-flag".to_string(),
+            CompiledToggle {
+                name: "parent-flag".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![],
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+
+        state.is_enabled("some-toggle", &blank_context);
+
+        let metrics = state.get_metrics().unwrap();
+        assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
+        assert!(metrics.toggles.get("parent-flag").is_none());
+    }
+
+    #[test]
+    pub fn metrics_are_not_recorded_for_parent_flags_with_variants() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![],
+                dependencies: vec![FeatureDependency {
+                    feature: "parent-flag".into(),
+                    enabled: Some(true),
+                    variants: Some(vec!["don't-ignore-me".into()]),
+                }],
+                ..CompiledToggle::default()
+            },
+        );
+
+        compiled_state.insert(
+            "parent-flag".to_string(),
+            CompiledToggle {
+                name: "parent-flag".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![],
+                compiled_variant_strategy: Some(vec![(
+                    Box::new(|_| true),
+                    vec![CompiledVariant {
+                        name: "don't-ignore-me".into(),
+                        weight: 100,
+                        stickiness: None,
+                        payload: None,
+                        overrides: None,
+                    }],
+                )]),
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+
+        state.is_enabled("some-toggle", &blank_context);
+
+        let metrics = state.get_metrics().unwrap();
+        assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
+        assert!(metrics.toggles.get("parent-flag").is_none());
+    }
+
+    #[test]
+    pub fn parent_flags_are_consulted_for_get_variant() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![CompiledVariant {
+                    name: "enabled-variant".into(),
+                    weight: 100,
+                    stickiness: None,
+                    payload: None,
+                    overrides: None,
+                }],
+                dependencies: vec![FeatureDependency {
+                    feature: "parent-flag".into(),
+                    enabled: Some(true),
+                    variants: Some(vec!["don't-ignore-me".into()]),
+                }],
+                ..CompiledToggle::default()
+            },
+        );
+
+        compiled_state.insert(
+            "parent-flag".to_string(),
+            CompiledToggle {
+                name: "parent-flag".into(),
+                enabled: false,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![],
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+
+        let variant = state.get_variant("some-toggle", &blank_context);
+
+        assert_eq!(variant.name, "disabled");
+
+        let metrics = state.get_metrics().unwrap();
+        assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
+        assert!(metrics.toggles.get("parent-flag").is_none());
     }
 }
