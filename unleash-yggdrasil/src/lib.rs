@@ -1452,8 +1452,59 @@ mod test {
         state.is_enabled("some-toggle", &blank_context);
 
         let metrics = state.get_metrics().unwrap();
-        println!("metrics: {:#?}", metrics);
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
+        assert!(metrics.toggles.get("parent-flag").is_none());
+    }
+
+    #[test]
+    pub fn parent_flags_are_consulted_for_get_variant() {
+        let mut compiled_state = HashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![CompiledVariant {
+                    name: "enabled-variant".into(),
+                    weight: 100,
+                    stickiness: None,
+                    payload: None,
+                    overrides: None,
+                }],
+                dependencies: vec![FeatureDependency {
+                    feature: "parent-flag".into(),
+                    enabled: Some(true),
+                    variants: Some(vec!["don't-ignore-me".into()]),
+                }],
+                ..CompiledToggle::default()
+            },
+        );
+
+        compiled_state.insert(
+            "parent-flag".to_string(),
+            CompiledToggle {
+                name: "parent-flag".into(),
+                enabled: false,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![],
+                ..CompiledToggle::default()
+            },
+        );
+
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let blank_context = Context::default();
+
+        let variant = state.get_variant("some-toggle", &blank_context);
+
+        assert_eq!(variant.name, "disabled");
+
+        let metrics = state.get_metrics().unwrap();
+        assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
         assert!(metrics.toggles.get("parent-flag").is_none());
     }
 }
