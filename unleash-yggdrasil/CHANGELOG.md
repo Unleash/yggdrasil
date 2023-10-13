@@ -16,9 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    
    Regarding these extra points not covered by the spec:
    
-       metrics are not called on dependent features :: this is covered and tested
-       impression events are called on dependent features for easier debugging :: yggdrasil doesn't touch impression events
-       warning events for missing dependencies are reported once :: yggdrasil doesn't deal with warnings
+   metrics are not called on dependent features :: this is covered and tested
+   impression events are called on dependent features for easier debugging :: yggdrasil doesn't touch impression events
+   warning events for missing dependencies are reported once :: yggdrasil doesn't deal with warnings
    
    @kwasniew , there is a line in resolveVariant in the Node SDK that checks for parent dependencies being satisfied. What exactly does it do? I tried doing something similar here, but removed it because the tests pass either way. Is this an edge case not covered by the tests, or is it just that the implementations differ here?
    
@@ -26,26 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
    ### (Important) Commits
    
    * feat(#2255): update client specs
-   
-   * Wip: impl 1 (without updating unleash-types)
-   
-   * feat(#2255): add test to check that metrics aren't recorded
-   
-   * feat(#2255): fix assumption in test
-   
-   * feat(#2255): avoid counting metrics for parents
-   
-   * feat(#2255): make deps always a vec
-   
-   * feat(#2255): use unleash-types type for dependency
-   
-   * feat(#2255): bump unleash-types
-   
-   * feat(#2255): add test for metrics if parent flag has variants
-   
-   * Get variant without counting
-   
-   * feat(#2255): add test to ensure get_variant works
+* Wip: impl 1 (without updating unleash-types)
+* feat(#2255): add test to check that metrics aren't recorded
+* feat(#2255): fix assumption in test
+* feat(#2255): avoid counting metrics for parents
+* feat(#2255): make deps always a vec
+* feat(#2255): use unleash-types type for dependency
+* feat(#2255): bump unleash-types
+* feat(#2255): add test for metrics if parent flag has variants
+* Get variant without counting
+* feat(#2255): add test to ensure get_variant works
 
 ### Bug Fixes
 
@@ -55,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 2 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#49](https://github.com/Unleash/yggdrasil/issues/49), [#51](https://github.com/Unleash/yggdrasil/issues/51)
@@ -70,6 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add dependent flags ([`d89c183`](https://github.com/Unleash/yggdrasil/commit/d89c1837e1ef965eaea49e2b54c5a71bfa475877))
  * **[#51](https://github.com/Unleash/yggdrasil/issues/51)**
     - Allows current time to be assumed when calculating the context ([`8bf7a69`](https://github.com/Unleash/yggdrasil/commit/8bf7a697411cd9e4b029151253740d67104faa88))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.6.1 ([`32c21f6`](https://github.com/Unleash/yggdrasil/commit/32c21f6155deb4c1b7331f11c18e9a7a232f9489))
 </details>
 
 ## v0.6.0 (2023-10-10)
