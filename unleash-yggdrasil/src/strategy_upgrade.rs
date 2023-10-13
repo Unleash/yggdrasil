@@ -223,7 +223,7 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
                     .collect::<Vec<String>>()
                     .join(", ")
             })
-            .unwrap_or_else(|| "".to_string());
+            .unwrap_or_default();
         format!("[{values}]")
     } else {
         if constraint.operator == Operator::SemverEq
