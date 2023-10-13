@@ -5,7 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.6.1 (2023-10-13)
+
+### New Features
+
+ - <csr-id-d89c1837e1ef965eaea49e2b54c5a71bfa475877/> add dependent flags
+   ### Description
+   
+   This PR adds dependent flags to Yggdrasil, complying with the updated client specs.
+   
+   Regarding these extra points not covered by the spec:
+   
+       metrics are not called on dependent features :: this is covered and tested
+       impression events are called on dependent features for easier debugging :: yggdrasil doesn't touch impression events
+       warning events for missing dependencies are reported once :: yggdrasil doesn't deal with warnings
+   
+   @kwasniew , there is a line in resolveVariant in the Node SDK that checks for parent dependencies being satisfied. What exactly does it do? I tried doing something similar here, but removed it because the tests pass either way. Is this an edge case not covered by the tests, or is it just that the implementations differ here?
+   
+   
+   ### (Important) Commits
+   
+   * feat(#2255): update client specs
+   
+   * Wip: impl 1 (without updating unleash-types)
+   
+   * feat(#2255): add test to check that metrics aren't recorded
+   
+   * feat(#2255): fix assumption in test
+   
+   * feat(#2255): avoid counting metrics for parents
+   
+   * feat(#2255): make deps always a vec
+   
+   * feat(#2255): use unleash-types type for dependency
+   
+   * feat(#2255): bump unleash-types
+   
+   * feat(#2255): add test for metrics if parent flag has variants
+   
+   * Get variant without counting
+   
+   * feat(#2255): add test to ensure get_variant works
+
+### Bug Fixes
+
+ - <csr-id-8bf7a697411cd9e4b029151253740d67104faa88/> allows current time to be assumed when calculating the context
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 2 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#49](https://github.com/Unleash/yggdrasil/issues/49), [#51](https://github.com/Unleash/yggdrasil/issues/51)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#49](https://github.com/Unleash/yggdrasil/issues/49)**
+    - Add dependent flags ([`d89c183`](https://github.com/Unleash/yggdrasil/commit/d89c1837e1ef965eaea49e2b54c5a71bfa475877))
+ * **[#51](https://github.com/Unleash/yggdrasil/issues/51)**
+    - Allows current time to be assumed when calculating the context ([`8bf7a69`](https://github.com/Unleash/yggdrasil/commit/8bf7a697411cd9e4b029151253740d67104faa88))
+</details>
+
 ## v0.6.0 (2023-10-10)
+
+<csr-id-e08f62b77a8eb20121989fecf2b0161f9dc34215/>
 
 ### New Features
 
@@ -27,8 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release over the course of 56 calendar days.
- - 83 days passed between releases.
+ - 4 commits contributed to the release over the course of 56 calendar days.
+ - 84 days passed between releases.
  - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#42](https://github.com/Unleash/yggdrasil/issues/42), [#43](https://github.com/Unleash/yggdrasil/issues/43), [#48](https://github.com/Unleash/yggdrasil/issues/48)
 
@@ -44,6 +113,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Make ruby useful ([`c878e95`](https://github.com/Unleash/yggdrasil/commit/c878e9535018ecc10f99419528d1f6b8d2e9d6c5))
  * **[#48](https://github.com/Unleash/yggdrasil/issues/48)**
     - Non strategy variants will work with empty strategy variants ([`137e4c8`](https://github.com/Unleash/yggdrasil/commit/137e4c8364f62262d7968c21e012e06083b6bd50))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.6.0 ([`26f86b6`](https://github.com/Unleash/yggdrasil/commit/26f86b6023fa8be52a20158aade78646550c00cf))
 </details>
 
 ## v0.5.9 (2023-07-18)
