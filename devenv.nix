@@ -5,7 +5,9 @@
   # env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  # packages = [ pkgs.git ];
+  packages = [
+    pkgs.github-cli # required for the release process
+  ];
 
   # https://devenv.sh/scripts/
   # scripts.hello.exec = "echo hello from $GREET";
