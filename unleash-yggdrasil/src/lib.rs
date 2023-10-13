@@ -307,30 +307,34 @@ impl EngineState {
     }
 
     fn is_parent_dependency_satisfied(&self, toggle: &CompiledToggle, context: &Context) -> bool {
-        toggle.dependencies.iter().all(|parent| {
-            let Some(parent_toggle) = self.get_toggle(&parent.feature) else {
+        toggle.dependencies.iter().all(|parent_dependency| {
+            let Some(compiled_parent) = self.get_toggle(&parent_dependency.feature) else {
                 return false;
             };
 
-            if !parent_toggle.dependencies.is_empty() {
+            if !compiled_parent.dependencies.is_empty() {
                 return false;
             }
 
-            let parent_enabled = self.enabled(parent_toggle, context);
-            if parent.enabled.unwrap_or(true) {
-                match parent.variants.as_ref() {
-                    Some(variants) if !variants.is_empty() => {
-                        parent_enabled
-                            && self
-                                .check_variant_by_toggle(parent_toggle, context)
-                                .map(|variant| variants.contains(&variant.name))
-                                .unwrap_or(true)
-                    }
-                    _ => parent_enabled,
+            let parent_enabled = self.enabled(compiled_parent, context);
+            let expected_parent_enabled_state = parent_dependency.enabled.unwrap_or(true);
+            let parent_variant = self.check_variant_by_toggle(compiled_parent, context);
+
+            let is_variant_dependency_satisfied = {
+                if let (Some(expected_variants), Some(actual_variant)) =
+                    (&parent_dependency.variants, parent_variant)
+                {
+                    expected_variants.is_empty() || expected_variants.contains(&actual_variant.name)
+                } else {
+                    true
                 }
-            } else {
-                !parent_enabled
+            };
+
+            if !is_variant_dependency_satisfied {
+                return false;
             }
+
+            parent_enabled == expected_parent_enabled_state
         })
     }
 
