@@ -8,7 +8,7 @@ Yggdrasil is a Rust project designed to create the core of the Unleash SDK domai
 
 ## Building the Core
 
-Easy enough - run `cargo build` from the root of the project. You'll need an up to date set of Rust tools to do this.
+Easy enough - run `cargo build` from the root of the project. You'll need an up to date set of Rust tools to do this (`rustup update stable`).
 
 To run the client specs, you'll first need to clone them:
 
@@ -42,4 +42,5 @@ Start by setting up and activating a virtual environment in the python-sdk folde
 python3 -m venv venv
 source venv/bin/activate
 ```
+
 Install [maturin](https://github.com/PyO3/maturin) by executing `pip install maturin` in your shell. Then you can run `maturin develop`.

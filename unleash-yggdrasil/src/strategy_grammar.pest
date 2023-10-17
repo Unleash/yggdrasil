@@ -51,10 +51,12 @@ string_list_operation_without_case = {
     starts_with_ignore_case
     | ends_with_ignore_case
     | contains_any_ignore_case
+    | equals_any_ignore_case 
 }
     starts_with_ignore_case     = { "starts_with_any_ignore_case" }
     ends_with_ignore_case       = { "ends_with_any_ignore_case" }
     contains_any_ignore_case    = { "contains_any_ignore_case" }
+    equals_any_ignore_case      = { "equals_any_ignore_case" } 
 
 list_operation = { "in" | "not_in" }
 

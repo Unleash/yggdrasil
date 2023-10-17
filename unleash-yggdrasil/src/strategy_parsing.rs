@@ -73,6 +73,7 @@ enum StringComparator {
     StartsWith,
     EndsWith,
     Contains,
+    Equals,
 }
 
 struct StringComparatorType {
@@ -170,6 +171,10 @@ fn to_string_comparator(node: Pair<Rule>) -> StringComparatorType {
         "contains_any_ignore_case" => StringComparatorType {
             ignore_case: true,
             comparator_type: StringComparator::Contains,
+        },
+        "equals_any_ignore_case" => StringComparatorType {
+            ignore_case: true,
+            comparator_type: StringComparator::Equals,
         },
         _ => unreachable!(),
     }
@@ -407,6 +412,7 @@ fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFrag
                 StringComparator::Contains => list.iter().any(|item| value.contains(item)),
                 StringComparator::StartsWith => list.iter().any(|item| value.starts_with(item)),
                 StringComparator::EndsWith => list.iter().any(|item| value.ends_with(item)),
+                StringComparator::Equals => list.iter().any(|item| &value == item),
             }
             .invert(inverted)
         } else {
@@ -418,7 +424,6 @@ fn string_fragment_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFrag
 fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
     let first = node.next();
     let second = node.next();
-
     let (inverted, child) = match (first, second) {
         (Some(_), Some(second)) => (true, second),
         (Some(first), None) => (false, first),
@@ -731,17 +736,50 @@ mod tests {
         assert!(rule(&Context::default()));
     }
 
-    #[test_case("user_id starts_with_any [\"some\"]", true)]
-    #[test_case("user_id ends_with_any [\".com\"]", true)]
-    #[test_case("user_id contains_any [\"email\"]", true)]
-    #[test_case("user_id contains_any [\"EMAIL\"]", false)]
-    #[test_case("user_id contains_any_ignore_case [\"EMAIL\"]", true)]
-    #[test_case("user_id ends_with_any_ignore_case [\".COM\"]", true)]
-    #[test_case("user_id starts_with_any_ignore_case [\"SOME\"]", true)]
-    fn run_string_operators_tests(rule: &str, expected: bool) {
+    #[test_case("some-email.com", "user_id starts_with_any [\"some\"]", true)]
+    #[test_case("some-email.com", "user_id ends_with_any [\".com\"]", true)]
+    #[test_case("some-email.com", "user_id contains_any [\"email\"]", true)]
+    #[test_case("some-email.com", "user_id contains_any [\"EMAIL\"]", false)]
+    #[test_case("some-email.com", "user_id contains_any_ignore_case [\"EMAIL\"]", true)]
+    #[test_case("some-email.com", "user_id ends_with_any_ignore_case [\".COM\"]", true)]
+    #[test_case(
+        "some-email.com",
+        "user_id starts_with_any_ignore_case [\"SOME\"]",
+        true
+    )]
+    #[test_case(
+        "some-email.com",
+        "user_id equals_any_ignore_case [\"some-EMAIL.com\"]",
+        true
+    )]
+    #[test_case(
+        "some-email.com",
+        "user_id equals_any_ignore_case [\"noemail.com\",\"neither-THIS.com\"]",
+        false
+    )]
+    #[test_case(
+        "some-email.com",
+        "! user_id equals_any_ignore_case [\"notemail.com\"]",
+        true
+    )]
+    #[test_case(
+        "some-email.com",
+        "! user_id equals_any_ignore_case [\"notemail.com\",\"some-EMAIL.com\"]",
+        false
+    )]
+    #[test_case(
+        "sOMeUSer-email.com",
+        "! user_id equals_any_ignore_case [\"someuser\"]",
+        true
+    )]
+    #[test_case(
+        "sOMeUSer-email.com",
+        "user_id equals_any_ignore_case [\"someuser-EMAIL.com\"]",
+        true
+    )]
+    fn run_string_operators_tests(user_id: &str, rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
-        let context = context_from_user_id("some-email.com");
-
+        let context = context_from_user_id(user_id);
         assert_eq!(rule(&context), expected);
     }
 
