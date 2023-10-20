@@ -14,6 +14,45 @@ public class Tests
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    [Test] 
+    public void MassTestMemoryUsage() {
+        // Arrange
+        var basePath = Path.Combine("..", "..", "..", "..", "..", "..", "client-specification", "specifications");
+        var suitePath = Path.Combine(basePath, "01-simple-examples.json");
+        var suiteData = JObject.Parse(File.ReadAllText(suitePath));
+
+        var unleashEngine = new UnleashEngine();
+        //unleashEngine.TakeState(suiteData["state"].ToString());
+
+        var runTestFor = (Action lambda, string process) => {
+
+            // Baseline / warm up
+            for (var i = 0; i < 1000000; i++) {
+                lambda();
+            }
+            GC.Collect();
+
+            var baseline = GC.GetTotalMemory(true);
+
+            // Act
+            for (var i = 0; i < 1000000; i++) {
+                lambda();
+            }
+            GC.Collect();
+
+            var memoryTotal = GC.GetTotalMemory(true);
+
+            // Assert
+            var diff = memoryTotal - baseline;
+            Assert.LessOrEqual(diff, 524288, process + " has a likely memory leak. Diff: " + diff + " bytes");
+        };
+
+        runTestFor(() => unleashEngine.IsEnabled("Feature.A", new Context()), "IsEnabled");
+        runTestFor(() => unleashEngine.GetVariant("Feature.A", new Context()), "GetVariant");
+        runTestFor(() => unleashEngine.TakeState(suiteData["state"].ToString()), "TakeState");
+        runTestFor(() => unleashEngine.GetMetrics(), "GetMetrics");
+    }
+
     [Test]
     public void TestClientSpec()
     {
