@@ -18,7 +18,7 @@ public class Tests
     public void TestClientSpec()
     {
         var unleashEngine = new UnleashEngine();
-        var basePath = Path.Combine("..", "..", "..", "..", "..", "client-specification", "specifications");
+        var basePath = Path.Combine("..", "..", "..", "..", "..", "..", "client-specification", "specifications");
         var indexFilePath = Path.Combine(basePath, "index.json");
         var testSuites = JArray.Parse(File.ReadAllText(indexFilePath));
 
