@@ -25,7 +25,6 @@ public class EngineResponse<TResult> : EngineResponse {
     public TResult? Value { get; set; }
 }
 
-
 public class Variant
 {
     public string? Name { get; set; }
