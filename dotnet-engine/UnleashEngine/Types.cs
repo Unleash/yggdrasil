@@ -21,8 +21,8 @@ public class EngineResponse {
     public string? StatusCode { get; set; }
 }
 
-public class EngineResponse<TResult> : EngineResponse {
-    public TResult? Value { get; set; }
+public class EngineResponse<TValue> : EngineResponse {
+    public TValue? Value { get; set; }
 }
 
 public class Variant
@@ -36,4 +36,9 @@ public class Payload
 {
     public string? PayloadType { get; set; }
     public string? Value { get; set; }
+}
+
+public class UnleashException : Exception
+{
+    public UnleashException(string message) : base(message) { }
 }

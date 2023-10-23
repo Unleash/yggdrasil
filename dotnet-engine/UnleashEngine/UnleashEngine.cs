@@ -51,14 +51,14 @@ public class UnleashEngine
 
         var takeStateJson = Marshal.PtrToStringUTF8(takeStatePtr);
 
+        platformEngine.FreeResponse(takeStatePtr);
+
         var takeStateResult = takeStateJson != null ?
             JsonSerializer.Deserialize<EngineResponse>(takeStateJson, options) :
             null;
 
-        platformEngine.FreeResponse(takeStatePtr);
-
         if (takeStateResult?.StatusCode == "Error") {
-            throw new Exception($"Error: {takeStateResult?.ErrorMessage}");
+            throw new UnleashException($"Error: {takeStateResult?.ErrorMessage}");
         }
     }
 
@@ -71,23 +71,21 @@ public class UnleashEngine
         {
             return false;
         }
-        else
-        {
-            var isEnabledJson = Marshal.PtrToStringUTF8(isEnabledPtr);
 
-            var isEnabledResult = isEnabledJson != null ?
-                JsonSerializer.Deserialize<EngineResponse<bool?>>(isEnabledJson, options) :
-                null;
+        var isEnabledJson = Marshal.PtrToStringUTF8(isEnabledPtr);
 
-            platformEngine.FreeResponse(isEnabledPtr);
+        platformEngine.FreeResponse(isEnabledPtr);
+
+        var isEnabledResult = isEnabledJson != null ?
+            JsonSerializer.Deserialize<EngineResponse<bool?>>(isEnabledJson, options) :
+            null;
 
 
-            if (isEnabledResult?.StatusCode == "Error") {
-                throw new Exception($"Error: {isEnabledResult?.ErrorMessage}");
-            }
-
-            return isEnabledResult?.Value ?? false;
+        if (isEnabledResult?.StatusCode == "Error") {
+            throw new UnleashException($"Error: {isEnabledResult?.ErrorMessage}");
         }
+
+        return isEnabledResult?.Value ?? false;
     }
 
     public Variant? GetVariant(string toggleName, Context context)
@@ -99,22 +97,20 @@ public class UnleashEngine
         {
             return null;
         }
-        else
-        {
-            var variantJson = Marshal.PtrToStringUTF8(variantPtr);
 
-            var variantResult = variantJson != null ?
-                JsonSerializer.Deserialize<EngineResponse<Variant>>(variantJson, options) :
-                null;
+        var variantJson = Marshal.PtrToStringUTF8(variantPtr);
 
-            platformEngine.FreeResponse(variantPtr);
+        platformEngine.FreeResponse(variantPtr);
 
-            if (variantResult?.StatusCode == "Error") {
-                throw new Exception($"Error: {variantResult?.ErrorMessage}");
-            }
+        var variantResult = variantJson != null ?
+            JsonSerializer.Deserialize<EngineResponse<Variant>>(variantJson, options) :
+            null;
 
-            return variantResult?.Value ?? new Variant() { Enabled = false, Name = "disabled", Payload = null };
+        if (variantResult?.StatusCode == "Error") {
+            throw new UnleashException($"Error: {variantResult?.ErrorMessage}");
         }
+
+        return variantResult?.Value ?? new Variant() { Enabled = false, Name = "disabled", Payload = null };
     }
 
     public Dictionary<string, int>? GetMetrics() {
@@ -124,22 +120,20 @@ public class UnleashEngine
         {
             return null;
         }
-        else
-        {
-            var metricsJson = Marshal.PtrToStringUTF8(metricsPtr);
 
-            var metricsResult = metricsJson != null ?
-                JsonSerializer.Deserialize<EngineResponse<Dictionary<string, int>>>(metricsJson, options) :
-                null;
+        var metricsJson = Marshal.PtrToStringUTF8(metricsPtr);
 
-            platformEngine.FreeResponse(metricsPtr);
+        platformEngine.FreeResponse(metricsPtr);
 
-            if (metricsResult?.StatusCode == "Error") {
-                throw new Exception($"Error: {metricsResult?.ErrorMessage}");
-            }
-            
-            return metricsResult?.Value;
+        var metricsResult = metricsJson != null ?
+            JsonSerializer.Deserialize<EngineResponse<Dictionary<string, int>>>(metricsJson, options) :
+            null;
+
+        if (metricsResult?.StatusCode == "Error") {
+            throw new UnleashException($"Error: {metricsResult?.ErrorMessage}");
         }
+
+        return metricsResult?.Value;
     }
 
     public void CountToggle(string toggle, bool enabled)

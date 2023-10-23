@@ -44,7 +44,7 @@ public class Tests
 
             // Assert
             var diff = memoryTotal - baseline;
-            Assert.LessOrEqual(diff, 524288, process + " has a likely memory leak. Diff: " + diff + " bytes");
+            Assert.LessOrEqual(diff, 200000, process + " has a potential memory leak. Diff: " + diff + " bytes");
         };
 
         runTestFor(() => unleashEngine.IsEnabled("Feature.A", new Context()), "IsEnabled");
