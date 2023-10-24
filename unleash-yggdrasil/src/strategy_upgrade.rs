@@ -12,7 +12,8 @@ pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) 
     }
     let rule_text = strategies
         .iter()
-        .map(|x| upgrade_strategy(x, segment_map))
+        .enumerate()
+        .map(|(index, x)| upgrade_strategy(x, segment_map, index))
         .collect::<Vec<String>>()
         .join(" or ");
     rule_text
@@ -25,10 +26,11 @@ pub fn build_variant_rules(
 ) -> Vec<(String, Vec<StrategyVariant>, String, String)> {
     strategies
         .iter()
-        .filter(|strategy| strategy.variants.is_some())
-        .map(|strategy| {
+        .enumerate()
+        .filter(|(_, strategy)| strategy.variants.is_some())
+        .map(|(index, strategy)| {
             (
-                upgrade_strategy(strategy, segment_map),
+                upgrade_strategy(strategy, segment_map, index),
                 strategy.variants.clone().unwrap(),
                 strategy
                     .parameters
@@ -60,7 +62,11 @@ impl PropResolver for Strategy {
     }
 }
 
-fn upgrade_strategy(strategy: &Strategy, segment_map: &HashMap<i32, Segment>) -> String {
+fn upgrade_strategy(
+    strategy: &Strategy,
+    segment_map: &HashMap<i32, Segment>,
+    strategy_index: usize,
+) -> String {
     let strategy_rule = match strategy.name.as_str() {
         "default" => "true".into(),
         "userWithId" => upgrade_user_id_strategy(strategy),
@@ -69,7 +75,7 @@ fn upgrade_strategy(strategy: &Strategy, segment_map: &HashMap<i32, Segment>) ->
         "gradualRolloutRandom" => upgrade_random(strategy),
         "flexibleRollout" => upgrade_flexible_rollout_strategy(strategy),
         "remoteAddress" => upgrade_remote_address(strategy),
-        _ => "true".into(),
+        _ => format!("custom_strategy[{strategy_index}]"),
     };
 
     let segments = strategy
@@ -697,5 +703,29 @@ mod tests {
         };
         let rule = upgrade_constraint(&constraint);
         assert_eq!(rule.as_str(), expected);
+    }
+
+    #[test]
+    fn upgrades_custom_strategy_to_lookup_index() {
+        let default_strategy = Strategy {
+            name: "default".into(),
+            parameters: None,
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+
+        let custom_strategy = Strategy {
+            name: "custom".into(),
+            parameters: None,
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+
+        let output = upgrade(&vec![default_strategy, custom_strategy], &HashMap::new());
+        assert_eq!(output.as_str(), "true or custom_strategy[1]")
     }
 }
