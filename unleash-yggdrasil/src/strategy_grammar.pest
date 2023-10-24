@@ -1,5 +1,5 @@
 num = @{ int ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ int)? }
-    int = { ("+" | "-")? ~ ASCII_DIGIT+ }
+int = { ("+" | "-")? ~ ASCII_DIGIT+ }
 
 percentage = { ("100" | (ASCII_DIGIT ~ ASCII_DIGIT?)) ~ "%" }
 
@@ -70,6 +70,7 @@ constraint = {
         | default_strategy_constraint
         | string_fragment_constraint
         | list_constraint
+        | custom_strategy_constraint
     )
 }
     default_strategy_constraint = { boolean }
@@ -81,6 +82,7 @@ constraint = {
     rollout_constraint = { percentage ~ stickiness_param? ~ group_id_param?}
         stickiness_param = { "sticky on " ~ context_value ~ ( NULL_COALESCE ~ context_value)* }
         group_id_param = { "with group_id of" ~ string }
+    custom_strategy_constraint = { "custom_strategy[" ~ int ~ "]" }
 
 context_value = { random | user_id | session_id | remote_address | app_name | environment | current_time | property }
     user_id         = { "user_id" }

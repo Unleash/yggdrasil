@@ -184,6 +184,10 @@ fn numeric(node: Pair<Rule>) -> f64 {
     node.as_str().parse::<f64>().unwrap()
 }
 
+fn integer(node: Pair<Rule>) -> i64 {
+    node.as_str().parse::<i64>().unwrap()
+}
+
 fn date(node: Pair<Rule>) -> DateTime<Utc> {
     node.as_str().parse::<DateTime<Utc>>().unwrap()
 }
@@ -372,6 +376,17 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     }
 }
 
+fn custom_strategy_constraint(_inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
+    let strategy_index = integer(node.next().unwrap());
+    Box::new(move |context| {
+        *context
+            .strategy_results
+            .as_ref()
+            .and_then(|strategy_results| strategy_results.get(&(strategy_index as usize)))
+            .unwrap_or(&true)
+    })
+}
+
 fn harvest_set(node: Pairs<Rule>) -> HashSet<String> {
     node.into_iter().map(string).collect::<HashSet<String>>()
 }
@@ -442,6 +457,9 @@ fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
             string_fragment_constraint(inverted, child.into_inner())
         }
         Rule::list_constraint => list_constraint(inverted, child.into_inner()),
+        Rule::custom_strategy_constraint => {
+            custom_strategy_constraint(inverted, child.into_inner())
+        }
         _ => unreachable!(),
     }
 }
@@ -485,6 +503,7 @@ mod tests {
             app_name: None,
             remote_address: None,
             toggle_name: "".into(),
+            strategy_results: None,
         }
     }
 
@@ -503,6 +522,7 @@ mod tests {
                 remote_address: Default::default(),
                 properties: Default::default(),
                 toggle_name: Default::default(),
+                strategy_results: None,
             }
         }
     }
@@ -641,6 +661,7 @@ mod tests {
             app_name: None,
             remote_address: None,
             toggle_name: "".into(),
+            strategy_results: None,
         };
 
         let rule = compile_rule(rule).expect("");
@@ -826,5 +847,79 @@ mod tests {
     fn escaping_strings_works() {
         let rule = "user_id in [\"Nobody likes \\\"scare quotes\\\"\"]";
         compile_rule(rule).unwrap();
+    }
+
+    #[test]
+    fn custom_strategy_result_works_with_multiple_strategies() {
+        let rule = "custom_strategy[0] or custom_strategy[1]";
+        let rule = compile_rule(rule).unwrap();
+
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert(0, true);
+        custom_strategy_results.insert(1, true);
+
+        let context = Context {
+            strategy_results: Some(custom_strategy_results),
+            ..Context::default()
+        };
+        let result = rule(&context);
+        assert!(result);
+
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert(0, false);
+        custom_strategy_results.insert(1, false);
+        let context = Context {
+            strategy_results: Some(custom_strategy_results),
+            ..Context::default()
+        };
+        let result = rule(&context);
+        assert!(!result);
+    }
+
+    #[test]
+    fn missing_custom_strategy_results_produce_true_without_error() {
+        let rule = "custom_strategy[0] and custom_strategy[1]";
+        let rule = compile_rule(rule).unwrap();
+
+        let context = Context::default();
+        let result = rule(&context);
+
+        assert!(result);
+    }
+
+    #[test]
+    fn custom_strategy_can_use_arbitrary_index() {
+        let rule = "custom_strategy[7]";
+        let rule = compile_rule(rule).unwrap();
+
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert(7, false);
+
+        let context = Context {
+            strategy_results: Some(custom_strategy_results),
+            ..Default::default()
+        };
+        let result = rule(&context);
+
+        assert!(!result);
+    }
+
+    #[test]
+    fn custom_strategy_results_that_are_not_used_do_not_error() {
+        let rule = "user_id > 1";
+        let rule = compile_rule(rule).unwrap();
+
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert(0, true);
+        custom_strategy_results.insert(1, true);
+
+        let context = Context {
+            strategy_results: Some(custom_strategy_results),
+            user_id: Some("7".into()),
+            ..Context::default()
+        };
+        let result = rule(&context);
+
+        assert!(result);
     }
 }

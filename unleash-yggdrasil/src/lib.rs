@@ -346,7 +346,7 @@ impl EngineState {
     }
 
     fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
-        let enriched_context = EnrichedContext::from(context.clone(), toggle.name.clone());
+        let enriched_context = EnrichedContext::from(context.clone(), toggle.name.clone(), None);
         toggle.enabled
             && self.is_parent_dependency_satisfied(toggle, context)
             && (toggle.compiled_strategy)(&enriched_context)
@@ -443,7 +443,7 @@ impl EngineState {
                 .compiled_variant_strategy
                 .as_ref()
                 .and_then(|variant_strategies| {
-                    let context = EnrichedContext::from(context.clone(), toggle.name.clone());
+                    let context = EnrichedContext::from(context.clone(), toggle.name.clone(), None);
 
                     let resolved_strategy_variants: Option<(&Vec<CompiledVariant>, &String)> =
                         variant_strategies
