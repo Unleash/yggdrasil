@@ -6,14 +6,43 @@ use crate::state::SdkError;
 
 const DEFAULT_STICKINESS: &str = "user_id | session_id | random";
 
+enum StrategyType {
+    Default,
+    UserWithId,
+    GradualRolloutUserId,
+    GradualRolloutSessionId,
+    GradualRolloutRandom,
+    FlexibleRollout,
+    RemoteAddress,
+    Custom(String),
+}
+
+trait IsCustom {
+    fn is_custom(&self) -> bool;
+}
+
+impl IsCustom for Strategy {
+    fn is_custom(&self) -> bool {
+        match StrategyType::from(self.name.as_str()) {
+            StrategyType::Custom(_) => true,
+            _ => false,
+        }
+    }
+}
+
 pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) -> String {
     if strategies.is_empty() {
         return "true".into();
     }
+    let mut custom_strat_count = 0;
     let rule_text = strategies
         .iter()
-        .enumerate()
-        .map(|(index, x)| upgrade_strategy(x, segment_map, index))
+        .map(|strategy| {
+            if strategy.is_custom() {
+                custom_strat_count += 1;
+            }
+            upgrade_strategy(strategy, segment_map, custom_strat_count)
+        })
         .collect::<Vec<String>>()
         .join(" or ");
     rule_text
@@ -23,14 +52,17 @@ pub fn build_variant_rules(
     strategies: &[Strategy],
     segment_map: &HashMap<i32, Segment>,
     toggle_name: &String,
-) -> Vec<(String, Vec<StrategyVariant>, String, String)> {
+) -> Vec<(String, Vec<StrategyVariant>, String)> {
+    let mut custom_strat_count = 0;
     strategies
         .iter()
-        .enumerate()
-        .filter(|(_, strategy)| strategy.variants.is_some())
-        .map(|(index, strategy)| {
+        .filter(|strategy| strategy.variants.is_some())
+        .map(|strategy| {
+            if strategy.is_custom() {
+                custom_strat_count += 1;
+            }
             (
-                upgrade_strategy(strategy, segment_map, index),
+                upgrade_strategy(strategy, segment_map, custom_strat_count),
                 strategy.variants.clone().unwrap(),
                 strategy
                     .parameters
@@ -62,20 +94,35 @@ impl PropResolver for Strategy {
     }
 }
 
+impl From<&str> for StrategyType {
+    fn from(strategy: &str) -> Self {
+        match strategy {
+            "default" => StrategyType::Default,
+            "userWithId" => StrategyType::UserWithId,
+            "gradualRolloutUserId" => StrategyType::GradualRolloutUserId,
+            "gradualRolloutSessionId" => StrategyType::GradualRolloutSessionId,
+            "gradualRolloutRandom" => StrategyType::GradualRolloutRandom,
+            "flexibleRollout" => StrategyType::FlexibleRollout,
+            "remoteAddress" => StrategyType::RemoteAddress,
+            _ => StrategyType::Custom(strategy.to_string()),
+        }
+    }
+}
+
 fn upgrade_strategy(
     strategy: &Strategy,
     segment_map: &HashMap<i32, Segment>,
-    strategy_index: usize,
+    strategy_count: usize,
 ) -> String {
-    let strategy_rule = match strategy.name.as_str() {
-        "default" => "true".into(),
-        "userWithId" => upgrade_user_id_strategy(strategy),
-        "gradualRolloutUserId" => upgrade_user_id_rollout_strategy(strategy),
-        "gradualRolloutSessionId" => upgrade_session_id_rollout_strategy(strategy),
-        "gradualRolloutRandom" => upgrade_random(strategy),
-        "flexibleRollout" => upgrade_flexible_rollout_strategy(strategy),
-        "remoteAddress" => upgrade_remote_address(strategy),
-        _ => format!("custom_strategy[{strategy_index}]"),
+    let strategy_rule = match StrategyType::from(strategy.name.as_str()) {
+        StrategyType::Default => "true".into(),
+        StrategyType::UserWithId => upgrade_user_id_strategy(strategy),
+        StrategyType::GradualRolloutUserId => upgrade_user_id_rollout_strategy(strategy),
+        StrategyType::GradualRolloutSessionId => upgrade_session_id_rollout_strategy(strategy),
+        StrategyType::GradualRolloutRandom => upgrade_random(strategy),
+        StrategyType::FlexibleRollout => upgrade_flexible_rollout_strategy(strategy),
+        StrategyType::RemoteAddress => upgrade_remote_address(strategy),
+        StrategyType::Custom(_) => format!("external_value[\"customStrategy{strategy_count}\"]"),
     };
 
     let segments = strategy
@@ -706,7 +753,22 @@ mod tests {
     }
 
     #[test]
-    fn upgrades_custom_strategy_to_lookup_index() {
+    fn upgrades_custom_strategy_to_a_named_lookup() {
+        let custom_strategy = Strategy {
+            name: "custom".into(),
+            parameters: None,
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+
+        let output = upgrade(&vec![custom_strategy], &HashMap::new());
+        assert_eq!(output.as_str(), "external_value[\"customStrategy1\"]")
+    }
+
+    #[test]
+    fn custom_strategy_count_is_only_incremented_for_custom_strategies() {
         let default_strategy = Strategy {
             name: "default".into(),
             parameters: None,
@@ -725,7 +787,20 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![default_strategy, custom_strategy], &HashMap::new());
-        assert_eq!(output.as_str(), "true or custom_strategy[1]")
+        let output = upgrade(
+            &vec![
+                default_strategy.clone(),
+                default_strategy.clone(),
+                custom_strategy.clone(),
+                custom_strategy.clone(),
+                default_strategy.clone(),
+                custom_strategy,
+            ],
+            &HashMap::new(),
+        );
+        assert_eq!(
+            output.as_str(),
+            "true or true or external_value[\"customStrategy1\"] or external_value[\"customStrategy2\"] or true or external_value[\"customStrategy3\"]"
+        )
     }
 }

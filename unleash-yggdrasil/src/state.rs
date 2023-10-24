@@ -9,7 +9,7 @@ pub struct EnrichedContext {
     pub current_time: Option<String>,
     pub remote_address: Option<String>,
     pub properties: Option<HashMap<String, String>>,
-    pub strategy_results: Option<HashMap<usize, bool>>,
+    pub external_results: Option<HashMap<String, bool>>,
     pub(crate) toggle_name: String,
 }
 
@@ -17,7 +17,7 @@ impl EnrichedContext {
     pub fn from(
         context: Context,
         toggle_name: String,
-        strategy_results: Option<HashMap<usize, bool>>,
+        external_results: Option<HashMap<String, bool>>,
     ) -> Self {
         EnrichedContext {
             user_id: context.user_id.clone(),
@@ -30,7 +30,7 @@ impl EnrichedContext {
                 .or_else(|| Some(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string())),
             remote_address: context.remote_address.clone(),
             properties: context.properties,
-            strategy_results,
+            external_results,
             toggle_name,
         }
     }
