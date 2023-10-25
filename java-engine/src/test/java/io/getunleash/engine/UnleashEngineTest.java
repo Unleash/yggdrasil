@@ -1,5 +1,6 @@
 package io.getunleash.engine;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,7 +20,7 @@ import io.getunleash.engine.VariantDef;
 class UnleashEngineTest {
 
     private String simpleFeatures = loadFeaturesFromFile(
-            "../../../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
+            "../../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
                                                                                      // feature JSON
 
     public static String loadFeaturesFromFile(String filePath) {
@@ -66,7 +67,7 @@ class UnleashEngineTest {
     public void testClientSpec() throws Exception {
         UnleashEngine unleashEngine = new UnleashEngine();
         ObjectMapper objectMapper = new ObjectMapper();
-        File basePath = Paths.get("..", "..", "..", "client-specification", "specifications").toFile();
+        File basePath = Paths.get( "..", "..", "client-specification", "specifications").toFile();
         File indexFile = new File(basePath, "index.json");
         List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<>() {
         });
@@ -89,7 +90,8 @@ class UnleashEngineTest {
                     boolean result = unleashEngine.isEnabled(toggleName, context);
 
                     assertEquals(expectedResult, result,
-                            String.format("Failed test '%s': expected %b, got %b",
+                            String.format("[%s] Failed test '%s': expected %b, got %b",
+                                    suite,
                                     test.get("description"), expectedResult,
                                     result));
                 }

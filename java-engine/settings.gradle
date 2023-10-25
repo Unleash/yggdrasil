@@ -13,4 +13,3 @@ plugins {
 }
 
 rootProject.name = 'unleash-engine'
-include('lib')
