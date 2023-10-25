@@ -27,7 +27,9 @@ public class EngineResponse<TValue> : EngineResponse {
 
 public class Variant
 {
-    public string? Name { get; set; }
+    public static Variant DISABLED_VARIANT { get { return new Variant { Name = "disabled", Payload = null, Enabled = false }; } }
+
+    public string Name { get; set; }
     public Payload? Payload { get; set; }
     public bool Enabled { get; set; }
 }
@@ -41,4 +43,20 @@ public class Payload
 public class UnleashException : Exception
 {
     public UnleashException(string message) : base(message) { }
+}
+
+public class FeatureCount
+{
+    public long Yes { get; set; }
+    public long No { get; set; }
+    public Dictionary<string, long> Variants { get; set; }
+}
+
+
+public class MetricsBucket
+{
+    public Dictionary<string, FeatureCount> Toggles { get; set; }
+
+    public DateTimeOffset Start { get; set; }
+    public DateTimeOffset Stop { get; set; }
 }

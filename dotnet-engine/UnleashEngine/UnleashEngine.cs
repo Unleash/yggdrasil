@@ -85,7 +85,11 @@ public class UnleashEngine
             throw new UnleashException($"Error: {isEnabledResult?.ErrorMessage}");
         }
 
-        return isEnabledResult?.Value ?? false;
+        var enabled = isEnabledResult?.Value ?? false;
+
+        platformEngine.CountToggle(state, toggleName, enabled);
+
+        return enabled;
     }
 
     public Variant? GetVariant(string toggleName, Context context)
@@ -110,14 +114,18 @@ public class UnleashEngine
             throw new UnleashException($"Error: {variantResult?.ErrorMessage}");
         }
 
-        return variantResult?.Value ?? new Variant() { Enabled = false, Name = "disabled", Payload = null };
+        var variant = variantResult?.Value ?? Variant.DISABLED_VARIANT;
+
+        platformEngine.CountVariant(state, toggleName, variant.Name);
+
+        return variant;
     }
 
-    public Dictionary<string, int>? GetMetrics() {
+    public MetricsBucket? GetMetrics() {
         var metricsPtr = platformEngine.GetMetrics(state);
 
         if (metricsPtr == IntPtr.Zero)
-        {
+        {   
             return null;
         }
 
@@ -126,7 +134,7 @@ public class UnleashEngine
         platformEngine.FreeResponse(metricsPtr);
 
         var metricsResult = metricsJson != null ?
-            JsonSerializer.Deserialize<EngineResponse<Dictionary<string, int>>>(metricsJson, options) :
+            JsonSerializer.Deserialize<EngineResponse<MetricsBucket>>(metricsJson, options) :
             null;
 
         if (metricsResult?.StatusCode == "Error") {
@@ -134,15 +142,5 @@ public class UnleashEngine
         }
 
         return metricsResult?.Value;
-    }
-
-    public void CountToggle(string toggle, bool enabled)
-    {
-        platformEngine.CountToggle(state, toggle, enabled);
-    }
-
-    public void CountVariant(string toggle, string variant)
-    {
-        platformEngine.CountVariant(state, toggle, variant);
     }
 }
