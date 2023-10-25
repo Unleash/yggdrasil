@@ -6,6 +6,7 @@ package io.getunleash.engine;
 import java.nio.file.Paths;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jna.*;
@@ -18,17 +19,17 @@ interface UnleashFFI extends Library {
 
     UnleashFFI INSTANCE = Native.load(combinedPath, UnleashFFI.class);
 
-    Pointer engine_new();
+    Pointer new_engine();
 
     void engine_free(Pointer ptr);
 
-    Pointer engine_take_state(Pointer ptr, String toggles);
+    Pointer take_state(Pointer ptr, String toggles);
 
-    boolean engine_is_enabled(Pointer ptr, String name, String context);
+    boolean check_enabled(Pointer ptr, String name, String context);
 
-    Pointer engine_get_variant(Pointer ptr, String name, String context);
+    Pointer check_variant(Pointer ptr, String name, String context);
 
-    void engine_free_variant_def(Pointer variant_def_ptr);
+    void free_response(Pointer pointer);
 }
 
 public class UnleashEngine {
@@ -36,7 +37,8 @@ public class UnleashEngine {
     private ObjectMapper mapper = new ObjectMapper();
 
     public UnleashEngine() {
-        ptr = UnleashFFI.INSTANCE.engine_new();
+        ptr = UnleashFFI.INSTANCE.new_engine();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public void free() {
@@ -44,19 +46,19 @@ public class UnleashEngine {
     }
 
     public void takeState(String toggles) {
-        UnleashFFI.INSTANCE.engine_take_state(ptr, toggles);
+        UnleashFFI.INSTANCE.take_state(ptr, toggles);
     }
 
     public boolean isEnabled(String name, Context context) throws JsonProcessingException {
         String jsonContext = mapper.writeValueAsString(context);
-        return UnleashFFI.INSTANCE.engine_is_enabled(ptr, name, jsonContext);
+        return UnleashFFI.INSTANCE.check_enabled(ptr, name, jsonContext);
     }
 
     public VariantDef getVariant(String name, Context context) throws JsonMappingException, JsonProcessingException {
         String jsonContext = mapper.writeValueAsString(context);
-        Pointer variantDefPtr = UnleashFFI.INSTANCE.engine_get_variant(ptr, name, jsonContext);
+        Pointer variantDefPtr = UnleashFFI.INSTANCE.check_variant(ptr, name, jsonContext);
         String variantJson = variantDefPtr.getString(0);
-        UnleashFFI.INSTANCE.engine_free_variant_def(variantDefPtr);
+        UnleashFFI.INSTANCE.free_response(variantDefPtr);
         return mapper.readValue(variantJson, VariantDef.class);
     }
 }

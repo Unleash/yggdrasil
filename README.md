@@ -8,7 +8,7 @@ Yggdrasil is a Rust project designed to create the core of the Unleash SDK domai
 
 ## Building the Core
 
-Easy enough - run `cargo build` from the root of the project. You'll need an up to date set of Rust tools to do this.
+Easy enough - run `cargo build --release` from the root of the project. You'll need an up to date set of Rust tools to do this.
 
 To run the client specs, you'll first need to clone them:
 
