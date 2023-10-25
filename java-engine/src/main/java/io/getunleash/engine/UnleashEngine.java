@@ -49,7 +49,6 @@ public class UnleashEngine {
     }
 
     public void takeState(String toggles) throws YggdrasilInvalidInputException {
-        System.out.println("Taking state: "+toggles);
         TakeStateResponse response = read(UnleashFFI.INSTANCE.take_state(enginePtr, toggles), TakeStateResponse.class);
         if (!response.isValid()) {
             throw new YggdrasilInvalidInputException(toggles);
