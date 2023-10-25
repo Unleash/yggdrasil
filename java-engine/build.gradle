@@ -18,7 +18,7 @@ repositories {
 
 dependencies {
     // Use JUnit Jupiter for testing.
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
 
     // This dependency is exported to consumers, that is to say found on their compile classpath.
     api 'org.apache.commons:commons-math3:3.6.1'
@@ -26,11 +26,11 @@ dependencies {
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
     implementation 'com.google.guava:guava:31.1-jre'
 
-    implementation 'net.java.dev.jna:jna:5.8.0'
+    implementation 'net.java.dev.jna:jna:5.13.0'
 
     implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
 
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.0.1'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.1'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
