@@ -3,13 +3,14 @@
  */
 package io.getunleash.engine;
 
-import java.nio.file.Paths;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.jna.*;
+import com.sun.jna.Library;
+import com.sun.jna.Native;
+import com.sun.jna.Pointer;
+
+import java.nio.file.Paths;
 
 interface UnleashFFI extends Library {
 
@@ -25,7 +26,7 @@ interface UnleashFFI extends Library {
 
     Pointer take_state(Pointer ptr, String toggles);
 
-    boolean check_enabled(Pointer ptr, String name, String context);
+    Pointer check_enabled(Pointer ptr, String name, String context);
 
     Pointer check_variant(Pointer ptr, String name, String context);
 
@@ -33,32 +34,55 @@ interface UnleashFFI extends Library {
 }
 
 public class UnleashEngine {
-    private Pointer ptr;
-    private ObjectMapper mapper = new ObjectMapper();
+    private static final String UTF_8 = "UTF-8";
+    private final Pointer enginePtr;
+    private final ObjectMapper mapper;
 
     public UnleashEngine() {
-        ptr = UnleashFFI.INSTANCE.new_engine();
+        enginePtr = UnleashFFI.INSTANCE.new_engine();
+        mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public void free() {
-        UnleashFFI.INSTANCE.engine_free(ptr);
+        UnleashFFI.INSTANCE.engine_free(enginePtr);
     }
 
-    public void takeState(String toggles) {
-        UnleashFFI.INSTANCE.take_state(ptr, toggles);
+    public void takeState(String toggles) throws YggdrasilInvalidInputException {
+        System.out.println("Taking state: "+toggles);
+        TakeStateResponse response = read(UnleashFFI.INSTANCE.take_state(enginePtr, toggles), TakeStateResponse.class);
+        if (!response.isValid()) {
+            throw new YggdrasilInvalidInputException(toggles);
+        }
     }
 
-    public boolean isEnabled(String name, Context context) throws JsonProcessingException {
-        String jsonContext = mapper.writeValueAsString(context);
-        return UnleashFFI.INSTANCE.check_enabled(ptr, name, jsonContext);
+    <T> T read(Pointer pointer, Class<T> clazz) {
+        String str = pointer.getString(0, UTF_8);
+        UnleashFFI.INSTANCE.free_response(pointer);
+        try {
+            System.out.println(str); // TODO use a logging library. SLF4J?
+            return mapper.readValue(str, clazz);
+        } catch (JsonProcessingException e) {
+            throw new YggdrasilParseException(str, clazz, e);
+        }
     }
 
-    public VariantDef getVariant(String name, Context context) throws JsonMappingException, JsonProcessingException {
-        String jsonContext = mapper.writeValueAsString(context);
-        Pointer variantDefPtr = UnleashFFI.INSTANCE.check_variant(ptr, name, jsonContext);
-        String variantJson = variantDefPtr.getString(0);
-        UnleashFFI.INSTANCE.free_response(variantDefPtr);
-        return mapper.readValue(variantJson, VariantDef.class);
+    public boolean isEnabled(String name, Context context) throws YggdrasilInvalidInputException {
+        try {
+            String jsonContext = mapper.writeValueAsString(context);
+            IsEnabledResponse isEnabled = read(UnleashFFI.INSTANCE.check_enabled(enginePtr, name, jsonContext), IsEnabledResponse.class);
+            return isEnabled.isEnabled();
+        } catch (JsonProcessingException e) {
+            throw new YggdrasilInvalidInputException(context);
+        }
+    }
+
+    public VariantResponse getVariant(String name, Context context) throws YggdrasilInvalidInputException {
+        try {
+            String jsonContext = mapper.writeValueAsString(context);
+            return read(UnleashFFI.INSTANCE.check_variant(enginePtr, name, jsonContext), VariantResponse.class);
+        } catch (JsonProcessingException e) {
+            throw new YggdrasilInvalidInputException(context);
+        }
     }
 }

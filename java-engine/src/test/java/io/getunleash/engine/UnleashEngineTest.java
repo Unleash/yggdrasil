@@ -1,6 +1,5 @@
 package io.getunleash.engine;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,12 +13,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.getunleash.engine.UnleashEngine;
-import io.getunleash.engine.VariantDef;
+class TestSuite {
+    public String name;
+    public Object state;
+    public List<Map<String, Object>> tests;
+    public List<Map<String, Object>> variantTests;
+}
 
 class UnleashEngineTest {
 
-    private String simpleFeatures = loadFeaturesFromFile(
+    private static final VariantResponse DEFAULT_VARIANT = new VariantResponse(StatusCode.NotFound, new VariantDef("disabled", null, false), null);
+    private final String simpleFeatures = loadFeaturesFromFile(
             "../../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
                                                                                      // feature JSON
 
@@ -36,7 +40,7 @@ class UnleashEngineTest {
     }
 
     @Test
-    void testTakeState() {
+    void testTakeState() throws YggdrasilInvalidInputException {
         UnleashEngine engine = new UnleashEngine();
         engine.takeState(simpleFeatures);
     }
@@ -57,10 +61,14 @@ class UnleashEngineTest {
         engine.takeState(simpleFeatures);
 
         Context context = new Context();
-        VariantDef variant = engine.getVariant("Feature.A", context);
+        VariantResponse variant = engine.getVariant("Feature.A", context);
 
-        assertEquals("disabled", variant.name);
-        assertFalse(variant.enabled);
+        if (!variant.isValid()) {
+            variant = DEFAULT_VARIANT;
+        }
+
+        assertEquals("disabled", variant.getName());
+        assertFalse(variant.isEnabled());
     }
 
     @Test
@@ -74,12 +82,12 @@ class UnleashEngineTest {
 
         for (String suite : testSuites) {
             File suiteFile = new File(basePath, suite);
-            Map<String, Object> suiteData = objectMapper.readValue(suiteFile, new TypeReference<>() {
+            TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<>() {
             });
 
-            unleashEngine.takeState(objectMapper.writeValueAsString(suiteData.get("state")));
+            unleashEngine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
-            List<Map<String, Object>> tests = (List<Map<String, Object>>) suiteData.get("tests");
+            List<Map<String, Object>> tests = suiteData.tests;
             if (tests != null) {
                 for (Map<String, Object> test : tests) {
                     String contextJson = objectMapper.writeValueAsString(test.get("context"));
@@ -97,7 +105,7 @@ class UnleashEngineTest {
                 }
             }
 
-            List<Map<String, Object>> variantTests = (List<Map<String, Object>>) suiteData.get("variantTests");
+            List<Map<String, Object>> variantTests = suiteData.variantTests;
             if (variantTests != null) {
                 for (Map<String, Object> test : variantTests) {
                     String contextJson = objectMapper.writeValueAsString(test.get("context"));
@@ -105,10 +113,14 @@ class UnleashEngineTest {
                     String toggleName = (String) test.get("toggleName");
 
                     VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
-                    VariantDef result = unleashEngine.getVariant(toggleName, context);
+                    VariantResponse result = unleashEngine.getVariant(toggleName, context);
+                    if (!result.isValid()) {
+                        // this behavior should be implemented in the SDK
+                        result = DEFAULT_VARIANT;
+                    }
 
                     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
-                    String resultJson = objectMapper.writeValueAsString(result);
+                    String resultJson = objectMapper.writeValueAsString(result.value);
 
                     assertEquals(expectedResultJson, resultJson,
                             String.format("Failed test '%s': expected %b, got %b",
