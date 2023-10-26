@@ -20,10 +20,6 @@ public class UnleashEngine {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    public void free() {
-        yggdrasil.free();
-    }
-
     public void takeState(String toggles) throws YggdrasilInvalidInputException {
         TakeStateResponse response = read(yggdrasil.takeState(toggles), TakeStateResponse.class);
         if (!response.isValid()) {

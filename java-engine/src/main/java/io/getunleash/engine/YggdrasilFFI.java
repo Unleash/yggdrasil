@@ -5,6 +5,7 @@ import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 
+import java.lang.ref.Cleaner;
 import java.nio.file.Paths;
 
 interface UnleashFFI extends Library {
@@ -22,8 +23,11 @@ interface UnleashFFI extends Library {
     void free_response(Pointer pointer);
 }
 
-class YggdrasilFFI {
-    private final UnleashFFI ffi; // instance ffi
+class YggdrasilFFI  {
+    private static final Cleaner CLEANER = Cleaner.create();
+    @SuppressWarnings("unused")
+    private final Cleaner.Cleanable cleanable;
+    private final UnleashFFI ffi;
     private final Pointer enginePtr;
 
     /**
@@ -33,10 +37,11 @@ class YggdrasilFFI {
         this(System.getenv("YGGDRASIL_LIB_PATH"));
     }
 
-    YggdrasilFFI(String libraryPath) {
+    static UnleashFFI loadLibrary(String libraryPath) {
         if (libraryPath == null) {
             libraryPath = "."; // assume it's accessible in current path
         }
+        System.out.println("Loading library from "+Paths.get(libraryPath).toAbsolutePath());
         String libImpl = "libyggdrasilffi.so";
         if (Platform.isMac()) {
             libImpl = "libyggdrasilffi.dylib";
@@ -45,17 +50,25 @@ class YggdrasilFFI {
         }
 
         String combinedPath = Paths.get(libraryPath, libImpl).toString();
+        return Native.load(combinedPath, UnleashFFI.class);
+    }
 
-        this.ffi = Native.load(combinedPath, UnleashFFI.class);
+    YggdrasilFFI(String libraryPath) {
+        this(loadLibrary(libraryPath));
+    }
+
+    YggdrasilFFI(UnleashFFI ffi) {
+        this.ffi = ffi;
         this.enginePtr = this.ffi.new_engine();
+
+        // Note that the cleaning action must not refer to the object being registered.
+        // If so, the object will not become phantom reachable and the cleaning action will not be invoked automatically.
+        // this.cleanable uses a PhantomReference to this object, so from a GC perspective it doesn't count.
+        this.cleanable = CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
     }
 
     Pointer takeState(String toggles) {
         return this.ffi.take_state(this.enginePtr, toggles);
-    }
-
-    void free() {
-        this.ffi.free_engine(this.enginePtr);
     }
 
     void freeResponse(Pointer response) {
@@ -68,5 +81,21 @@ class YggdrasilFFI {
 
     Pointer checkVariant(String name, String context){
         return this.ffi.check_variant(this.enginePtr, name, context);
+    }
+
+    private static final class YggdrasilNativeLibraryResourceCleaner implements Runnable {
+        private final UnleashFFI ffi;
+        private final Pointer enginePtr;
+
+        private YggdrasilNativeLibraryResourceCleaner(UnleashFFI ffi, Pointer enginePtr) {
+            this.ffi = ffi;
+            this.enginePtr = enginePtr;
+        }
+
+        @Override
+        public void run() {
+            // All exceptions thrown by the cleaning action are ignored
+            this.ffi.free_engine(this.enginePtr);
+        }
     }
 }

@@ -5,9 +5,13 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'java-engine/**'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'java-engine/**'
   schedule:
     # Runs on schedule at 1745 UTC every Tuesday
     - cron: '45 17 * * 2'

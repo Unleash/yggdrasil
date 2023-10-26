@@ -20,6 +20,9 @@ dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
 
+    // use Mockito
+    testImplementation 'org.mockito:mockito-core:5.2.0'
+
     implementation 'net.java.dev.jna:jna:5.13.0'
 
     implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
