@@ -7,8 +7,6 @@ import com.sun.jna.Pointer;
 
 import java.lang.ref.Cleaner;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.Set;
 
 interface UnleashFFI extends Library {
 
@@ -27,8 +25,9 @@ interface UnleashFFI extends Library {
 
 class YggdrasilFFI  {
     private static final Cleaner CLEANER = Cleaner.create();
-    static final Set<Cleaner.Cleanable> CLEANABLES = new HashSet<>();
-    final UnleashFFI ffi;
+    @SuppressWarnings("unused")
+    private final Cleaner.Cleanable cleanable;
+    private final UnleashFFI ffi;
     private final Pointer enginePtr;
 
     /**
@@ -63,9 +62,7 @@ class YggdrasilFFI  {
         this.enginePtr = this.ffi.new_engine();
 
         // Note that the cleaning action must not refer to the object being registered. If so, the object will not become phantom reachable and the cleaning action will not be invoked automatically.
-        CLEANABLES.add(
-                CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr))
-        );
+        this.cleanable = CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
     }
 
     Pointer takeState(String toggles) {

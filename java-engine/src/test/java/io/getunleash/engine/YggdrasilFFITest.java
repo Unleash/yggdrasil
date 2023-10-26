@@ -11,7 +11,6 @@ import java.lang.ref.ReferenceQueue;
 import java.lang.reflect.Field;
 import java.nio.file.Paths;
 import java.util.Objects;
-import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
@@ -52,14 +51,12 @@ class YggdrasilFFITest {
     }
 
     @Test
-
-    void testResourceCleanup() throws InterruptedException {
+    void testResourceCleanup() {
         // Create a library instance and then nullify it to make it eligible for GC.
         UnleashFFI ffiMock = Mockito.mock(UnleashFFI.class);
         @SuppressWarnings("UnusedDeclaration")
         YggdrasilFFI library = new YggdrasilFFI(ffiMock);
-        Cleaner.Cleanable cleanable = YggdrasilFFI.CLEANABLES.iterator().next();
-
+        Cleaner.Cleanable cleanable = (Cleaner.Cleanable) getField(YggdrasilFFI.class, "cleanable", library);
 
         ReferenceQueue<Object> queue = new ReferenceQueue<>();
         PhantomReference<Object> ref =
@@ -82,6 +79,20 @@ class YggdrasilFFITest {
 
     private String absoluteValidPath() {
         return Paths.get(VALID_PATH).toAbsolutePath().toString();
+    }
+
+    /**
+     * Get an object from a named field.
+     */
+    static Object getField(Class<?> clazz,
+                           String fieldName, Object instance) {
+        try {
+            Field field = clazz.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.get(instance);
+        } catch (NoSuchFieldException | IllegalAccessException ex) {
+            throw new RuntimeException("field unknown or not accessible");
+        }
     }
 
     /**
