@@ -47,21 +47,13 @@ class UnleashEngineTest {
         engine = new UnleashEngine(new YggdrasilFFI("../target/release"));
     }
 
-    @AfterEach
-    void destroy() {
-        engine.free();
-    }
-
-
     @Test
     void testTakeState() throws YggdrasilInvalidInputException {
-        UnleashEngine engine = new UnleashEngine();
         engine.takeState(simpleFeatures);
     }
 
     @Test
     void testIsEnabled() throws Exception {
-        UnleashEngine engine = new UnleashEngine();
         engine.takeState(simpleFeatures);
 
         Context context = new Context();
@@ -71,7 +63,6 @@ class UnleashEngineTest {
 
     @Test
     void testGetVariant() throws Exception {
-        UnleashEngine engine = new UnleashEngine();
         engine.takeState(simpleFeatures);
 
         Context context = new Context();
@@ -87,7 +78,6 @@ class UnleashEngineTest {
 
     @Test
     public void testClientSpec() throws Exception {
-        UnleashEngine unleashEngine = new UnleashEngine();
         ObjectMapper objectMapper = new ObjectMapper();
         File basePath = Paths.get( "..", "..", "client-specification", "specifications").toFile();
         File indexFile = new File(basePath, "index.json");
@@ -99,7 +89,7 @@ class UnleashEngineTest {
             TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<>() {
             });
 
-            unleashEngine.takeState(objectMapper.writeValueAsString(suiteData.state));
+            engine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
             List<Map<String, Object>> tests = suiteData.tests;
             if (tests != null) {
@@ -109,7 +99,7 @@ class UnleashEngineTest {
                     String toggleName = (String) test.get("toggleName");
                     boolean expectedResult = (Boolean) test.get("expectedResult");
 
-                    boolean result = unleashEngine.isEnabled(toggleName, context);
+                    boolean result = engine.isEnabled(toggleName, context);
 
                     assertEquals(expectedResult, result,
                             String.format("[%s] Failed test '%s': expected %b, got %b",
@@ -127,7 +117,7 @@ class UnleashEngineTest {
                     String toggleName = (String) test.get("toggleName");
 
                     VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
-                    VariantResponse result = unleashEngine.getVariant(toggleName, context);
+                    VariantResponse result = engine.getVariant(toggleName, context);
                     if (!result.isValid()) {
                         // this behavior should be implemented in the SDK
                         result = DEFAULT_VARIANT;

@@ -22,7 +22,7 @@ interface UnleashFFI extends Library {
     void free_response(Pointer pointer);
 }
 
-class YggdrasilFFI {
+class YggdrasilFFI implements AutoCloseable {
     private final UnleashFFI ffi; // instance ffi
     private final Pointer enginePtr;
 
@@ -54,10 +54,6 @@ class YggdrasilFFI {
         return this.ffi.take_state(this.enginePtr, toggles);
     }
 
-    void free() {
-        this.ffi.free_engine(this.enginePtr);
-    }
-
     void freeResponse(Pointer response) {
         this.ffi.free_response(response);
     }
@@ -68,5 +64,10 @@ class YggdrasilFFI {
 
     Pointer checkVariant(String name, String context){
         return this.ffi.check_variant(this.enginePtr, name, context);
+    }
+
+    @Override
+    public void close() {
+        this.ffi.free_engine(this.enginePtr);
     }
 }
