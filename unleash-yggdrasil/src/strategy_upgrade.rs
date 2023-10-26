@@ -23,10 +23,10 @@ trait IsCustom {
 
 impl IsCustom for Strategy {
     fn is_custom(&self) -> bool {
-        match StrategyType::from(self.name.as_str()) {
-            StrategyType::Custom(_) => true,
-            _ => false,
-        }
+        matches!(
+            StrategyType::from(self.name.as_str()),
+            StrategyType::Custom(_)
+        )
     }
 }
 
