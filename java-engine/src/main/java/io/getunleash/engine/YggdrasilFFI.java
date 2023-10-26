@@ -61,7 +61,9 @@ class YggdrasilFFI  {
         this.ffi = ffi;
         this.enginePtr = this.ffi.new_engine();
 
-        // Note that the cleaning action must not refer to the object being registered. If so, the object will not become phantom reachable and the cleaning action will not be invoked automatically.
+        // Note that the cleaning action must not refer to the object being registered.
+        // If so, the object will not become phantom reachable and the cleaning action will not be invoked automatically.
+        // this.cleanable uses a PhantomReference to this object, so from a GC perspective it doesn't count.
         this.cleanable = CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
     }
 
