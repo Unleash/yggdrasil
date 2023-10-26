@@ -1,7 +1,11 @@
 package io.getunleash.engine;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,9 +13,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.junit.jupiter.api.Assertions.*;
 
 class TestSuite {
     public String name;
@@ -26,7 +28,6 @@ class UnleashEngineTest {
     private final String simpleFeatures = loadFeaturesFromFile(
             "../../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
                                                                                      // feature JSON
-
     public static String loadFeaturesFromFile(String filePath) {
         ObjectMapper mapper = new ObjectMapper();
         try {
@@ -38,6 +39,19 @@ class UnleashEngineTest {
             return null;
         }
     }
+
+    private UnleashEngine engine;
+
+    @BeforeEach
+    void createEngine() {
+        engine = new UnleashEngine(new YggdrasilFFI("../target/release"));
+    }
+
+    @AfterEach
+    void destroy() {
+        engine.free();
+    }
+
 
     @Test
     void testTakeState() throws YggdrasilInvalidInputException {
@@ -99,7 +113,7 @@ class UnleashEngineTest {
 
                     assertEquals(expectedResult, result,
                             String.format("[%s] Failed test '%s': expected %b, got %b",
-                                    suite,
+                                    suiteData.name,
                                     test.get("description"), expectedResult,
                                     result));
                 }
@@ -123,13 +137,14 @@ class UnleashEngineTest {
                     String resultJson = objectMapper.writeValueAsString(result.value);
 
                     assertEquals(expectedResultJson, resultJson,
-                            String.format("Failed test '%s': expected %b, got %b",
+                            String.format("[%s] Failed test '%s': expected %b, got %b",
+                                    suiteData.name,
                                     test.get("description"), expectedResultJson,
                                     resultJson));
                 }
             }
 
-            System.out.println(String.format("Completed specification '%s'", suite));
+            System.out.printf("Completed specification '%s'%n", suite);
         }
     }
 }
