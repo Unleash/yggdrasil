@@ -26,7 +26,7 @@ class UnleashEngineTest {
 
     private static final VariantResponse DEFAULT_VARIANT = new VariantResponse(StatusCode.NotFound, new VariantDef("disabled", null, false), null);
     private final String simpleFeatures = loadFeaturesFromFile(
-            "../../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
+            "../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
                                                                                      // feature JSON
     public static String loadFeaturesFromFile(String filePath) {
         ObjectMapper mapper = new ObjectMapper();
@@ -79,7 +79,7 @@ class UnleashEngineTest {
     @Test
     public void testClientSpec() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        File basePath = Paths.get( "..", "..", "client-specification", "specifications").toFile();
+        File basePath = Paths.get(  "../client-specification/specifications").toFile();
         File indexFile = new File(basePath, "index.json");
         List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<>() {
         });
