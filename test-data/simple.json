@@ -25,6 +25,54 @@
       "name": "Feature.C",
       "enabled": true,
       "strategies": []
+    },
+    {
+      "name": "Feature.D",
+      "description": "Has a custom strategy",
+      "enabled": false,
+      "strategies": [
+        {
+          "name": "custom",
+          "constraints": [],
+          "parameters": {
+            "foo": "bar"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Feature.E",
+      "description": "Has three custom strategies and some non custom strategies",
+      "enabled": false,
+      "strategies": [
+        {
+          "name": "custom",
+          "constraints": [],
+          "parameters": {
+            "foo": "bar"
+          }
+        },
+        {
+          "name": "custom",
+          "constraints": [],
+          "parameters": {
+            "foo": "bar"
+          }
+        },
+        {
+          "name": "default"
+        },
+        {
+          "name": "default"
+        },
+        {
+          "name": "custom",
+          "constraints": [],
+          "parameters": {
+            "foo": "bar"
+          }
+        }
+      ]
     }
   ]
 }
