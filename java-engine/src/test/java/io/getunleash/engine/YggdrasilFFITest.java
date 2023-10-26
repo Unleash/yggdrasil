@@ -12,9 +12,8 @@ class YggdrasilFFITest {
     static final String VALID_PATH = "../target/release";
     @Test
     void testSuccessfulLibraryLoad() {
-        try (YggdrasilFFI ffi = new YggdrasilFFI(VALID_PATH)) {
-            assertNotNull(ffi);
-        }
+        YggdrasilFFI ffi = new YggdrasilFFI(VALID_PATH);
+        assertNotNull(ffi);
     }
 
     @Test
@@ -33,11 +32,9 @@ class YggdrasilFFITest {
 
     @Test
     void testEngineMethods() {
-        try (YggdrasilFFI ffi = new YggdrasilFFI(VALID_PATH)) {
-            Pointer state = ffi.takeState("someToggles");
-            assertNotNull(state);
-            // add more methods and assertions as needed.
-        }
+        YggdrasilFFI ffi = new YggdrasilFFI(VALID_PATH);
+        Pointer state = ffi.takeState("someToggles");
+        assertNotNull(state);
     }
 
     @Test

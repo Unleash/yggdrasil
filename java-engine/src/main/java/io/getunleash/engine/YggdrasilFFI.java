@@ -5,6 +5,7 @@ import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 
+import java.lang.ref.Cleaner;
 import java.nio.file.Paths;
 
 interface UnleashFFI extends Library {
@@ -22,8 +23,9 @@ interface UnleashFFI extends Library {
     void free_response(Pointer pointer);
 }
 
-class YggdrasilFFI implements AutoCloseable {
-    private final UnleashFFI ffi; // instance ffi
+class YggdrasilFFI  {
+    private static final Cleaner CLEANER = Cleaner.create();
+    private final UnleashFFI ffi;
     private final Pointer enginePtr;
 
     /**
@@ -49,6 +51,7 @@ class YggdrasilFFI implements AutoCloseable {
 
         this.ffi = Native.load(combinedPath, UnleashFFI.class);
         this.enginePtr = this.ffi.new_engine();
+        CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this));
     }
 
     Pointer takeState(String toggles) {
@@ -67,8 +70,22 @@ class YggdrasilFFI implements AutoCloseable {
         return this.ffi.check_variant(this.enginePtr, name, context);
     }
 
-    @Override
-    public void close() {
+    void close() {
         this.ffi.free_engine(this.enginePtr);
+    }
+
+    private static final class YggdrasilNativeLibraryResourceCleaner implements Runnable {
+        private final UnleashFFI ffi;
+        private final Pointer enginePtr;
+
+        private YggdrasilNativeLibraryResourceCleaner(YggdrasilFFI yggdrasilEmbeddedLibrary) {
+            this.ffi = yggdrasilEmbeddedLibrary.ffi;
+            this.enginePtr = yggdrasilEmbeddedLibrary.enginePtr;
+        }
+
+        @Override
+        public void run() {
+            this.ffi.free_engine(this.enginePtr);
+        }
     }
 }
