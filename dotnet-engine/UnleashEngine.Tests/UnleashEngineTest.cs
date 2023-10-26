@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Unleash;
 using System;
 using Newtonsoft.Json.Linq;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 
 
 public class Tests
@@ -77,7 +78,7 @@ public class Tests
                 var toggleName = (string)test["toggleName"];
                 var expectedResult = (bool)test["expectedResult"];
 
-                var result = unleashEngine.IsEnabled(toggleName, context);
+                var result = unleashEngine.IsEnabled(toggleName, context) ?? false;
 
                 Assert.AreEqual(expectedResult, result, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");
             }
@@ -91,7 +92,7 @@ public class Tests
                 // Silly hack to apply formatting to the string from the spec
                 var expectedResult = JsonSerializer.Serialize(JsonSerializer.Deserialize<Variant>(test["expectedResult"].ToString(), options), options);
 
-                var result = unleashEngine.GetVariant(toggleName, context);
+                var result = unleashEngine.GetVariant(toggleName, context) ?? new Variant { Name = "disabled", Payload = null, Enabled = false };
                 var jsonResult = JsonSerializer.Serialize(result, options);
 
                 Assert.AreEqual(expectedResult, jsonResult, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");

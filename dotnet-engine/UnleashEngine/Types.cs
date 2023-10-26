@@ -27,8 +27,6 @@ public class EngineResponse<TValue> : EngineResponse {
 
 public class Variant
 {
-    public static Variant DISABLED_VARIANT { get { return new Variant { Name = "disabled", Payload = null, Enabled = false }; } }
-
     public string Name { get; set; }
     public Payload? Payload { get; set; }
     public bool Enabled { get; set; }

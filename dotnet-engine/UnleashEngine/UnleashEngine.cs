@@ -62,9 +62,10 @@ public class UnleashEngine
         }
     }
 
-    public bool IsEnabled(string toggleName, Context context)
+    public bool? IsEnabled(string toggleName, Context context)
     {
         string contextJson = JsonSerializer.Serialize(context, options);
+
         var isEnabledPtr = platformEngine.CheckEnabled(state, toggleName, contextJson);
 
         if (isEnabledPtr == IntPtr.Zero)
@@ -85,11 +86,7 @@ public class UnleashEngine
             throw new UnleashException($"Error: {isEnabledResult?.ErrorMessage}");
         }
 
-        var enabled = isEnabledResult?.Value ?? false;
-
-        platformEngine.CountToggle(state, toggleName, enabled);
-
-        return enabled;
+        return isEnabledResult?.Value;
     }
 
     public Variant? GetVariant(string toggleName, Context context)
@@ -114,11 +111,7 @@ public class UnleashEngine
             throw new UnleashException($"Error: {variantResult?.ErrorMessage}");
         }
 
-        var variant = variantResult?.Value ?? Variant.DISABLED_VARIANT;
-
-        platformEngine.CountVariant(state, toggleName, variant.Name);
-
-        return variant;
+        return variantResult?.Value;
     }
 
     public MetricsBucket? GetMetrics() {
@@ -142,5 +135,15 @@ public class UnleashEngine
         }
 
         return metricsResult?.Value;
+    }
+
+    public void CountFeature(string featureName, bool enabled)
+    {
+        this.platformEngine.CountToggle(state, featureName, enabled);
+    }
+
+    public void CountVariant(string featureName, string variantName)
+    {
+        this.platformEngine.CountVariant(state, featureName, variantName);
     }
 }
