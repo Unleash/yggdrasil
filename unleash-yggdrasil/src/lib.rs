@@ -323,7 +323,7 @@ impl EngineState {
                 return false;
             }
 
-            let parent_enabled = self.enabled(compiled_parent, context);
+            let parent_enabled = self.enabled(compiled_parent, context, None); //parent toggles explicitly don't support custom strategies
             let expected_parent_enabled_state = parent_dependency.enabled.unwrap_or(true);
             let parent_variant = self.check_variant_by_toggle(compiled_parent, context);
 
@@ -345,25 +345,35 @@ impl EngineState {
         })
     }
 
-    fn enabled(&self, toggle: &CompiledToggle, context: &Context) -> bool {
-        let enriched_context = EnrichedContext::from(context.clone(), toggle.name.clone(), None);
+    fn enabled(
+        &self,
+        toggle: &CompiledToggle,
+        context: &Context,
+        external_values: Option<HashMap<String, bool>>,
+    ) -> bool {
+        let enriched_context =
+            EnrichedContext::from(context.clone(), toggle.name.clone(), external_values);
         toggle.enabled
             && self.is_parent_dependency_satisfied(toggle, context)
             && (toggle.compiled_strategy)(&enriched_context)
     }
 
-    pub fn resolve_all(&self, context: &Context) -> Option<HashMap<String, ResolvedToggle>> {
+    pub fn resolve_all(
+        &self,
+        context: &Context,
+        external_values: Option<HashMap<String, bool>>,
+    ) -> Option<HashMap<String, ResolvedToggle>> {
         self.compiled_state.as_ref().map(|state| {
             state
                 .iter()
                 .map(|(name, toggle)| {
-                    let enabled = self.enabled(toggle, context);
+                    let enabled = self.enabled(toggle, context, external_values.clone());
                     (
                         name.clone(),
                         ResolvedToggle {
                             enabled,
                             impression_data: toggle.impression_data,
-                            variant: self.get_variant(name, context),
+                            variant: self.get_variant(name, context, external_values.clone()),
                             project: toggle.project.clone(),
                         },
                     )
@@ -372,26 +382,41 @@ impl EngineState {
         })
     }
 
-    pub fn resolve(&self, name: &str, context: &Context) -> Option<ResolvedToggle> {
+    pub fn resolve(
+        &self,
+        name: &str,
+        context: &Context,
+        external_values: Option<HashMap<String, bool>>,
+    ) -> Option<ResolvedToggle> {
         self.compiled_state.as_ref().and_then(|state| {
             state.get(name).map(|compiled_toggle| ResolvedToggle {
-                enabled: self.enabled(compiled_toggle, context),
+                enabled: self.enabled(compiled_toggle, context, external_values.clone()),
                 impression_data: compiled_toggle.impression_data,
-                variant: self.get_variant(name, context),
+                variant: self.get_variant(name, context, external_values),
                 project: compiled_toggle.project.clone(),
             })
         })
     }
 
-    pub fn check_enabled(&self, name: &str, context: &Context) -> Option<bool> {
+    pub fn check_enabled(
+        &self,
+        name: &str,
+        context: &Context,
+        external_values: Option<HashMap<String, bool>>,
+    ) -> Option<bool> {
         self.get_toggle(name)
-            .map(|toggle| self.enabled(toggle, context))
+            .map(|toggle| self.enabled(toggle, context, external_values))
     }
 
-    pub fn is_enabled(&self, name: &str, context: &Context) -> bool {
+    pub fn is_enabled(
+        &self,
+        name: &str,
+        context: &Context,
+        external_values: Option<HashMap<String, bool>>,
+    ) -> bool {
         let is_enabled = self
             .get_toggle(name)
-            .map(|toggle| self.enabled(toggle, context))
+            .map(|toggle| self.enabled(toggle, context, external_values))
             .unwrap_or_default();
 
         self.count_toggle(name, is_enabled);
@@ -467,9 +492,14 @@ impl EngineState {
         })
     }
 
-    pub fn check_variant(&self, name: &str, context: &Context) -> Option<VariantDef> {
+    pub fn check_variant(
+        &self,
+        name: &str,
+        context: &Context,
+        external_values: Option<HashMap<String, bool>>,
+    ) -> Option<VariantDef> {
         self.get_toggle(name).and_then(|toggle| {
-            if self.enabled(toggle, context) {
+            if self.enabled(toggle, context, external_values) {
                 self.check_variant_by_toggle(toggle, context)
             } else {
                 None
@@ -477,11 +507,16 @@ impl EngineState {
         })
     }
 
-    pub fn get_variant(&self, name: &str, context: &Context) -> VariantDef {
+    pub fn get_variant(
+        &self,
+        name: &str,
+        context: &Context,
+        external_values: Option<HashMap<String, bool>>,
+    ) -> VariantDef {
         let toggle = self.get_toggle(name);
 
         let variant = if let Some(toggle) = toggle {
-            let enabled = self.enabled(toggle, context);
+            let enabled = self.enabled(toggle, context, external_values);
             self.count_toggle(name, enabled);
 
             if enabled {
@@ -656,7 +691,7 @@ mod test {
                     &test_case.description, &test_case.toggle_name, &test_case.context
                 );
                 let expected = test_case.expected_result;
-                let actual = engine.is_enabled(&test_case.toggle_name, &test_case.context);
+                let actual = engine.is_enabled(&test_case.toggle_name, &test_case.context, None);
                 if expected != actual {
                     panic!(
                         "Test case: '{}' does not match. Expected: {}, actual: {}",
@@ -672,7 +707,7 @@ mod test {
                     &test_case.description, &test_case.toggle_name, &test_case.context
                 );
                 let expected = test_case.expected_result;
-                let actual = engine.get_variant(&test_case.toggle_name, &test_case.context);
+                let actual = engine.get_variant(&test_case.toggle_name, &test_case.context, None);
                 assert_eq!(expected, actual);
             }
         }
@@ -702,7 +737,7 @@ mod test {
         };
         let context = Context::default();
 
-        state.get_variant("cool-animals", &context);
+        state.get_variant("cool-animals", &context, None);
     }
 
     #[test]
@@ -724,7 +759,10 @@ mod test {
         };
         let context = Context::default();
 
-        assert_eq!(state.get_variant("test", &context), VariantDef::default());
+        assert_eq!(
+            state.get_variant("test", &context, None),
+            VariantDef::default()
+        );
     }
 
     #[test]
@@ -752,11 +790,11 @@ mod test {
 
         let blank_context = Context::default();
 
-        state.is_enabled("some-toggle", &context_with_user_id_of_7);
-        state.is_enabled("some-toggle", &context_with_user_id_of_7);
+        state.is_enabled("some-toggle", &context_with_user_id_of_7, None);
+        state.is_enabled("some-toggle", &context_with_user_id_of_7, None);
 
         //No user id, no enabled state, this should increment the "no" metric
-        state.is_enabled("some-toggle", &blank_context);
+        state.is_enabled("some-toggle", &blank_context, None);
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 2);
@@ -794,8 +832,8 @@ mod test {
             ..Context::default()
         };
 
-        state.get_variant("some-toggle", &blank_context);
-        state.get_variant("some-toggle", &context_with_user_id_of_7);
+        state.get_variant("some-toggle", &blank_context, None);
+        state.get_variant("some-toggle", &context_with_user_id_of_7, None);
 
         let metrics = state.get_metrics().unwrap();
         let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
@@ -863,7 +901,7 @@ mod test {
             ..Default::default()
         };
 
-        state.is_enabled("some-toggle", &Context::default());
+        state.is_enabled("some-toggle", &Context::default(), None);
 
         let metrics = state.get_metrics();
         assert!(metrics.is_some());
@@ -890,8 +928,8 @@ mod test {
             ..Default::default()
         };
 
-        state.is_enabled("missing-toggle", &Context::default());
-        state.get_variant("missing-toggle", &Context::default());
+        state.is_enabled("missing-toggle", &Context::default(), None);
+        state.get_variant("missing-toggle", &Context::default(), None);
 
         let metrics = state.get_metrics().unwrap();
 
@@ -920,10 +958,10 @@ mod test {
         };
 
         for _ in 0..10 {
-            state.is_enabled("some-toggle", &Context::default());
-            state.get_variant("some-toggle", &Context::default());
+            state.is_enabled("some-toggle", &Context::default(), None);
+            state.get_variant("some-toggle", &Context::default(), None);
 
-            state.is_enabled("missing-toggle", &Context::default());
+            state.is_enabled("missing-toggle", &Context::default(), None);
         }
 
         let metrics = state.get_metrics().unwrap();
@@ -960,7 +998,7 @@ mod test {
             ..Default::default()
         };
 
-        let is_enabled = state.is_enabled("some-toggle", &Context::default());
+        let is_enabled = state.is_enabled("some-toggle", &Context::default(), None);
 
         let is_enabled_metrics = state
             .get_metrics()
@@ -971,7 +1009,7 @@ mod test {
             .yes;
 
         let check_enabled = state
-            .check_enabled("some-toggle", &Context::default())
+            .check_enabled("some-toggle", &Context::default(), None)
             .unwrap();
 
         state.count_toggle("some-toggle", check_enabled);
@@ -1009,7 +1047,7 @@ mod test {
             ..Default::default()
         };
 
-        let first_variant = state.get_variant("some-toggle", &Context::default());
+        let first_variant = state.get_variant("some-toggle", &Context::default(), None);
         let get_variant_metrics = state
             .get_metrics()
             .unwrap()
@@ -1019,7 +1057,7 @@ mod test {
             .clone();
 
         let second_variant = state
-            .check_variant("some-toggle", &Context::default())
+            .check_variant("some-toggle", &Context::default(), None)
             .unwrap_or_default();
 
         state.count_toggle("some-toggle", true);
@@ -1114,7 +1152,7 @@ mod test {
         };
 
         let blank_context = Context::default();
-        let toggles = state.resolve_all(&blank_context).unwrap();
+        let toggles = state.resolve_all(&blank_context, None).unwrap();
         let resolved_variant = toggles.get("some-toggle").unwrap().variant.name.clone();
         let unresolved_variant = toggles
             .get("some-toggle-other")
@@ -1164,7 +1202,7 @@ mod test {
         };
 
         let blank_context = Context::default();
-        let toggle = state.resolve("some-toggle", &blank_context).unwrap();
+        let toggle = state.resolve("some-toggle", &blank_context, None).unwrap();
         let resolved_variant = toggle.variant.name;
 
         assert!(toggle.enabled);
@@ -1274,7 +1312,7 @@ mod test {
             compiled_state: Some(compiled_state),
             ..Default::default()
         };
-        let variant = state.get_variant("some-toggle", &Context::default());
+        let variant = state.get_variant("some-toggle", &Context::default(), None);
         assert_eq!(variant.name, "don't-ignore-me".to_string());
     }
 
@@ -1306,7 +1344,7 @@ mod test {
             compiled_state: Some(compiled_state),
             ..Default::default()
         };
-        let variant = state.get_variant("some-toggle", &Context::default());
+        let variant = state.get_variant("some-toggle", &Context::default(), None);
         assert_eq!(variant.name, "disabled".to_string());
     }
 
@@ -1368,10 +1406,10 @@ mod test {
 
         engine.take_state(feature_set);
 
-        let results = engine.resolve_all(&context);
+        let results = engine.resolve_all(&context, None);
         let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
 
-        assert_eq!(targeted_toggle.enabled, true);
+        assert!(targeted_toggle.enabled);
         assert_eq!(targeted_toggle.variant.name, "another");
     }
 
@@ -1412,7 +1450,7 @@ mod test {
 
         let blank_context = Context::default();
 
-        state.is_enabled("some-toggle", &blank_context);
+        state.is_enabled("some-toggle", &blank_context, None);
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
@@ -1467,7 +1505,7 @@ mod test {
 
         let blank_context = Context::default();
 
-        state.is_enabled("some-toggle", &blank_context);
+        state.is_enabled("some-toggle", &blank_context, None);
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
@@ -1517,7 +1555,7 @@ mod test {
 
         let blank_context = Context::default();
 
-        let variant = state.get_variant("some-toggle", &blank_context);
+        let variant = state.get_variant("some-toggle", &blank_context, None);
 
         assert_eq!(variant.name, "disabled");
 

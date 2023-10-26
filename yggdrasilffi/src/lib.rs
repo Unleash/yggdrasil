@@ -173,7 +173,7 @@ pub unsafe extern "C" fn check_enabled(
         let custom_strategy_results =
             get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
 
-        Ok(engine.check_enabled(toggle_name, &context))
+        Ok(engine.check_enabled(toggle_name, &context, Some(custom_strategy_results)))
     })();
 
     result_to_json_ptr(result)
@@ -195,13 +195,16 @@ pub unsafe extern "C" fn check_variant(
     engine_ptr: *mut c_void,
     toggle_name_ptr: *const c_char,
     context_ptr: *const c_char,
+    custom_strategy_results_ptr: *const c_char,
 ) -> *const c_char {
     let result: Result<Option<VariantDef>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
+        let custom_strategy_results =
+            get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
 
-        Ok(engine.check_variant(toggle_name, &context))
+        Ok(engine.check_variant(toggle_name, &context, Some(custom_strategy_results)))
     })();
 
     result_to_json_ptr(result)
