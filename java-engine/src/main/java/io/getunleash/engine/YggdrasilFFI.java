@@ -7,6 +7,8 @@ import com.sun.jna.Pointer;
 
 import java.lang.ref.Cleaner;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 
 interface UnleashFFI extends Library {
 
@@ -25,7 +27,8 @@ interface UnleashFFI extends Library {
 
 class YggdrasilFFI  {
     private static final Cleaner CLEANER = Cleaner.create();
-    private final UnleashFFI ffi;
+    static final Set<Cleaner.Cleanable> CLEANABLES = new HashSet<>();
+    final UnleashFFI ffi;
     private final Pointer enginePtr;
 
     /**
@@ -35,7 +38,7 @@ class YggdrasilFFI  {
         this(System.getenv("YGGDRASIL_LIB_PATH"));
     }
 
-    YggdrasilFFI(String libraryPath) {
+    static UnleashFFI loadLibrary(String libraryPath) {
         if (libraryPath == null) {
             libraryPath = "."; // assume it's accessible in current path
         }
@@ -48,10 +51,21 @@ class YggdrasilFFI  {
         }
 
         String combinedPath = Paths.get(libraryPath, libImpl).toString();
+        return Native.load(combinedPath, UnleashFFI.class);
+    }
 
-        this.ffi = Native.load(combinedPath, UnleashFFI.class);
+    YggdrasilFFI(String libraryPath) {
+        this(loadLibrary(libraryPath));
+    }
+
+    YggdrasilFFI(UnleashFFI ffi) {
+        this.ffi = ffi;
         this.enginePtr = this.ffi.new_engine();
-        CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this));
+
+        // Note that the cleaning action must not refer to the object being registered. If so, the object will not become phantom reachable and the cleaning action will not be invoked automatically.
+        CLEANABLES.add(
+                CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr))
+        );
     }
 
     Pointer takeState(String toggles) {
@@ -70,21 +84,18 @@ class YggdrasilFFI  {
         return this.ffi.check_variant(this.enginePtr, name, context);
     }
 
-    void close() {
-        this.ffi.free_engine(this.enginePtr);
-    }
-
     private static final class YggdrasilNativeLibraryResourceCleaner implements Runnable {
         private final UnleashFFI ffi;
         private final Pointer enginePtr;
 
-        private YggdrasilNativeLibraryResourceCleaner(YggdrasilFFI yggdrasilEmbeddedLibrary) {
-            this.ffi = yggdrasilEmbeddedLibrary.ffi;
-            this.enginePtr = yggdrasilEmbeddedLibrary.enginePtr;
+        private YggdrasilNativeLibraryResourceCleaner(UnleashFFI ffi, Pointer enginePtr) {
+            this.ffi = ffi;
+            this.enginePtr = enginePtr;
         }
 
         @Override
         public void run() {
+            // All exceptions thrown by the cleaning action are ignored
             this.ffi.free_engine(this.enginePtr);
         }
     }
