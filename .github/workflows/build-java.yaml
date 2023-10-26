@@ -1,0 +1,61 @@
+---
+name: Java build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'java-engine/**.java'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'java-engine/**.java'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [11]
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      ## begin build yggdrasil (maybe this can be a separate job)
+      - name: Install rust
+        run: |
+          rustup set auto-self-update disable
+          rustup toolchain install stable --profile default
+          rustup show
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Install required cargo packages
+        run: cargo install
+      - name: Build yggdrasil
+        run: cargo build --release
+      ## end build yggdrasil
+
+      ## Test requirements
+      - name: Get client spec
+        uses: actions/checkout@v3
+        with:
+          repository: Unleash/client-specification
+          ref: v4.5.2
+          path: client-specification
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ matrix.version }}
+          cache: 'gradle'
+          distribution: 'temurin'
+      - name: Run tests
+        run: |
+          cd java-engine
+          ./gradlew test
