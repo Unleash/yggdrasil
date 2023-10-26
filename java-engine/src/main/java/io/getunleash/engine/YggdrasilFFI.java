@@ -37,6 +37,7 @@ class YggdrasilFFI implements AutoCloseable {
         if (libraryPath == null) {
             libraryPath = "."; // assume it's accessible in current path
         }
+        System.out.println("Loading library from "+Paths.get(libraryPath).toAbsolutePath());
         String libImpl = "libyggdrasilffi.so";
         if (Platform.isMac()) {
             libImpl = "libyggdrasilffi.dylib";

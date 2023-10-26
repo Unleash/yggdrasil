@@ -14,7 +14,7 @@ on:
       - 'java-engine/**.java'
 
 jobs:
-  build:
+  build-java:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -56,4 +56,5 @@ jobs:
       - name: Run tests
         run: |
           cd java-engine
+          pwd
           ./gradlew test
