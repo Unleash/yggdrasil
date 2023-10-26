@@ -35,8 +35,6 @@ jobs:
           rustup show
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
-      - name: Install required cargo packages
-        run: cargo install
       - name: Build yggdrasil
         run: cargo build --release
       ## end build yggdrasil
