@@ -6,4 +6,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Include="../../target/release/libyggdrasilffi.so" Condition="Exists('../../target/release/libyggdrasilffi.so')">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../../target/release/libyggdrasilffi.dylib" Condition="Exists('../../target/release/libyggdrasilffi.dylib')">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="../../target/release/libyggdrasilffi.dll" Condition="Exists('../../target/release/libyggdrasilffi.dll')">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

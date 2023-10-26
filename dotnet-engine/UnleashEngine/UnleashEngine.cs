@@ -5,31 +5,6 @@ using System.Text.Json;
 
 namespace Unleash;
 
-public class Context
-{
-    public string? UserId { get; set; }
-    public string? SessionId { get; set; }
-    public string? RemoteAddress { get; set; }
-    public string? Environment { get; set; }
-    public string? AppName { get; set; }
-    public string? CurrentTime { get; set; }
-    public Dictionary<string, string>? Properties { get; set; }
-}
-
-public class Variant
-{
-    public string Name { get; set; }
-    public Payload? Payload { get; set; }
-    public bool Enabled { get; set; }
-}
-
-public class Payload
-{
-    public string? PayloadType { get; set; }
-    public string? Value { get; set; }
-}
-
-
 public class UnleashEngine
 {
     private JsonSerializerOptions options = new JsonSerializerOptions
@@ -37,67 +12,138 @@ public class UnleashEngine
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
+    private IFFIAccess platformEngine;
+
+    private static IFFIAccess GetPlatformEngine() { 
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+            return new FFILinux();
+        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+            return new FFIMacOS();
+        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            return new FFIWin();
+        } else {
+            throw new PlatformNotSupportedException();
+        }
+    }
+
     private IntPtr state;
-    private const string DLL_PATH = "../../../../../target/release/libyggdrasilffi.so";
-
-    [DllImport(DLL_PATH)]
-    private static extern IntPtr engine_new();
-
-    [DllImport(DLL_PATH)]
-    private static extern void engine_free(IntPtr ptr);
-
-    [DllImport(DLL_PATH)]
-    private static extern IntPtr engine_take_state(IntPtr ptr, string json);
-
-    [DllImport(DLL_PATH)]
-    private static extern bool engine_is_enabled(IntPtr ptr, string toggle_name, string context);
-
-    [DllImport(DLL_PATH)]
-    private static extern IntPtr engine_get_variant(IntPtr ptr, string toggle_name, string context);
-
-    [DllImport(DLL_PATH)]
-    private static extern void engine_free_variant_def(IntPtr ptr);
 
     public UnleashEngine()
     {
-        this.state = engine_new();
+        platformEngine = GetPlatformEngine();
+        state = platformEngine.NewEngine();
     }
 
     public void Dispose()
     {
-        engine_free(this.state);
+        platformEngine.FreeEngine(this.state);
         GC.SuppressFinalize(this);
     }
 
     public void TakeState(string json)
     {
-        engine_take_state(state, json);
+        var takeStatePtr = platformEngine.TakeState(state, json);
+
+        if (takeStatePtr == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var takeStateJson = Marshal.PtrToStringUTF8(takeStatePtr);
+
+        platformEngine.FreeResponse(takeStatePtr);
+
+        var takeStateResult = takeStateJson != null ?
+            JsonSerializer.Deserialize<EngineResponse>(takeStateJson, options) :
+            null;
+
+        if (takeStateResult?.StatusCode == "Error") {
+            throw new UnleashException($"Error: {takeStateResult?.ErrorMessage}");
+        }
     }
 
-    public bool IsEnabled(string toggleName, Context context)
+    public bool? IsEnabled(string toggleName, Context context)
     {
         string contextJson = JsonSerializer.Serialize(context, options);
-        return engine_is_enabled(state, toggleName, contextJson);
+
+        var isEnabledPtr = platformEngine.CheckEnabled(state, toggleName, contextJson);
+
+        if (isEnabledPtr == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var isEnabledJson = Marshal.PtrToStringUTF8(isEnabledPtr);
+
+        platformEngine.FreeResponse(isEnabledPtr);
+
+        var isEnabledResult = isEnabledJson != null ?
+            JsonSerializer.Deserialize<EngineResponse<bool?>>(isEnabledJson, options) :
+            null;
+
+
+        if (isEnabledResult?.StatusCode == "Error") {
+            throw new UnleashException($"Error: {isEnabledResult?.ErrorMessage}");
+        }
+
+        return isEnabledResult?.Value;
     }
 
     public Variant? GetVariant(string toggleName, Context context)
     {
         var contextJson = JsonSerializer.Serialize(context, options);
-        var variantPtr = engine_get_variant(state, toggleName, contextJson);
+        var variantPtr = platformEngine.CheckVariant(state, toggleName, contextJson);
 
         if (variantPtr == IntPtr.Zero)
         {
             return null;
         }
-        else
-        {
-            var variantJson = Marshal.PtrToStringUTF8(variantPtr);
 
-            var variant = JsonSerializer.Deserialize<Variant>(variantJson, options);
+        var variantJson = Marshal.PtrToStringUTF8(variantPtr);
 
-            engine_free_variant_def(variantPtr);
+        platformEngine.FreeResponse(variantPtr);
 
-            return variant;
+        var variantResult = variantJson != null ?
+            JsonSerializer.Deserialize<EngineResponse<Variant>>(variantJson, options) :
+            null;
+
+        if (variantResult?.StatusCode == "Error") {
+            throw new UnleashException($"Error: {variantResult?.ErrorMessage}");
         }
+
+        return variantResult?.Value;
+    }
+
+    public MetricsBucket? GetMetrics() {
+        var metricsPtr = platformEngine.GetMetrics(state);
+
+        if (metricsPtr == IntPtr.Zero)
+        {   
+            return null;
+        }
+
+        var metricsJson = Marshal.PtrToStringUTF8(metricsPtr);
+
+        platformEngine.FreeResponse(metricsPtr);
+
+        var metricsResult = metricsJson != null ?
+            JsonSerializer.Deserialize<EngineResponse<MetricsBucket>>(metricsJson, options) :
+            null;
+
+        if (metricsResult?.StatusCode == "Error") {
+            throw new UnleashException($"Error: {metricsResult?.ErrorMessage}");
+        }
+
+        return metricsResult?.Value;
+    }
+
+    public void CountFeature(string featureName, bool enabled)
+    {
+        this.platformEngine.CountToggle(state, featureName, enabled);
+    }
+
+    public void CountVariant(string featureName, string variantName)
+    {
+        this.platformEngine.CountVariant(state, featureName, variantName);
     }
 }
