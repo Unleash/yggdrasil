@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 17 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#61](https://github.com/Unleash/yggdrasil/issues/61)
@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#61](https://github.com/Unleash/yggdrasil/issues/61)**
     - New hashing implemented for variants ([`df0d854`](https://github.com/Unleash/yggdrasil/commit/df0d85445a91d987219fc60d26f2c6c097c0d878))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.7.0 ([`38b87b5`](https://github.com/Unleash/yggdrasil/commit/38b87b52d980fe623d683d4d9bd792bbf34eeff2))
 </details>
 
 ## v0.6.1 (2023-10-13)
