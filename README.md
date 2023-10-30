@@ -21,6 +21,15 @@ This will run whole test suite
 cargo test
 ```
 
+## Releasing
+
+Validation and execution
+
+```
+cargo smart-release -u -b minor unleash-yggdrasil
+cargo smart-release -u -b minor unleash-yggdrasil --execute
+```
+
 
 ## Node
 
