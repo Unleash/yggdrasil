@@ -433,7 +433,6 @@ impl EngineState {
         toggle: &CompiledToggle,
         context: &Context,
     ) -> Option<VariantDef> {
-        // toggle.compiled_variant_strategy
         let strategy_variants =
             toggle
                 .compiled_variant_strategy
