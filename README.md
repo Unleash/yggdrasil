@@ -12,11 +12,20 @@ Easy enough - run `cargo build --release` from the root of the project. You'll n
 
 To run the client specs, you'll first need to clone them:
 
-`git clone --depth 5 --branch v4.5.2 https://github.com/Unleash/client-specification.git client-specification`
+`git clone --depth 5 --branch v5.0.2 https://github.com/Unleash/client-specification.git client-specification`
+
+## Testing
+
+This will run whole test suite
+```
+cargo test
+```
+
 
 ## Node
 
 The Node core is a special case, this doesn't use FFI like the other SDKs, instead this compiles the core down to WASM.
+
 
 ### Building
 

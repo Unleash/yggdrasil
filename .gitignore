@@ -10,6 +10,7 @@
 **/obj
 **/vendor
 **/**.gem
+.idea
 /client-specification
 
 ## Specific files we want to ignore

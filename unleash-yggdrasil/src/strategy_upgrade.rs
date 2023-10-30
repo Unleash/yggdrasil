@@ -21,7 +21,8 @@ pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) 
 pub fn build_variant_rules(
     strategies: &[Strategy],
     segment_map: &HashMap<i32, Segment>,
-) -> Vec<(String, Vec<StrategyVariant>, String)> {
+    toggle_name: &String,
+) -> Vec<(String, Vec<StrategyVariant>, String, String)> {
     strategies
         .iter()
         .filter(|strategy| strategy.variants.is_some())
@@ -35,9 +36,15 @@ pub fn build_variant_rules(
                     .and_then(|params| params.get("stickiness"))
                     .cloned()
                     .unwrap_or_else(|| "default".to_string()),
+                strategy
+                    .parameters
+                    .as_ref()
+                    .and_then(|params| params.get("groupId"))
+                    .cloned()
+                    .unwrap_or_else(|| toggle_name.clone()),
             )
         })
-        .collect::<Vec<(String, Vec<StrategyVariant>, String)>>()
+        .collect::<Vec<(String, Vec<StrategyVariant>, String, String)>>()
 }
 
 trait PropResolver {
