@@ -31,7 +31,6 @@ pub type CompiledState = HashMap<String, CompiledToggle>;
 pub const SUPPORTED_SPEC_VERSION: &str = "5.0.2";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 
-
 pub struct CompiledToggle {
     pub name: String,
     pub enabled: bool,
@@ -96,31 +95,35 @@ fn compile_variant_rule(
     segment_map: &HashMap<i32, Segment>,
 ) -> Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>> {
     let variant_rules: Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>> =
-        build_variant_rules(&toggle.strategies.clone().unwrap_or_default(), segment_map, &toggle.name)
-            .iter()
-            .map(|(rule_string, strategy_variants, stickiness, group_id)| {
-                if strategy_variants.is_empty() {
-                    return None;
-                };
-                let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
-                compiled_rule.map(|rule| {
-                    (
-                        rule,
-                        strategy_variants
-                            .iter()
-                            .map(|strategy_variant| CompiledVariant {
-                                name: strategy_variant.name.clone(),
-                                weight: strategy_variant.weight,
-                                stickiness: Some(stickiness.clone()),
-                                payload: strategy_variant.payload.clone(),
-                                overrides: None,
-                            })
-                            .collect(),
-                        group_id.clone(),
-                    )
-                })
+        build_variant_rules(
+            &toggle.strategies.clone().unwrap_or_default(),
+            segment_map,
+            &toggle.name,
+        )
+        .iter()
+        .map(|(rule_string, strategy_variants, stickiness, group_id)| {
+            if strategy_variants.is_empty() {
+                return None;
+            };
+            let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
+            compiled_rule.map(|rule| {
+                (
+                    rule,
+                    strategy_variants
+                        .iter()
+                        .map(|strategy_variant| CompiledVariant {
+                            name: strategy_variant.name.clone(),
+                            weight: strategy_variant.weight,
+                            stickiness: Some(stickiness.clone()),
+                            payload: strategy_variant.payload.clone(),
+                            overrides: None,
+                        })
+                        .collect(),
+                    group_id.clone(),
+                )
             })
-            .collect();
+        })
+        .collect();
 
     variant_rules
 }
@@ -162,8 +165,8 @@ pub struct IPAddress(pub IpAddr);
 
 impl<'de> de::Deserialize<'de> for IPAddress {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: de::Deserializer<'de>,
+    where
+        D: de::Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
             let s = String::deserialize(deserializer)?;
@@ -415,7 +418,9 @@ impl EngineState {
             .and_then(|variant| variant.stickiness.clone());
 
         let target = get_seed(stickiness, context)
-            .map(|seed| normalized_hash(&group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap())
+            .map(|seed| {
+                normalized_hash(&group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
+            })
             .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight));
 
         let mut total_weight = 0;
@@ -441,9 +446,11 @@ impl EngineState {
                     let context = EnrichedContext::from(context.clone(), toggle.name.clone());
 
                     let resolved_strategy_variants: Option<(&Vec<CompiledVariant>, &String)> =
-                        variant_strategies.iter().find_map(|(rule, rule_variants, group_id)| {
-                            (rule)(&context).then_some((rule_variants, group_id))
-                        });
+                        variant_strategies
+                            .iter()
+                            .find_map(|(rule, rule_variants, group_id)| {
+                                (rule)(&context).then_some((rule_variants, group_id))
+                            });
                     resolved_strategy_variants
                 });
 
@@ -486,7 +493,7 @@ impl EngineState {
             self.count_toggle(name, false);
             None
         }
-            .unwrap_or_default();
+        .unwrap_or_default();
 
         self.count_variant(name, &variant.name);
         variant
