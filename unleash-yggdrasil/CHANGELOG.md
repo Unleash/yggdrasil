@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.7.0 (2023-10-30)
+
+### New Features
+
+ - <csr-id-df0d85445a91d987219fc60d26f2c6c097c0d878/> new hashing implemented for variants
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 17 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#61](https://github.com/Unleash/yggdrasil/issues/61)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#61](https://github.com/Unleash/yggdrasil/issues/61)**
+    - New hashing implemented for variants ([`df0d854`](https://github.com/Unleash/yggdrasil/commit/df0d85445a91d987219fc60d26f2c6c097c0d878))
+</details>
+
 ## v0.6.1 (2023-10-13)
 
 ### New Features
@@ -45,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 2 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#49](https://github.com/Unleash/yggdrasil/issues/49), [#51](https://github.com/Unleash/yggdrasil/issues/51)
@@ -61,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#51](https://github.com/Unleash/yggdrasil/issues/51)**
     - Allows current time to be assumed when calculating the context ([`8bf7a69`](https://github.com/Unleash/yggdrasil/commit/8bf7a697411cd9e4b029151253740d67104faa88))
  * **Uncategorized**
+    - Release unleash-yggdrasil v0.6.1 ([`7cc8312`](https://github.com/Unleash/yggdrasil/commit/7cc831213005a619452121074a997d4a23a6f7b4))
     - Release unleash-yggdrasil v0.6.1 ([`32c21f6`](https://github.com/Unleash/yggdrasil/commit/32c21f6155deb4c1b7331f11c18e9a7a232f9489))
 </details>
 
