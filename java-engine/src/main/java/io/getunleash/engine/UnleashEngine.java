@@ -3,12 +3,17 @@ package io.getunleash.engine;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.sun.jna.Pointer;
+
+import java.io.IOException;
 
 public class UnleashEngine {
     private static final String UTF_8 = "UTF-8";
     private final YggdrasilFFI yggdrasil;
-    private final ObjectMapper mapper;
+    private final ObjectReader reader;
+    private final ObjectWriter writer;
 
     public UnleashEngine() {
         this(new YggdrasilFFI());
@@ -16,8 +21,10 @@ public class UnleashEngine {
 
     UnleashEngine(YggdrasilFFI yggdrasil) {
         this.yggdrasil = yggdrasil;
-        mapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        reader = mapper.reader();
+        writer = mapper.writer();
     }
 
     public void takeState(String toggles) throws YggdrasilInvalidInputException {
@@ -29,7 +36,7 @@ public class UnleashEngine {
 
     public boolean isEnabled(String name, Context context) throws YggdrasilInvalidInputException {
         try {
-            String jsonContext = mapper.writeValueAsString(context);
+            String jsonContext = writer.writeValueAsString(context);
             IsEnabledResponse isEnabled = read(yggdrasil.checkEnabled(name, jsonContext), IsEnabledResponse.class);
             return isEnabled.isEnabled();
         } catch (JsonProcessingException e) {
@@ -39,7 +46,7 @@ public class UnleashEngine {
 
     public VariantResponse getVariant(String name, Context context) throws YggdrasilInvalidInputException {
         try {
-            String jsonContext = mapper.writeValueAsString(context);
+            String jsonContext = writer.writeValueAsString(context);
             return read(yggdrasil.checkVariant(name, jsonContext), VariantResponse.class);
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
@@ -54,8 +61,8 @@ public class UnleashEngine {
         yggdrasil.freeResponse(pointer);
         try {
             System.out.println(str); // TODO use a logging library. SLF4J?
-            return mapper.readValue(str, clazz);
-        } catch (JsonProcessingException e) {
+            return reader.readValue(str, clazz);
+        } catch (IOException e) {
             throw new YggdrasilParseException(str, clazz, e);
         }
     }
