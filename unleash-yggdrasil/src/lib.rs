@@ -1167,15 +1167,15 @@ mod test {
 
     // The client spec doesn't actually enforce anything except userId for variant overrides, so this is
     // getting its own test set until the client spec can take over that responsibility
-    #[test_case("userId", "7", & ["7"], true; "Basic example")]
-    #[test_case("userId", "7", & ["7", "8"], true; "With multiple values")]
-    #[test_case("userId", "7", & ["2", "9"], false; "Expected not to match against missing property")]
-    #[test_case("sessionId", "7", & ["2", "7"], true; "Resolves against session id")]
-    #[test_case("remoteAddress", "7", & ["2", "7"], true; "Resolves against remote address")]
-    #[test_case("environment", "7", & ["2", "7"], true; "Resolves against environment")]
-    #[test_case("currentTime", "7", & ["2", "7"], true; "Resolves against currentTime")]
-    #[test_case("appName", "7", & ["2", "7"], true; "Resolves against app name")]
-    #[test_case("someArbContext", "7", & ["2", "7"], true; "Resolves against arbitrary context field")]
+    #[test_case("userId", "7", &["7"], true; "Basic example")]
+    #[test_case("userId", "7", &["7", "8"], true; "With multiple values")]
+    #[test_case("userId", "7", &["2", "9"], false; "Expected not to match against missing property")]
+    #[test_case("sessionId", "7", &["2", "7"], true; "Resolves against session id")]
+    #[test_case("remoteAddress", "7", &["2", "7"], true; "Resolves against remote address")]
+    #[test_case("environment", "7", &["2", "7"], true; "Resolves against environment")]
+    #[test_case("currentTime", "7", &["2", "7"], true; "Resolves against currentTime")]
+    #[test_case("appName", "7", &["2", "7"], true; "Resolves against app name")]
+    #[test_case("someArbContext", "7", &["2", "7"], true; "Resolves against arbitrary context field")]
     fn variant_override_resolves_with_arbitrary_context_fields(
         context_name: &str,
         context_values: &str,

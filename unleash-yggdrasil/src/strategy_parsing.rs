@@ -32,12 +32,7 @@ lazy_static! {
 
 pub fn normalized_hash(group: &str, identifier: &str, modulus: u32, seed: u32) -> std::io::Result<u32> {
     let mut reader = Cursor::new(format!("{}:{}", &group, &identifier));
-    let hash_result = murmur3_32(&mut reader, seed)?;
-
-    // Print the values and murmur result
-    println!("Group: {}, Identifier: {}, Modulus: {}, Seed: {}, Murmur Result: {}", group, identifier, modulus, seed, hash_result);
-
-    Ok(hash_result % modulus)
+    murmur3_32(&mut reader, seed).map(|hash_result| hash_result % modulus)
 }
 
 pub type RuleFragment = Box<dyn SendableFragment + Send + Sync + 'static>;

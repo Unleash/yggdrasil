@@ -619,34 +619,34 @@ mod tests {
     }
 
     #[test_case(
-    Operator::StrEndsWith,
-    false,
-    "user_id ends_with_any [\"some\", \"thing\"]"
+        Operator::StrEndsWith,
+        false,
+        "user_id ends_with_any [\"some\", \"thing\"]"
     )]
     #[test_case(
-    Operator::StrStartsWith,
-    false,
-    "user_id starts_with_any [\"some\", \"thing\"]"
+        Operator::StrStartsWith,
+        false,
+        "user_id starts_with_any [\"some\", \"thing\"]"
     )]
     #[test_case(
-    Operator::StrContains,
-    false,
-    "user_id contains_any [\"some\", \"thing\"]"
+        Operator::StrContains,
+        false,
+        "user_id contains_any [\"some\", \"thing\"]"
     )]
     #[test_case(
-    Operator::StrEndsWith,
-    true,
-    "user_id ends_with_any_ignore_case [\"some\", \"thing\"]"
+        Operator::StrEndsWith,
+        true,
+        "user_id ends_with_any_ignore_case [\"some\", \"thing\"]"
     )]
     #[test_case(
-    Operator::StrStartsWith,
-    true,
-    "user_id starts_with_any_ignore_case [\"some\", \"thing\"]"
+        Operator::StrStartsWith,
+        true,
+        "user_id starts_with_any_ignore_case [\"some\", \"thing\"]"
     )]
     #[test_case(
-    Operator::StrContains,
-    true,
-    "user_id contains_any_ignore_case [\"some\", \"thing\"]"
+        Operator::StrContains,
+        true,
+        "user_id contains_any_ignore_case [\"some\", \"thing\"]"
     )]
     fn upgrades_string_list_operator(op: Operator, case_insensitive: bool, expected: &str) {
         let constraint = Constraint {
