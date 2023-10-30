@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::atomic::AtomicU32;
+
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
@@ -27,13 +28,15 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "4.5.2";
+pub const SUPPORTED_SPEC_VERSION: &str = "5.0.2";
+const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
+
 
 pub struct CompiledToggle {
     pub name: String,
     pub enabled: bool,
     pub compiled_strategy: RuleFragment,
-    pub compiled_variant_strategy: Option<Vec<(RuleFragment, Vec<CompiledVariant>)>>,
+    pub compiled_variant_strategy: Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>>,
     pub variants: Vec<CompiledVariant>,
     pub impression_data: bool,
     pub project: String,
@@ -91,11 +94,11 @@ fn build_segment_map(segments: &Option<Vec<Segment>>) -> HashMap<i32, Segment> {
 fn compile_variant_rule(
     toggle: &ClientFeature,
     segment_map: &HashMap<i32, Segment>,
-) -> Option<Vec<(RuleFragment, Vec<CompiledVariant>)>> {
-    let variant_rules: Option<Vec<(RuleFragment, Vec<CompiledVariant>)>> =
-        build_variant_rules(&toggle.strategies.clone().unwrap_or_default(), segment_map)
+) -> Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>> {
+    let variant_rules: Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>> =
+        build_variant_rules(&toggle.strategies.clone().unwrap_or_default(), segment_map, &toggle.name)
             .iter()
-            .map(|(rule_string, strategy_variants, stickiness)| {
+            .map(|(rule_string, strategy_variants, stickiness, group_id)| {
                 if strategy_variants.is_empty() {
                     return None;
                 };
@@ -113,6 +116,7 @@ fn compile_variant_rule(
                                 overrides: None,
                             })
                             .collect(),
+                        group_id.clone(),
                     )
                 })
             })
@@ -158,8 +162,8 @@ pub struct IPAddress(pub IpAddr);
 
 impl<'de> de::Deserialize<'de> for IPAddress {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
+        where
+            D: de::Deserializer<'de>,
     {
         if deserializer.is_human_readable() {
             let s = String::deserialize(deserializer)?;
@@ -394,8 +398,8 @@ impl EngineState {
 
     fn resolve_variant<'a>(
         &self,
-        toggle: &CompiledToggle,
         variants: &'a Vec<CompiledVariant>,
+        group_id: &str,
         context: &Context,
     ) -> Option<&'a CompiledVariant> {
         if variants.is_empty() {
@@ -411,7 +415,7 @@ impl EngineState {
             .and_then(|variant| variant.stickiness.clone());
 
         let target = get_seed(stickiness, context)
-            .map(|seed| normalized_hash(&toggle.name, &seed, total_weight).unwrap())
+            .map(|seed| normalized_hash(&group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap())
             .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight));
 
         let mut total_weight = 0;
@@ -429,6 +433,7 @@ impl EngineState {
         toggle: &CompiledToggle,
         context: &Context,
     ) -> Option<VariantDef> {
+        // toggle.compiled_variant_strategy
         let strategy_variants =
             toggle
                 .compiled_variant_strategy
@@ -436,17 +441,17 @@ impl EngineState {
                 .and_then(|variant_strategies| {
                     let context = EnrichedContext::from(context.clone(), toggle.name.clone());
 
-                    let resolved_strategy_variants: Option<&Vec<CompiledVariant>> =
-                        variant_strategies.iter().find_map(|(rule, rule_variants)| {
-                            (rule)(&context).then_some(rule_variants)
+                    let resolved_strategy_variants: Option<(&Vec<CompiledVariant>, &String)> =
+                        variant_strategies.iter().find_map(|(rule, rule_variants, group_id)| {
+                            (rule)(&context).then_some((rule_variants, group_id))
                         });
                     resolved_strategy_variants
                 });
 
         let variant = if let Some(strategy_variants) = strategy_variants {
-            self.resolve_variant(toggle, strategy_variants, context)
+            self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
         } else {
-            self.resolve_variant(toggle, &toggle.variants, context)
+            self.resolve_variant(&toggle.variants, &toggle.name, context)
         };
 
         variant.map(|variant| VariantDef {
@@ -482,7 +487,7 @@ impl EngineState {
             self.count_toggle(name, false);
             None
         }
-        .unwrap_or_default();
+            .unwrap_or_default();
 
         self.count_variant(name, &variant.name);
         variant
@@ -1162,15 +1167,15 @@ mod test {
 
     // The client spec doesn't actually enforce anything except userId for variant overrides, so this is
     // getting its own test set until the client spec can take over that responsibility
-    #[test_case("userId", "7", &["7"], true; "Basic example")]
-    #[test_case("userId", "7", &["7", "8"], true; "With multiple values")]
-    #[test_case("userId", "7", &["2", "9"], false; "Expected not to match against missing property")]
-    #[test_case("sessionId", "7", &["2", "7"], true; "Resolves against session id")]
-    #[test_case("remoteAddress", "7", &["2", "7"], true; "Resolves against remote address")]
-    #[test_case("environment", "7", &["2", "7"], true; "Resolves against environment")]
-    #[test_case("currentTime", "7", &["2", "7"], true; "Resolves against currentTime")]
-    #[test_case("appName", "7", &["2", "7"], true; "Resolves against app name")]
-    #[test_case("someArbContext", "7", &["2", "7"], true; "Resolves against arbitrary context field")]
+    #[test_case("userId", "7", & ["7"], true; "Basic example")]
+    #[test_case("userId", "7", & ["7", "8"], true; "With multiple values")]
+    #[test_case("userId", "7", & ["2", "9"], false; "Expected not to match against missing property")]
+    #[test_case("sessionId", "7", & ["2", "7"], true; "Resolves against session id")]
+    #[test_case("remoteAddress", "7", & ["2", "7"], true; "Resolves against remote address")]
+    #[test_case("environment", "7", & ["2", "7"], true; "Resolves against environment")]
+    #[test_case("currentTime", "7", & ["2", "7"], true; "Resolves against currentTime")]
+    #[test_case("appName", "7", & ["2", "7"], true; "Resolves against app name")]
+    #[test_case("someArbContext", "7", & ["2", "7"], true; "Resolves against arbitrary context field")]
     fn variant_override_resolves_with_arbitrary_context_fields(
         context_name: &str,
         context_values: &str,
@@ -1254,6 +1259,7 @@ mod test {
                         payload: None,
                         overrides: None,
                     }],
+                    "some-toggle".to_string(),
                 )]),
                 ..CompiledToggle::default()
             },
@@ -1285,6 +1291,7 @@ mod test {
                         payload: None,
                         overrides: None,
                     }],
+                    "some-toggle".to_string(),
                 )]),
                 ..CompiledToggle::default()
             },
@@ -1441,6 +1448,7 @@ mod test {
                         payload: None,
                         overrides: None,
                     }],
+                    "parent-flag".to_string(),
                 )]),
                 ..CompiledToggle::default()
             },

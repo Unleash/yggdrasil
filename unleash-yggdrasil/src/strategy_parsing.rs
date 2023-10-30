@@ -30,9 +30,14 @@ lazy_static! {
     };
 }
 
-pub fn normalized_hash(group: &str, identifier: &str, modulus: u32) -> std::io::Result<u32> {
+pub fn normalized_hash(group: &str, identifier: &str, modulus: u32, seed: u32) -> std::io::Result<u32> {
     let mut reader = Cursor::new(format!("{}:{}", &group, &identifier));
-    murmur3_32(&mut reader, 0).map(|hash_result| hash_result % modulus)
+    let hash_result = murmur3_32(&mut reader, seed)?;
+
+    // Print the values and murmur result
+    println!("Group: {}, Identifier: {}, Modulus: {}, Seed: {}, Murmur Result: {}", group, identifier, modulus, seed, hash_result);
+
+    Ok(hash_result % modulus)
 }
 
 pub type RuleFragment = Box<dyn SendableFragment + Send + Sync + 'static>;
@@ -297,7 +302,7 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
         };
 
         let hash = if let Some(stickiness) = stickiness {
-            normalized_hash(&group_id, &stickiness, 100)
+            normalized_hash(&group_id, &stickiness, 100, 0)
         } else {
             // The original code does something different here - if we're using the
             // default strategy it generates a string of a number between 1 and 101
