@@ -30,7 +30,12 @@ lazy_static! {
     };
 }
 
-pub fn normalized_hash(group: &str, identifier: &str, modulus: u32, seed: u32) -> std::io::Result<u32> {
+pub fn normalized_hash(
+    group: &str,
+    identifier: &str,
+    modulus: u32,
+    seed: u32,
+) -> std::io::Result<u32> {
     let mut reader = Cursor::new(format!("{}:{}", &group, &identifier));
     murmur3_32(&mut reader, seed).map(|hash_result| hash_result % modulus)
 }
