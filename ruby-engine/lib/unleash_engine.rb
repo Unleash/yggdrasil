@@ -85,6 +85,7 @@ class UnleashEngine
 
     raise "Error: #{response[:error_message]}" if response[:status_code] == ERROR_RESPONSE
     return nil if response[:status_code] == TOGGLE_MISSING_RESPONSE
+
     return response[:value] == true
   end
 
