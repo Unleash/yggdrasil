@@ -52,7 +52,7 @@ pub fn build_variant_rules(
     strategies: &[Strategy],
     segment_map: &HashMap<i32, Segment>,
     toggle_name: &String,
-) -> Vec<(String, Vec<StrategyVariant>, String)> {
+) -> Vec<(String, Vec<StrategyVariant>, String, String)> {
     let mut custom_strat_count = 0;
     strategies
         .iter()
