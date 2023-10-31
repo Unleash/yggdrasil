@@ -130,7 +130,10 @@ pub unsafe extern "C" fn free_engine(engine_ptr: *mut c_void) {
 /// but any invalid pointers will result in undefined behavior.
 /// These pointers should not be dropped for the lifetime of this function call.
 #[no_mangle]
-pub unsafe extern "C" fn take_state(engine_ptr: *mut c_void, json_ptr: *const c_char) -> *const c_char {
+pub unsafe extern "C" fn take_state(
+    engine_ptr: *mut c_void,
+    json_ptr: *const c_char,
+) -> *const c_char {
     let result: Result<Option<()>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
         let toggles: ClientFeatures = get_json(json_ptr)?;
