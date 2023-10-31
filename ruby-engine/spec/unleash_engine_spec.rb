@@ -27,13 +27,13 @@ RSpec.describe UnleashEngine do
       unleash_engine.count_toggle(feature_name, true)
       unleash_engine.count_toggle(feature_name, false)
 
-      metrics =  unleash_engine.get_metrics() # This should clear the metrics buffer
+      metrics = unleash_engine.get_metrics() # This should clear the metrics buffer
 
       metric = metrics[:toggles][feature_name.to_sym]
       expect(metric[:yes]).to eq(1)
       expect(metric[:no]).to eq(1)
 
-      metrics =  unleash_engine.get_metrics()
+      metrics = unleash_engine.get_metrics()
       expect(metrics).to be_nil
     end
 
@@ -48,7 +48,7 @@ RSpec.describe UnleashEngine do
       unleash_engine.count_toggle(toggle_name, true)
       unleash_engine.count_toggle(toggle_name, false)
 
-      metrics =  unleash_engine.get_metrics()
+      metrics = unleash_engine.get_metrics()
       metric = metrics[:toggles][toggle_name.to_sym]
 
       expect(metric[:yes]).to eq(1)
@@ -61,7 +61,7 @@ RSpec.describe UnleashEngine do
       unleash_engine.count_toggle(toggle_name, true)
       unleash_engine.count_toggle(toggle_name, false)
 
-      metrics =  unleash_engine.get_metrics()
+      metrics = unleash_engine.get_metrics()
       metric = metrics[:toggles][toggle_name.to_sym]
 
       expect(metric[:yes]).to eq(1)
@@ -78,7 +78,7 @@ RSpec.describe UnleashEngine do
 
       unleash_engine.count_variant(toggle_name, 'disabled')
 
-      metrics =  unleash_engine.get_metrics()
+      metrics = unleash_engine.get_metrics()
       metric = metrics[:toggles][toggle_name.to_sym]
 
       expect(metric[:variants][:disabled]).to eq(1)
