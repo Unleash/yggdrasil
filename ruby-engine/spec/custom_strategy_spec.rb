@@ -8,6 +8,7 @@ RSpec.describe "custom strategies" do
       "features": [
         {
           "name": "Feature.A",
+          "enabled": true,
           "strategies": [
             {
               "name": "default",
@@ -86,6 +87,54 @@ RSpec.describe "custom strategies" do
       expect(strategy_results.length).to eq(2)
       expect(strategy_results["customStrategy1"]).to eq(false)
       expect(strategy_results["customStrategy1"]).to eq(false)
+    end
+
+    it "should calculate custom strategies e2e" do
+      class TestStrategy
+        attr_reader :name
+
+        def initialize(name)
+          @name = name
+        end
+
+        def enabled?(params, context)
+          context[:userId] == "123"
+        end
+      end
+
+      state =     {
+        "version": 1,
+        "features": [
+          {
+            "name": "Feature.A",
+            "enabled": true,
+            "strategies": [
+              {
+                "name": "custom",
+                "parameters": {
+                  "gerkhins": "yes"
+                }
+              }
+            ]
+          }
+        ]
+      }
+
+      engine = UnleashEngine.new
+      engine.register_custom_strategies([TestStrategy.new("custom")])
+
+      engine.take_state(state.to_json)
+
+      should_be_enabled = engine.enabled?("Feature.A", {
+        userId: "123"
+      })
+
+      should_not_be_enabled = engine.enabled?("Feature.A", {
+        userId: "456"
+      })
+
+      expect(should_be_enabled).to eq(true)
+      expect(should_not_be_enabled).to eq(false)
     end
   end
 end
