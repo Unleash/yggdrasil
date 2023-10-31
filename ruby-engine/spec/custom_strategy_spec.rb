@@ -1,7 +1,6 @@
 require_relative '../lib/custom_strategy'
 
 RSpec.describe "custom strategies" do
-
   let(:raw_state) do
     {
       "version": 1,
@@ -40,7 +39,6 @@ RSpec.describe "custom strategies" do
 
   describe 'computing custom strategies' do
     it 'respects the logic contained in the enabled function' do
-
       class TestStrategy
         attr_reader :name
 
@@ -61,7 +59,6 @@ RSpec.describe "custom strategies" do
     end
 
     it 'creates a strategy result for every custom strategy thats implemented and defined' do
-
       class TestStrategy
         attr_reader :name
 
@@ -102,7 +99,7 @@ RSpec.describe "custom strategies" do
         end
       end
 
-      state =     {
+      state = {
         "version": 1,
         "features": [
           {
@@ -126,12 +123,12 @@ RSpec.describe "custom strategies" do
       engine.take_state(state.to_json)
 
       should_be_enabled = engine.enabled?("Feature.A", {
-        userId: "123"
-      })
+                                            userId: "123"
+                                          })
 
       should_not_be_enabled = engine.enabled?("Feature.A", {
-        userId: "456"
-      })
+                                                userId: "456"
+                                              })
 
       expect(should_be_enabled).to eq(true)
       expect(should_not_be_enabled).to eq(false)
