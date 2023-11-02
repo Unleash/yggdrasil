@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -57,8 +59,18 @@ class UnleashEngineTest {
         engine.takeState(simpleFeatures);
 
         Context context = new Context();
-        boolean result = engine.isEnabled("Feature.A", context);
-        assertTrue(result);
+        IsEnabledResponse result = engine.isEnabled("Feature.A", context);
+        assertTrue(result.isValid());
+        assertTrue(result.isEnabled());
+    }
+
+    @Test
+    void testIsEnabledWithoutValidResponse() throws Exception {
+        engine.takeState(simpleFeatures);
+
+        Context context = new Context();
+        IsEnabledResponse result = engine.isEnabled("IDoNotExist", context);
+        assertFalse(result.isValid());
     }
 
     @Test
@@ -99,9 +111,9 @@ class UnleashEngineTest {
                     String toggleName = (String) test.get("toggleName");
                     boolean expectedResult = (Boolean) test.get("expectedResult");
 
-                    boolean result = engine.isEnabled(toggleName, context);
+                    IsEnabledResponse result = engine.isEnabled(toggleName, context);
 
-                    assertEquals(expectedResult, result,
+                    assertEquals(expectedResult, result.isEnabled(),
                             String.format("[%s] Failed test '%s': expected %b, got %b",
                                     suiteData.name,
                                     test.get("description"), expectedResult,
@@ -136,5 +148,37 @@ class UnleashEngineTest {
 
             System.out.printf("Completed specification '%s'%n", suite);
         }
+    }
+
+    @Test
+    void testMetrics() {
+        engine.countVariant("Feature.A", "A");
+        engine.countToggle("Feature.B", true);
+        engine.countToggle("Feature.C", false);
+        engine.countToggle("Feature.C", false);
+        MetricsResponse metrics = engine.getMetrics();
+
+        MetricsBucket bucket = metrics.getValue();
+        assertNotNull(bucket);
+
+        Instant start = bucket.getStart();
+        Instant stop = bucket.getStop();
+        assertNotNull(start);
+        assertNotNull(stop);
+        assertTrue(stop.isAfter(start)); // unlikely to be equal but could happen
+        assertTrue(start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10 seconds of now
+
+        assertEquals(3, bucket.getToggles().size());
+
+        assertEquals(1, bucket.getToggles().get("Feature.A").getVariants().get("A"));
+        // Validate: counting on enabled is up to the SDK or should we also count enabled when getting a variant?
+        assertEquals(0, bucket.getToggles().get("Feature.A").getYes());
+        assertEquals(0, bucket.getToggles().get("Feature.A").getNo());
+
+        assertEquals(1, bucket.getToggles().get("Feature.B").getYes());
+        assertEquals(0, bucket.getToggles().get("Feature.B").getNo());
+
+        assertEquals(0, bucket.getToggles().get("Feature.C").getYes());
+        assertEquals(2, bucket.getToggles().get("Feature.C").getNo());
     }
 }

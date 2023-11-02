@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sun.jna.Pointer;
 
 import java.io.IOException;
@@ -22,6 +24,7 @@ public class UnleashEngine {
     UnleashEngine(YggdrasilFFI yggdrasil) {
         this.yggdrasil = yggdrasil;
         ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         reader = mapper.reader();
         writer = mapper.writer();
@@ -34,11 +37,10 @@ public class UnleashEngine {
         }
     }
 
-    public boolean isEnabled(String name, Context context) throws YggdrasilInvalidInputException {
+    public IsEnabledResponse isEnabled(String name, Context context) throws YggdrasilInvalidInputException {
         try {
             String jsonContext = writer.writeValueAsString(context);
-            IsEnabledResponse isEnabled = read(yggdrasil.checkEnabled(name, jsonContext), IsEnabledResponse.class);
-            return isEnabled.isEnabled();
+            return read(yggdrasil.checkEnabled(name, jsonContext), IsEnabledResponse.class);
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
         }
@@ -51,6 +53,18 @@ public class UnleashEngine {
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
         }
+    }
+
+    public void countToggle(String flagName, boolean enabled) {
+        this.yggdrasil.countToggle(flagName, enabled);
+    }
+
+    public void countVariant(String flagName, String variantName) {
+        this.yggdrasil.countVariant(flagName, variantName);
+    }
+
+    public MetricsResponse getMetrics() {
+        return read(yggdrasil.getMetrics(), MetricsResponse.class);
     }
 
     /**

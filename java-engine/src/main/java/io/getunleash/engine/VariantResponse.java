@@ -3,7 +3,7 @@ package io.getunleash.engine;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-class VariantResponse extends YggResponse<VariantDef> {
+public class VariantResponse extends YggResponse<VariantDef> {
 
     @JsonCreator
     VariantResponse(

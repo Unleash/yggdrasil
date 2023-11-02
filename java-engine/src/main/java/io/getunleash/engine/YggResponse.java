@@ -8,7 +8,7 @@ class YggResponse<T> {
     final T value;
     final String errorMessage;
 
-    @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
+    @JsonCreator
     YggResponse(@JsonProperty("status_code") StatusCode statusCode, @JsonProperty("value") T value, @JsonProperty("error_message") String errorMessage) {
         this.statusCode = statusCode;
         this.value = value;
