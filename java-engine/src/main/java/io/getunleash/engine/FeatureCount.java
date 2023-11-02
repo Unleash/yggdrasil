@@ -11,7 +11,11 @@ public class FeatureCount {
     private final Map<String, Long> variants;
 
     @JsonCreator
-    public FeatureCount(@JsonProperty("yes") Long yes, @JsonProperty("no") Long no, @JsonProperty("variants") Map<String, Long> variants) {
+    public FeatureCount(
+            @JsonProperty("yes") Long yes,
+            @JsonProperty("no") Long no,
+            @JsonProperty("variants") Map<String, Long> variants
+    ) {
         this.yes = yes;
         this.no = no;
         this.variants = variants;
