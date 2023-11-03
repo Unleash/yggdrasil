@@ -1,6 +1,7 @@
 package io.getunleash.engine;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -30,25 +31,27 @@ public class UnleashEngine {
     }
 
     public void takeState(String toggles) throws YggdrasilInvalidInputException {
-        TakeStateResponse response = read(yggdrasil.takeState(toggles), TakeStateResponse.class);
+        YggResponse<Void> response = read(yggdrasil.takeState(toggles), new TypeReference<>() {});
         if (!response.isValid()) {
             throw new YggdrasilInvalidInputException(toggles);
         }
     }
 
-    public IsEnabledResponse isEnabled(String name, Context context) throws YggdrasilInvalidInputException {
+    public Boolean isEnabled(String name, Context context) throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = writer.writeValueAsString(context);
-            return read(yggdrasil.checkEnabled(name, jsonContext), IsEnabledResponse.class);
+            YggResponse<Boolean> isEnabled = read(yggdrasil.checkEnabled(name, jsonContext), new TypeReference<>() {});
+            return isEnabled.getValue();
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
         }
     }
 
-    public VariantResponse getVariant(String name, Context context) throws YggdrasilInvalidInputException {
+    public VariantDef getVariant(String name, Context context) throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = writer.writeValueAsString(context);
-            return read(yggdrasil.checkVariant(name, jsonContext), VariantResponse.class);
+            YggResponse<VariantDef> response = read(yggdrasil.checkVariant(name, jsonContext), new TypeReference<>() {});
+            return response.getValue();
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
         }
@@ -62,21 +65,22 @@ public class UnleashEngine {
         this.yggdrasil.countVariant(flagName, variantName);
     }
 
-    public MetricsResponse getMetrics() {
-        return read(yggdrasil.getMetrics(), MetricsResponse.class);
+    public MetricsBucket getMetrics() throws YggdrasilError {
+        YggResponse<MetricsBucket> response = read(yggdrasil.getMetrics(), new TypeReference<>() {});
+        return response.getValue();
     }
 
     /**
      * Handle reading from a pointer into a String and mapping it to an object
      */
-    private <T> T read(Pointer pointer, Class<T> clazz) {
+    private <T> T read(Pointer pointer, TypeReference<T> typeReference) {
         String str = pointer.getString(0, UTF_8);
         yggdrasil.freeResponse(pointer);
         try {
             System.out.println(str); // TODO use a logging library. SLF4J?
-            return reader.readValue(str, clazz);
+            return reader.forType(typeReference).readValue(str);
         } catch (IOException e) {
-            throw new YggdrasilParseException(str, clazz, e);
+            throw new YggdrasilParseException(str, typeReference.getClass(), e);
         }
     }
 }

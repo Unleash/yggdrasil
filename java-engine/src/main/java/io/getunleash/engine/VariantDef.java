@@ -26,7 +26,7 @@ public class VariantDef {
         return payload;
     }
 
-    public Boolean getEnabled() {
+    public Boolean isEnabled() {
         return enabled;
     }
 }

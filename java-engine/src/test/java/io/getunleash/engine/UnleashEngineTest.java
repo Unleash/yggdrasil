@@ -3,7 +3,6 @@ package io.getunleash.engine;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +25,7 @@ class TestSuite {
 
 class UnleashEngineTest {
 
-    private static final VariantResponse DEFAULT_VARIANT = new VariantResponse(StatusCode.NotFound, new VariantDef("disabled", null, false), null);
+    private static final VariantDef DEFAULT_VARIANT = new VariantDef("disabled", null, false);
     private final String simpleFeatures = loadFeaturesFromFile(
             "../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
                                                                                      // feature JSON
@@ -59,9 +58,9 @@ class UnleashEngineTest {
         engine.takeState(simpleFeatures);
 
         Context context = new Context();
-        IsEnabledResponse result = engine.isEnabled("Feature.A", context);
-        assertTrue(result.isValid());
-        assertTrue(result.isEnabled());
+        Boolean result = engine.isEnabled("Feature.A", context);
+        assertNotNull(result);
+        assertTrue(result);
     }
 
     @Test
@@ -69,8 +68,8 @@ class UnleashEngineTest {
         engine.takeState(simpleFeatures);
 
         Context context = new Context();
-        IsEnabledResponse result = engine.isEnabled("IDoNotExist", context);
-        assertFalse(result.isValid());
+        Boolean result = engine.isEnabled("IDoNotExist", context);
+        assertNull(result); // not found
     }
 
     @Test
@@ -78,9 +77,9 @@ class UnleashEngineTest {
         engine.takeState(simpleFeatures);
 
         Context context = new Context();
-        VariantResponse variant = engine.getVariant("Feature.A", context);
+        VariantDef variant = engine.getVariant("Feature.A", context);
 
-        if (!variant.isValid()) {
+        if (variant == null) {
             variant = DEFAULT_VARIANT;
         }
 
@@ -111,9 +110,13 @@ class UnleashEngineTest {
                     String toggleName = (String) test.get("toggleName");
                     boolean expectedResult = (Boolean) test.get("expectedResult");
 
-                    IsEnabledResponse result = engine.isEnabled(toggleName, context);
+                    Boolean result = engine.isEnabled(toggleName, context);
 
-                    assertEquals(expectedResult, result.isEnabled(),
+                    if (result == null) {
+                        result = false; // Default should be provided by SDK
+                    }
+
+                    assertEquals(expectedResult, result,
                             String.format("[%s] Failed test '%s': expected %b, got %b",
                                     suiteData.name,
                                     test.get("description"), expectedResult,
@@ -129,14 +132,14 @@ class UnleashEngineTest {
                     String toggleName = (String) test.get("toggleName");
 
                     VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
-                    VariantResponse result = engine.getVariant(toggleName, context);
-                    if (!result.isValid()) {
+                    VariantDef result = engine.getVariant(toggleName, context);
+                    if (result == null) {
                         // this behavior should be implemented in the SDK
                         result = DEFAULT_VARIANT;
                     }
 
                     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
-                    String resultJson = objectMapper.writeValueAsString(result.value);
+                    String resultJson = objectMapper.writeValueAsString(result);
 
                     assertEquals(expectedResultJson, resultJson,
                             String.format("[%s] Failed test '%s': expected %b, got %b",
@@ -151,14 +154,13 @@ class UnleashEngineTest {
     }
 
     @Test
-    void testMetrics() {
+    void testMetrics() throws YggdrasilError {
         engine.countVariant("Feature.A", "A");
         engine.countToggle("Feature.B", true);
         engine.countToggle("Feature.C", false);
         engine.countToggle("Feature.C", false);
-        MetricsResponse metrics = engine.getMetrics();
+        MetricsBucket bucket = engine.getMetrics();
 
-        MetricsBucket bucket = metrics.getValue();
         assertNotNull(bucket);
 
         Instant start = bucket.getStart();

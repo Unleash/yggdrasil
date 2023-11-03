@@ -19,6 +19,17 @@ class YggResponse<T> {
         return StatusCode.Ok.equals(this.statusCode);
     }
 
+    public T getValue() throws YggdrasilError {
+        if (isValid()) {
+            return this.value;
+        } else {
+            if (this.statusCode == null || this.statusCode.equals(StatusCode.Error)) {
+                throw new IllegalStateException("statusCode is null");
+            }
+            return null;
+        }
+    }
+
     @Override
     public String toString() {
         return "YggResponse{" +
