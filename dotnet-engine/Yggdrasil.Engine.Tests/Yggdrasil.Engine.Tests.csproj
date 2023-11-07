@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\UnleashEngine\UnleashEngine.csproj" />
+    <ProjectReference Include="..\Yggdrasil.Engine\Yggdrasil.Engine.csproj" />
   </ItemGroup>
 
 </Project>

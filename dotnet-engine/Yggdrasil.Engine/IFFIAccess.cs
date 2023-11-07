@@ -1,4 +1,4 @@
-namespace Unleash;
+namespace Yggdrasil;
 
 internal interface IFFIAccess {
     IntPtr NewEngine();
