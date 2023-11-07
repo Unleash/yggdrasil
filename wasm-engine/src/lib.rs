@@ -29,7 +29,7 @@ pub struct Context {
 }
 
 impl Context {
-    fn to_context(self) -> EnrichedContext {
+    fn to_context(&self) -> EnrichedContext {
         let yggdrasil_context = YggdrasilContext {
             user_id: self.user_id.clone(),
             session_id: self.session_id.clone(),
@@ -40,7 +40,10 @@ impl Context {
             properties: self.properties.clone(),
         };
 
-        EnrichedContext::from(yggdrasil_context, self.group_id.unwrap_or("".into()))
+        EnrichedContext::from(
+            yggdrasil_context,
+            self.group_id.clone().unwrap_or("".into()),
+        )
     }
 }
 
