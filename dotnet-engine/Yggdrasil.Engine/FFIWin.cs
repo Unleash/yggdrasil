@@ -27,14 +27,14 @@ internal class FFIWin : IFFIAccess {
         return take_state(ptr, json);
     }
 
-    public IntPtr CheckEnabled(IntPtr ptr, string toggle_name, string context)
+    public IntPtr CheckEnabled(IntPtr ptr, string toggle_name, string context, string customStrategyResults)
     {
-        return check_enabled(ptr, toggle_name, context);
+        return check_enabled(ptr, toggle_name, context, customStrategyResults);
     }
 
-    public IntPtr CheckVariant(IntPtr ptr, string toggle_name, string context) 
+    public IntPtr CheckVariant(IntPtr ptr, string toggle_name, string context, string customStrategyResults)
     {
-        return check_variant(ptr, toggle_name, context);
+        return check_variant(ptr, toggle_name, context, customStrategyResults);
     }
 
     public void FreeResponse(IntPtr ptr)
@@ -62,10 +62,10 @@ internal class FFIWin : IFFIAccess {
     internal static extern IntPtr take_state(IntPtr ptr, string json);
 
     [DllImport(DLL_PATH)]
-    internal static extern IntPtr check_enabled(IntPtr ptr, string toggle_name, string context);
+    internal static extern IntPtr check_enabled(IntPtr ptr, string toggle_name, string context, string customStrategyResults);
 
     [DllImport(DLL_PATH)]
-    internal static extern IntPtr check_variant(IntPtr ptr, string toggle_name, string context);
+    internal static extern IntPtr check_variant(IntPtr ptr, string toggle_name, string context, string customStrategyResults);
 
     [DllImport(DLL_PATH)]
     internal static extern void free_response(IntPtr ptr);

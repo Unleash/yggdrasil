@@ -14,7 +14,7 @@ public class YggdrasilEngine
 
     private IFFIAccess platformEngine;
 
-    private static IFFIAccess GetPlatformEngine() { 
+    private static IFFIAccess GetPlatformEngine() {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
             return new FFILinux();
         } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
@@ -66,7 +66,7 @@ public class YggdrasilEngine
     {
         string contextJson = JsonSerializer.Serialize(context, options);
 
-        var isEnabledPtr = platformEngine.CheckEnabled(state, toggleName, contextJson);
+        var isEnabledPtr = platformEngine.CheckEnabled(state, toggleName, contextJson, "{}");
 
         if (isEnabledPtr == IntPtr.Zero)
         {
@@ -92,7 +92,7 @@ public class YggdrasilEngine
     public Variant? GetVariant(string toggleName, Context context)
     {
         var contextJson = JsonSerializer.Serialize(context, options);
-        var variantPtr = platformEngine.CheckVariant(state, toggleName, contextJson);
+        var variantPtr = platformEngine.CheckVariant(state, toggleName, contextJson, "{}");
 
         if (variantPtr == IntPtr.Zero)
         {
@@ -118,7 +118,7 @@ public class YggdrasilEngine
         var metricsPtr = platformEngine.GetMetrics(state);
 
         if (metricsPtr == IntPtr.Zero)
-        {   
+        {
             return null;
         }
 

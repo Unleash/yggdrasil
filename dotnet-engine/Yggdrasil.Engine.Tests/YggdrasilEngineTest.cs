@@ -15,7 +15,7 @@ public class Tests
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    [Test] 
+    [Test]
     public void MassTestMemoryUsage() {
         // Arrange
         var basePath = Path.Combine("..", "..", "..", "..", "..", "..", "client-specification", "specifications");
