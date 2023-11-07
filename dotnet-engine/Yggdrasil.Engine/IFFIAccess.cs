@@ -7,9 +7,9 @@ internal interface IFFIAccess {
 
     IntPtr TakeState(IntPtr ptr, string json);
 
-    IntPtr CheckEnabled(IntPtr ptr, string toggle_name, string context);
+    IntPtr CheckEnabled(IntPtr ptr, string toggle_name, string context, string customStrategyResults);
 
-    IntPtr CheckVariant(IntPtr ptr, string toggle_name, string context);
+    IntPtr CheckVariant(IntPtr ptr, string toggle_name, string context, string customStrategyResults);
 
     void FreeEngine(IntPtr ptr);
 
