@@ -372,7 +372,7 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     }
 }
 
-fn external_value(_inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
+fn external_value(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let strategy_index = string(node.next().unwrap());
     Box::new(move |context| {
         context
@@ -380,6 +380,7 @@ fn external_value(_inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
             .as_ref()
             .and_then(|strategy_results| strategy_results.get(&strategy_index))
             .copied()
+            .map(|result| result.invert(inverted))
             .unwrap_or(false)
     })
 }
@@ -853,6 +854,33 @@ mod tests {
         let result = rule(&context);
 
         assert!(!result);
+    }
+
+    #[test]
+    fn missing_external_value_produces_false_without_error_even_when_inverted() {
+        let rule = "!external_value[\"i_do_not_exist\"]";
+        let rule = compile_rule(rule).unwrap();
+
+        let context = Context::default();
+        let result = rule(&context);
+
+        assert!(!result);
+    }
+
+    #[test]
+    fn inversion_works_on_external_values() {
+        let rule = "!external_value[\"test_value\"]";
+        let rule = compile_rule(rule).unwrap();
+
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert("test_value".to_string(), true);
+
+        let context = Context {
+            external_results: Some(custom_strategy_results),
+            ..Default::default()
+        };
+
+        assert!(!rule(&context));
     }
 
     #[test]
