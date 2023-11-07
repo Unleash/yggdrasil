@@ -70,6 +70,7 @@ constraint = {
         | default_strategy_constraint
         | string_fragment_constraint
         | list_constraint
+        | external_value
     )
 }
     default_strategy_constraint = { boolean }
@@ -81,6 +82,7 @@ constraint = {
     rollout_constraint = { percentage ~ stickiness_param? ~ group_id_param?}
         stickiness_param = { "sticky on " ~ context_value ~ ( NULL_COALESCE ~ context_value)* }
         group_id_param = { "with group_id of" ~ string }
+    external_value = { "external_value[" ~ string ~ "]" }
 
 context_value = { random | user_id | session_id | remote_address | app_name | environment | current_time | property }
     user_id         = { "user_id" }

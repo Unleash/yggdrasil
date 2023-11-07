@@ -1,5 +1,6 @@
 require 'ffi'
 require 'json'
+require 'custom_strategy'
 
 TOGGLE_MISSING_RESPONSE = 'NotFound'.freeze
 ERROR_RESPONSE = 'Error'.freeze
@@ -40,8 +41,8 @@ class UnleashEngine
   attach_function :free_engine, [:pointer], :void
 
   attach_function :take_state, %i[pointer string], :pointer
-  attach_function :check_enabled, %i[pointer string string], :pointer
-  attach_function :check_variant, %i[pointer string string], :pointer
+  attach_function :check_enabled, %i[pointer string string string], :pointer
+  attach_function :check_variant, %i[pointer string string string], :pointer
   attach_function :get_metrics, [:pointer], :pointer
   attach_function :free_response, [:pointer], :void
 
@@ -50,6 +51,7 @@ class UnleashEngine
 
   def initialize
     @engine = UnleashEngine.new_engine
+    @custom_strategy_handler = CustomStrategyHandler.new
     ObjectSpace.define_finalizer(self, self.class.finalize(@engine))
   end
 
@@ -58,6 +60,7 @@ class UnleashEngine
   end
 
   def take_state(toggles)
+    @custom_strategy_handler.update_strategies(toggles)
     response_ptr = UnleashEngine.take_state(@engine, toggles)
     take_toggles_response = JSON.parse(response_ptr.read_string, symbolize_names: true)
     UnleashEngine.free_response(response_ptr)
@@ -65,8 +68,9 @@ class UnleashEngine
 
   def get_variant(name, context)
     context_json = (context || {}).to_json
+    custom_strategy_results = @custom_strategy_handler.evaluate_custom_strategies(name, context).to_json
 
-    variant_def_json_ptr = UnleashEngine.check_variant(@engine, name, context_json)
+    variant_def_json_ptr = UnleashEngine.check_variant(@engine, name, context_json, custom_strategy_results)
     variant_def_json = variant_def_json_ptr.read_string
     UnleashEngine.free_response(variant_def_json_ptr)
     variant_response = JSON.parse(variant_def_json, symbolize_names: true)
@@ -77,8 +81,9 @@ class UnleashEngine
 
   def enabled?(toggle_name, context)
     context_json = (context || {}).to_json
+    custom_strategy_results = @custom_strategy_handler.evaluate_custom_strategies(toggle_name, context).to_json
 
-    response_ptr = UnleashEngine.check_enabled(@engine, toggle_name, context_json)
+    response_ptr = UnleashEngine.check_enabled(@engine, toggle_name, context_json, custom_strategy_results)
     response_json = response_ptr.read_string
     UnleashEngine.free_response(response_ptr)
     response = JSON.parse(response_json, symbolize_names: true)
@@ -104,5 +109,9 @@ class UnleashEngine
     metrics = JSON.parse(metrics_ptr.read_string, symbolize_names: true)
     UnleashEngine.free_response(metrics_ptr)
     metrics[:value]
+  end
+
+  def register_custom_strategies(strategies)
+    @custom_strategy_handler.register_custom_strategies(strategies)
   end
 end

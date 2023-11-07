@@ -9,11 +9,16 @@ pub struct EnrichedContext {
     pub current_time: Option<String>,
     pub remote_address: Option<String>,
     pub properties: Option<HashMap<String, String>>,
+    pub external_results: Option<HashMap<String, bool>>,
     pub(crate) toggle_name: String,
 }
 
 impl EnrichedContext {
-    pub fn from(context: Context, toggle_name: String) -> Self {
+    pub fn from(
+        context: Context,
+        toggle_name: String,
+        external_results: Option<HashMap<String, bool>>,
+    ) -> Self {
         EnrichedContext {
             user_id: context.user_id.clone(),
             session_id: context.session_id.clone(),
@@ -25,6 +30,7 @@ impl EnrichedContext {
                 .or_else(|| Some(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string())),
             remote_address: context.remote_address.clone(),
             properties: context.properties,
+            external_results,
             toggle_name,
         }
     }
@@ -46,7 +52,7 @@ mod test {
     #[test]
     fn converting_a_context_to_enriched_context_assumes_now_for_time_if_not_set() {
         let context = Context::default();
-        let enriched_context = EnrichedContext::from(context, "test".into());
+        let enriched_context = EnrichedContext::from(context, "test".into(), None);
         chrono::DateTime::parse_from_rfc3339(
             &enriched_context
                 .current_time
@@ -62,7 +68,7 @@ mod test {
             current_time: Some("2020-01-01T00:00:00Z".into()),
             ..Context::default()
         };
-        let enriched_context = EnrichedContext::from(context, "test".into());
+        let enriched_context = EnrichedContext::from(context, "test".into(), None);
         assert_eq!(
             enriched_context
                 .current_time
@@ -76,7 +82,7 @@ mod test {
         let rule_text = "current_time > 2023-10-13T10:19:22Z";
         let rule = compile_rule(rule_text).unwrap();
         let context = Context::default();
-        let enriched_context = EnrichedContext::from(context, "test".into());
+        let enriched_context = EnrichedContext::from(context, "test".into(), None);
 
         assert!(rule(&enriched_context));
     }

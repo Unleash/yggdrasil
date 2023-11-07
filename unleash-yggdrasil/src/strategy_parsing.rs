@@ -372,6 +372,19 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     }
 }
 
+fn external_value(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
+    let strategy_index = string(node.next().unwrap());
+    Box::new(move |context| {
+        context
+            .external_results
+            .as_ref()
+            .and_then(|strategy_results| strategy_results.get(&strategy_index))
+            .copied()
+            .map(|result| result.invert(inverted))
+            .unwrap_or(false)
+    })
+}
+
 fn harvest_set(node: Pairs<Rule>) -> HashSet<String> {
     node.into_iter().map(string).collect::<HashSet<String>>()
 }
@@ -442,6 +455,7 @@ fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
             string_fragment_constraint(inverted, child.into_inner())
         }
         Rule::list_constraint => list_constraint(inverted, child.into_inner()),
+        Rule::external_value => external_value(inverted, child.into_inner()),
         _ => unreachable!(),
     }
 }
@@ -485,6 +499,7 @@ mod tests {
             app_name: None,
             remote_address: None,
             toggle_name: "".into(),
+            external_results: None,
         }
     }
 
@@ -503,6 +518,7 @@ mod tests {
                 remote_address: Default::default(),
                 properties: Default::default(),
                 toggle_name: Default::default(),
+                external_results: None,
             }
         }
     }
@@ -641,6 +657,7 @@ mod tests {
             app_name: None,
             remote_address: None,
             toggle_name: "".into(),
+            external_results: None,
         };
 
         let rule = compile_rule(rule).expect("");
@@ -826,5 +843,70 @@ mod tests {
     fn escaping_strings_works() {
         let rule = "user_id in [\"Nobody likes \\\"scare quotes\\\"\"]";
         compile_rule(rule).unwrap();
+    }
+
+    #[test]
+    fn missing_external_value_produces_false_without_error() {
+        let rule = "external_value[\"i_do_not_exist\"]";
+        let rule = compile_rule(rule).unwrap();
+
+        let context = Context::default();
+        let result = rule(&context);
+
+        assert!(!result);
+    }
+
+    #[test]
+    fn missing_external_value_produces_false_without_error_even_when_inverted() {
+        let rule = "!external_value[\"i_do_not_exist\"]";
+        let rule = compile_rule(rule).unwrap();
+
+        let context = Context::default();
+        let result = rule(&context);
+
+        assert!(!result);
+    }
+
+    #[test]
+    fn inversion_works_on_external_values() {
+        let rule = "!external_value[\"test_value\"]";
+        let rule = compile_rule(rule).unwrap();
+
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert("test_value".to_string(), true);
+
+        let context = Context {
+            external_results: Some(custom_strategy_results),
+            ..Default::default()
+        };
+
+        assert!(!rule(&context));
+    }
+
+    #[test]
+    fn external_value_is_respected() {
+        let rule = "external_value[\"test_value\"]";
+        let rule = compile_rule(rule).unwrap();
+
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert("test_value".to_string(), true);
+
+        let mut context = Context {
+            external_results: Some(custom_strategy_results),
+            ..Default::default()
+        };
+
+        let true_result = rule(&context);
+
+        context
+            .external_results
+            .as_mut()
+            .unwrap()
+            .insert("test_value".to_string(), false);
+
+        let false_result = rule(&context);
+
+        assert!(true_result);
+        assert!(!false_result);
     }
 }
