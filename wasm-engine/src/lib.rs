@@ -43,6 +43,7 @@ impl Context {
         EnrichedContext::from(
             yggdrasil_context,
             self.group_id.clone().unwrap_or("".into()),
+            None,
         )
     }
 }
