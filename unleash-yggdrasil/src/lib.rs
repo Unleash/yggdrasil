@@ -367,7 +367,7 @@ impl EngineState {
             state
                 .iter()
                 .map(|(name, toggle)| {
-                    let enabled = self.enabled(toggle, context, &external_values);
+                    let enabled = self.enabled(toggle, context, external_values);
                     (
                         name.clone(),
                         ResolvedToggle {
@@ -390,7 +390,7 @@ impl EngineState {
     ) -> Option<ResolvedToggle> {
         self.compiled_state.as_ref().and_then(|state| {
             state.get(name).map(|compiled_toggle| ResolvedToggle {
-                enabled: self.enabled(compiled_toggle, context, &external_values),
+                enabled: self.enabled(compiled_toggle, context, external_values),
                 impression_data: compiled_toggle.impression_data,
                 variant: self.get_variant(name, context, external_values),
                 project: compiled_toggle.project.clone(),
@@ -444,7 +444,7 @@ impl EngineState {
 
         let target = get_seed(stickiness, context)
             .map(|seed| {
-                normalized_hash(&group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
+                normalized_hash(group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
             })
             .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight));
 
