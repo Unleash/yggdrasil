@@ -3,9 +3,9 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 
 
-namespace Unleash;
+namespace Yggdrasil;
 
-public class UnleashEngine
+public class YggdrasilEngine
 {
     private JsonSerializerOptions options = new JsonSerializerOptions
     {
@@ -28,7 +28,7 @@ public class UnleashEngine
 
     private IntPtr state;
 
-    public UnleashEngine()
+    public YggdrasilEngine()
     {
         platformEngine = GetPlatformEngine();
         state = platformEngine.NewEngine();
@@ -58,7 +58,7 @@ public class UnleashEngine
             null;
 
         if (takeStateResult?.StatusCode == "Error") {
-            throw new UnleashException($"Error: {takeStateResult?.ErrorMessage}");
+            throw new YggdrasilEngineException($"Error: {takeStateResult?.ErrorMessage}");
         }
     }
 
@@ -83,7 +83,7 @@ public class UnleashEngine
 
 
         if (isEnabledResult?.StatusCode == "Error") {
-            throw new UnleashException($"Error: {isEnabledResult?.ErrorMessage}");
+            throw new YggdrasilEngineException($"Error: {isEnabledResult?.ErrorMessage}");
         }
 
         return isEnabledResult?.Value;
@@ -108,7 +108,7 @@ public class UnleashEngine
             null;
 
         if (variantResult?.StatusCode == "Error") {
-            throw new UnleashException($"Error: {variantResult?.ErrorMessage}");
+            throw new YggdrasilEngineException($"Error: {variantResult?.ErrorMessage}");
         }
 
         return variantResult?.Value;
@@ -131,7 +131,7 @@ public class UnleashEngine
             null;
 
         if (metricsResult?.StatusCode == "Error") {
-            throw new UnleashException($"Error: {metricsResult?.ErrorMessage}");
+            throw new YggdrasilEngineException($"Error: {metricsResult?.ErrorMessage}");
         }
 
         return metricsResult?.Value;
