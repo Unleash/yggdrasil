@@ -2,10 +2,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using NUnit.Framework;
-using Unleash;
 using System;
 using Newtonsoft.Json.Linq;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+using Yggdrasil;
 
 
 public class Tests
@@ -22,8 +22,7 @@ public class Tests
         var suitePath = Path.Combine(basePath, "01-simple-examples.json");
         var suiteData = JObject.Parse(File.ReadAllText(suitePath));
 
-        var unleashEngine = new UnleashEngine();
-        //unleashEngine.TakeState(suiteData["state"].ToString());
+        var yggdrasilEngine = new YggdrasilEngine();
 
         var runTestFor = (Action lambda, string process) => {
 
@@ -48,16 +47,16 @@ public class Tests
             Assert.LessOrEqual(diff, 200000, process + " has a potential memory leak. Diff: " + diff + " bytes");
         };
 
-        runTestFor(() => unleashEngine.IsEnabled("Feature.A", new Context()), "IsEnabled");
-        runTestFor(() => unleashEngine.GetVariant("Feature.A", new Context()), "GetVariant");
-        runTestFor(() => unleashEngine.TakeState(suiteData["state"].ToString()), "TakeState");
-        runTestFor(() => unleashEngine.GetMetrics(), "GetMetrics");
+        runTestFor(() => yggdrasilEngine.IsEnabled("Feature.A", new Context()), "IsEnabled");
+        runTestFor(() => yggdrasilEngine.GetVariant("Feature.A", new Context()), "GetVariant");
+        runTestFor(() => yggdrasilEngine.TakeState(suiteData["state"].ToString()), "TakeState");
+        runTestFor(() => yggdrasilEngine.GetMetrics(), "GetMetrics");
     }
 
     [Test]
     public void TestClientSpec()
     {
-        var unleashEngine = new UnleashEngine();
+        var yggdrasilEngine = new YggdrasilEngine();
         var basePath = Path.Combine("..", "..", "..", "..", "..", "..", "client-specification", "specifications");
         var indexFilePath = Path.Combine(basePath, "index.json");
         var testSuites = JArray.Parse(File.ReadAllText(indexFilePath));
@@ -67,7 +66,7 @@ public class Tests
             var suitePath = Path.Combine(basePath, suite.ToString());
             var suiteData = JObject.Parse(File.ReadAllText(suitePath));
 
-            unleashEngine.TakeState(suiteData["state"].ToString());
+            yggdrasilEngine.TakeState(suiteData["state"].ToString());
 
             var tests = suiteData["tests"] ?? new JArray();
             foreach (var test in tests)
@@ -78,7 +77,7 @@ public class Tests
                 var toggleName = (string)test["toggleName"];
                 var expectedResult = (bool)test["expectedResult"];
 
-                var result = unleashEngine.IsEnabled(toggleName, context) ?? false;
+                var result = yggdrasilEngine.IsEnabled(toggleName, context) ?? false;
 
                 Assert.AreEqual(expectedResult, result, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");
             }
@@ -92,7 +91,7 @@ public class Tests
                 // Silly hack to apply formatting to the string from the spec
                 var expectedResult = JsonSerializer.Serialize(JsonSerializer.Deserialize<Variant>(test["expectedResult"].ToString(), options), options);
 
-                var result = unleashEngine.GetVariant(toggleName, context) ?? new Variant { Name = "disabled", Payload = null, Enabled = false };
+                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant { Name = "disabled", Payload = null, Enabled = false };
                 var jsonResult = JsonSerializer.Serialize(result, options);
 
                 Assert.AreEqual(expectedResult, jsonResult, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");

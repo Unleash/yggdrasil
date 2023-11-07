@@ -20,6 +20,12 @@ interface UnleashFFI extends Library {
 
     Pointer check_variant(Pointer ptr, String name, String context);
 
+    void count_toggle(Pointer ptr, String name, boolean enabled);
+
+    void count_variant(Pointer ptr, String name, String variantName);
+
+    Pointer get_metrics(Pointer ptr);
+
     void free_response(Pointer pointer);
 }
 
@@ -81,6 +87,18 @@ class YggdrasilFFI  {
 
     Pointer checkVariant(String name, String context){
         return this.ffi.check_variant(this.enginePtr, name, context);
+    }
+
+    void countToggle(String flagName, boolean enabled) {
+        this.ffi.count_toggle(this.enginePtr, flagName, enabled);
+    }
+
+    void countVariant(String flagName, String variantName) {
+        this.ffi.count_variant(this.enginePtr, flagName, variantName);
+    }
+
+    Pointer getMetrics() {
+        return this.ffi.get_metrics(this.enginePtr);
     }
 
     private static final class YggdrasilNativeLibraryResourceCleaner implements Runnable {

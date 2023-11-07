@@ -451,7 +451,7 @@ impl EngineState {
         let mut total_weight = 0;
         for variant in variants {
             total_weight += variant.weight as u32;
-            if total_weight > target {
+            if total_weight >= target {
                 return Some(variant);
             }
         }

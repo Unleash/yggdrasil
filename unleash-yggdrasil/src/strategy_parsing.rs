@@ -37,7 +37,7 @@ pub fn normalized_hash(
     seed: u32,
 ) -> std::io::Result<u32> {
     let mut reader = Cursor::new(format!("{}:{}", &group, &identifier));
-    murmur3_32(&mut reader, seed).map(|hash_result| hash_result % modulus)
+    murmur3_32(&mut reader, seed).map(|hash_result| hash_result % modulus + 1)
 }
 
 pub type RuleFragment = Box<dyn SendableFragment + Send + Sync + 'static>;

@@ -8,7 +8,7 @@ class YggResponse<T> {
     final T value;
     final String errorMessage;
 
-    @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
+    @JsonCreator
     YggResponse(@JsonProperty("status_code") StatusCode statusCode, @JsonProperty("value") T value, @JsonProperty("error_message") String errorMessage) {
         this.statusCode = statusCode;
         this.value = value;
@@ -17,6 +17,17 @@ class YggResponse<T> {
 
     boolean isValid() {
         return StatusCode.Ok.equals(this.statusCode);
+    }
+
+    public T getValue() throws YggdrasilError {
+        if (isValid()) {
+            return this.value;
+        } else {
+            if (this.statusCode == null || this.statusCode.equals(StatusCode.Error)) {
+                throw new IllegalStateException("statusCode is null");
+            }
+            return null;
+        }
     }
 
     @Override

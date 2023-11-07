@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 
 
-namespace Unleash;
+namespace Yggdrasil;
 
 internal class FFIMacOS : IFFIAccess {
     private const string DLL_PATH = "libyggdrasilffi.dylib";
