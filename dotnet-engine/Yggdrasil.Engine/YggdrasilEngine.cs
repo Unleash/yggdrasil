@@ -1,7 +1,5 @@
-﻿
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text.Json;
-
 
 namespace Yggdrasil;
 
@@ -12,37 +10,22 @@ public class YggdrasilEngine
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private IFFIAccess platformEngine;
-
-    private static IFFIAccess GetPlatformEngine() {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
-            return new FFILinux();
-        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
-            return new FFIMacOS();
-        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-            return new FFIWin();
-        } else {
-            throw new PlatformNotSupportedException();
-        }
-    }
-
     private IntPtr state;
 
     public YggdrasilEngine()
     {
-        platformEngine = GetPlatformEngine();
-        state = platformEngine.NewEngine();
+        state = FFI.NewEngine();
     }
 
     public void Dispose()
     {
-        platformEngine.FreeEngine(this.state);
+        FFI.FreeEngine(this.state);
         GC.SuppressFinalize(this);
     }
 
     public void TakeState(string json)
     {
-        var takeStatePtr = platformEngine.TakeState(state, json);
+        var takeStatePtr = FFI.TakeState(state, json);
 
         if (takeStatePtr == IntPtr.Zero)
         {
@@ -51,13 +34,15 @@ public class YggdrasilEngine
 
         var takeStateJson = Marshal.PtrToStringUTF8(takeStatePtr);
 
-        platformEngine.FreeResponse(takeStatePtr);
+        FFI.FreeResponse(takeStatePtr);
 
-        var takeStateResult = takeStateJson != null ?
-            JsonSerializer.Deserialize<EngineResponse>(takeStateJson, options) :
-            null;
+        var takeStateResult =
+            takeStateJson != null
+                ? JsonSerializer.Deserialize<EngineResponse>(takeStateJson, options)
+                : null;
 
-        if (takeStateResult?.StatusCode == "Error") {
+        if (takeStateResult?.StatusCode == "Error")
+        {
             throw new YggdrasilEngineException($"Error: {takeStateResult?.ErrorMessage}");
         }
     }
@@ -66,7 +51,7 @@ public class YggdrasilEngine
     {
         string contextJson = JsonSerializer.Serialize(context, options);
 
-        var isEnabledPtr = platformEngine.CheckEnabled(state, toggleName, contextJson, "{}");
+        var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, "{}");
 
         if (isEnabledPtr == IntPtr.Zero)
         {
@@ -75,14 +60,15 @@ public class YggdrasilEngine
 
         var isEnabledJson = Marshal.PtrToStringUTF8(isEnabledPtr);
 
-        platformEngine.FreeResponse(isEnabledPtr);
+        FFI.FreeResponse(isEnabledPtr);
 
-        var isEnabledResult = isEnabledJson != null ?
-            JsonSerializer.Deserialize<EngineResponse<bool?>>(isEnabledJson, options) :
-            null;
+        var isEnabledResult =
+            isEnabledJson != null
+                ? JsonSerializer.Deserialize<EngineResponse<bool?>>(isEnabledJson, options)
+                : null;
 
-
-        if (isEnabledResult?.StatusCode == "Error") {
+        if (isEnabledResult?.StatusCode == "Error")
+        {
             throw new YggdrasilEngineException($"Error: {isEnabledResult?.ErrorMessage}");
         }
 
@@ -92,7 +78,7 @@ public class YggdrasilEngine
     public Variant? GetVariant(string toggleName, Context context)
     {
         var contextJson = JsonSerializer.Serialize(context, options);
-        var variantPtr = platformEngine.CheckVariant(state, toggleName, contextJson, "{}");
+        var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, "{}");
 
         if (variantPtr == IntPtr.Zero)
         {
@@ -101,21 +87,24 @@ public class YggdrasilEngine
 
         var variantJson = Marshal.PtrToStringUTF8(variantPtr);
 
-        platformEngine.FreeResponse(variantPtr);
+        FFI.FreeResponse(variantPtr);
 
-        var variantResult = variantJson != null ?
-            JsonSerializer.Deserialize<EngineResponse<Variant>>(variantJson, options) :
-            null;
+        var variantResult =
+            variantJson != null
+                ? JsonSerializer.Deserialize<EngineResponse<Variant>>(variantJson, options)
+                : null;
 
-        if (variantResult?.StatusCode == "Error") {
+        if (variantResult?.StatusCode == "Error")
+        {
             throw new YggdrasilEngineException($"Error: {variantResult?.ErrorMessage}");
         }
 
         return variantResult?.Value;
     }
 
-    public MetricsBucket? GetMetrics() {
-        var metricsPtr = platformEngine.GetMetrics(state);
+    public MetricsBucket? GetMetrics()
+    {
+        var metricsPtr = FFI.GetMetrics(state);
 
         if (metricsPtr == IntPtr.Zero)
         {
@@ -124,13 +113,15 @@ public class YggdrasilEngine
 
         var metricsJson = Marshal.PtrToStringUTF8(metricsPtr);
 
-        platformEngine.FreeResponse(metricsPtr);
+        FFI.FreeResponse(metricsPtr);
 
-        var metricsResult = metricsJson != null ?
-            JsonSerializer.Deserialize<EngineResponse<MetricsBucket>>(metricsJson, options) :
-            null;
+        var metricsResult =
+            metricsJson != null
+                ? JsonSerializer.Deserialize<EngineResponse<MetricsBucket>>(metricsJson, options)
+                : null;
 
-        if (metricsResult?.StatusCode == "Error") {
+        if (metricsResult?.StatusCode == "Error")
+        {
             throw new YggdrasilEngineException($"Error: {metricsResult?.ErrorMessage}");
         }
 
@@ -139,11 +130,11 @@ public class YggdrasilEngine
 
     public void CountFeature(string featureName, bool enabled)
     {
-        this.platformEngine.CountToggle(state, featureName, enabled);
+        FFI.CountToggle(state, featureName, enabled);
     }
 
     public void CountVariant(string featureName, string variantName)
     {
-        this.platformEngine.CountVariant(state, featureName, variantName);
+        FFI.CountVariant(state, featureName, variantName);
     }
 }
