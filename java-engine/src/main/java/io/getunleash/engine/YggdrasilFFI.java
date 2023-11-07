@@ -16,9 +16,9 @@ interface UnleashFFI extends Library {
 
     Pointer take_state(Pointer ptr, String toggles);
 
-    Pointer check_enabled(Pointer ptr, String name, String context);
+    Pointer check_enabled(Pointer ptr, String name, String context, String customStrategyResults);
 
-    Pointer check_variant(Pointer ptr, String name, String context);
+    Pointer check_variant(Pointer ptr, String name, String context, String customStrategyResults);
 
     void count_toggle(Pointer ptr, String name, boolean enabled);
 
@@ -29,7 +29,7 @@ interface UnleashFFI extends Library {
     void free_response(Pointer pointer);
 }
 
-class YggdrasilFFI  {
+class YggdrasilFFI {
     private static final Cleaner CLEANER = Cleaner.create();
     @SuppressWarnings("unused")
     private final Cleaner.Cleanable cleanable;
@@ -47,7 +47,7 @@ class YggdrasilFFI  {
         if (libraryPath == null) {
             libraryPath = "."; // assume it's accessible in current path
         }
-        System.out.println("Loading library from "+Paths.get(libraryPath).toAbsolutePath());
+        System.out.println("Loading library from " + Paths.get(libraryPath).toAbsolutePath());
         String libImpl = "libyggdrasilffi.so";
         if (Platform.isMac()) {
             libImpl = "libyggdrasilffi.dylib";
@@ -68,8 +68,10 @@ class YggdrasilFFI  {
         this.enginePtr = this.ffi.new_engine();
 
         // Note that the cleaning action must not refer to the object being registered.
-        // If so, the object will not become phantom reachable and the cleaning action will not be invoked automatically.
-        // this.cleanable uses a PhantomReference to this object, so from a GC perspective it doesn't count.
+        // If so, the object will not become phantom reachable and the cleaning action
+        // will not be invoked automatically.
+        // this.cleanable uses a PhantomReference to this object, so from a GC
+        // perspective it doesn't count.
         this.cleanable = CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
     }
 
@@ -81,12 +83,12 @@ class YggdrasilFFI  {
         this.ffi.free_response(response);
     }
 
-    Pointer checkEnabled(String name, String context){
-        return this.ffi.check_enabled(this.enginePtr, name, context);
+    Pointer checkEnabled(String name, String context, String customStrategyResults) {
+        return this.ffi.check_enabled(this.enginePtr, name, context, customStrategyResults);
     }
 
-    Pointer checkVariant(String name, String context){
-        return this.ffi.check_variant(this.enginePtr, name, context);
+    Pointer checkVariant(String name, String context, String customStrategyResults) {
+        return this.ffi.check_variant(this.enginePtr, name, context, customStrategyResults);
     }
 
     void countToggle(String flagName, boolean enabled) {

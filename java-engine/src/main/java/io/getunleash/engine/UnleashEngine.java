@@ -40,7 +40,7 @@ public class UnleashEngine {
     public Boolean isEnabled(String name, Context context) throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = writer.writeValueAsString(context);
-            YggResponse<Boolean> isEnabled = read(yggdrasil.checkEnabled(name, jsonContext), new TypeReference<>() {});
+            YggResponse<Boolean> isEnabled = read(yggdrasil.checkEnabled(name, jsonContext, "{}"), new TypeReference<>() {});
             return isEnabled.getValue();
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
@@ -50,7 +50,7 @@ public class UnleashEngine {
     public VariantDef getVariant(String name, Context context) throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = writer.writeValueAsString(context);
-            YggResponse<VariantDef> response = read(yggdrasil.checkVariant(name, jsonContext), new TypeReference<>() {});
+            YggResponse<VariantDef> response = read(yggdrasil.checkVariant(name, jsonContext, "{}"), new TypeReference<>() {});
             return response.getValue();
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
