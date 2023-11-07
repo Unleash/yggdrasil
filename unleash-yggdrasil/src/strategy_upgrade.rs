@@ -51,7 +51,7 @@ pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) 
 pub fn build_variant_rules(
     strategies: &[Strategy],
     segment_map: &HashMap<i32, Segment>,
-    toggle_name: &String,
+    toggle_name: &str,
 ) -> Vec<(String, Vec<StrategyVariant>, String, String)> {
     let mut custom_strat_count = 0;
     strategies
@@ -75,7 +75,7 @@ pub fn build_variant_rules(
                     .as_ref()
                     .and_then(|params| params.get("groupId"))
                     .cloned()
-                    .unwrap_or_else(|| toggle_name.clone()),
+                    .unwrap_or_else(|| toggle_name.to_owned()),
             )
         })
         .collect::<Vec<(String, Vec<StrategyVariant>, String, String)>>()
