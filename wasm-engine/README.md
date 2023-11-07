@@ -22,7 +22,7 @@ Then, you can use it in your code:
   const yggdrasil = require("../pkg/wasm_engine.js");
 
   const context = {
-    user_id: "7",
+    userId: "7",
   };
 
   const ruleEnabled = yggdrasil.evaluate("user_id > 6", context); //returns true

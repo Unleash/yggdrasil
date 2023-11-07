@@ -2,7 +2,7 @@ const yggdrasil = require("../pkg/wasm_engine.js");
 
 test("Rule evaluates correctly", () => {
   const context = {
-    user_id: "7",
+    userId: "7",
   };
 
   const result = yggdrasil.evaluate("user_id > 6", context);

@@ -10,13 +10,21 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Deserialize, Serialize)]
 pub struct Context {
+    #[serde(rename = "userId")]
     pub user_id: Option<String>,
+    #[serde(rename = "sessionId")]
     pub session_id: Option<String>,
+    #[serde(rename = "environment")]
     pub environment: Option<String>,
+    #[serde(rename = "appName")]
     pub app_name: Option<String>,
+    #[serde(rename = "currentTime")]
     pub current_time: Option<String>,
+    #[serde(rename = "remoteAddress")]
     pub remote_address: Option<String>,
+    #[serde(rename = "groupId")]
     pub group_id: Option<String>,
+    #[serde(rename = "properties")]
     pub properties: Option<HashMap<String, String>>,
 }
 
