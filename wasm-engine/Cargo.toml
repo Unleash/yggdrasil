@@ -1,8 +1,8 @@
 [package]
+name = "wasm-engine"
+version = "0.1.0"
 authors = ["sighphyre <liquidwicked64@gmail.com>"]
 edition = "2018"
-name = "unleash-node-core"
-version = "0.2.0"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -11,25 +11,21 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-getrandom = { version = "0.2", features = ["js"] }
-unleash-types = "0.10.5"
+wasm-bindgen = "0.2"
 unleash-yggdrasil = {path = "../unleash-yggdrasil"}
-serde-wasm-bindgen = "0.4.5"
-wasm-bindgen = "0.2.83"
+getrandom = { version = "0.2", features = ["js"] }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
-console_error_panic_hook = {version = "0.1.6", optional = true}
+console_error_panic_hook = { version = "0.1.6", optional = true }
 
-# `wee_alloc` is a tiny allocator for wasm that is only ~1K in code size
-# compared to the default allocator's ~10K. It is slower than the default
-# allocator, however.
-wee_alloc = {version = "0.4.5", optional = true}
+serde = { version = "1.0.190", features = ["derive"] }
+serde-wasm-bindgen = "0.6.1"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.13"
+wasm-bindgen-test = "0.3"
 
 [profile.release]
 # Tell `rustc` to optimize for small code size.
