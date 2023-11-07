@@ -173,7 +173,7 @@ pub unsafe extern "C" fn check_enabled(
         let custom_strategy_results =
             get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
 
-        Ok(engine.check_enabled(toggle_name, &context, Some(custom_strategy_results)))
+        Ok(engine.check_enabled(toggle_name, &context, &Some(custom_strategy_results)))
     })();
 
     result_to_json_ptr(result)
@@ -204,7 +204,7 @@ pub unsafe extern "C" fn check_variant(
         let custom_strategy_results =
             get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
 
-        Ok(engine.check_variant(toggle_name, &context, Some(custom_strategy_results)))
+        Ok(engine.check_variant(toggle_name, &context, &Some(custom_strategy_results)))
     })();
 
     result_to_json_ptr(result)
