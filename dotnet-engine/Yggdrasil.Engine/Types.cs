@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Unleash;
+namespace Yggdrasil;
 
 public class Context
 {
@@ -9,7 +9,7 @@ public class Context
     public string? RemoteAddress { get; set; }
     public string? Environment { get; set; }
     public string? AppName { get; set; }
-    public string? CurrentTime { get; set; }
+    public DateTimeOffset? CurrentTime { get; set; }
     public Dictionary<string, string>? Properties { get; set; }
 }
 
@@ -36,11 +36,20 @@ public class Payload
 {
     public string? PayloadType { get; set; }
     public string? Value { get; set; }
+
+    public override bool Equals(object? obj)
+    {
+        if (obj == null)
+            return false;
+
+        var payload = (Payload)obj;
+        return Value == payload.Value && PayloadType == payload.PayloadType;
+    }
 }
 
-public class UnleashException : Exception
+public class YggdrasilEngineException : Exception
 {
-    public UnleashException(string message) : base(message) { }
+    public YggdrasilEngineException(string message) : base(message) { }
 }
 
 public class FeatureCount
