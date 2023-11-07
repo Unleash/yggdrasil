@@ -2,6 +2,6 @@
 
 members = [
   "unleash-yggdrasil",
-  "node-sdk",
+  "wasm-engine",
   "yggdrasilffi",
 ]
