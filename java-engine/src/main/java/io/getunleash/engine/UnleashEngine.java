@@ -77,7 +77,6 @@ public class UnleashEngine {
         String str = pointer.getString(0, UTF_8);
         yggdrasil.freeResponse(pointer);
         try {
-            System.out.println(str); // TODO use a logging library. SLF4J?
             return reader.forType(typeReference).readValue(str);
         } catch (IOException e) {
             throw new YggdrasilParseException(str, typeReference.getClass(), e);
