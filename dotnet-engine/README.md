@@ -19,3 +19,11 @@ dotnet build
 ```bash
 dotnet test
 ```
+
+## Running the benchmarks
+
+```bash
+dotnet run --project Yggdrasil.Benchmarks -c Release
+```
+
+Output can be read in Yggdrasil.Benchmarks/BenchmarkDotNet.Artifacts/results

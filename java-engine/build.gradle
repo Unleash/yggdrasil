@@ -1,6 +1,7 @@
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
+    id "me.champeau.jmh" version "0.7.2"
 }
 
 repositories {
@@ -22,6 +23,10 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.1'
 
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.2'
+
+    jmh 'org.openjdk.jmh:jmh-core:1.33'
+
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.33'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -34,4 +39,15 @@ java {
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+}
+
+jmh {
+    version = '1.33'
+    fork = 2
+    includeTests = false
+    iterations = 5
+    timeOnIteration = '5s'
+    warmup = '5s'
+    warmupForks = 1
+    warmupIterations = 3
 }

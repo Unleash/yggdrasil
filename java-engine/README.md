@@ -21,3 +21,14 @@ Then tests can be run with:
 ```bash
 gradle test
 ```
+
+You can run the benchmarks with:
+
+```bash
+gradle jmh
+```
+
+Or if gradle has a cached run:
+```bash
+gradle jmh --rerun-tasks
+```
