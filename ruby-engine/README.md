@@ -15,10 +15,18 @@ Then you can run the tests with:
 rspec
 ```
 
+Benchmarks can be run with:
+
+```bash
+rspec scripts/benchmark.rb
+```
+And should produce human readable output.
+
+
 There's also a `mem_check.rb` in the scripts folder. This is not a bullet proof test, but it can be helpful for detecting large leaks. This requires human interaction - you need to read the output and understand what it's telling you, so it's not run as part of the test suite.
 
 ```bash
-ruby scripts/mem_check.rb
+rspec scripts/mem_check.rb
 ```
 
 ## Build

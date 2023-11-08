@@ -8,4 +8,5 @@ gem "ffi"
 gem "fiddle"
 group :development do
   gem "get_process_mem", "~> 0.2.7"
+  gem "benchmark-ips", "~> 2.12.0"
 end

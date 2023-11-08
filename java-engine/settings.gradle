@@ -6,6 +6,12 @@
  * Detailed information about configuring a multi-project build in Gradle can be found
  * in the user manual at https://docs.gradle.org/8.1/userguide/multi_project_builds.html
  */
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
 
 plugins {
     // Apply the foojay-resolver plugin to allow automatic download of JDKs
