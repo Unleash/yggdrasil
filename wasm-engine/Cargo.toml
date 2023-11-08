@@ -1,8 +1,11 @@
 [package]
-name = "wasm-engine"
-version = "0.1.0"
-authors = ["sighphyre <liquidwicked64@gmail.com>"]
+name = "yggdrasil-engine"
+version = "0.1.0-beta"
+authors = ["sighphyre <simon@getunleash.io>"]
+repository = "https://github.com/unleash/yggdrasil"
+description = "Direct bindings to the Yggdrasil grammar for NodeJS"
 edition = "2018"
+license = "MIT"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
