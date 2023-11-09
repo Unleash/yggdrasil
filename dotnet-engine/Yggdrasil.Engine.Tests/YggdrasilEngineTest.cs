@@ -6,6 +6,7 @@ using System;
 using Newtonsoft.Json.Linq;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Yggdrasil;
+using Yggdrasil.Test;
 
 
 public class Tests
@@ -101,4 +102,33 @@ public class Tests
         }
     }
 
+    [Test]
+    public void Custom_Strategies_Required_But_Not_Configured_Fails() {
+        var yggdrasilEngine = new YggdrasilEngine();
+        var fileFolder = TestContext.CurrentContext.TestDirectory;
+        var filePath = Path.Combine(fileFolder, "custom-strategies.json");
+        var json = File.ReadAllText(filePath);
+        yggdrasilEngine.TakeState(json);
+        var context = new Context();
+        var result = yggdrasilEngine.IsEnabled("Feature.Custom.Strategies", context);
+        Assert.AreEqual(false, result);
+    }
+
+    [Test]
+    public void Custom_Strategies_Required_And_Configured_Succeeds() {
+        var yggdrasilEngine = new YggdrasilEngine();
+        yggdrasilEngine.RegisterCustomStrategies(new List<IStrategy>
+        {
+            new CustomStrategyReturningTrue("custom"),
+            new CustomStrategyReturningTrue("cus-tom")
+        });
+
+        var fileFolder = TestContext.CurrentContext.TestDirectory;
+        var filePath = Path.Combine(fileFolder, "custom-strategies.json");
+        var json = File.ReadAllText(filePath);
+        yggdrasilEngine.TakeState(json);
+        var context = new Context();
+        var result = yggdrasilEngine.IsEnabled("Feature.Custom.Strategies", context);
+        Assert.AreEqual(true, result);
+    }
 }
