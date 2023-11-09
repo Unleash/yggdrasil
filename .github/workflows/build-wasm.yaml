@@ -6,14 +6,9 @@ on:
     branches:
       - main
     paths:
-      - 'wasm-engine/**'
+      - "wasm-engine/**"
     tags:
-      - '*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version (for manual trigger)'
-        required: true
+      - "*"
 
 jobs:
   build-and-publish-wasm:
@@ -39,9 +34,9 @@ jobs:
       - name: Build WASM
         run: wasm-pack build --target nodejs --out-name yggdrasil-engine --scope unleash
 
-      - name: Publish to npm
-        run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-          npm publish pkg --access public
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - name: Publish to npm
+      #   run: |
+      #     echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+      #     npm publish pkg --access public
+      #   env:
+      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
