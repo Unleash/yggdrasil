@@ -37,12 +37,9 @@ jobs:
           working-directory: wasm-engine
 
       - name: Build WASM
-        run: wasm-pack build --target nodejs
+        run: wasm-pack build --target nodejs --out-name yggdrasil-engine --scope unleash
 
       - name: Publish to npm
-        run: |
-          cd pkg
-          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
-          npm publish --access public
+        run: wasm-pack publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
