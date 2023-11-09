@@ -38,3 +38,10 @@ jobs:
 
       - name: Build WASM
         run: wasm-pack build --target nodejs
+
+      - name: Publish to npm
+        run: |
+          cd pkg
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
