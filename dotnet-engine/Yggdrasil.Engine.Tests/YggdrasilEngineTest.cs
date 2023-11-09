@@ -4,7 +4,6 @@ using System.Text.Json;
 using NUnit.Framework;
 using System;
 using Newtonsoft.Json.Linq;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Yggdrasil;
 
 
@@ -101,4 +100,67 @@ public class Tests
         }
     }
 
+    [Test]
+    public void Impression_Data_Test_Enabled() {
+        var testDataObject = new {
+            Version = 2,
+            Features = new [] {
+                new {
+                    Name = "with.impression.data",
+                    Type = "release",
+                    Enabled = true,
+                    ImpressionData = true,
+                    Strategies = new [] {
+                        new {
+                            Name = "default",
+                            Parameters = new Dictionary<string, string>()
+                        }
+                    }
+                }
+            }
+        };
+
+        var testData = JsonSerializer.Serialize(testDataObject, options);
+        var engine = new YggdrasilEngine();
+        engine.TakeState(testData);
+        var featureName = "with.impression.data";
+        var result = engine.IsEnabled(featureName, new Context());
+        var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
+        Assert.NotNull(result);
+        Assert.IsTrue(result);
+        Assert.NotNull(shouldEmit);
+        Assert.IsTrue(shouldEmit);
+    }
+
+    [Test]
+    public void Impression_Data_Test_Disabled() {
+        var testDataObject = new {
+            Version = 2,
+            Features = new [] {
+                new {
+                    Name = "with.impression.data.false",
+                    Type = "release",
+                    Enabled = true,
+                    ImpressionData = false,
+                    Strategies = new [] {
+                        new {
+                            Name = "default",
+                            Parameters = new Dictionary<string, string>()
+                        }
+                    }
+                }
+            }
+        };
+
+        var testData = JsonSerializer.Serialize(testDataObject, options);
+        var engine = new YggdrasilEngine();
+        engine.TakeState(testData);
+        var featureName = "with.impression.data.false";
+        var result = engine.IsEnabled(featureName, new Context());
+        var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
+        Assert.NotNull(result);
+        Assert.IsTrue(result);
+        Assert.NotNull(shouldEmit);
+        Assert.IsFalse(shouldEmit);
+    }
 }
