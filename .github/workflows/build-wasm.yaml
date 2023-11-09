@@ -17,6 +17,9 @@ on:
 jobs:
   build-and-publish-wasm:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wasm-engine
     steps:
       - uses: actions/checkout@v2
 
@@ -29,6 +32,8 @@ jobs:
 
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.3.0
+        with:
+          working-directory: wasm-engine
 
       - name: Build WASM
         run: wasm-pack build --target nodejs
