@@ -18,4 +18,9 @@
     <ProjectReference Include="..\Yggdrasil.Engine\Yggdrasil.Engine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="custom-strategies.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>  
+  </ItemGroup>
 </Project>
