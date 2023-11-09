@@ -1,6 +1,7 @@
 name: Build and Publish WASM
 
 on:
+  pull_request:
   push:
     branches:
       - main
