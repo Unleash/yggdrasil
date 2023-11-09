@@ -398,6 +398,15 @@ impl EngineState {
         })
     }
 
+    pub fn should_emit_impression_event(
+        &self,
+        name: &str,
+    ) -> bool {
+        self.compiled_state.as_ref().and_then(|state| {
+            state.get(name).map(|compiled_toggle| compiled_toggle.impression_data)
+        }).unwrap_or_default()
+    }
+
     pub fn check_enabled(
         &self,
         name: &str,

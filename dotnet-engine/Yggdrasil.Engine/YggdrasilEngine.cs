@@ -24,6 +24,11 @@ public class YggdrasilEngine
         customStrategies.RegisterCustomStrategies(strategies);
     }
 
+    public bool ShouldEmitImpressionEvent(string featureName)
+    {
+        return FFI.ShouldEmitImpressionEvent(state, featureName);
+    }
+
     public void Dispose()
     {
         FFI.FreeEngine(this.state);
