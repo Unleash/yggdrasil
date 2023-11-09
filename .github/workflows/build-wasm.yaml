@@ -1,0 +1,34 @@
+name: Build and Publish WASM
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'wasm-engine/**'
+    tags:
+      - '*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (for manual trigger)'
+        required: true
+
+jobs:
+  build-and-publish-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.3.0
+
+      - name: Build WASM
+        run: wasm-pack build --target nodejs
