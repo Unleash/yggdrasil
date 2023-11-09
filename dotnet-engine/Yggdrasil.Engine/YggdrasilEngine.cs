@@ -5,6 +5,8 @@ namespace Yggdrasil;
 
 public class YggdrasilEngine
 {
+    private CustomStrategies customStrategies = new CustomStrategies();
+
     private JsonSerializerOptions options = new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -17,6 +19,11 @@ public class YggdrasilEngine
         state = FFI.NewEngine();
     }
 
+    public void RegisterCustomStrategies(List<IStrategy> strategies)
+    {
+        customStrategies.RegisterCustomStrategies(strategies);
+    }
+
     public void Dispose()
     {
         FFI.FreeEngine(this.state);
@@ -25,6 +32,8 @@ public class YggdrasilEngine
 
     public void TakeState(string json)
     {
+        customStrategies.MapFeatures(json);
+
         var takeStatePtr = FFI.TakeState(state, json);
 
         if (takeStatePtr == IntPtr.Zero)
@@ -49,9 +58,9 @@ public class YggdrasilEngine
 
     public bool? IsEnabled(string toggleName, Context context)
     {
+        var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
         string contextJson = JsonSerializer.Serialize(context, options);
-
-        var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, "{}");
+        var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, customStrategyPayload);
 
         if (isEnabledPtr == IntPtr.Zero)
         {
@@ -77,8 +86,9 @@ public class YggdrasilEngine
 
     public Variant? GetVariant(string toggleName, Context context)
     {
+        var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
         var contextJson = JsonSerializer.Serialize(context, options);
-        var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, "{}");
+        var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, customStrategyPayload);
 
         if (variantPtr == IntPtr.Zero)
         {

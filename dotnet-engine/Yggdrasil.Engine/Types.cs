@@ -67,3 +67,76 @@ public class MetricsBucket
     public DateTimeOffset Start { get; set; }
     public DateTimeOffset Stop { get; set; }
 }
+
+/// <summary>
+/// Defines a strategy for enabling a feature.
+/// </summary>
+public interface IStrategy
+{
+    /// <summary>
+    /// Gets the stragegy name 
+    /// </summary>
+    string Name { get; }
+
+    /// <summary>
+    /// Calculates if the strategy is enabled for a given context
+    /// </summary>
+    bool IsEnabled(Dictionary<string, string> parameters, Context context);
+}
+
+class StrategyDefinition
+{
+    public string Name { get; set; } = "";
+
+    public Dictionary<string, string>? Parameters { get; set; }
+}
+
+class Feature
+{
+    public string Name { get; set; } = "";
+    public List<StrategyDefinition>? Strategies { get; set; }
+}
+
+class FeatureCollection
+{
+    public List<Feature>? Features { get; set; }
+}
+
+class MappedFeature
+{
+    public MappedFeature(Feature feature, List<MappedStrategy> strategies)
+    {
+        Name = feature.Name;
+        Strategies = strategies;
+    }
+
+    public string Name { get; }
+    public List<MappedStrategy> Strategies { get; }
+}
+
+class MappedStrategy
+{
+    public string ResultName { get; set; }
+
+    public string StrategyName { get; set; }
+
+    public IStrategy? Strategy { get; set; }
+
+    public Dictionary<string, string> Parameters { get; set; }
+
+    public bool IsEnabled(Context context)
+    {
+        return Strategy?.IsEnabled(Parameters , context) ?? true;
+    }
+
+    public static MappedStrategy ToMappedStrategy(int index, string strategyName, Dictionary<string, string> parameters, IStrategy? strategy = null)
+    {
+        return new MappedStrategy
+        {
+            ResultName = $"customStrategy{index + 1}",
+            StrategyName = strategyName,
+            Strategy = strategy,
+            Parameters = parameters
+        };
+    }
+}
