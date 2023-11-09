@@ -1,22 +1,21 @@
 name: Build and Publish WASM
 
 on:
+  pull_request:
   push:
     branches:
       - main
     paths:
-      - 'wasm-engine/**'
+      - "wasm-engine/**"
     tags:
-      - '*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version (for manual trigger)'
-        required: true
+      - "*"
 
 jobs:
   build-and-publish-wasm:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wasm-engine
     steps:
       - uses: actions/checkout@v2
 
@@ -29,6 +28,15 @@ jobs:
 
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.3.0
+        with:
+          working-directory: wasm-engine
 
       - name: Build WASM
-        run: wasm-pack build --target nodejs
+        run: wasm-pack build --target nodejs --out-name yggdrasil-engine --scope unleash
+
+      # - name: Publish to npm
+      #   run: |
+      #     echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+      #     npm publish pkg --access public
+      #   env:
+      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
