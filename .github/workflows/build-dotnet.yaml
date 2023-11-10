@@ -57,10 +57,12 @@ jobs:
           dotnet restore dotnet-engine.sln
       
       - name: Build
-        run: dotnet build dotnet-engine.sln --configuration Release --no-restore
+        run: |
+          cd dotnet-engine
+          dotnet build dotnet-engine.sln --configuration Release --no-restore
         
       - name: Test
         run: |
-          cd Yggdrasil.Engine.Tests
+          cd dotnet-engine/Yggdrasil.Engine.Tests
           dotnet test --no-restore
           
