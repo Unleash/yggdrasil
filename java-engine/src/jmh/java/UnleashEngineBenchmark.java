@@ -1,17 +1,14 @@
 package io.getunleash.engine;
 
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Scope;
-import com.fasterxml.jackson.core.type.TypeReference;
+import org.openjdk.jmh.annotations.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.nio.file.Paths;
 import java.io.IOException;
 
 
-@State(Scope.Thread)
+@State(Scope.Benchmark)
 public class UnleashEngineBenchmark {
 
     private UnleashEngine engine;
@@ -28,7 +25,10 @@ public class UnleashEngineBenchmark {
     public void setUp() {
         engine = new UnleashEngine(new YggdrasilFFI("../target/release"));
         try {
-            engine.takeState(loadFeaturesFromFile(featureFilePath));
+            System.out.println("Loading features from " + featureFilePath);
+            String toggles = loadFeaturesFromFile(featureFilePath);
+            System.out.println("Taking state "+toggles);
+            engine.takeState(toggles);
         } catch (Exception e) {
             System.out.println("Failed to setup benchmarks");
             e.printStackTrace();
@@ -37,6 +37,11 @@ public class UnleashEngineBenchmark {
     }
 
     @Benchmark
+    @Fork(jvmArgsAppend =
+{
+  //"-XX:StartFlightRecording:settings=/home/gaston/.sdkman/candidates/java/20.0.2-oracle/lib/jfr/profile.jfc"
+  "-XX:StartFlightRecording:filename=myrecording.jfr,settings=profile"
+})
     public void benchmarkFeatureToggle() {
         Context context = new Context();
         try {
@@ -46,5 +51,11 @@ public class UnleashEngineBenchmark {
             e.printStackTrace();
             System.exit(1);
         }
+    }
+
+    @TearDown
+    public void tearDown() {
+        System.out.println("Renaming recording");
+       // new File("myrecording.jfr").renameTo(new File("myrecording"+ Instant.now() + ".jfr"));
     }
 }

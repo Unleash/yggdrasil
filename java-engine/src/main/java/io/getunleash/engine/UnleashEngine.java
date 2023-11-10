@@ -14,7 +14,6 @@ import java.io.IOException;
 public class UnleashEngine {
     private static final String UTF_8 = "UTF-8";
     private final YggdrasilFFI yggdrasil;
-    private final ObjectReader reader;
     private final ObjectWriter writer;
 
     public UnleashEngine() {
@@ -25,13 +24,18 @@ public class UnleashEngine {
         this.yggdrasil = yggdrasil;
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        reader = mapper.reader();
         writer = mapper.writer();
     }
 
+    private ObjectReader getReader() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        return mapper.reader();
+    }
+
     public void takeState(String toggles) throws YggdrasilInvalidInputException {
-        YggResponse<Void> response = read(yggdrasil.takeState(toggles), new TypeReference<>() {});
+        YggResponse<Void> response = read(yggdrasil.takeState(toggles), getReader().forType(new TypeReference<YggResponse<Void>>() {}));
         if (!response.isValid()) {
             throw new YggdrasilInvalidInputException(toggles);
         }
@@ -40,7 +44,7 @@ public class UnleashEngine {
     public Boolean isEnabled(String name, Context context) throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = writer.writeValueAsString(context);
-            YggResponse<Boolean> isEnabled = read(yggdrasil.checkEnabled(name, jsonContext, "{}"), new TypeReference<>() {});
+            YggResponse<Boolean> isEnabled = read(yggdrasil.checkEnabled(name, jsonContext, "{}"), getReader().forType(new TypeReference<YggResponse<Boolean>>() {}));
             return isEnabled.getValue();
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
@@ -50,7 +54,7 @@ public class UnleashEngine {
     public VariantDef getVariant(String name, Context context) throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = writer.writeValueAsString(context);
-            YggResponse<VariantDef> response = read(yggdrasil.checkVariant(name, jsonContext, "{}"), new TypeReference<>() {});
+            YggResponse<VariantDef> response = read(yggdrasil.checkVariant(name, jsonContext, "{}"), getReader().forType(new TypeReference<YggResponse<VariantDef>>() {}));
             return response.getValue();
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
@@ -66,20 +70,24 @@ public class UnleashEngine {
     }
 
     public MetricsBucket getMetrics() throws YggdrasilError {
-        YggResponse<MetricsBucket> response = read(yggdrasil.getMetrics(), new TypeReference<>() {});
+        YggResponse<MetricsBucket> response = read(yggdrasil.getMetrics(), getReader().forType(new TypeReference<YggResponse<MetricsBucket>>() {}));
         return response.getValue();
     }
 
     /**
      * Handle reading from a pointer into a String and mapping it to an object
      */
-    private <T> T read(Pointer pointer, TypeReference<T> typeReference) {
-        String str = pointer.getString(0, UTF_8);
-        yggdrasil.freeResponse(pointer);
+    private <T> T read(Pointer pointer, ObjectReader reader) {
         try {
-            return reader.forType(typeReference).readValue(str);
-        } catch (IOException e) {
-            throw new YggdrasilParseException(str, typeReference.getClass(), e);
+            String str = pointer.getString(0, UTF_8);
+            try {
+                return reader.readValue(str);
+            } catch (IOException e) {
+                System.out.println("Failed to parse response from Yggdrasil: " + str);
+                throw new YggdrasilParseException(str, reader.getClass(), e);
+            }
+        } finally {
+            yggdrasil.freeResponse(pointer);
         }
     }
 }
