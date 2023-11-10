@@ -1,0 +1,66 @@
+---
+name: .NET Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dotnet-engine/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'dotnet-engine/**'
+  
+jobs:
+  build-java:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      ## snatched from build-java.yml
+      ## begin build yggdrasil (maybe this can be a separate job)
+      - name: Install rust
+        run: |
+          rustup set auto-self-update disable
+          rustup toolchain install stable --profile default
+          rustup show
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Build yggdrasil
+        run: cargo build --release
+      ## end build yggdrasil
+
+      ## snatched from build-java.yml
+      ## Test requirements
+      - name: Get client spec
+        uses: actions/checkout@v3
+        with:
+          repository: Unleash/client-specification
+          ref: v5.0.2
+          path: client-specification
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore dependencies
+        run: |
+          cd dotnet-engine
+          dotnet restore dotnet-engine.sln
+      
+      - name: Build
+        run: dotnet build dotnet-engine.sln --configuration Release --no-restore
+        
+      - name: Test
+        run: |
+          cd Yggdrasil.Engine.Tests
+          dotnet test --no-restore
+          
