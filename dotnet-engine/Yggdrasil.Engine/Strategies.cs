@@ -21,7 +21,7 @@ internal class CustomStrategies
         "flexibleRollout",
     };
 
-    private Dictionary<string, IStrategy>? strategies = null;
+    private Dictionary<string, IStrategy> strategies = new Dictionary<string, IStrategy>();
     private Dictionary<string, MappedFeature>? mappedFeatures = null;
 
 
@@ -41,11 +41,11 @@ internal class CustomStrategies
             .Where(IsCustomStrategy)
             .Where(definition => this.strategies?.ContainsKey(definition.Name) ?? false)
             .Select((definition, index) => 
-                MappedStrategy.ToMappedStrategy(
+                new MappedStrategy(
                     index,
                     definition.Name,
                     definition.Parameters ?? new Dictionary<string, string>(),
-                    this.strategies?[definition.Name]))
+                    this.strategies[definition.Name]))
             .ToList();
     }
     

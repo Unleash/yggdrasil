@@ -27,7 +27,7 @@ public class EngineResponse<TValue> : EngineResponse {
 
 public class Variant
 {
-    public string Name { get; set; }
+    public string? Name { get; set; }
     public Payload? Payload { get; set; }
     public bool Enabled { get; set; }
 }
@@ -45,6 +45,11 @@ public class Payload
         var payload = (Payload)obj;
         return Value == payload.Value && PayloadType == payload.PayloadType;
     }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Value, PayloadType);
+    }
 }
 
 public class YggdrasilEngineException : Exception
@@ -56,13 +61,13 @@ public class FeatureCount
 {
     public long Yes { get; set; }
     public long No { get; set; }
-    public Dictionary<string, long> Variants { get; set; }
+    public Dictionary<string, long>? Variants { get; set; }
 }
 
 
 public class MetricsBucket
 {
-    public Dictionary<string, FeatureCount> Toggles { get; set; }
+    public Dictionary<string, FeatureCount>? Toggles { get; set; }
 
     public DateTimeOffset Start { get; set; }
     public DateTimeOffset Stop { get; set; }
@@ -116,27 +121,24 @@ class MappedFeature
 
 class MappedStrategy
 {
-    public string ResultName { get; set; }
+    public MappedStrategy(int index, string strategyName, Dictionary<string, string> parameters, IStrategy strategy)
+    {
+            ResultName = $"customStrategy{index + 1}";
+            StrategyName = strategyName;
+            Strategy = strategy;
+            Parameters = parameters;
+    }
 
-    public string StrategyName { get; set; }
+    public string ResultName { get; private set; }
 
-    public IStrategy? Strategy { get; set; }
+    public string StrategyName { get; private set; }
 
-    public Dictionary<string, string> Parameters { get; set; }
+    public IStrategy Strategy { get; private set; }
+
+    public Dictionary<string, string> Parameters { get; private set; }
 
     public bool IsEnabled(Context context)
     {
-        return Strategy?.IsEnabled(Parameters , context) ?? true;
-    }
-
-    public static MappedStrategy ToMappedStrategy(int index, string strategyName, Dictionary<string, string> parameters, IStrategy? strategy = null)
-    {
-        return new MappedStrategy
-        {
-            ResultName = $"customStrategy{index + 1}",
-            StrategyName = strategyName,
-            Strategy = strategy,
-            Parameters = parameters
-        };
+        return Strategy.IsEnabled(Parameters , context);
     }
 }

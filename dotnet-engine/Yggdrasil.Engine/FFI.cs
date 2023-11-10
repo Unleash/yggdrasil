@@ -95,8 +95,13 @@ internal static class FFI
         else
             throw new PlatformNotSupportedException("Unsupported platform");
 
-        string assemblyLocation = Assembly.GetExecutingAssembly().Location;
-        string assemblyDirectory = Path.GetDirectoryName(assemblyLocation);
+        var assemblyLocation = Assembly.GetExecutingAssembly().Location;
+        if (assemblyLocation == null)
+            throw new PlatformNotSupportedException("Unsupported platform");
+            
+        var assemblyDirectory = Path.GetDirectoryName(assemblyLocation);
+        if (assemblyDirectory == null)
+            throw new PlatformNotSupportedException("Unsupported platform");
 
         return Path.Combine(assemblyDirectory, libraryName);
     }
