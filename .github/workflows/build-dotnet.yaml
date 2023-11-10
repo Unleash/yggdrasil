@@ -44,7 +44,7 @@ jobs:
         with:
           repository: Unleash/client-specification
           ref: v5.0.2
-          path: client-specification
+          path: ../client-specification
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v3
