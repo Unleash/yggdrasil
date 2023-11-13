@@ -116,6 +116,10 @@ class UnleashEngineTest {
                         result = false; // Default should be provided by SDK
                     }
 
+                    System.out.printf("[%s] Test '%s': expected %b, got %b%n",
+                            suiteData.name,
+                            test.get("description"), expectedResult,
+                            result);
                     assertEquals(expectedResult, result,
                             String.format("[%s] Failed test '%s': expected %b, got %b",
                                     suiteData.name,
@@ -141,6 +145,10 @@ class UnleashEngineTest {
                     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
                     String resultJson = objectMapper.writeValueAsString(result);
 
+                    System.out.printf("[%s] Test '%s': expected %b, got %b%n",
+                            suiteData.name,
+                            test.get("description"), expectedResultJson,
+                            resultJson);
                     assertEquals(expectedResultJson, resultJson,
                             String.format("[%s] Failed test '%s': expected %b, got %b",
                                     suiteData.name,

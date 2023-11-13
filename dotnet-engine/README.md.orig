@@ -20,6 +20,15 @@ dotnet build
 dotnet test
 ```
 
+<<<<<<< HEAD
+## Running the benchmarks
+
+```bash
+dotnet run --project Yggdrasil.Benchmarks -c Release
+```
+
+Output can be read in Yggdrasil.Benchmarks/BenchmarkDotNet.Artifacts/results
+=======
 ## Development
 
 You can publish local packages to test with your SDK like this:
@@ -38,11 +47,4 @@ dotnet nuget add source ~/path/to/local/feed
 ```
 
 Now you can switch package source in package manager and import your locally published package to work with.
-
-## Running the benchmarks
-
-```bash
-dotnet run --project Yggdrasil.Benchmarks -c Release
-```
-
-Output can be read in Yggdrasil.Benchmarks/BenchmarkDotNet.Artifacts/results
+>>>>>>> origin/main

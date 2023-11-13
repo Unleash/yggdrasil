@@ -24,6 +24,7 @@ internal static class FFI
     private delegate void FreeResponseDelegate(IntPtr ptr);
     private delegate void CountToggleDelegate(IntPtr ptr, string toggle_name, bool enabled);
     private delegate void CountVariantDelegate(IntPtr ptr, string toggle_name, string variant_name);
+    private delegate bool ShouldEmitImpressionEventDelegate(IntPtr ptr, string toggle_name);
 
     private static readonly NewEngineDelegate _newEngine;
     private static readonly FreeEngineDelegate _freeEngine;
@@ -34,6 +35,7 @@ internal static class FFI
     private static readonly FreeResponseDelegate _free_response;
     private static readonly CountToggleDelegate _count_toggle;
     private static readonly CountVariantDelegate _count_variant;
+    private static readonly ShouldEmitImpressionEventDelegate _should_emit_impression_event;
 
     static FFI()
     {
@@ -74,6 +76,10 @@ internal static class FFI
 
         _count_variant = Marshal.GetDelegateForFunctionPointer<CountVariantDelegate>(
             NativeLibrary.GetExport(libHandle, "count_variant")
+        );
+
+        _should_emit_impression_event = Marshal.GetDelegateForFunctionPointer<ShouldEmitImpressionEventDelegate>(
+            NativeLibrary.GetExport(libHandle, "should_emit_impression_event")
         );
     }
 
@@ -148,5 +154,10 @@ internal static class FFI
     public static void CountVariant(IntPtr ptr, string toggle_name, string variant_name)
     {
         _count_variant(ptr, toggle_name, variant_name);
+    }
+
+    public static bool ShouldEmitImpressionEvent(IntPtr ptr, string toggle_name)
+    {
+        return _should_emit_impression_event(ptr, toggle_name);
     }
 }
