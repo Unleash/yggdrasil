@@ -5,15 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.7.0 (2023-11-13)
-
-### Other
-
- - <csr-id-adb57f62ea8fd3db99107fdb22c562371c7032b0/> fix normalized hash result to start from 1 instead of 0
-
-### Bug Fixes
-
- - <csr-id-6919241817638a7005974b0b85753e2464faa0fe/> make free floating quotes in string operators work correctly
+## v0.8.0 (2023-11-13)
 
 ### Chore
 
@@ -21,18 +13,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New Features
 
- - <csr-id-df0d85445a91d987219fc60d26f2c6c097c0d878/> new hashing implemented for variants
  - <csr-id-8c5330b1b6935ecd695058b9c7aa79d3f7766122/> add shouldemitimpressionevents to yggdrasil and .NET wrapper
    * feat: add shouldemitimpressionevents to yggdrasil and .NET wrapper
    
    * feat: added some impression events tests in dotnet engine
  - <csr-id-77537e0b45f197fa8ed43e061e1107dabb5c2a57/> custom strategies in ruby and support in the core engine
 
+### Bug Fixes
+
+ - <csr-id-6919241817638a7005974b0b85753e2464faa0fe/> make free floating quotes in string operators work correctly
+
+### Other
+
+ - <csr-id-adb57f62ea8fd3db99107fdb22c562371c7032b0/> fix normalized hash result to start from 1 instead of 0
+
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release over the course of 12 calendar days.
+ - 6 commits contributed to the release over the course of 12 calendar days.
  - 13 days passed between releases.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 5 unique issues were worked on: [#56](https://github.com/sighphyre/yggdrasil/issues/56), [#63](https://github.com/sighphyre/yggdrasil/issues/63), [#65](https://github.com/sighphyre/yggdrasil/issues/65), [#75](https://github.com/sighphyre/yggdrasil/issues/75), [#80](https://github.com/sighphyre/yggdrasil/issues/80)
@@ -53,7 +52,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add shouldemitimpressionevents to yggdrasil and .NET wrapper ([`8c5330b`](https://github.com/sighphyre/yggdrasil/commit/8c5330b1b6935ecd695058b9c7aa79d3f7766122))
  * **[#80](https://github.com/sighphyre/yggdrasil/issues/80)**
     - Make free floating quotes in string operators work correctly ([`6919241`](https://github.com/sighphyre/yggdrasil/commit/6919241817638a7005974b0b85753e2464faa0fe))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.7.0 ([`d9204d6`](https://github.com/sighphyre/yggdrasil/commit/d9204d6e4301f64a038f2bed447bf3db08c0f8a8))
 </details>
+
+## v0.7.0 (2023-10-30)
+
+<csr-id-adb57f62ea8fd3db99107fdb22c562371c7032b0/>
+<csr-id-fbfbe329dfbf435e4a010769bd118e6a9e347325/>
+
+### Other
+
+ - <csr-id-adb57f62ea8fd3db99107fdb22c562371c7032b0/> fix normalized hash result to start from 1 instead of 0
+
+### Bug Fixes
+
+ - <csr-id-6919241817638a7005974b0b85753e2464faa0fe/> make free floating quotes in string operators work correctly
+
+### Chore
+
+ - <csr-id-fbfbe329dfbf435e4a010769bd118e6a9e347325/> apply cargo fmt
+
+### New Features
+
+<csr-id-77537e0b45f197fa8ed43e061e1107dabb5c2a57/>
+
+ - <csr-id-df0d85445a91d987219fc60d26f2c6c097c0d878/> new hashing implemented for variants
+ - <csr-id-8c5330b1b6935ecd695058b9c7aa79d3f7766122/> add shouldemitimpressionevents to yggdrasil and .NET wrapper
+   * feat: add shouldemitimpressionevents to yggdrasil and .NET wrapper
+* feat: added some impression events tests in dotnet engine
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 3 commits contributed to the release.
+ - 17 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#61](https://github.com/sighphyre/yggdrasil/issues/61)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#61](https://github.com/sighphyre/yggdrasil/issues/61)**
+    - New hashing implemented for variants ([`df0d854`](https://github.com/sighphyre/yggdrasil/commit/df0d85445a91d987219fc60d26f2c6c097c0d878))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.7.0 ([`b57e44c`](https://github.com/sighphyre/yggdrasil/commit/b57e44cbcd79973896c6facd50f91866c1641a4a))
+    - Release unleash-yggdrasil v0.7.0 ([`38b87b5`](https://github.com/sighphyre/yggdrasil/commit/38b87b52d980fe623d683d4d9bd792bbf34eeff2))
+</details>
+
+<csr-unknown>
+ custom strategies in ruby and support in the core engine<csr-unknown/>
 
 ## v0.6.1 (2023-10-13)
 
