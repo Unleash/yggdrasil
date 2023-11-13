@@ -1,11 +1,10 @@
 package io.getunleash.engine;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -13,8 +12,8 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class TestSuite {
     public String name;
@@ -26,9 +25,13 @@ class TestSuite {
 class UnleashEngineTest {
 
     private static final VariantDef DEFAULT_VARIANT = new VariantDef("disabled", null, false);
-    private final String simpleFeatures = loadFeaturesFromFile(
-            "../client-specification/specifications/01-simple-examples.json"); // Assume this is set up to be your
-                                                                                     // feature JSON
+    private final String simpleFeatures =
+            loadFeaturesFromFile(
+                    "../client-specification/specifications/01-simple-examples.json"); // Assume
+    // this is
+    // set up to
+    // be your
+    // feature JSON
     public static String loadFeaturesFromFile(String filePath) {
         ObjectMapper mapper = new ObjectMapper();
         try {
@@ -90,15 +93,13 @@ class UnleashEngineTest {
     @Test
     public void testClientSpec() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
-        File basePath = Paths.get(  "../client-specification/specifications").toFile();
+        File basePath = Paths.get("../client-specification/specifications").toFile();
         File indexFile = new File(basePath, "index.json");
-        List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<>() {
-        });
+        List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<>() {});
 
         for (String suite : testSuites) {
             File suiteFile = new File(basePath, suite);
-            TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<>() {
-            });
+            TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<>() {});
 
             engine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
@@ -116,10 +117,14 @@ class UnleashEngineTest {
                         result = false; // Default should be provided by SDK
                     }
 
-                    assertEquals(expectedResult, result,
-                            String.format("[%s] Failed test '%s': expected %b, got %b",
+                    assertEquals(
+                            expectedResult,
+                            result,
+                            String.format(
+                                    "[%s] Failed test '%s': expected %b, got %b",
                                     suiteData.name,
-                                    test.get("description"), expectedResult,
+                                    test.get("description"),
+                                    expectedResult,
                                     result));
                 }
             }
@@ -131,7 +136,8 @@ class UnleashEngineTest {
                     Context context = objectMapper.readValue(contextJson, Context.class);
                     String toggleName = (String) test.get("toggleName");
 
-                    VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
+                    VariantDef expectedResult =
+                            objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
                     VariantDef result = engine.getVariant(toggleName, context);
                     if (result == null) {
                         // this behavior should be implemented in the SDK
@@ -141,10 +147,14 @@ class UnleashEngineTest {
                     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
                     String resultJson = objectMapper.writeValueAsString(result);
 
-                    assertEquals(expectedResultJson, resultJson,
-                            String.format("[%s] Failed test '%s': expected %b, got %b",
+                    assertEquals(
+                            expectedResultJson,
+                            resultJson,
+                            String.format(
+                                    "[%s] Failed test '%s': expected %b, got %b",
                                     suiteData.name,
-                                    test.get("description"), expectedResultJson,
+                                    test.get("description"),
+                                    expectedResultJson,
                                     resultJson));
                 }
             }
@@ -168,12 +178,15 @@ class UnleashEngineTest {
         assertNotNull(start);
         assertNotNull(stop);
         assertTrue(stop.isAfter(start)); // unlikely to be equal but could happen
-        assertTrue(start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10 seconds of now
+        assertTrue(
+                start.until(Instant.now(), ChronoUnit.SECONDS)
+                        < 10); // should be within 10 seconds of now
 
         assertEquals(3, bucket.getToggles().size());
 
         assertEquals(1, bucket.getToggles().get("Feature.A").getVariants().get("A"));
-        // Validate: counting on enabled is up to the SDK or should we also count enabled when getting a variant?
+        // Validate: counting on enabled is up to the SDK or should we also count enabled when
+        // getting a variant?
         assertEquals(0, bucket.getToggles().get("Feature.A").getYes());
         assertEquals(0, bucket.getToggles().get("Feature.A").getNo());
 

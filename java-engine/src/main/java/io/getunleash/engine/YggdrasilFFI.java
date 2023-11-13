@@ -1,10 +1,10 @@
 package io.getunleash.engine;
 
+
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
-
 import java.lang.ref.Cleaner;
 import java.nio.file.Paths;
 
@@ -31,14 +31,14 @@ interface UnleashFFI extends Library {
 
 class YggdrasilFFI {
     private static final Cleaner CLEANER = Cleaner.create();
+
     @SuppressWarnings("unused")
     private final Cleaner.Cleanable cleanable;
+
     private final UnleashFFI ffi;
     private final Pointer enginePtr;
 
-    /**
-     * If we want singleton we just make the constructors private
-     */
+    /** If we want singleton we just make the constructors private */
     YggdrasilFFI() {
         this(System.getenv("YGGDRASIL_LIB_PATH"));
     }
@@ -72,7 +72,9 @@ class YggdrasilFFI {
         // will not be invoked automatically.
         // this.cleanable uses a PhantomReference to this object, so from a GC
         // perspective it doesn't count.
-        this.cleanable = CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
+        this.cleanable =
+                CLEANER.register(
+                        this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
     }
 
     Pointer takeState(String toggles) {
