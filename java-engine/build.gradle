@@ -24,9 +24,9 @@ dependencies {
 
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.2'
 
-    jmh 'org.openjdk.jmh:jmh-core:1.33'
+    jmh 'org.openjdk.jmh:jmh-core:1.35'
 
-    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.33'
+    jmh 'org.openjdk.jmh:jmh-generator-annprocess:1.35'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
@@ -42,7 +42,7 @@ tasks.named('test') {
 }
 
 jmh {
-    version = '1.33'
+    version = '1.35'
     fork = 2
     includeTests = false
     iterations = 5

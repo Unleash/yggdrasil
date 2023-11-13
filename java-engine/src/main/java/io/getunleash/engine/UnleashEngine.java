@@ -46,7 +46,7 @@ public class UnleashEngine {
 
     public VariantDef getVariant(String name, Context context) throws YggdrasilInvalidInputException, YggdrasilError {
         try {
-            String jsonContext = mapper.writer().writeValueAsString(context);
+            String jsonContext = mapper.writeValueAsString(context);
             YggResponse<VariantDef> response = read(yggdrasil.checkVariant(name, jsonContext, CUSTOM_STRATEGY_RESULTS), new TypeReference<>() {});
             return response.getValue();
         } catch (JsonProcessingException e) {
