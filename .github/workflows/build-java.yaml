@@ -8,8 +8,6 @@ on:
     paths:
       - 'java-engine/**.java'
   pull_request:
-    branches:
-      - main
     paths:
       - 'java-engine/**.java'
 
