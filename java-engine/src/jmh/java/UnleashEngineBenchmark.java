@@ -8,7 +8,7 @@ import java.nio.file.Paths;
 import java.io.IOException;
 
 
-@State(Scope.Benchmark)
+@State(Scope.Thread)
 public class UnleashEngineBenchmark {
 
     private UnleashEngine engine;
