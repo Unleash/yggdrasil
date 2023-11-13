@@ -1,6 +1,5 @@
 package io.getunleash.engine;
 
-
 import java.util.Map;
 
 public class Context {
