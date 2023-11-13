@@ -15,14 +15,10 @@ public class Tests
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private static readonly string baseDirectory = 
-          Environment.GetEnvironmentVariable("GITHUB_WORKSPACE") ??
-          Path.Combine("..", "..", "..", "..", "..", "..");
-
     //[Test]
     public void MassTestMemoryUsage() {
         // Arrange
-        var basePath = Path.Combine(baseDirectory, "client-specification", "specifications");
+        var basePath = Path.Combine("..", "..", "..", "..", "..", "client-specification", "specifications");
         var suitePath = Path.Combine(basePath, "01-simple-examples.json");
         var suiteData = JObject.Parse(File.ReadAllText(suitePath));
 
@@ -61,7 +57,7 @@ public class Tests
     public void TestClientSpec()
     {
         var yggdrasilEngine = new YggdrasilEngine();
-        var basePath = Path.Combine(baseDirectory, "client-specification", "specifications");
+        var basePath = Path.Combine("..", "..", "..", "..", "..", "client-specification", "specifications");
         var indexFilePath = Path.Combine(basePath, "index.json");
         var testSuites = JArray.Parse(File.ReadAllText(indexFilePath));
 
