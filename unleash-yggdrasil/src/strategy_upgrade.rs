@@ -264,7 +264,7 @@ fn is_stringy(op: &Operator) -> bool {
 }
 
 fn escape_quotes(stringy_operator: &str) -> String {
-    stringy_operator.replace("\"", "\\\"")
+    stringy_operator.replace('\"', "\\\"")
 }
 
 fn upgrade_constraint(constraint: &Constraint) -> String {
