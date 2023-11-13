@@ -63,7 +63,8 @@ internal class CustomStrategies
 
     internal string GetCustomStrategyPayload(string toggleName, Context context)
     {
-        var feature = mappedFeatures?[toggleName];
+        MappedFeature? feature = null;
+        mappedFeatures?.TryGetValue(toggleName, out feature);
         if (feature == null)
         {
             return "{}";
