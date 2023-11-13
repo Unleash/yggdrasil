@@ -6,8 +6,14 @@ on:
       - main
     paths:
       - 'wasm-engine/**'
+      # Build in main if anything changes in yggdrasil or the ffi layer
+      - 'unleash-yggdrasil/src/**.rs'
+      - 'yggdrasilffi/src/**.rs'
     tags:
       - '*'
+  pull_request:
+    paths:
+      - 'wasm-engine/**'
   workflow_dispatch:
     inputs:
       version:
