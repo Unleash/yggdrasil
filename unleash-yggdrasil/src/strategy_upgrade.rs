@@ -263,6 +263,10 @@ fn is_stringy(op: &Operator) -> bool {
     )
 }
 
+fn escape_quotes(stringy_operator: &str) -> String {
+    stringy_operator.replace("\"", "\\\"")
+}
+
 fn upgrade_constraint(constraint: &Constraint) -> String {
     let context_name = upgrade_context_name(&constraint.context_name);
     let op = upgrade_operator(&constraint.operator, constraint.case_insensitive);
@@ -279,7 +283,7 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
             .map(|values| {
                 values
                     .iter()
-                    .map(|x| format!("\"{x}\""))
+                    .map(|x| format!("\"{}\"", escape_quotes(x)))
                     .collect::<Vec<String>>()
                     .join(", ")
             })
@@ -802,5 +806,19 @@ mod tests {
             output.as_str(),
             "true or true or external_value[\"customStrategy1\"] or external_value[\"customStrategy2\"] or true or external_value[\"customStrategy3\"]"
         )
+    }
+
+    #[test]
+    fn correctly_escapes_free_quotes_in_string_operators() {
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: Operator::StrContains,
+            case_insensitive: false,
+            inverted: false,
+            values: Some(vec!["some\"thing".into()]),
+            value: None,
+        };
+        let rule = upgrade_constraint(&constraint);
+        assert_eq!(rule.as_str(), "user_id contains_any [\"some\\\"thing\"]");
     }
 }

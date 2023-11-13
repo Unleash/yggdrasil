@@ -206,7 +206,8 @@ fn string(node: Pair<Rule>) -> String {
     let mut chars = node.as_str().chars();
     chars.next();
     chars.next_back();
-    chars.as_str().into()
+    let string: String = chars.as_str().into();
+    string.replace("\\\"", "\"")
 }
 
 //Constraints
@@ -908,5 +909,14 @@ mod tests {
 
         assert!(true_result);
         assert!(!false_result);
+    }
+
+    #[test]
+    fn evaluates_quotes_in_stringy_rules_correctly() {
+        let rule = compile_rule("user_id contains_any [\"some\\\"thing\"]").unwrap();
+
+        let context = context_from_user_id("some\"thing");
+
+        assert!(rule(&context));
     }
 }
