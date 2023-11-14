@@ -25,6 +25,8 @@ interface UnleashFFI extends Library {
 
     Pointer get_metrics(Pointer ptr);
 
+    Pointer should_emit_impression_event(Pointer ptr, String name);
+
     void free_response(Pointer pointer);
 }
 
@@ -102,6 +104,10 @@ class YggdrasilFFI {
 
     Pointer getMetrics() {
         return this.ffi.get_metrics(this.enginePtr);
+    }
+
+    Pointer shouldEmitImpressionEvent(String name) {
+        return this.ffi.should_emit_impression_event(this.enginePtr, name);
     }
 
     private static final class YggdrasilNativeLibraryResourceCleaner implements Runnable {

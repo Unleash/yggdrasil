@@ -7,11 +7,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,13 +29,11 @@ class TestSuite {
 class UnleashEngineTest {
 
     private static final VariantDef DEFAULT_VARIANT = new VariantDef("disabled", null, false);
+
+    // Assume this is set up to be your feature JSON
     private final String simpleFeatures =
-            loadFeaturesFromFile(
-                    "../client-specification/specifications/01-simple-examples.json"); // Assume
-    // this is
-    // set up to
-    // be your
-    // feature JSON
+            loadFeaturesFromFile("../client-specification/specifications/01-simple-examples.json");
+
     public static String loadFeaturesFromFile(String filePath) {
         ObjectMapper mapper = new ObjectMapper();
         try {
@@ -195,5 +197,33 @@ class UnleashEngineTest {
 
         assertEquals(0, bucket.getToggles().get("Feature.C").getYes());
         assertEquals(2, bucket.getToggles().get("Feature.C").getNo());
+    }
+
+    @Test
+    void testImpressionData() throws Exception {
+        String features = Files.readString(Paths.get(Objects.requireNonNull(getClass().getClassLoader().getResource("impression-data-tests.json")).toURI()));
+        String featureName = "with.impression.data";
+
+        assertFalse(engine.shouldEmitImpressionEvent(featureName));
+
+        engine.takeState(features);
+        Boolean result = engine.isEnabled(featureName, new Context());
+        assertNotNull(result);
+        assertTrue(result);
+        assertTrue(engine.shouldEmitImpressionEvent(featureName));
+    }
+
+    @Test
+    void testImpressionDataFalse() throws Exception {
+        String features = Files.readString(Paths.get(Objects.requireNonNull(getClass().getClassLoader().getResource("impression-data-tests.json")).toURI()));
+        String featureName = "with.impression.data.false";
+
+        assertFalse(engine.shouldEmitImpressionEvent(featureName));
+
+        engine.takeState(features);
+        Boolean result = engine.isEnabled(featureName, new Context());
+        assertNotNull(result);
+        assertTrue(result);
+        assertFalse(engine.shouldEmitImpressionEvent(featureName));
     }
 }

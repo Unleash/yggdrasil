@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "features": [
+    {
+      "name": "with.impression.data",
+      "type": "release",
+      "enabled": true,
+      "impressionData": true,
+      "strategies": [{
+        "name": "default"
+      }]
+    },
+    {
+      "name": "with.impression.data.false",
+      "enabled": true,
+      "impressionData": false,
+      "strategies": [{
+        "name": "default"
+      }]
+    }
+  ]
+}

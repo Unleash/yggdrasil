@@ -75,6 +75,12 @@ public class UnleashEngine {
         return response.getValue();
     }
 
+    public boolean shouldEmitImpressionEvent(String name) throws YggdrasilError {
+        YggResponse<Boolean> response =
+                read(yggdrasil.shouldEmitImpressionEvent(name), new TypeReference<>() {});
+        return response.getValue();
+    }
+
     /** Handle reading from a pointer into a String and mapping it to an object */
     private <T> T read(Pointer pointer, TypeReference<T> clazz) {
         try {
