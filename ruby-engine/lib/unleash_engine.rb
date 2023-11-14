@@ -19,18 +19,13 @@ def platform_specific_lib
   end
 end
 
-class Variant
-  attr_accessor :enabled, :name, :payload
-
-  def initialize(attributes = {})
-    self.enabled = attributes['enabled'] || false
-    self.name = attributes['name'] || 'disabled'
-    self.payload = attributes['payload']
-  end
-
-  def to_s
-    "Variant: #{self.name} enabled: #{self.enabled} payload: #{self.payload}"
-  end
+def to_variant(raw_variant)
+  payload = raw_variant[:payload] && raw_variant[:payload].transform_keys(&:to_s)
+  {
+    name: raw_variant[:name],
+    enabled: raw_variant[:enabled],
+    payload: payload,
+  }
 end
 
 class UnleashEngine
@@ -76,7 +71,9 @@ class UnleashEngine
     variant_response = JSON.parse(variant_def_json, symbolize_names: true)
 
     return nil if variant_response[:status_code] == TOGGLE_MISSING_RESPONSE
-    return variant_response[:value] if variant_response[:status_code] == OK_RESPONSE
+    variant = variant_response[:value]
+
+    return to_variant(variant) if variant_response[:status_code] == OK_RESPONSE
   end
 
   def enabled?(toggle_name, context)
