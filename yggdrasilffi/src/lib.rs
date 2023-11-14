@@ -54,6 +54,17 @@ enum FFIError {
     NullError(String),
 }
 
+const KNOWN_STRATEGIES: [&str; 8] = [
+    "default",
+    "userWithId",
+    "gradualRolloutUserId",
+    "gradualRolloutRandom",
+    "applicationHostname",
+    "gradualRolloutSessionId",
+    "remoteAddress",
+    "flexibleRollout",
+];
+
 impl From<Utf8Error> for FFIError {
     fn from(_: Utf8Error) -> Self {
         FFIError::Utf8Error
@@ -208,6 +219,18 @@ pub unsafe extern "C" fn check_variant(
     })();
 
     result_to_json_ptr(result)
+}
+
+/// Returns a JSON encoded response with a list of strings representing the built-in strategies Yggdrasil supports.
+///
+/// # Safety
+///
+/// The caller is responsible for freeing the allocated memory. This can be done by calling
+/// `free_response` and passing in the pointer returned by this method. Failure to do so will result in a leak.
+#[no_mangle]
+pub unsafe extern "C" fn built_in_strategies() -> *const c_char {
+    let strategies = serde_json::to_string(&KNOWN_STRATEGIES).unwrap();
+    CString::new(strategies).unwrap().into_raw()
 }
 
 /// Frees the memory allocated for a response message created by `check_enabled` or `check_variant`.
