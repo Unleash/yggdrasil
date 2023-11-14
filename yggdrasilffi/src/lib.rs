@@ -319,7 +319,6 @@ pub unsafe extern "C" fn get_metrics(engine_ptr: *mut c_void) -> *mut c_char {
 ///
 /// The caller is responsible for ensuring the engine_ptr is a valid pointer to an unleash engine.
 /// An invalid pointer to unleash engine will result in undefined behaviour.
-/// Null pointers will result in a false return value without undefined behaviour.
 #[no_mangle]
 pub unsafe extern "C" fn should_emit_impression_event(
     engine_ptr: *mut c_void,
