@@ -2,7 +2,6 @@ package io.getunleash.engine;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.Map;
 
 public class FeatureCount {
@@ -14,8 +13,7 @@ public class FeatureCount {
     public FeatureCount(
             @JsonProperty("yes") Long yes,
             @JsonProperty("no") Long no,
-            @JsonProperty("variants") Map<String, Long> variants
-    ) {
+            @JsonProperty("variants") Map<String, Long> variants) {
         this.yes = yes;
         this.no = no;
         this.variants = variants;

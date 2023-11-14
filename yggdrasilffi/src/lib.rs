@@ -312,6 +312,28 @@ pub unsafe extern "C" fn get_metrics(engine_ptr: *mut c_void) -> *mut c_char {
     result_to_json_ptr(result)
 }
 
+/// Lets you know whether impression events are enabled for this toggle or not.
+/// Returns a JSON encoded response of type `Response`.
+///
+/// # Safety
+///
+/// The caller is responsible for ensuring the engine_ptr is a valid pointer to an unleash engine.
+/// An invalid pointer to unleash engine will result in undefined behaviour.
+#[no_mangle]
+pub unsafe extern "C" fn should_emit_impression_event(
+    engine_ptr: *mut c_void,
+    toggle_name_ptr: *const c_char,
+) -> *mut c_char {
+    let result: Result<Option<bool>, FFIError> = (|| {
+        let engine = get_engine(engine_ptr)?;
+        let toggle_name = get_str(toggle_name_ptr)?;
+
+        Ok(Some(engine.should_emit_impression_event(toggle_name)))
+    })();
+
+    result_to_json_ptr(result)
+}
+
 #[cfg(test)]
 mod tests {
     use std::ffi::{CStr, CString};

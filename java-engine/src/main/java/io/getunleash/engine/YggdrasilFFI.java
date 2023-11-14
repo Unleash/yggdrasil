@@ -4,7 +4,6 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
-
 import java.lang.ref.Cleaner;
 import java.nio.file.Paths;
 
@@ -26,19 +25,21 @@ interface UnleashFFI extends Library {
 
     Pointer get_metrics(Pointer ptr);
 
+    Pointer should_emit_impression_event(Pointer ptr, String name);
+
     void free_response(Pointer pointer);
 }
 
 class YggdrasilFFI {
     private static final Cleaner CLEANER = Cleaner.create();
+
     @SuppressWarnings("unused")
     private final Cleaner.Cleanable cleanable;
+
     private final UnleashFFI ffi;
     private final Pointer enginePtr;
 
-    /**
-     * If we want singleton we just make the constructors private
-     */
+    /** If we want singleton we just make the constructors private */
     YggdrasilFFI() {
         this(System.getenv("YGGDRASIL_LIB_PATH"));
     }
@@ -72,7 +73,9 @@ class YggdrasilFFI {
         // will not be invoked automatically.
         // this.cleanable uses a PhantomReference to this object, so from a GC
         // perspective it doesn't count.
-        this.cleanable = CLEANER.register(this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
+        this.cleanable =
+                CLEANER.register(
+                        this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
     }
 
     Pointer takeState(String toggles) {
@@ -101,6 +104,10 @@ class YggdrasilFFI {
 
     Pointer getMetrics() {
         return this.ffi.get_metrics(this.enginePtr);
+    }
+
+    Pointer shouldEmitImpressionEvent(String name) {
+        return this.ffi.should_emit_impression_event(this.enginePtr, name);
     }
 
     private static final class YggdrasilNativeLibraryResourceCleaner implements Runnable {

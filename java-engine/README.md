@@ -5,7 +5,7 @@
 We use gradle here:
 
 ```bash
-gradle build
+./gradlew build
 ```
 
 ## Running the tests
@@ -19,5 +19,5 @@ export YGGDRASIL_LIB_PATH=/home/{YOUR_NAME_HERE}/dev/yggdrasil/target/release
 Then tests can be run with:
 
 ```bash
-gradle test
+./gradlew test
 ```

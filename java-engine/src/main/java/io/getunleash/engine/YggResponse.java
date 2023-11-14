@@ -9,7 +9,10 @@ class YggResponse<T> {
     final String errorMessage;
 
     @JsonCreator
-    YggResponse(@JsonProperty("status_code") StatusCode statusCode, @JsonProperty("value") T value, @JsonProperty("error_message") String errorMessage) {
+    YggResponse(
+            @JsonProperty("status_code") StatusCode statusCode,
+            @JsonProperty("value") T value,
+            @JsonProperty("error_message") String errorMessage) {
         this.statusCode = statusCode;
         this.value = value;
         this.errorMessage = errorMessage;
@@ -32,10 +35,14 @@ class YggResponse<T> {
 
     @Override
     public String toString() {
-        return "YggResponse{" +
-                "statusCode=" + statusCode +
-                ", value=" + value +
-                ", errorMessage='" + errorMessage + '\'' +
-                '}';
+        return "YggResponse{"
+                + "statusCode="
+                + statusCode
+                + ", value="
+                + value
+                + ", errorMessage='"
+                + errorMessage
+                + '\''
+                + '}';
     }
 }
