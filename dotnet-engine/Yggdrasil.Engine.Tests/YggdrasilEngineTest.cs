@@ -103,7 +103,8 @@ public class Tests
     }
 
     [Test]
-    public void Custom_Strategies_Required_But_Not_Configured_Fails() {
+    public void Custom_Strategies_Required_But_Not_Configured_Returns_False() {
+
         var yggdrasilEngine = new YggdrasilEngine();
         var fileFolder = TestContext.CurrentContext.TestDirectory;
         var filePath = Path.Combine(fileFolder, "custom-strategies.json");
