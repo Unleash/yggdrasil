@@ -28,6 +28,44 @@
             "impressionData": false
         },
         {
+            "name": "Feature.Mixed.Strategies",
+            "type": "release",
+            "enabled": true,
+            "project": "default",
+            "stale": false,
+            "strategies": [
+                {
+                    "name": "default",
+                    "constraints": [],
+                    "parameters": {},
+                    "variants": []
+                },
+                {
+                    "name": "custom",
+                    "constraints": [],
+                    "parameters": {
+                        "one": "yes"
+                    },
+                    "variants": []
+                },
+                {
+                    "name": "default",
+                    "constraints": [],
+                    "parameters": {},
+                    "variants": []
+                },
+                {
+                    "name": "cus-tom",
+                    "constraints": [],
+                    "parameters": {},
+                    "variants": []
+                }
+            ],
+            "variants": [],
+            "description": "",
+            "impressionData": false
+        },
+        {
             "name": "Feature.Simple.Enabled",
             "type": "release",
             "enabled": true,

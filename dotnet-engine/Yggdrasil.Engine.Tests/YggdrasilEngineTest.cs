@@ -69,6 +69,7 @@ public class Tests
             yggdrasilEngine.TakeState(suiteData["state"].ToString());
 
             var tests = suiteData["tests"] ?? new JArray();
+
             foreach (var test in tests)
             {
 
@@ -132,6 +133,24 @@ public class Tests
     }
 
     [Test]
+    public void Custom_Strategies_Correct_Names_Despite_Ordering() {
+        var yggdrasilEngine = new YggdrasilEngine();
+        yggdrasilEngine.RegisterCustomStrategies(new List<IStrategy>
+        {
+            new CustomStrategyReturningTrue("custom"),
+            new CustomStrategyReturningTrue("cus-tom")
+        });
+
+        var fileFolder = TestContext.CurrentContext.TestDirectory;
+        var filePath = Path.Combine(fileFolder, "custom-strategies.json");
+        var json = File.ReadAllText(filePath);
+        yggdrasilEngine.TakeState(json);
+        var context = new Context();
+        var result = yggdrasilEngine.IsEnabled("Feature.Mixed.Strategies", context);
+        Assert.AreEqual(true, result);
+    }
+
+    [Test]
     public void Impression_Data_Test_Enabled() {
         var testDataObject = new {
             Version = 2,
@@ -191,7 +210,6 @@ public class Tests
         var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
         Assert.NotNull(result);
         Assert.IsTrue(result);
-        Assert.NotNull(shouldEmit);
         Assert.IsFalse(shouldEmit);
     }
 }
