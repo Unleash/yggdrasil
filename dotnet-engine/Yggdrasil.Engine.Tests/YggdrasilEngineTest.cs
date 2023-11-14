@@ -92,7 +92,7 @@ public class Tests
                 // Silly hack to apply formatting to the string from the spec
                 var expectedResult = JsonSerializer.Serialize(JsonSerializer.Deserialize<Variant>(test["expectedResult"].ToString(), options), options);
 
-                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant { Name = "disabled", Payload = null, Enabled = false };
+                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant("disabled", null, false );
                 var jsonResult = JsonSerializer.Serialize(result, options);
 
                 Assert.AreEqual(expectedResult, jsonResult, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");
