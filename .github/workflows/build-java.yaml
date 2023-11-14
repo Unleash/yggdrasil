@@ -7,9 +7,10 @@ on:
       - main
     paths:
       - 'java-engine/**.java'
+      # Build in main if anything changes in yggdrasil or the ffi layer
+      - 'unleash-yggdrasil/src/**.rs'
+      - 'yggdrasilffi/src/**.rs'
   pull_request:
-    branches:
-      - main
     paths:
       - 'java-engine/**.java'
 
@@ -53,8 +54,9 @@ jobs:
           java-version: ${{ matrix.version }}
           cache: 'gradle'
           distribution: 'temurin'
+      - name: Check Code Format
+        working-directory: ./java-engine
+        run: ./gradlew spotlessCheck
       - name: Run tests
-        run: |
-          cd java-engine
-          pwd
-          ./gradlew test
+        working-directory: ./java-engine
+        run: ./gradlew test
