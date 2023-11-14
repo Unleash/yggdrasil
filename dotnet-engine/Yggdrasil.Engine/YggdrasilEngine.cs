@@ -26,7 +26,27 @@ public class YggdrasilEngine
 
     public bool ShouldEmitImpressionEvent(string featureName)
     {
-        return FFI.ShouldEmitImpressionEvent(state, featureName);
+        var shouldEmitImpressionEventPtr = FFI.ShouldEmitImpressionEvent(state, featureName);
+        if (shouldEmitImpressionEventPtr == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var shouldEmitImpressionEventJson = Marshal.PtrToStringUTF8(shouldEmitImpressionEventPtr);
+
+        FFI.FreeResponse(shouldEmitImpressionEventPtr);
+
+        var shouldEmitImpressionEventResult =
+            shouldEmitImpressionEventJson != null
+                ? JsonSerializer.Deserialize<EngineResponse<bool>>(shouldEmitImpressionEventJson, options)
+                : null;
+        
+        if (shouldEmitImpressionEventResult?.StatusCode == "Error")
+        {
+            throw new YggdrasilEngineException($"Error: {shouldEmitImpressionEventResult?.ErrorMessage}");
+        }
+
+        return shouldEmitImpressionEventResult?.Value ?? false;
     }
 
     public void Dispose()

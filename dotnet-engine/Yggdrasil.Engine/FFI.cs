@@ -24,7 +24,7 @@ internal static class FFI
     private delegate void FreeResponseDelegate(IntPtr ptr);
     private delegate void CountToggleDelegate(IntPtr ptr, string toggle_name, bool enabled);
     private delegate void CountVariantDelegate(IntPtr ptr, string toggle_name, string variant_name);
-    private delegate bool ShouldEmitImpressionEventDelegate(IntPtr ptr, string toggle_name);
+    private delegate IntPtr ShouldEmitImpressionEventDelegate(IntPtr ptr, string toggle_name);
 
     private static readonly NewEngineDelegate _newEngine;
     private static readonly FreeEngineDelegate _freeEngine;
@@ -161,7 +161,7 @@ internal static class FFI
         _count_variant(ptr, toggle_name, variant_name);
     }
 
-    public static bool ShouldEmitImpressionEvent(IntPtr ptr, string toggle_name)
+    public static IntPtr ShouldEmitImpressionEvent(IntPtr ptr, string toggle_name)
     {
         return _should_emit_impression_event(ptr, toggle_name);
     }
