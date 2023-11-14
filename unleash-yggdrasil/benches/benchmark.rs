@@ -5,7 +5,7 @@ use unleash_types::client_features::{
 use unleash_yggdrasil::{Context, EngineState};
 
 fn is_enabled(engine: &EngineState, toggle_name: &str, context: &Context) {
-    engine.is_enabled(toggle_name, context, None);
+    engine.is_enabled(toggle_name, context, &None);
 }
 
 fn benchmark_with_no_strategy(c: &mut Criterion) {

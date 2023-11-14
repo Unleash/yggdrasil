@@ -3,16 +3,16 @@ package io.getunleash.engine;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-class VariantDef {
+public class VariantDef {
     private final String name;
     private final Payload payload;
     private final Boolean enabled;
+
     @JsonCreator
     VariantDef(
             @JsonProperty("name") String name,
             @JsonProperty("payload") Payload payload,
-            @JsonProperty("enabled") Boolean enabled
-    ) {
+            @JsonProperty("enabled") Boolean enabled) {
         this.name = name;
         this.payload = payload;
         this.enabled = enabled;
@@ -26,7 +26,7 @@ class VariantDef {
         return payload;
     }
 
-    public Boolean getEnabled() {
+    public Boolean isEnabled() {
         return enabled;
     }
 }

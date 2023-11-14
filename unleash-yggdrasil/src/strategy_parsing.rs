@@ -37,7 +37,7 @@ pub fn normalized_hash(
     seed: u32,
 ) -> std::io::Result<u32> {
     let mut reader = Cursor::new(format!("{}:{}", &group, &identifier));
-    murmur3_32(&mut reader, seed).map(|hash_result| hash_result % modulus)
+    murmur3_32(&mut reader, seed).map(|hash_result| hash_result % modulus + 1)
 }
 
 pub type RuleFragment = Box<dyn SendableFragment + Send + Sync + 'static>;
@@ -206,7 +206,8 @@ fn string(node: Pair<Rule>) -> String {
     let mut chars = node.as_str().chars();
     chars.next();
     chars.next_back();
-    chars.as_str().into()
+    let string: String = chars.as_str().into();
+    string.replace("\\\"", "\"")
 }
 
 //Constraints
@@ -372,7 +373,7 @@ fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     }
 }
 
-fn external_value(_inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
+fn external_value(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let strategy_index = string(node.next().unwrap());
     Box::new(move |context| {
         context
@@ -380,6 +381,7 @@ fn external_value(_inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
             .as_ref()
             .and_then(|strategy_results| strategy_results.get(&strategy_index))
             .copied()
+            .map(|result| result.invert(inverted))
             .unwrap_or(false)
     })
 }
@@ -856,6 +858,33 @@ mod tests {
     }
 
     #[test]
+    fn missing_external_value_produces_false_without_error_even_when_inverted() {
+        let rule = "!external_value[\"i_do_not_exist\"]";
+        let rule = compile_rule(rule).unwrap();
+
+        let context = Context::default();
+        let result = rule(&context);
+
+        assert!(!result);
+    }
+
+    #[test]
+    fn inversion_works_on_external_values() {
+        let rule = "!external_value[\"test_value\"]";
+        let rule = compile_rule(rule).unwrap();
+
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert("test_value".to_string(), true);
+
+        let context = Context {
+            external_results: Some(custom_strategy_results),
+            ..Default::default()
+        };
+
+        assert!(!rule(&context));
+    }
+
+    #[test]
     fn external_value_is_respected() {
         let rule = "external_value[\"test_value\"]";
         let rule = compile_rule(rule).unwrap();
@@ -880,5 +909,14 @@ mod tests {
 
         assert!(true_result);
         assert!(!false_result);
+    }
+
+    #[test]
+    fn evaluates_quotes_in_stringy_rules_correctly() {
+        let rule = compile_rule("user_id contains_any [\"some\\\"thing\"]").unwrap();
+
+        let context = context_from_user_id("some\"thing");
+
+        assert!(rule(&context));
     }
 }

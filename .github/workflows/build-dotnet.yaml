@@ -1,25 +1,24 @@
 ---
-name: Java build
+name: .NET Build
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'java-engine/**.java'
+      - 'dotnet-engine/**'
       # Build in main if anything changes in yggdrasil or the ffi layer
       - 'unleash-yggdrasil/src/**.rs'
       - 'yggdrasilffi/src/**.rs'
   pull_request:
+    branches:
+      - main
     paths:
-      - 'java-engine/**.java'
-
+      - 'dotnet-engine/**'
+  
 jobs:
-  build-java:
+  build-dotnet:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: [11]
     permissions:
       contents: read
       security-events: write
@@ -28,6 +27,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      ## snatched from build-java.yml
       ## begin build yggdrasil (maybe this can be a separate job)
       - name: Install rust
         run: |
@@ -40,6 +40,7 @@ jobs:
         run: cargo build --release
       ## end build yggdrasil
 
+      ## snatched from build-java.yml
       ## Test requirements
       - name: Get client spec
         uses: actions/checkout@v3
@@ -48,15 +49,21 @@ jobs:
           ref: v5.0.2
           path: client-specification
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
         with:
-          java-version: ${{ matrix.version }}
-          cache: 'gradle'
-          distribution: 'temurin'
-      - name: Check Code Format
-        working-directory: ./java-engine
-        run: ./gradlew spotlessCheck
-      - name: Run tests
-        working-directory: ./java-engine
-        run: ./gradlew test
+          dotnet-version: '6.0.x'
+
+      - name: Restore dependencies
+        run: |
+          cd dotnet-engine
+          dotnet restore dotnet-engine.sln
+      
+      - name: Build
+        run: dotnet build dotnet-engine.sln --configuration Release --no-restore
+        
+      - name: Test
+        run: |
+          cd Yggdrasil.Engine.Tests
+          dotnet test --no-restore
+          

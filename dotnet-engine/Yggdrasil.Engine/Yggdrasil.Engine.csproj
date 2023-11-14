@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Yggdrasil.Engine</PackageId>
+    <Version>1.0.0-beta.0</Version>
+    <Company>Bricks Software AS</Company>
+    <Authors>Unleash</Authors>
+    <IncludeSymbols>True</IncludeSymbols>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="../../target/release/libyggdrasilffi.so" Condition="Exists('../../target/release/libyggdrasilffi.so')">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+    </Content>
+    <Content Include="../../target/release/libyggdrasilffi.dylib" Condition="Exists('../../target/release/libyggdrasilffi.dylib')">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+    </Content>
+    <Content Include="../../target/release/libyggdrasilffi.dll" Condition="Exists('../../target/release/libyggdrasilffi.dll')">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <PackageCopyToOutput>true</PackageCopyToOutput>
+    </Content>
+  </ItemGroup>
+</Project>

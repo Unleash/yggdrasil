@@ -83,7 +83,6 @@ RSpec.describe "custom strategies" do
       strategy_results = handler.evaluate_custom_strategies("Feature.A", {})
       expect(strategy_results.length).to eq(2)
       expect(strategy_results["customStrategy1"]).to eq(false)
-      expect(strategy_results["customStrategy1"]).to eq(false)
     end
 
     it "should calculate custom strategies e2e" do
