@@ -28,7 +28,7 @@ def to_variant(raw_variant)
   }
 end
 
-class UnleashEngine
+class YggdrasilEngine
   extend FFI::Library
   ffi_lib File.expand_path(platform_specific_lib, __dir__)
 
@@ -45,29 +45,29 @@ class UnleashEngine
   attach_function :count_variant, %i[pointer string string], :void
 
   def initialize
-    @engine = UnleashEngine.new_engine
+    @engine = YggdrasilEngine.new_engine
     @custom_strategy_handler = CustomStrategyHandler.new
     ObjectSpace.define_finalizer(self, self.class.finalize(@engine))
   end
 
   def self.finalize(engine)
-    proc { UnleashEngine.free_engine(engine) }
+    proc { YggdrasilEngine.free_engine(engine) }
   end
 
   def take_state(toggles)
     @custom_strategy_handler.update_strategies(toggles)
-    response_ptr = UnleashEngine.take_state(@engine, toggles)
+    response_ptr = YggdrasilEngine.take_state(@engine, toggles)
     take_toggles_response = JSON.parse(response_ptr.read_string, symbolize_names: true)
-    UnleashEngine.free_response(response_ptr)
+    YggdrasilEngine.free_response(response_ptr)
   end
 
   def get_variant(name, context)
     context_json = (context || {}).to_json
     custom_strategy_results = @custom_strategy_handler.evaluate_custom_strategies(name, context).to_json
 
-    variant_def_json_ptr = UnleashEngine.check_variant(@engine, name, context_json, custom_strategy_results)
+    variant_def_json_ptr = YggdrasilEngine.check_variant(@engine, name, context_json, custom_strategy_results)
     variant_def_json = variant_def_json_ptr.read_string
-    UnleashEngine.free_response(variant_def_json_ptr)
+    YggdrasilEngine.free_response(variant_def_json_ptr)
     variant_response = JSON.parse(variant_def_json, symbolize_names: true)
 
     return nil if variant_response[:status_code] == TOGGLE_MISSING_RESPONSE
@@ -80,9 +80,9 @@ class UnleashEngine
     context_json = (context || {}).to_json
     custom_strategy_results = @custom_strategy_handler.evaluate_custom_strategies(toggle_name, context).to_json
 
-    response_ptr = UnleashEngine.check_enabled(@engine, toggle_name, context_json, custom_strategy_results)
+    response_ptr = YggdrasilEngine.check_enabled(@engine, toggle_name, context_json, custom_strategy_results)
     response_json = response_ptr.read_string
-    UnleashEngine.free_response(response_ptr)
+    YggdrasilEngine.free_response(response_ptr)
     response = JSON.parse(response_json, symbolize_names: true)
 
     raise "Error: #{response[:error_message]}" if response[:status_code] == ERROR_RESPONSE
@@ -92,19 +92,19 @@ class UnleashEngine
   end
 
   def count_toggle(toggle_name, enabled)
-    response_ptr = UnleashEngine.count_toggle(@engine, toggle_name, enabled)
-    UnleashEngine.free_response(response_ptr)
+    response_ptr = YggdrasilEngine.count_toggle(@engine, toggle_name, enabled)
+    YggdrasilEngine.free_response(response_ptr)
   end
 
   def count_variant(toggle_name, variant_name)
-    response_ptr = UnleashEngine.count_variant(@engine, toggle_name, variant_name)
-    UnleashEngine.free_response(response_ptr)
+    response_ptr = YggdrasilEngine.count_variant(@engine, toggle_name, variant_name)
+    YggdrasilEngine.free_response(response_ptr)
   end
 
   def get_metrics
-    metrics_ptr = UnleashEngine.get_metrics(@engine)
+    metrics_ptr = YggdrasilEngine.get_metrics(@engine)
     metrics = JSON.parse(metrics_ptr.read_string, symbolize_names: true)
-    UnleashEngine.free_response(metrics_ptr)
+    YggdrasilEngine.free_response(metrics_ptr)
     metrics[:value]
   end
 

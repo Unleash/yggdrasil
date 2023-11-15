@@ -1,16 +1,16 @@
 require 'rspec'
 require 'json'
-require_relative '../lib/unleash_engine'
+require_relative '../lib/yggdrasil_engine'
 
 index_file_path = '../client-specification/specifications/index.json'
 test_suites = JSON.parse(File.read(index_file_path))
 
-RSpec.describe UnleashEngine do
-  let(:unleash_engine) { UnleashEngine.new }
+RSpec.describe YggdrasilEngine do
+  let(:yggdrasil_engine) { YggdrasilEngine.new }
 
   describe '#checking a toggle' do
     it 'that does not exist should yield a not found' do
-      is_enabled = unleash_engine.enabled?('missing-toggle', {})
+      is_enabled = yggdrasil_engine.enabled?('missing-toggle', {})
       expect(is_enabled).to be_nil
     end
   end
@@ -22,18 +22,18 @@ RSpec.describe UnleashEngine do
       suite_path = File.join('../client-specification/specifications', '01-simple-examples.json')
       suite_data = JSON.parse(File.read(suite_path))
 
-      unleash_engine.take_state(suite_data['state'].to_json)
+      yggdrasil_engine.take_state(suite_data['state'].to_json)
 
-      unleash_engine.count_toggle(feature_name, true)
-      unleash_engine.count_toggle(feature_name, false)
+      yggdrasil_engine.count_toggle(feature_name, true)
+      yggdrasil_engine.count_toggle(feature_name, false)
 
-      metrics = unleash_engine.get_metrics() # This should clear the metrics buffer
+      metrics = yggdrasil_engine.get_metrics() # This should clear the metrics buffer
 
       metric = metrics[:toggles][feature_name.to_sym]
       expect(metric[:yes]).to eq(1)
       expect(metric[:no]).to eq(1)
 
-      metrics = unleash_engine.get_metrics()
+      metrics = yggdrasil_engine.get_metrics()
       expect(metrics).to be_nil
     end
 
@@ -43,12 +43,12 @@ RSpec.describe UnleashEngine do
       suite_path = File.join('../client-specification/specifications', '01-simple-examples.json')
       suite_data = JSON.parse(File.read(suite_path))
 
-      unleash_engine.take_state(suite_data['state'].to_json)
+      yggdrasil_engine.take_state(suite_data['state'].to_json)
 
-      unleash_engine.count_toggle(toggle_name, true)
-      unleash_engine.count_toggle(toggle_name, false)
+      yggdrasil_engine.count_toggle(toggle_name, true)
+      yggdrasil_engine.count_toggle(toggle_name, false)
 
-      metrics = unleash_engine.get_metrics()
+      metrics = yggdrasil_engine.get_metrics()
       metric = metrics[:toggles][toggle_name.to_sym]
 
       expect(metric[:yes]).to eq(1)
@@ -58,10 +58,10 @@ RSpec.describe UnleashEngine do
     it 'should increment toggle count when the toggle does not exist' do
       toggle_name = 'Feature.X'
 
-      unleash_engine.count_toggle(toggle_name, true)
-      unleash_engine.count_toggle(toggle_name, false)
+      yggdrasil_engine.count_toggle(toggle_name, true)
+      yggdrasil_engine.count_toggle(toggle_name, false)
 
-      metrics = unleash_engine.get_metrics()
+      metrics = yggdrasil_engine.get_metrics()
       metric = metrics[:toggles][toggle_name.to_sym]
 
       expect(metric[:yes]).to eq(1)
@@ -74,11 +74,11 @@ RSpec.describe UnleashEngine do
       suite_path = File.join('../client-specification/specifications', '01-simple-examples.json')
       suite_data = JSON.parse(File.read(suite_path))
 
-      unleash_engine.take_state(suite_data['state'].to_json)
+      yggdrasil_engine.take_state(suite_data['state'].to_json)
 
-      unleash_engine.count_variant(toggle_name, 'disabled')
+      yggdrasil_engine.count_variant(toggle_name, 'disabled')
 
-      metrics = unleash_engine.get_metrics()
+      metrics = yggdrasil_engine.get_metrics()
       metric = metrics[:toggles][toggle_name.to_sym]
 
       expect(metric[:variants][:disabled]).to eq(1)
@@ -87,7 +87,7 @@ RSpec.describe UnleashEngine do
 end
 
 RSpec.describe 'Client Specification' do
-  let(:unleash_engine) { UnleashEngine.new }
+  let(:yggdrasil_engine) { YggdrasilEngine.new }
 
   test_suites.each do |suite|
     suite_path = File.join('../client-specification/specifications', suite)
@@ -95,7 +95,7 @@ RSpec.describe 'Client Specification' do
 
     describe "Suite '#{suite}'" do
       before(:each) do
-        unleash_engine.take_state(suite_data[:state].to_json)
+        yggdrasil_engine.take_state(suite_data[:state].to_json)
       end
 
       suite_data.fetch(:tests, []).each do |test|
@@ -105,7 +105,7 @@ RSpec.describe 'Client Specification' do
           let(:expected_result) { test[:expectedResult] }
 
           it 'returns correct result for `is_enabled?` method' do
-            result = unleash_engine.enabled?(toggle_name, context) || false
+            result = yggdrasil_engine.enabled?(toggle_name, context) || false
 
             expect(result).to eq(expected_result),
                               "Failed test '#{test['description']}': expected #{expected_result}, got #{result}"
@@ -119,10 +119,10 @@ RSpec.describe 'Client Specification' do
         describe "Variant Test '#{test[:description]}'" do
           let(:context) { test[:context] }
           let(:toggle_name) { test[:toggleName] }
-          let(:expected_result) { test[:expectedResult] }
+          let(:expected_result) { to_variant(test[:expectedResult]) }
 
           it 'returns correct result for `get_variant` method' do
-            result = unleash_engine.get_variant(toggle_name, context) || {
+            result = yggdrasil_engine.get_variant(toggle_name, context) || {
               :name => 'disabled',
               :payload => nil,
               :enabled => false
