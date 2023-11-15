@@ -1,0 +1,41 @@
+name: Build Ruby
+on:
+  push:
+    tags:
+      - '*'
+  pull_request:
+    paths:
+      - 'ruby-engine/**'
+
+jobs:
+  build_and_publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.0'
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Build Rust Library
+      run: |
+        cargo build --release
+        rm -f lib/libyggdrasilffi.so
+        cp ../target/release/libyggdrasilffi.so lib/
+
+    - name: Build Gem
+      run: gem build yggdrasil-engine.gemspec
+
+    - name: Publish to RubyGems
+      run: gem push yggdrasil-engine-*.gem
+      env:
+        GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}

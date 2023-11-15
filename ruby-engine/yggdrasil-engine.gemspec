@@ -4,8 +4,8 @@ Gem::Specification.new do |s|
   s.date        = '2023-06-28'
   s.summary     = 'Unleash engine for evaluating feature toggles'
   s.description = '...'
-  s.authors     = ['Your Name']
-  s.email       = 'you@example.com'
+  s.authors     = ['Unleash']
+  s.email       = 'liquidwicked64@gmail.com'
   s.files       = Dir.glob("{lib,spec}/**/*") + ["README.md"] + Dir["lib/**/*", "ext/libyggdrasilffi.so"]
   s.homepage    =
     'http://github.com/username/my_gem'
