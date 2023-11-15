@@ -532,7 +532,6 @@ impl EngineState {
             if enabled {
                 let mut variant = self.check_variant_by_toggle(toggle, context).unwrap_or_default();
                 variant.feature_enabled = true;
-                println!("Setting feature_enabled");
                 Some(variant)
             } else {
                 None
