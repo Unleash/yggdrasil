@@ -29,7 +29,7 @@
     {
       "name": "Feature.D",
       "description": "Has a custom strategy",
-      "enabled": false,
+      "enabled": true,
       "strategies": [
         {
           "name": "custom",
@@ -43,7 +43,7 @@
     {
       "name": "Feature.E",
       "description": "Has three custom strategies and some non custom strategies",
-      "enabled": false,
+      "enabled": true,
       "strategies": [
         {
           "name": "custom",
