@@ -325,7 +325,7 @@ impl EngineState {
 
             let parent_enabled = self.enabled(compiled_parent, context, &None); //parent toggles explicitly don't support custom strategies
             let expected_parent_enabled_state = parent_dependency.enabled.unwrap_or(true);
-            let parent_variant = self.check_variant_by_toggle(compiled_parent, context);
+            let parent_variant = self.check_variant_by_toggle(compiled_parent, context, parent_enabled);
 
             let is_variant_dependency_satisfied = {
                 if let (Some(expected_variants), Some(actual_variant)) =
@@ -471,6 +471,7 @@ impl EngineState {
         &self,
         toggle: &CompiledToggle,
         context: &Context,
+        is_enabled: bool,
     ) -> Option<VariantDef> {
         let strategy_variants =
             toggle
@@ -498,7 +499,7 @@ impl EngineState {
             name: variant.name.clone(),
             payload: variant.payload.clone(),
             enabled: true,
-            feature_enabled: true,
+            feature_enabled: is_enabled.clone(),
         })
     }
 
@@ -510,7 +511,7 @@ impl EngineState {
     ) -> Option<VariantDef> {
         self.get_toggle(name).and_then(|toggle| {
             if self.enabled(toggle, context, external_values) {
-                self.check_variant_by_toggle(toggle, context)
+                self.check_variant_by_toggle(toggle, context, true)
             } else {
                 None
             }
@@ -530,9 +531,7 @@ impl EngineState {
             self.count_toggle(name, enabled);
 
             if enabled {
-                let mut variant = self.check_variant_by_toggle(toggle, context).unwrap_or_default();
-                variant.feature_enabled = true;
-                Some(variant)
+                self.check_variant_by_toggle(toggle, context, true)
             } else {
                 None
             }
