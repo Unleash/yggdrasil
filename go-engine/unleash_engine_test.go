@@ -226,6 +226,9 @@ func TestClientSpecification(t *testing.T) {
 				if result.Enabled != expectedVariant.Enabled {
 					t.Fatalf("Failed variant test '%s': expected variant enabled %v, got %v", testMap["description"], expectedVariant.Enabled, result.Enabled)
 				}
+				if result.FeatureEnabled != expectedVariant.FeatureEnabled {
+					t.Fatalf("Failed variant test '%s': expected variant feature_enabled %v, got %v", testMap["description"], expectedVariant.FeatureEnabled, result.FeatureEnabled)
+				}
 				if result.Payload != nil && expectedVariant.Payload != nil {
 					if result.Payload.Value != expectedVariant.Payload.Value {
 						t.Fatalf("Failed variant test '%s': expected variant payload %s, got %s", testMap["description"], expectedVariant.Payload, result.Payload)

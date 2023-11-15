@@ -32,7 +32,7 @@ class TestSuite {
 
 class UnleashEngineTest {
 
-    private static final VariantDef DEFAULT_VARIANT = new VariantDef("disabled", null, false);
+    private static final VariantDef DEFAULT_VARIANT = new VariantDef("disabled", null, false, false);
 
     // Assume this is set up to be your feature JSON
     private final String simpleFeatures =

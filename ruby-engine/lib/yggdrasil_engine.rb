@@ -25,6 +25,7 @@ def to_variant(raw_variant)
     name: raw_variant[:name],
     enabled: raw_variant[:enabled],
     payload: payload,
+    feature_enabled: raw_variant[:feature_enabled]
   }
 end
 

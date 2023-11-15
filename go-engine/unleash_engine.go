@@ -45,9 +45,10 @@ func (e *UnleashEngine) IsEnabled(toggleName string, context *Context) bool {
 }
 
 type VariantDef struct {
-	Name    string   `json:"name,omitempty"`
-	Payload *Payload `json:"payload,omitempty"`
-	Enabled bool     `json:"enabled,omitempty"`
+	Name           string   `json:"name,omitempty"`
+	Payload        *Payload `json:"payload,omitempty"`
+	Enabled        bool     `json:"enabled,omitempty"`
+	FeatureEnabled bool     `json:"featureEnabled,omitempty"`
 }
 
 type Payload struct {

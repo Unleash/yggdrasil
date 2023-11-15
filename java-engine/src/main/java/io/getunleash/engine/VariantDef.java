@@ -7,15 +7,18 @@ public class VariantDef {
     private final String name;
     private final Payload payload;
     private final Boolean enabled;
+    private final Boolean featureEnabled;
 
     @JsonCreator
     VariantDef(
             @JsonProperty("name") String name,
             @JsonProperty("payload") Payload payload,
-            @JsonProperty("enabled") Boolean enabled) {
+            @JsonProperty("enabled") Boolean enabled,
+            @JsonProperty("feature_enabled") Boolean featureEnabled) {
         this.name = name;
         this.payload = payload;
         this.enabled = enabled;
+        this.featureEnabled = featureEnabled;
     }
 
     public String getName() {
@@ -28,5 +31,9 @@ public class VariantDef {
 
     public Boolean isEnabled() {
         return enabled;
+    }
+
+    public Boolean isFeatureEnabled() {
+        return featureEnabled;
     }
 }

@@ -125,12 +125,14 @@ RSpec.describe 'Client Specification' do
             result = yggdrasil_engine.get_variant(toggle_name, context) || {
               :name => 'disabled',
               :payload => nil,
-              :enabled => false
+              :enabled => false,
+              :feature_enabled => unleash_engine.enabled?(toggle_name, context) || false
             }
 
             expect(result[:name]).to eq(expected_result[:name])
             expect(result[:payload]).to eq(expected_result[:payload])
             expect(result[:enabled]).to eq(expected_result[:enabled])
+            expect(result[:feature_enabled]).to eq(expected_result[:feature_enabled])
           end
         end
       end

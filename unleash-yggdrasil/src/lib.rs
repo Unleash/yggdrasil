@@ -28,7 +28,7 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "5.0.2";
+pub const SUPPORTED_SPEC_VERSION: &str = "5.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 
 pub struct CompiledToggle {
@@ -498,6 +498,7 @@ impl EngineState {
             name: variant.name.clone(),
             payload: variant.payload.clone(),
             enabled: true,
+            feature_enabled: true,
         })
     }
 
@@ -529,7 +530,10 @@ impl EngineState {
             self.count_toggle(name, enabled);
 
             if enabled {
-                self.check_variant_by_toggle(toggle, context)
+                let mut variant = self.check_variant_by_toggle(toggle, context).unwrap_or_default();
+                variant.feature_enabled = true;
+                println!("Setting feature_enabled");
+                Some(variant)
             } else {
                 None
             }
@@ -540,6 +544,7 @@ impl EngineState {
         .unwrap_or_default();
 
         self.count_variant(name, &variant.name);
+        println!("Returning variant with feature_enabled: {}", &variant.feature_enabled);
         variant
     }
 
@@ -612,6 +617,7 @@ pub struct VariantDef {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub payload: Option<Payload>,
     pub enabled: bool,
+    pub feature_enabled: bool,
 }
 
 impl Default for VariantDef {
@@ -620,6 +626,7 @@ impl Default for VariantDef {
             name: "disabled".into(),
             payload: None,
             enabled: false,
+            feature_enabled: false,
         }
     }
 }
@@ -768,9 +775,12 @@ mod test {
         };
         let context = Context::default();
 
+        let mut expected_variant = VariantDef::default();
+        expected_variant.feature_enabled = true;
+
         assert_eq!(
             state.get_variant("test", &context, &None),
-            VariantDef::default()
+            expected_variant
         );
     }
 
@@ -1079,7 +1089,10 @@ mod test {
             .unwrap()
             .clone();
 
-        assert_eq!(first_variant, VariantDef::default());
+        let mut expected_variant = VariantDef::default();
+        expected_variant.feature_enabled = true;
+
+        assert_eq!(first_variant, expected_variant);
         assert_eq!(first_variant.name, second_variant.name);
 
         assert_eq!(get_variant_metrics.variants.len(), 1);
