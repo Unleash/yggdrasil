@@ -20,7 +20,7 @@ public class UnleashEngine {
     private final YggdrasilFFI yggdrasil;
 
     private final ObjectMapper mapper;
-    private final CustomStrategies customStrategies;
+    private final CustomStrategiesEvaluator customStrategiesEvaluator;
 
     public UnleashEngine() {
         this(new YggdrasilFFI());
@@ -42,8 +42,8 @@ public class UnleashEngine {
         if (customStrategies != null && !customStrategies.isEmpty()) {
             List<String> builtInStrategies =
                     read(yggdrasil.builtInStrategies(), new TypeReference<>() {});
-            this.customStrategies =
-                    new CustomStrategies(
+            this.customStrategiesEvaluator =
+                    new CustomStrategiesEvaluator(
                             customStrategies.stream()
                                     .filter(
                                             strategy -> {
@@ -57,7 +57,7 @@ public class UnleashEngine {
                                                 return true;
                                             }));
         } else {
-            this.customStrategies = new CustomStrategies(Stream.empty());
+            this.customStrategiesEvaluator = new CustomStrategiesEvaluator(Stream.empty());
         }
     }
 
@@ -67,14 +67,14 @@ public class UnleashEngine {
             throw new YggdrasilInvalidInputException(toggles);
         }
 
-        customStrategies.takeState(toggles);
+        customStrategiesEvaluator.takeState(toggles);
     }
 
     public Boolean isEnabled(String name, Context context)
             throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = mapper.writeValueAsString(context);
-            String strategyResults = customStrategies.eval(name, context);
+            String strategyResults = customStrategiesEvaluator.eval(name, context);
             YggResponse<Boolean> isEnabled =
                     read(
                             yggdrasil.checkEnabled(name, jsonContext, strategyResults),

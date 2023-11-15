@@ -1,5 +1,6 @@
 package io.getunleash.engine;
 
+import static io.getunleash.engine.TestStrategies.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.of;
 
@@ -48,43 +49,6 @@ class UnleashEngineTest {
             return null;
         }
     }
-
-    static IStrategy alwaysTrue =
-            new IStrategy() {
-                @Override
-                public String getName() {
-                    return "custom";
-                }
-
-                @Override
-                public boolean isEnabled(Map<String, String> parameters, Context context) {
-                    return true;
-                }
-            };
-
-    static IStrategy onlyTrueIfAllParametersInContext =
-            new IStrategy() {
-                @Override
-                public String getName() {
-                    return "custom";
-                }
-
-                @Override
-                public boolean isEnabled(Map<String, String> parameters, Context context) {
-                    for (String parameter : parameters.keySet()) {
-                        Map<String, String> properties = context.getProperties();
-
-                        if (properties == null
-                                || !(properties.containsKey(parameter)
-                                        && properties
-                                                .get(parameter)
-                                                .equals(parameters.get(parameter)))) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-            };
 
     private UnleashEngine engine;
 
@@ -278,24 +242,29 @@ class UnleashEngineTest {
         return Stream.of(
                 of(null, "Feature.Custom.Strategies", new Context(), false),
                 of(Collections.emptyList(), "Feature.Custom.Strategies", new Context(), false),
-                of(List.of(alwaysTrue), "Feature.Custom.Strategies", new Context(), true),
+                of(List.of(alwaysTrue("custom")), "Feature.Custom.Strategies", new Context(), true),
                 of(
-                        List.of(onlyTrueIfAllParametersInContext),
+                        List.of(onlyTrueIfAllParametersInContext("custom")),
                         "Feature.Custom.Strategies",
                         new Context(),
                         false),
                 of(
-                        List.of(onlyTrueIfAllParametersInContext),
+                        List.of(onlyTrueIfAllParametersInContext("custom")),
                         "Feature.Custom.Strategies",
                         oneYesContext,
                         true),
                 of(
-                        List.of(onlyTrueIfAllParametersInContext),
+                        List.of(onlyTrueIfAllParametersInContext("custom")),
                         "Feature.Mixed.Strategies",
                         oneYesContext,
                         true),
-                of(List.of(alwaysTrue), "Feature.Mixed.Strategies", oneYesContext, true),
-                of(List.of(), "Feature.Mixed.Strategies", oneYesContext, true));
+                of(List.of(alwaysTrue("custom")), "Feature.Mixed.Strategies", oneYesContext, true),
+                of(List.of(), "Feature.Mixed.Strategies", oneYesContext, true),
+                of(
+                        List.of(alwaysFails("custom")),
+                        "Feature.Mixed.Strategies",
+                        oneYesContext,
+                        true));
     }
 
     private void takeFeaturesFromResource(UnleashEngine engine, String resource) {

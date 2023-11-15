@@ -15,18 +15,19 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class CustomStrategies {
-    private static final Logger log = LoggerFactory.getLogger(CustomStrategies.class);
+class CustomStrategiesEvaluator {
+    private static final Logger log = LoggerFactory.getLogger(CustomStrategiesEvaluator.class);
     static final String EMPTY_STRATEGY_RESULTS = "{}";
     private final Map<String, IStrategy> registeredStrategies;
     private final ObjectMapper mapper;
 
     private Map<String, List<MappedStrategy>> featureStrategies = new HashMap<>();
 
-    public CustomStrategies(Stream<IStrategy> customStrategies) {
+    public CustomStrategiesEvaluator(Stream<IStrategy> customStrategies) {
         this.mapper = new ObjectMapper();
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        this.registeredStrategies = customStrategies.collect(toMap(IStrategy::getName, identity()));
+        this.registeredStrategies =
+                customStrategies.collect(toMap(IStrategy::getName, identity(), (a, b) -> a));
     }
 
     public void takeState(String toggles) {
@@ -57,15 +58,11 @@ class CustomStrategies {
         List<MappedStrategy> mappedStrategies = new ArrayList<>();
         int index = 1;
         for (StrategyDefinition strategyDefinition : feature.strategies) {
-            IStrategy impl = registeredStrategies.get(strategyDefinition.name);
-            if (impl == null) {
-                log.warn(
-                        "Custom strategy {} not found. This means it will always return false",
-                        strategyDefinition.name);
-            } else {
-                mappedStrategies.add(
-                        new MappedStrategy("customStrategy" + (index++), impl, strategyDefinition));
-            }
+            IStrategy impl =
+                    Optional.ofNullable(registeredStrategies.get(strategyDefinition.name))
+                            .orElseGet(() -> alwaysFalseStrategy(strategyDefinition.name));
+            mappedStrategies.add(
+                    new MappedStrategy("customStrategy" + (index++), impl, strategyDefinition));
         }
         return mappedStrategies;
     }
@@ -84,11 +81,8 @@ class CustomStrategies {
                                 Collectors.toMap(
                                         mappedStrategy -> mappedStrategy.resultName,
                                         mappedStrategy ->
-                                                mappedStrategy.implementation.isEnabled(
-                                                        mappedStrategy
-                                                                .strategyDefinition
-                                                                .parameters,
-                                                        context)));
+                                                tryIsEnabled(context, mappedStrategy)
+                                                        .orElse(false)));
         try {
             return mapper.writeValueAsString(results);
         } catch (JsonProcessingException e) {
@@ -96,6 +90,20 @@ class CustomStrategies {
                     "Error processing strategy results. This means custom strategies will return false every time they're used",
                     e);
             return EMPTY_STRATEGY_RESULTS;
+        }
+    }
+
+    private static Optional<Boolean> tryIsEnabled(Context context, MappedStrategy mappedStrategy) {
+        try {
+            return Optional.of(
+                    mappedStrategy.implementation.isEnabled(
+                            mappedStrategy.strategyDefinition.parameters, context));
+        } catch (Exception e) {
+            log.warn(
+                    "Error evaluating custom strategy {}",
+                    mappedStrategy.strategyDefinition.name,
+                    e);
+            return Optional.empty();
         }
     }
 
@@ -132,6 +140,21 @@ class CustomStrategies {
             this.name = name;
             this.parameters = parameters;
         }
+    }
+
+    private IStrategy alwaysFalseStrategy(String name) {
+        log.warn("Custom strategy {} not found. This means it will always return false", name);
+        return new IStrategy() {
+            @Override
+            public String getName() {
+                return name;
+            }
+
+            @Override
+            public boolean isEnabled(Map<String, String> parameters, Context context) {
+                return false;
+            }
+        };
     }
 
     private static class MappedStrategy {
