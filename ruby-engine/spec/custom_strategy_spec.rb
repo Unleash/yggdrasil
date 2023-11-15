@@ -116,7 +116,7 @@ RSpec.describe "custom strategies" do
         ]
       }
 
-      engine = UnleashEngine.new
+      engine = YggdrasilEngine.new
       engine.register_custom_strategies([TestStrategy.new("custom")])
 
       engine.take_state(state.to_json)

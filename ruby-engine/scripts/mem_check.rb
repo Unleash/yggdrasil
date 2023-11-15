@@ -1,9 +1,9 @@
 require 'objspace'
 require 'json'
-require_relative '../lib/unleash_engine'
+require_relative '../lib/yggdrasil_engine'
 require 'get_process_mem'
 
-unleash_engine = UnleashEngine.new
+yggdrasil_engine = YggdrasilEngine.new
 
 def run_memory_check(lambda, method_name_being_tested)
   puts "#{method_name_being_tested} Warming up"
@@ -40,10 +40,10 @@ suite_path = File.join('../client-specification/specifications', '01-simple-exam
 suite_data = JSON.parse(File.read(suite_path))
 json_client_features = suite_data['state'].to_json
 
-is_enabled = lambda { unleash_engine.enabled?('Feature.A', {}) }
-get_variant = lambda { unleash_engine.get_variant('Feature.A', {}) }
-get_metrics = lambda { unleash_engine.get_metrics() }
-take_state = lambda { unleash_engine.take_state(json_client_features) }
+is_enabled = lambda { yggdrasil_engine.enabled?('Feature.A', {}) }
+get_variant = lambda { yggdrasil_engine.get_variant('Feature.A', {}) }
+get_metrics = lambda { yggdrasil_engine.get_metrics() }
+take_state = lambda { yggdrasil_engine.take_state(json_client_features) }
 
 run_memory_check(is_enabled, "IsEnabled:")
 run_memory_check(get_variant, "GetVariant:")

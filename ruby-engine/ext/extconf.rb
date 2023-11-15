@@ -1,2 +1,2 @@
 require 'mkmf'
-create_makefile('unleash-engine/unleash-engine')
+create_makefile('yggdrasil-engine/yggdrasil-engine')
