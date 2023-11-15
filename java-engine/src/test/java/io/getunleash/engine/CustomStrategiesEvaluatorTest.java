@@ -75,7 +75,7 @@ class CustomStrategiesEvaluatorTest {
     void shouldBeAbleToTakeAnyStateWithoutFailing(String state) {
         CustomStrategiesEvaluator customStrategiesEvaluator =
                 new CustomStrategiesEvaluator(Stream.of(alwaysTrue("test-strategy")));
-        assertDoesNotThrow(() -> customStrategiesEvaluator.takeState(state));
+        assertDoesNotThrow(() -> customStrategiesEvaluator.loadStrategiesFor(state));
     }
 
     @ParameterizedTest
@@ -90,7 +90,7 @@ class CustomStrategiesEvaluatorTest {
             throws IOException, URISyntaxException {
         CustomStrategiesEvaluator customStrategiesEvaluator =
                 new CustomStrategiesEvaluator(Stream.of(alwaysTrue(strategyName)));
-        customStrategiesEvaluator.takeState(readResource("custom-strategy-tests.json"));
+        customStrategiesEvaluator.loadStrategiesFor(readResource("custom-strategy-tests.json"));
         assertSameObjects(
                 expected,
                 customStrategiesEvaluator.eval("Feature.Custom.Strategies", new Context()));
@@ -102,7 +102,7 @@ class CustomStrategiesEvaluatorTest {
             IStrategy one, IStrategy two, String expected) throws IOException, URISyntaxException {
         CustomStrategiesEvaluator customStrategiesEvaluator =
                 new CustomStrategiesEvaluator(Stream.of(one, two));
-        customStrategiesEvaluator.takeState(readResource("custom-strategy-tests.json"));
+        customStrategiesEvaluator.loadStrategiesFor(readResource("custom-strategy-tests.json"));
         assertSameObjects(
                 expected,
                 customStrategiesEvaluator.eval("Feature.Custom.Strategies", new Context()));
@@ -112,7 +112,7 @@ class CustomStrategiesEvaluatorTest {
     void faultyStrategy_shouldEvalToEmpty() throws IOException, URISyntaxException {
         CustomStrategiesEvaluator customStrategiesEvaluator =
                 new CustomStrategiesEvaluator(Stream.of(alwaysFails("custom")));
-        customStrategiesEvaluator.takeState(readResource("custom-strategy-tests.json"));
+        customStrategiesEvaluator.loadStrategiesFor(readResource("custom-strategy-tests.json"));
         assertSameObjects(
                 "{\"customStrategy1\":false,\"customStrategy2\":false}",
                 customStrategiesEvaluator.eval("Feature.Custom.Strategies", new Context()));

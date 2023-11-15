@@ -30,7 +30,7 @@ class CustomStrategiesEvaluator {
                 customStrategies.collect(toMap(IStrategy::getName, identity(), (a, b) -> a));
     }
 
-    public void takeState(String toggles) {
+    public void loadStrategiesFor(String toggles) {
         if (this.registeredStrategies.isEmpty()) {
             return;
         }

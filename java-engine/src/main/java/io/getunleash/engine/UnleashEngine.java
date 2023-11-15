@@ -67,7 +67,7 @@ public class UnleashEngine {
             throw new YggdrasilInvalidInputException(toggles);
         }
 
-        customStrategiesEvaluator.takeState(toggles);
+        customStrategiesEvaluator.loadStrategiesFor(toggles);
     }
 
     public Boolean isEnabled(String name, Context context)
