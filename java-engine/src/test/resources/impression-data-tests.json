@@ -17,6 +17,13 @@
       "strategies": [{
         "name": "default"
       }]
+    },
+    {
+      "name": "with.impression.data.undefined",
+      "enabled": true,
+      "strategies": [{
+        "name": "default"
+      }]
     }
   ]
 }

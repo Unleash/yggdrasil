@@ -3,6 +3,9 @@ package io.getunleash.engine;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jna.Pointer;
 import java.lang.ref.Cleaner;
 import java.lang.ref.PhantomReference;
@@ -10,6 +13,7 @@ import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.reflect.Field;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -35,6 +39,19 @@ class YggdrasilFFITest {
         Pointer state = ffi.takeState("someToggles");
         assertNotNull(state);
         ffi.freeResponse(state);
+    }
+
+    @Test
+    void testCustomStrategies() throws JsonProcessingException {
+        YggdrasilFFI ffi = new YggdrasilFFI(VALID_PATH);
+        Pointer ptr = ffi.builtInStrategies();
+        String content = ptr.getString(0, "UTF-8");
+        ffi.freeResponse(ptr);
+        List<String> strategies = new ObjectMapper().readValue(content, new TypeReference<>() {});
+        assertNotNull(strategies);
+        assertFalse(strategies.isEmpty());
+        assertTrue(strategies.contains("default"));
+        assertTrue(strategies.contains("gradualRolloutRandom"));
     }
 
     @Test
