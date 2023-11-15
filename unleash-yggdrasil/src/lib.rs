@@ -495,6 +495,12 @@ impl EngineState {
             self.resolve_variant(&toggle.variants, &toggle.name, context)
         };
 
+        if variant.is_none() {
+            let mut disabled_variant = VariantDef::default();
+            disabled_variant.feature_enabled = is_enabled;
+            return Some(disabled_variant)
+        }
+
         variant.map(|variant| VariantDef {
             name: variant.name.clone(),
             payload: variant.payload.clone(),
