@@ -106,48 +106,43 @@ public class Tests
     public void Custom_Strategies_Required_But_Not_Configured_Returns_False() {
 
         var yggdrasilEngine = new YggdrasilEngine();
-        var fileFolder = TestContext.CurrentContext.TestDirectory;
-        var filePath = Path.Combine(fileFolder, "custom-strategies.json");
+        var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.Custom.Strategies", context);
+        var result = yggdrasilEngine.IsEnabled("Feature.D", context);
         Assert.AreEqual(false, result);
     }
 
     [Test]
     public void Custom_Strategies_Required_And_Configured_Succeeds() {
-        var yggdrasilEngine = new YggdrasilEngine();
-        yggdrasilEngine.RegisterCustomStrategies(new List<IStrategy>
+        var yggdrasilEngine = new YggdrasilEngine(new List<IStrategy>
         {
             new CustomStrategyReturningTrue("custom"),
             new CustomStrategyReturningTrue("cus-tom")
         });
 
-        var fileFolder = TestContext.CurrentContext.TestDirectory;
-        var filePath = Path.Combine(fileFolder, "custom-strategies.json");
+        var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.Custom.Strategies", context);
+        var result = yggdrasilEngine.IsEnabled("Feature.D", context);
         Assert.AreEqual(true, result);
     }
 
     [Test]
     public void Custom_Strategies_Correct_Names_Despite_Ordering() {
-        var yggdrasilEngine = new YggdrasilEngine();
-        yggdrasilEngine.RegisterCustomStrategies(new List<IStrategy>
+        var yggdrasilEngine = new YggdrasilEngine(new List<IStrategy>
         {
             new CustomStrategyReturningTrue("custom"),
             new CustomStrategyReturningTrue("cus-tom")
         });
 
-        var fileFolder = TestContext.CurrentContext.TestDirectory;
-        var filePath = Path.Combine(fileFolder, "custom-strategies.json");
+        var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.Mixed.Strategies", context);
+        var result = yggdrasilEngine.IsEnabled("Feature.E", context);
         Assert.AreEqual(true, result);
     }
 
