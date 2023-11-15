@@ -126,7 +126,7 @@ RSpec.describe 'Client Specification' do
               :name => 'disabled',
               :payload => nil,
               :enabled => false,
-              :feature_enabled => unleash_engine.enabled?(toggle_name, context) || false
+              :feature_enabled => yggdrasil_engine.enabled?(toggle_name, context) || false
             }
 
             expect(result[:name]).to eq(expected_result[:name])
