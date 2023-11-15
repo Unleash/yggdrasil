@@ -74,7 +74,7 @@ public class Tests
             {
 
                 var contextJson = test["context"].ToString();
-                var context = JsonSerializer.Deserialize<Context>(contextJson, options);
+                var context = JsonSerializer.Deserialize<Context>(contextJson, options) ?? new Context();
                 var toggleName = (string)test["toggleName"];
                 var expectedResult = (bool)test["expectedResult"];
 
@@ -87,7 +87,7 @@ public class Tests
             foreach (var test in variantTests)
             {
                 var contextJson = test["context"].ToString();
-                var context = JsonSerializer.Deserialize<Context>(contextJson, options);
+                var context = JsonSerializer.Deserialize<Context>(contextJson, options) ?? new Context();
                 var toggleName = (string)test["toggleName"];
                 // Silly hack to apply formatting to the string from the spec
                 var expectedResult = JsonSerializer.Serialize(JsonSerializer.Deserialize<Variant>(test["expectedResult"].ToString(), options), options);
