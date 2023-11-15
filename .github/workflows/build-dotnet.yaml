@@ -15,7 +15,7 @@ on:
       - main
     paths:
       - 'dotnet-engine/**'
-  
+
 jobs:
   build-dotnet:
     runs-on: ubuntu-latest
@@ -58,14 +58,13 @@ jobs:
         run: |
           cd dotnet-engine
           dotnet restore dotnet-engine.sln
-      
+
       - name: Build
         run: |
           cd dotnet-engine
           dotnet build dotnet-engine.sln --configuration Release --no-restore
-        
+
       - name: Test
         run: |
           cd dotnet-engine/Yggdrasil.Engine.Tests
           dotnet test --no-restore
-          
