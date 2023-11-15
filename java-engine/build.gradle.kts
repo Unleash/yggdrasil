@@ -16,6 +16,11 @@ dependencies {
     // use Mockito
     testImplementation("org.mockito:mockito-core:5.2.0")
 
+    // use simple-logging with SLF4j for testing
+    testImplementation("org.slf4j:slf4j-simple:2.0.5")
+
+    implementation("org.slf4j:slf4j-api:2.0.5")
+
     implementation("net.java.dev.jna:jna:5.13.0")
 
     implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")

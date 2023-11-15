@@ -6,6 +6,8 @@ import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 import java.lang.ref.Cleaner;
 import java.nio.file.Paths;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 interface UnleashFFI extends Library {
 
@@ -27,11 +29,15 @@ interface UnleashFFI extends Library {
 
     Pointer should_emit_impression_event(Pointer ptr, String name);
 
+    Pointer built_in_strategies();
+
     void free_response(Pointer pointer);
 }
 
 class YggdrasilFFI {
     private static final Cleaner CLEANER = Cleaner.create();
+
+    private static final Logger log = LoggerFactory.getLogger(YggdrasilFFI.class);
 
     @SuppressWarnings("unused")
     private final Cleaner.Cleanable cleanable;
@@ -48,7 +54,7 @@ class YggdrasilFFI {
         if (libraryPath == null) {
             libraryPath = "."; // assume it's accessible in current path
         }
-        System.out.println("Loading library from " + Paths.get(libraryPath).toAbsolutePath());
+        log.info("Loading library from " + Paths.get(libraryPath).toAbsolutePath());
         String libImpl = "libyggdrasilffi.so";
         if (Platform.isMac()) {
             libImpl = "libyggdrasilffi.dylib";
@@ -104,6 +110,10 @@ class YggdrasilFFI {
 
     Pointer getMetrics() {
         return this.ffi.get_metrics(this.enginePtr);
+    }
+
+    Pointer builtInStrategies() {
+        return this.ffi.built_in_strategies();
     }
 
     Pointer shouldEmitImpressionEvent(String name) {

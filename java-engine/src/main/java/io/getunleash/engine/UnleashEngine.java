@@ -7,23 +7,58 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sun.jna.Pointer;
 import java.io.IOException;
+import java.util.*;
+import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class UnleashEngine {
     private static final String UTF_8 = "UTF-8";
-    private static final String CUSTOM_STRATEGY_RESULTS = "{}";
+    private static final String EMPTY_STRATEGY_RESULTS = "{}";
+
+    private static final Logger log = LoggerFactory.getLogger(UnleashEngine.class);
     private final YggdrasilFFI yggdrasil;
 
     private final ObjectMapper mapper;
+    private final CustomStrategiesEvaluator customStrategiesEvaluator;
 
     public UnleashEngine() {
         this(new YggdrasilFFI());
     }
 
+    public UnleashEngine(List<IStrategy> customStrategies) {
+        this(new YggdrasilFFI(), customStrategies);
+    }
+
     UnleashEngine(YggdrasilFFI yggdrasil) {
+        this(yggdrasil, null);
+    }
+
+    UnleashEngine(YggdrasilFFI yggdrasil, List<IStrategy> customStrategies) {
         this.yggdrasil = yggdrasil;
         this.mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        this.mapper.registerModule(new JavaTimeModule());
+        this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        if (customStrategies != null && !customStrategies.isEmpty()) {
+            List<String> builtInStrategies =
+                    read(yggdrasil.builtInStrategies(), new TypeReference<>() {});
+            this.customStrategiesEvaluator =
+                    new CustomStrategiesEvaluator(
+                            customStrategies.stream()
+                                    .filter(
+                                            strategy -> {
+                                                if (builtInStrategies.contains(
+                                                        strategy.getName())) {
+                                                    log.warn(
+                                                            "Custom strategy {} is already a built-in strategy. Skipping.",
+                                                            strategy.getName());
+                                                    return false;
+                                                }
+                                                return true;
+                                            }));
+        } else {
+            this.customStrategiesEvaluator = new CustomStrategiesEvaluator(Stream.empty());
+        }
     }
 
     public void takeState(String toggles) throws YggdrasilInvalidInputException {
@@ -31,15 +66,18 @@ public class UnleashEngine {
         if (!response.isValid()) {
             throw new YggdrasilInvalidInputException(toggles);
         }
+
+        customStrategiesEvaluator.loadStrategiesFor(toggles);
     }
 
     public Boolean isEnabled(String name, Context context)
             throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = mapper.writeValueAsString(context);
+            String strategyResults = customStrategiesEvaluator.eval(name, context);
             YggResponse<Boolean> isEnabled =
                     read(
-                            yggdrasil.checkEnabled(name, jsonContext, CUSTOM_STRATEGY_RESULTS),
+                            yggdrasil.checkEnabled(name, jsonContext, strategyResults),
                             new TypeReference<>() {});
             return isEnabled.getValue();
         } catch (JsonProcessingException e) {
@@ -53,7 +91,7 @@ public class UnleashEngine {
             String jsonContext = mapper.writeValueAsString(context);
             YggResponse<VariantDef> response =
                     read(
-                            yggdrasil.checkVariant(name, jsonContext, CUSTOM_STRATEGY_RESULTS),
+                            yggdrasil.checkVariant(name, jsonContext, EMPTY_STRATEGY_RESULTS),
                             new TypeReference<>() {});
             return response.getValue();
         } catch (JsonProcessingException e) {
@@ -88,7 +126,7 @@ public class UnleashEngine {
             try {
                 return mapper.readValue(str, clazz);
             } catch (IOException e) {
-                System.out.println("Failed to parse response from Yggdrasil: " + str);
+                log.error("Failed to parse response from Yggdrasil: {}", str, e);
                 throw new YggdrasilParseException(str, clazz.getClass(), e);
             }
         } finally {
