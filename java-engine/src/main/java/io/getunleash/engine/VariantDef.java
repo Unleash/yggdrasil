@@ -1,5 +1,7 @@
 package io.getunleash.engine;
 
+import java.util.Optional;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -18,7 +20,7 @@ public class VariantDef {
         this.name = name;
         this.payload = payload;
         this.enabled = enabled;
-        this.featureEnabled = featureEnabled;
+        this.featureEnabled = Optional.ofNullable(featureEnabled).orElse(false);
     }
 
     public String getName() {
