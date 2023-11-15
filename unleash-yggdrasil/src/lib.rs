@@ -499,7 +499,7 @@ impl EngineState {
             name: variant.name.clone(),
             payload: variant.payload.clone(),
             enabled: true,
-            feature_enabled: is_enabled.clone(),
+            feature_enabled: is_enabled,
         })
     }
 
