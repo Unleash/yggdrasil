@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,5 +18,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Yggdrasil.Engine\Yggdrasil.Engine.csproj" />
   </ItemGroup>
-
 </Project>
