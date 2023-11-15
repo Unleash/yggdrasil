@@ -40,7 +40,8 @@ class CustomStrategiesEvaluator {
         }
 
         try {
-            VersionedFeatures wrapper = mapper.readValue(toggles, new TypeReference<>() {});
+            VersionedFeatures wrapper =
+                    mapper.readValue(toggles, new TypeReference<VersionedFeatures>() {});
             if (wrapper.features != null) {
                 featureStrategies =
                         wrapper.features.stream()
