@@ -5,6 +5,8 @@ namespace Yggdrasil;
 
 public class YggdrasilEngine
 {
+    private CustomStrategies customStrategies = new CustomStrategies();
+
     private JsonSerializerOptions options = new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -12,14 +14,39 @@ public class YggdrasilEngine
 
     private IntPtr state;
 
-    public YggdrasilEngine()
+    public YggdrasilEngine(List<IStrategy>? strategies = null)
     {
         state = FFI.NewEngine();
+
+        if (strategies != null)
+        {
+            customStrategies.RegisterCustomStrategies(strategies);
+        }
     }
 
     public bool ShouldEmitImpressionEvent(string featureName)
     {
-        return FFI.ShouldEmitImpressionEvent(state, featureName);
+        var shouldEmitImpressionEventPtr = FFI.ShouldEmitImpressionEvent(state, featureName);
+        if (shouldEmitImpressionEventPtr == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var shouldEmitImpressionEventJson = Marshal.PtrToStringUTF8(shouldEmitImpressionEventPtr);
+
+        FFI.FreeResponse(shouldEmitImpressionEventPtr);
+
+        var shouldEmitImpressionEventResult =
+            shouldEmitImpressionEventJson != null
+                ? JsonSerializer.Deserialize<EngineResponse<bool>>(shouldEmitImpressionEventJson, options)
+                : null;
+        
+        if (shouldEmitImpressionEventResult?.StatusCode == "Error")
+        {
+            throw new YggdrasilEngineException($"Error: {shouldEmitImpressionEventResult?.ErrorMessage}");
+        }
+
+        return shouldEmitImpressionEventResult?.Value ?? false;
     }
 
     public void Dispose()
@@ -50,13 +77,15 @@ public class YggdrasilEngine
         {
             throw new YggdrasilEngineException($"Error: {takeStateResult?.ErrorMessage}");
         }
+
+        customStrategies.MapFeatures(json);
     }
 
     public bool? IsEnabled(string toggleName, Context context)
     {
+        var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
         string contextJson = JsonSerializer.Serialize(context, options);
-
-        var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, "{}");
+        var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, customStrategyPayload);
 
         if (isEnabledPtr == IntPtr.Zero)
         {
@@ -82,8 +111,9 @@ public class YggdrasilEngine
 
     public Variant? GetVariant(string toggleName, Context context)
     {
+        var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
         var contextJson = JsonSerializer.Serialize(context, options);
-        var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, "{}");
+        var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, customStrategyPayload);
 
         if (variantPtr == IntPtr.Zero)
         {

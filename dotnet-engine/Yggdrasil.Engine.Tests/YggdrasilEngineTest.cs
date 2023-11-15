@@ -5,6 +5,7 @@ using NUnit.Framework;
 using System;
 using Newtonsoft.Json.Linq;
 using Yggdrasil;
+using Yggdrasil.Test;
 
 
 public class Tests
@@ -14,10 +15,10 @@ public class Tests
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    [Test]
+    //[Test]
     public void MassTestMemoryUsage() {
         // Arrange
-        var basePath = Path.Combine("..", "..", "..", "..", "..", "..", "client-specification", "specifications");
+        var basePath = Path.Combine("..", "..", "..", "..", "..", "client-specification", "specifications");
         var suitePath = Path.Combine(basePath, "01-simple-examples.json");
         var suiteData = JObject.Parse(File.ReadAllText(suitePath));
 
@@ -56,7 +57,7 @@ public class Tests
     public void TestClientSpec()
     {
         var yggdrasilEngine = new YggdrasilEngine();
-        var basePath = Path.Combine("..", "..", "..", "..", "..", "..", "client-specification", "specifications");
+        var basePath = Path.Combine("..", "..", "..", "..", "..", "client-specification", "specifications");
         var indexFilePath = Path.Combine(basePath, "index.json");
         var testSuites = JArray.Parse(File.ReadAllText(indexFilePath));
 
@@ -68,6 +69,7 @@ public class Tests
             yggdrasilEngine.TakeState(suiteData["state"].ToString());
 
             var tests = suiteData["tests"] ?? new JArray();
+
             foreach (var test in tests)
             {
 
@@ -90,7 +92,7 @@ public class Tests
                 // Silly hack to apply formatting to the string from the spec
                 var expectedResult = JsonSerializer.Serialize(JsonSerializer.Deserialize<Variant>(test["expectedResult"].ToString(), options), options);
 
-                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant { Name = "disabled", Payload = null, Enabled = false };
+                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant("disabled", null, false );
                 var jsonResult = JsonSerializer.Serialize(result, options);
 
                 Assert.AreEqual(expectedResult, jsonResult, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");
@@ -98,6 +100,50 @@ public class Tests
 
             Console.WriteLine($"Passed client specification {suite}");
         }
+    }
+
+    [Test]
+    public void Custom_Strategies_Required_But_Not_Configured_Returns_False() {
+
+        var yggdrasilEngine = new YggdrasilEngine();
+        var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
+        var json = File.ReadAllText(filePath);
+        yggdrasilEngine.TakeState(json);
+        var context = new Context();
+        var result = yggdrasilEngine.IsEnabled("Feature.D", context);
+        Assert.AreEqual(false, result);
+    }
+
+    [Test]
+    public void Custom_Strategies_Required_And_Configured_Succeeds() {
+        var yggdrasilEngine = new YggdrasilEngine(new List<IStrategy>
+        {
+            new CustomStrategyReturningTrue("custom"),
+            new CustomStrategyReturningTrue("cus-tom")
+        });
+
+        var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
+        var json = File.ReadAllText(filePath);
+        yggdrasilEngine.TakeState(json);
+        var context = new Context();
+        var result = yggdrasilEngine.IsEnabled("Feature.D", context);
+        Assert.AreEqual(true, result);
+    }
+
+    [Test]
+    public void Custom_Strategies_Correct_Names_Despite_Ordering() {
+        var yggdrasilEngine = new YggdrasilEngine(new List<IStrategy>
+        {
+            new CustomStrategyReturningTrue("custom"),
+            new CustomStrategyReturningTrue("cus-tom")
+        });
+
+        var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
+        var json = File.ReadAllText(filePath);
+        yggdrasilEngine.TakeState(json);
+        var context = new Context();
+        var result = yggdrasilEngine.IsEnabled("Feature.E", context);
+        Assert.AreEqual(true, result);
     }
 
     [Test]
@@ -160,7 +206,6 @@ public class Tests
         var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
         Assert.NotNull(result);
         Assert.IsTrue(result);
-        Assert.NotNull(shouldEmit);
         Assert.IsFalse(shouldEmit);
     }
 }

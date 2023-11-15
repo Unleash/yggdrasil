@@ -17,5 +17,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Yggdrasil.Engine\Yggdrasil.Engine.csproj" />
   </ItemGroup>
-
 </Project>
