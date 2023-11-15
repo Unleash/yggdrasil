@@ -1,7 +1,7 @@
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
-    id("com.diffplug.spotless") version "6.22.0"
+    id("com.diffplug.spotless") version "6.13.0"
 }
 
 repositories {
@@ -14,7 +14,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
 
     // use Mockito
-    testImplementation("org.mockito:mockito-core:5.2.0")
+    testImplementation("org.mockito:mockito-core:4.11.0")
 
     // use simple-logging with SLF4j for testing
     testImplementation("org.slf4j:slf4j-simple:2.0.5")
@@ -32,8 +32,7 @@ dependencies {
 
 spotless {
     java {
-        // Choose a formatter, for example, Google Java Format
-        googleJavaFormat("1.12.0").aosp()
+        googleJavaFormat("1.7").aosp()
         removeUnusedImports()
         importOrder()
     }
