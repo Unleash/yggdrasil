@@ -14,14 +14,14 @@ public class YggdrasilEngine
 
     private IntPtr state;
 
-    public YggdrasilEngine()
+    public YggdrasilEngine(List<IStrategy>? strategies = null)
     {
         state = FFI.NewEngine();
-    }
 
-    public void RegisterCustomStrategies(List<IStrategy> strategies)
-    {
-        customStrategies.RegisterCustomStrategies(strategies);
+        if (strategies != null)
+        {
+            customStrategies.RegisterCustomStrategies(strategies);
+        }
     }
 
     public bool ShouldEmitImpressionEvent(string featureName)
@@ -57,8 +57,6 @@ public class YggdrasilEngine
 
     public void TakeState(string json)
     {
-        customStrategies.MapFeatures(json);
-
         var takeStatePtr = FFI.TakeState(state, json);
 
         if (takeStatePtr == IntPtr.Zero)
@@ -79,6 +77,8 @@ public class YggdrasilEngine
         {
             throw new YggdrasilEngineException($"Error: {takeStateResult?.ErrorMessage}");
         }
+
+        customStrategies.MapFeatures(json);
     }
 
     public bool? IsEnabled(string toggleName, Context context)
