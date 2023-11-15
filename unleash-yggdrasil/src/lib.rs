@@ -543,7 +543,6 @@ impl EngineState {
         .unwrap_or_default();
 
         self.count_variant(name, &variant.name);
-        println!("Returning variant with feature_enabled: {}", &variant.feature_enabled);
         variant
     }
 
