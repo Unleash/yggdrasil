@@ -28,8 +28,8 @@ public class Tests
         var runTestFor = (Action lambda, string process) =>
         {
 
-        // Baseline / warm up
-        for (var i = 0; i < 1000000; i++)
+            // Baseline / warm up
+            for (var i = 0; i < 1000000; i++)
             {
                 lambda();
             }
@@ -37,8 +37,8 @@ public class Tests
 
             var baseline = GC.GetTotalMemory(true);
 
-        // Act
-        for (var i = 0; i < 1000000; i++)
+            // Act
+            for (var i = 0; i < 1000000; i++)
             {
                 lambda();
             }
@@ -46,8 +46,8 @@ public class Tests
 
             var memoryTotal = GC.GetTotalMemory(true);
 
-        // Assert
-        var diff = memoryTotal - baseline;
+            // Assert
+            var diff = memoryTotal - baseline;
             Assert.LessOrEqual(diff, 200000, process + " has a potential memory leak. Diff: " + diff + " bytes");
         };
 
