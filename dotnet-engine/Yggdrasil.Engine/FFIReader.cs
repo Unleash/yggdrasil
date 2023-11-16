@@ -19,9 +19,15 @@ public static class FFIReader
     /// <param name="ptr">Pointer to a string containing the response from FFI. This pointer will be freed</param>
     /// <returns>The result from deserializing the engine response</returns>
     /// <exception cref="YggdrasilEngineException"></exception>
-    public static TRead? ReadPrimitive<TRead>(IntPtr ptr) where TRead : struct
+    public static TRead? ReadPrimitive<TRead>(IntPtr ptr)
+        where TRead : struct
     {
-        var engineResponse = ReadEngineResponse<EngineResponse<TRead?>>(ptr);
+        if (ptr == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        var engineResponse = ReadResponse<EngineResponse<TRead?>>(ptr);
         if (engineResponse?.StatusCode == "Error")
         {
             throw new YggdrasilEngineException($"Error: {engineResponse?.ErrorMessage}");
@@ -40,38 +46,21 @@ public static class FFIReader
     /// <param name="ptr">Pointer to a string containing the response from FFI. This pointer will be freed</param>
     /// <returns>The result from deserializing the engine response</returns>
     /// <exception cref="YggdrasilEngineException"></exception>
-    public static TRead? ReadComplex<TRead>(IntPtr ptr) where TRead : class
+    public static TRead? ReadComplex<TRead>(IntPtr ptr)
+        where TRead : class
     {
-        var engineResponse = ReadEngineResponse<EngineResponse<TRead>>(ptr);
+        if (ptr == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        var engineResponse = ReadResponse<EngineResponse<TRead>>(ptr);
         if (engineResponse?.StatusCode == "Error")
         {
             throw new YggdrasilEngineException($"Error: {engineResponse?.ErrorMessage}");
         }
 
         return engineResponse?.Value;
-    }
-
-    /// <summary>
-    /// Deserializes json value response from engine to a complex type (class).
-    /// Returns null if engine response is null.
-    /// Free's the response pointer.
-    /// </summary>
-    /// <typeparam name="TValue">The complex type to deserialize to and return.</typeparam>
-    /// <param name="ptr">Pointer to a string containing the response from FFI. This pointer will be freed</param>
-    /// <returns>The result from deserializing the engine response</returns>
-    public static TValue? ReadValue<TValue>(IntPtr ptr) where TValue : class
-    {
-        var json = Marshal.PtrToStringUTF8(ptr);
-
-        FFI.FreeResponse(ptr);
-
-        Console.WriteLine(json);
-
-        var result = json != null
-            ? JsonSerializer.Deserialize<TValue>(json, options)
-            : null;
-
-        return result;
     }
 
     /// <summary>
@@ -83,25 +72,37 @@ public static class FFIReader
     /// <exception cref="YggdrasilEngineException"></exception>
     public static void CheckResponse(IntPtr ptr)
     {
-        var engineResponse = ReadEngineResponse<EngineResponse>(ptr);
+        if (ptr == IntPtr.Zero)
+        {
+            throw new YggdrasilEngineException($"Error: unexpected null pointer");
+        }
+
+        var engineResponse = ReadResponse<EngineResponse>(ptr);
         if (engineResponse?.StatusCode == "Error")
         {
             throw new YggdrasilEngineException($"Error: {engineResponse?.ErrorMessage}");
         }
     }
 
-    private static TEngineResponse? ReadEngineResponse<TEngineResponse>(IntPtr ptr) where TEngineResponse : EngineResponse
+    internal static T? ReadResponse<T>(IntPtr ptr)
+        where T : class
     {
-        var json = Marshal.PtrToStringUTF8(ptr);
+        if (ptr == IntPtr.Zero)
+        {
+            throw new YggdrasilEngineException($"Error: unexpected null pointer");
+        }
 
-        FFI.FreeResponse(ptr);
+        try
+        {
+            var json = Marshal.PtrToStringUTF8(ptr);
 
-        Console.WriteLine(json);
+            var result = json != null ? JsonSerializer.Deserialize<T>(json, options) : null;
 
-        var result = json != null
-            ? JsonSerializer.Deserialize<TEngineResponse>(json, options)
-            : null;
-
-        return result;
+            return result;
+        }
+        finally
+        {
+            FFI.FreeResponse(ptr);
+        }
     }
 }
