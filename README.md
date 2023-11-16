@@ -1,6 +1,6 @@
 # Yggdrasil
 
-![world tree image](worldtree.webp "Title")
+![world tree image](worldtree.webp 'Title')
 
 ##### One SDK core connecting all the realms of Unleash.
 
@@ -17,15 +17,14 @@ To run the client specs, you'll first need to clone them:
 ## Testing
 
 This will run whole test suite
+
 ```
 cargo test
 ```
 
-
 ## Node
 
 The Node core is a special case, this doesn't use FFI like the other SDKs, instead this compiles the core down to WASM.
-
 
 ### Building
 
@@ -51,4 +50,5 @@ Start by setting up and activating a virtual environment in the python-sdk folde
 python3 -m venv venv
 source venv/bin/activate
 ```
+
 Install [maturin](https://github.com/PyO3/maturin) by executing `pip install maturin` in your shell. Then you can run `maturin develop`.

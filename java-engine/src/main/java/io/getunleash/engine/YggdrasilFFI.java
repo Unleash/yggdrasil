@@ -56,7 +56,7 @@ class YggdrasilFFI {
             libImpl = "libyggdrasilffi.dll";
         }
 
-        String combinedPath = Paths.get(libraryPath, libImpl).toString();
+        String combinedPath = Paths.get(libraryPath, libImpl).toAbsolutePath().toString();
         return Native.load(combinedPath, UnleashFFI.class);
     }
 

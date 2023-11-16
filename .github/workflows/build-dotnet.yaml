@@ -6,16 +6,16 @@ on:
     branches:
       - main
     paths:
-      - 'dotnet-engine/**'
+      - "dotnet-engine/**"
       # Build in main if anything changes in yggdrasil or the ffi layer
-      - 'unleash-yggdrasil/src/**.rs'
-      - 'yggdrasilffi/src/**.rs'
+      - "unleash-yggdrasil/src/**.rs"
+      - "yggdrasilffi/src/**.rs"
   pull_request:
     branches:
       - main
     paths:
-      - 'dotnet-engine/**'
-  
+      - "dotnet-engine/**"
+
 jobs:
   build-dotnet:
     runs-on: ubuntu-latest
@@ -52,20 +52,24 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: "6.0.x"
 
       - name: Restore dependencies
         run: |
           cd dotnet-engine
           dotnet restore dotnet-engine.sln
-      
+
+      - name: Check formatting
+        run: |
+          cd dotnet-engine
+          dotnet format --verify-no-changes
+
       - name: Build
         run: |
           cd dotnet-engine
           dotnet build dotnet-engine.sln --configuration Release --no-restore
-        
+
       - name: Test
         run: |
           cd dotnet-engine/Yggdrasil.Engine.Tests
           dotnet test --no-restore
-          

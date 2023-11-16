@@ -13,7 +13,8 @@ public class Context
     public Dictionary<string, string>? Properties { get; set; }
 }
 
-public class EngineResponse {
+public class EngineResponse
+{
     [JsonPropertyName("error_message")]
     public string? ErrorMessage { get; set; }
 
@@ -21,7 +22,8 @@ public class EngineResponse {
     public string? StatusCode { get; set; }
 }
 
-public class EngineResponse<TValue> : EngineResponse {
+public class EngineResponse<TValue> : EngineResponse
+{
     public TValue? Value { get; set; }
 }
 
@@ -144,10 +146,10 @@ class MappedStrategy
 {
     public MappedStrategy(int index, string strategyName, Dictionary<string, string> parameters, IStrategy strategy)
     {
-            ResultName = $"customStrategy{index + 1}";
-            StrategyName = strategyName;
-            Strategy = strategy;
-            Parameters = parameters;
+        ResultName = $"customStrategy{index + 1}";
+        StrategyName = strategyName;
+        Strategy = strategy;
+        Parameters = parameters;
     }
 
     public string ResultName { get; private set; }
@@ -160,6 +162,6 @@ class MappedStrategy
 
     public bool IsEnabled(Context context)
     {
-        return Strategy.IsEnabled(Parameters , context);
+        return Strategy.IsEnabled(Parameters, context);
     }
 }
