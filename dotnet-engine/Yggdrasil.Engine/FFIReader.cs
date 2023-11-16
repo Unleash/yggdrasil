@@ -21,7 +21,7 @@ public static class FFIReader
     /// <exception cref="YggdrasilEngineException"></exception>
     public static TRead? ReadPrimitive<TRead>(IntPtr ptr) where TRead : struct
     {
-        var engineResponse = ReadEngineResponse<EngineResponse<TRead>>(ptr);
+        var engineResponse = ReadEngineResponse<EngineResponse<TRead?>>(ptr);
         if (engineResponse?.StatusCode == "Error")
         {
             throw new YggdrasilEngineException($"Error: {engineResponse?.ErrorMessage}");
@@ -52,6 +52,29 @@ public static class FFIReader
     }
 
     /// <summary>
+    /// Deserializes json value response from engine to a complex type (class).
+    /// Returns null if engine response is null.
+    /// Free's the response pointer.
+    /// </summary>
+    /// <typeparam name="TValue">The complex type to deserialize to and return.</typeparam>
+    /// <param name="ptr">Pointer to a string containing the response from FFI. This pointer will be freed</param>
+    /// <returns>The result from deserializing the engine response</returns>
+    public static TValue? ReadValue<TValue>(IntPtr ptr) where TValue : class
+    {
+        var json = Marshal.PtrToStringUTF8(ptr);
+
+        FFI.FreeResponse(ptr);
+
+        Console.WriteLine(json);
+
+        var result = json != null
+            ? JsonSerializer.Deserialize<TValue>(json, options)
+            : null;
+
+        return result;
+    }
+
+    /// <summary>
     /// Handles the result of an engine operation that does not return a value.
     /// Throws <see cref="YggdrasilEngineException"/> if engine response is an error.
     /// Free's the response pointer.
@@ -72,6 +95,8 @@ public static class FFIReader
         var json = Marshal.PtrToStringUTF8(ptr);
 
         FFI.FreeResponse(ptr);
+
+        Console.WriteLine(json);
 
         var result = json != null
             ? JsonSerializer.Deserialize<TEngineResponse>(json, options)

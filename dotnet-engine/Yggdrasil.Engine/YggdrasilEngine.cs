@@ -21,7 +21,7 @@ public class YggdrasilEngine
     var knownStrategiesPtr = FFI.BuiltInStrategies(state);
     var knownStrategies = knownStrategiesPtr == IntPtr.Zero
       ? null
-      : FFIReader.ReadComplex<string[]>(knownStrategiesPtr);
+      : FFIReader.ReadValue<string[]>(knownStrategiesPtr);
 
     customStrategies = new CustomStrategies(knownStrategies);
 
