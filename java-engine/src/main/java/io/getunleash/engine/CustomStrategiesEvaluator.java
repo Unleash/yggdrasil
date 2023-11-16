@@ -29,7 +29,8 @@ class CustomStrategiesEvaluator {
         this(customStrategies, null);
     }
 
-    public CustomStrategiesEvaluator(Stream<IStrategy> customStrategies, IStrategy fallbackStrategy) {
+    public CustomStrategiesEvaluator(
+            Stream<IStrategy> customStrategies, IStrategy fallbackStrategy) {
         this.mapper = new ObjectMapper();
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.registeredStrategies =
@@ -38,7 +39,7 @@ class CustomStrategiesEvaluator {
     }
 
     public void loadStrategiesFor(String toggles) {
-        if (this.registeredStrategies.isEmpty() &&  this.fallbackStrategy == null) {
+        if (this.registeredStrategies.isEmpty() && this.fallbackStrategy == null) {
             return;
         }
 
@@ -75,7 +76,9 @@ class CustomStrategiesEvaluator {
         if (fallbackStrategy != null) {
             mappedStrategies.add(
                     new MappedStrategy(
-                            "customStrategy" + index, fallbackStrategy, new StrategyDefinition("fallback", Collections.emptyMap())));
+                            "customStrategy" + index,
+                            fallbackStrategy,
+                            new StrategyDefinition("fallback", Collections.emptyMap())));
         }
         return mappedStrategies;
     }

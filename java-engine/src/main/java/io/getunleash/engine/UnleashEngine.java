@@ -42,7 +42,8 @@ public class UnleashEngine {
         this(yggdrasil, customStrategies, null);
     }
 
-    UnleashEngine(YggdrasilFFI yggdrasil, List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
+    UnleashEngine(
+            YggdrasilFFI yggdrasil, List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
         this.yggdrasil = yggdrasil;
         this.mapper = new ObjectMapper();
         this.mapper.registerModule(new JavaTimeModule());
@@ -63,9 +64,11 @@ public class UnleashEngine {
                                                     return false;
                                                 }
                                                 return true;
-                                            }), fallbackStrategy);
+                                            }),
+                            fallbackStrategy);
         } else {
-            this.customStrategiesEvaluator = new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy);
+            this.customStrategiesEvaluator =
+                    new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy);
         }
     }
 
