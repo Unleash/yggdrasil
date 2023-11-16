@@ -19,19 +19,26 @@ class CustomStrategiesEvaluator {
     private static final Logger log = LoggerFactory.getLogger(CustomStrategiesEvaluator.class);
     static final String EMPTY_STRATEGY_RESULTS = "{}";
     private final Map<String, IStrategy> registeredStrategies;
+
+    private final IStrategy fallbackStrategy;
     private final ObjectMapper mapper;
 
     private Map<String, List<MappedStrategy>> featureStrategies = new HashMap<>();
 
     public CustomStrategiesEvaluator(Stream<IStrategy> customStrategies) {
+        this(customStrategies, null);
+    }
+
+    public CustomStrategiesEvaluator(Stream<IStrategy> customStrategies, IStrategy fallbackStrategy) {
         this.mapper = new ObjectMapper();
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.registeredStrategies =
                 customStrategies.collect(toMap(IStrategy::getName, identity(), (a, b) -> a));
+        this.fallbackStrategy = fallbackStrategy;
     }
 
     public void loadStrategiesFor(String toggles) {
-        if (this.registeredStrategies.isEmpty()) {
+        if (this.registeredStrategies.isEmpty() &&  this.fallbackStrategy == null) {
             return;
         }
 
@@ -65,14 +72,18 @@ class CustomStrategiesEvaluator {
             mappedStrategies.add(
                     new MappedStrategy("customStrategy" + (index++), impl, strategyDefinition));
         }
+        if (fallbackStrategy != null) {
+            mappedStrategies.add(
+                    new MappedStrategy(
+                            "customStrategy" + index, fallbackStrategy, new StrategyDefinition("fallback", Collections.emptyMap())));
+        }
         return mappedStrategies;
     }
 
     public String eval(String name, Context context) {
 
         List<MappedStrategy> mappedStrategies = featureStrategies.get(name);
-
-        if (mappedStrategies == null) {
+        if (mappedStrategies == null || mappedStrategies.isEmpty()) {
             return EMPTY_STRATEGY_RESULTS;
         }
 
@@ -84,6 +95,7 @@ class CustomStrategiesEvaluator {
                                         mappedStrategy ->
                                                 tryIsEnabled(context, mappedStrategy)
                                                         .orElse(false)));
+
         try {
             return mapper.writeValueAsString(results);
         } catch (JsonProcessingException e) {

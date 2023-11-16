@@ -27,14 +27,22 @@ public class UnleashEngine {
     }
 
     public UnleashEngine(List<IStrategy> customStrategies) {
-        this(new YggdrasilFFI(), customStrategies);
+        this(new YggdrasilFFI(), customStrategies, null);
+    }
+
+    public UnleashEngine(List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
+        this(new YggdrasilFFI(), customStrategies, fallbackStrategy);
     }
 
     UnleashEngine(YggdrasilFFI yggdrasil) {
-        this(yggdrasil, null);
+        this(yggdrasil, null, null);
     }
 
     UnleashEngine(YggdrasilFFI yggdrasil, List<IStrategy> customStrategies) {
+        this(yggdrasil, customStrategies, null);
+    }
+
+    UnleashEngine(YggdrasilFFI yggdrasil, List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
         this.yggdrasil = yggdrasil;
         this.mapper = new ObjectMapper();
         this.mapper.registerModule(new JavaTimeModule());
@@ -55,9 +63,9 @@ public class UnleashEngine {
                                                     return false;
                                                 }
                                                 return true;
-                                            }));
+                                            }), fallbackStrategy);
         } else {
-            this.customStrategiesEvaluator = new CustomStrategiesEvaluator(Stream.empty());
+            this.customStrategiesEvaluator = new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy);
         }
     }
 
