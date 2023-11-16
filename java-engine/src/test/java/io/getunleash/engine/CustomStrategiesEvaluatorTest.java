@@ -122,9 +122,14 @@ class CustomStrategiesEvaluatorTest {
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, Boolean> expectedMap =
                 assertDoesNotThrow(
-                        () -> objectMapper.readValue(expected, new TypeReference<>() {}));
+                        () ->
+                                objectMapper.readValue(
+                                        expected, new TypeReference<Map<String, Boolean>>() {}));
         Map<String, Boolean> resultMap =
-                assertDoesNotThrow(() -> objectMapper.readValue(result, new TypeReference<>() {}));
+                assertDoesNotThrow(
+                        () ->
+                                objectMapper.readValue(
+                                        result, new TypeReference<Map<String, Boolean>>() {}));
         assertEquals(expectedMap, resultMap);
     }
 }

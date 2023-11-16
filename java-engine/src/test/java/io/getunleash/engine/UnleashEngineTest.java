@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -101,11 +102,13 @@ class UnleashEngineTest {
         ObjectMapper objectMapper = new ObjectMapper();
         File basePath = Paths.get("../client-specification/specifications").toFile();
         File indexFile = new File(basePath, "index.json");
-        List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<>() {});
+        List<String> testSuites =
+                objectMapper.readValue(indexFile, new TypeReference<List<String>>() {});
 
         for (String suite : testSuites) {
             File suiteFile = new File(basePath, suite);
-            TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<>() {});
+            TestSuite suiteData =
+                    objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {});
 
             engine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
@@ -238,33 +241,49 @@ class UnleashEngineTest {
 
     private static Stream<Arguments> customStrategiesInput() {
         Context oneYesContext = new Context();
-        oneYesContext.setProperties(Map.of("one", "yes"));
+        oneYesContext.setProperties(mapOf("one", "yes"));
         return Stream.of(
                 of(null, "Feature.Custom.Strategies", new Context(), false),
                 of(Collections.emptyList(), "Feature.Custom.Strategies", new Context(), false),
-                of(List.of(alwaysTrue("custom")), "Feature.Custom.Strategies", new Context(), true),
                 of(
-                        List.of(onlyTrueIfAllParametersInContext("custom")),
+                        Collections.singletonList(alwaysTrue("custom")),
+                        "Feature.Custom.Strategies",
+                        new Context(),
+                        true),
+                of(
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
                         "Feature.Custom.Strategies",
                         new Context(),
                         false),
                 of(
-                        List.of(onlyTrueIfAllParametersInContext("custom")),
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
                         "Feature.Custom.Strategies",
                         oneYesContext,
                         true),
                 of(
-                        List.of(onlyTrueIfAllParametersInContext("custom")),
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
                         "Feature.Mixed.Strategies",
                         oneYesContext,
                         true),
-                of(List.of(alwaysTrue("custom")), "Feature.Mixed.Strategies", oneYesContext, true),
-                of(List.of(), "Feature.Mixed.Strategies", oneYesContext, true),
                 of(
-                        List.of(alwaysFails("custom")),
+                        Collections.singletonList(alwaysTrue("custom")),
+                        "Feature.Mixed.Strategies",
+                        oneYesContext,
+                        true),
+                of(Collections.emptyList(), "Feature.Mixed.Strategies", oneYesContext, true),
+                of(
+                        Collections.singletonList(alwaysFails("custom")),
                         "Feature.Mixed.Strategies",
                         oneYesContext,
                         true));
+    }
+
+    static Map<String, String> mapOf(String key, String value) {
+        return new HashMap<String, String>() {
+            {
+                put(key, value);
+            }
+        };
     }
 
     private void takeFeaturesFromResource(UnleashEngine engine, String resource) {
@@ -277,12 +296,14 @@ class UnleashEngineTest {
     }
 
     public static String readResource(String resource) throws IOException, URISyntaxException {
-        return Files.readString(
-                Paths.get(
-                        Objects.requireNonNull(
-                                        UnleashEngineTest.class
-                                                .getClassLoader()
-                                                .getResource(resource))
-                                .toURI()));
+        return new String(
+                Files.readAllBytes(
+                        Paths.get(
+                                Objects.requireNonNull(
+                                                UnleashEngineTest.class
+                                                        .getClassLoader()
+                                                        .getResource(resource))
+                                        .toURI())),
+                StandardCharsets.UTF_8);
     }
 }

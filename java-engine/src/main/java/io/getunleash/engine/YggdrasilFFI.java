@@ -4,7 +4,6 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
-import java.lang.ref.Cleaner;
 import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +34,7 @@ interface UnleashFFI extends Library {
 }
 
 class YggdrasilFFI {
-    private static final Cleaner CLEANER = Cleaner.create();
-
     private static final Logger log = LoggerFactory.getLogger(YggdrasilFFI.class);
-
-    @SuppressWarnings("unused")
-    private final Cleaner.Cleanable cleanable;
 
     private final UnleashFFI ffi;
     private final Pointer enginePtr;
@@ -73,15 +67,11 @@ class YggdrasilFFI {
     YggdrasilFFI(UnleashFFI ffi) {
         this.ffi = ffi;
         this.enginePtr = this.ffi.new_engine();
+    }
 
-        // Note that the cleaning action must not refer to the object being registered.
-        // If so, the object will not become phantom reachable and the cleaning action
-        // will not be invoked automatically.
-        // this.cleanable uses a PhantomReference to this object, so from a GC
-        // perspective it doesn't count.
-        this.cleanable =
-                CLEANER.register(
-                        this, new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr));
+    @Override
+    protected void finalize() {
+        new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr).run();
     }
 
     Pointer takeState(String toggles) {
