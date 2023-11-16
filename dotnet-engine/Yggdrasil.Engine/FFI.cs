@@ -25,6 +25,7 @@ internal static class FFI
   private delegate void CountToggleDelegate(IntPtr ptr, string toggle_name, bool enabled);
   private delegate void CountVariantDelegate(IntPtr ptr, string toggle_name, string variant_name);
   private delegate IntPtr ShouldEmitImpressionEventDelegate(IntPtr ptr, string toggle_name);
+  private delegate IntPtr BuiltInStrategiesDelegate(IntPtr ptr);
 
   private static readonly NewEngineDelegate _newEngine;
   private static readonly FreeEngineDelegate _freeEngine;
@@ -36,6 +37,7 @@ internal static class FFI
   private static readonly CountToggleDelegate _count_toggle;
   private static readonly CountVariantDelegate _count_variant;
   private static readonly ShouldEmitImpressionEventDelegate _should_emit_impression_event;
+  private static readonly BuiltInStrategiesDelegate _built_in_strategies;
 
   static FFI()
   {
@@ -80,6 +82,10 @@ internal static class FFI
 
     _should_emit_impression_event = Marshal.GetDelegateForFunctionPointer<ShouldEmitImpressionEventDelegate>(
         NativeLibrary.GetExport(libHandle, "should_emit_impression_event")
+    );
+
+    _built_in_strategies = Marshal.GetDelegateForFunctionPointer<BuiltInStrategiesDelegate>(
+        NativeLibrary.GetExport(libHandle, "built_in_strategies")
     );
   }
 
@@ -164,5 +170,10 @@ internal static class FFI
   public static IntPtr ShouldEmitImpressionEvent(IntPtr ptr, string toggle_name)
   {
     return _should_emit_impression_event(ptr, toggle_name);
+  }
+
+  public static IntPtr BuiltInStrategies(IntPtr ptr)
+  {
+    return _built_in_strategies(ptr);
   }
 }

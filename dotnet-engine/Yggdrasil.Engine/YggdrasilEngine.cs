@@ -4,7 +4,8 @@ namespace Yggdrasil;
 
 public class YggdrasilEngine
 {
-  private CustomStrategies customStrategies = new CustomStrategies();
+  private CustomStrategies customStrategies;
+
 
   private JsonSerializerOptions options = new JsonSerializerOptions
   {
@@ -17,6 +18,12 @@ public class YggdrasilEngine
   {
     state = FFI.NewEngine();
 
+    var knownStrategiesPtr = FFI.BuiltInStrategies(state);
+    var knownStrategies = knownStrategiesPtr == IntPtr.Zero
+      ? null
+      : FFIReader.ReadComplex<string[]>(knownStrategiesPtr);
+
+    customStrategies = new CustomStrategies(knownStrategies);
 
     if (strategies != null)
     {

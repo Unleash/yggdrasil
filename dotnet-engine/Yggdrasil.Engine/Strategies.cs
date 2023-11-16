@@ -10,24 +10,19 @@ internal class CustomStrategies
     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
   };
 
-  private static readonly string[] knownStrategies = new[] {
-        "default",
-        "userWithId",
-        "gradualRolloutUserId",
-        "gradualRolloutRandom",
-        "applicationHostname",
-        "gradualRolloutSessionId",
-        "remoteAddress",
-        "flexibleRollout",
-    };
+  private string[]? knownStrategies = null;
 
   private Dictionary<string, IStrategy> strategies = new Dictionary<string, IStrategy>();
   private Dictionary<string, MappedFeature>? mappedFeatures = null;
 
+  internal CustomStrategies(string[]? knownStrategies)
+  {
+    this.knownStrategies = knownStrategies;
+  }
 
   private bool IsCustomStrategy(StrategyDefinition strategy)
   {
-    return !knownStrategies.Contains(strategy.Name);
+    return !knownStrategies?.Contains(strategy.Name) ?? false;
   }
 
   private List<MappedStrategy> MapCustomStrategies(List<StrategyDefinition>? strategies)
