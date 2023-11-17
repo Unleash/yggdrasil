@@ -1431,6 +1431,73 @@ mod test {
     }
 
     #[test]
+    pub fn invalid_date_format_bubbles_up_a_nice_error_message() {
+        let raw_state = r#"
+        {
+            "version": 2,
+            "segments": [
+                {
+                    "id": 0,
+                    "name": "hasEnoughWins",
+                    "description": null,
+                    "constraints": [
+                        {
+                            "contextName": "dateLastWin",
+                            "operator": "DATE_AFTER",
+                            "value": "2022-05-01T12:00:00",
+                            "inverted": false,
+                            "caseInsensitive": true
+                        }
+                    ]
+                }
+            ],
+            "features": [
+                {
+                    "name": "toggle1",
+                    "type": "release",
+                    "enabled": true,
+                    "project": "TestProject20",
+                    "stale": false,
+                    "strategies": [
+                        {
+                            "name": "default",
+                            "segments": [
+                                0
+                            ]
+                        }
+                    ],
+                    "variants": [],
+                    "description": null,
+                    "impressionData": false
+                }
+            ],
+            "query": {
+                "environment": "development",
+                "inlineSegmentConstraints": true
+            },
+            "meta": {
+                "revisionId": 12137,
+                "etag": "\"76d8bb0e:12137\"",
+                "queryHash": "76d8bb0e"
+            }
+        }
+        "#;
+
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+
+        let maybe_error = engine.take_state(feature_set);
+
+        if let Err(error) = maybe_error {
+            let error_as_string = format!("{:?}", error);
+            // TODO make error message better
+            assert!(error_as_string.contains("StrategyParseError"));
+        } else {
+            panic!("Expected an error from yggdrasil take state but got an Ok instead!")
+        }
+    }
+
+    #[test]
     pub fn metrics_are_not_recorded_for_parent_flags() {
         let mut compiled_state = HashMap::new();
         compiled_state.insert(
