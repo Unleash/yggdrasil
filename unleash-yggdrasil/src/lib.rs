@@ -16,7 +16,7 @@ use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
-use state::EnrichedContext;
+use state::{EnrichedContext, SdkError};
 use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
@@ -128,7 +128,7 @@ fn compile_variant_rule(
     variant_rules
 }
 
-pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> {
+pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledToggle>, SdkError> {
     let mut compiled_state = HashMap::new();
     let segment_map = build_segment_map(&state.segments);
     for toggle in &state.features {
@@ -141,7 +141,9 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
                 enabled: toggle.enabled,
                 compiled_variant_strategy: variant_rule,
                 variants: compile_variants(&toggle.variants),
-                compiled_strategy: compile_rule(rule.as_str()).unwrap(),
+                compiled_strategy: compile_rule(rule.as_str()).map_err(|err| {
+                    SdkError::StrategyParseError(format!("Failed to parse rule, {:?}", err))
+                })?,
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
                 dependencies: toggle.dependencies.clone().unwrap_or_default(),
@@ -149,7 +151,7 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
         );
     }
 
-    compiled_state
+    Ok(compiled_state)
 }
 
 fn compile_variants(variants: &Option<Vec<Variant>>) -> Vec<CompiledVariant> {
@@ -351,8 +353,11 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> bool {
-        let enriched_context =
-            EnrichedContext::from(context.clone(), toggle.name.clone(), external_values.clone());
+        let enriched_context = EnrichedContext::from(
+            context.clone(),
+            toggle.name.clone(),
+            external_values.clone(),
+        );
         toggle.enabled
             && self.is_parent_dependency_satisfied(toggle, context)
             && (toggle.compiled_strategy)(&enriched_context)
@@ -398,13 +403,15 @@ impl EngineState {
         })
     }
 
-    pub fn should_emit_impression_event(
-        &self,
-        name: &str,
-    ) -> bool {
-        self.compiled_state.as_ref().and_then(|state| {
-            state.get(name).map(|compiled_toggle| compiled_toggle.impression_data)
-        }).unwrap_or_default()
+    pub fn should_emit_impression_event(&self, name: &str) -> bool {
+        self.compiled_state
+            .as_ref()
+            .and_then(|state| {
+                state
+                    .get(name)
+                    .map(|compiled_toggle| compiled_toggle.impression_data)
+            })
+            .unwrap_or_default()
     }
 
     pub fn check_enabled(
@@ -543,8 +550,9 @@ impl EngineState {
         variant
     }
 
-    pub fn take_state(&mut self, toggles: ClientFeatures) {
-        self.compiled_state = Some(compile_state(&toggles));
+    pub fn take_state(&mut self, toggles: ClientFeatures) -> Result<(), SdkError> {
+        self.compiled_state = Some(compile_state(&toggles)?);
+        Ok(())
     }
 }
 
@@ -691,7 +699,7 @@ mod test {
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::default();
-        engine.take_state(spec.state);
+        engine.take_state(spec.state).unwrap();
 
         if let Some(mut tests) = spec.tests {
             while let Some(test_case) = tests.pop() {
@@ -1413,7 +1421,7 @@ mod test {
             ..Context::default()
         };
 
-        engine.take_state(feature_set);
+        engine.take_state(feature_set).unwrap();
 
         let results = engine.resolve_all(&context, &None);
         let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
