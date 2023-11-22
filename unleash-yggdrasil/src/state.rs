@@ -36,10 +36,11 @@ impl EnrichedContext {
     }
 }
 
+
 #[derive(Debug)]
 pub enum SdkError {
     StrategyEvaluationError,
-    StrategyParseError,
+    StrategyParseError(String),
 }
 
 #[cfg(test)]
