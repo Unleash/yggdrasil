@@ -244,15 +244,20 @@ fn date_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
         let context_value = context_getter(context);
         match context_value {
             Some(context_value) => {
-                let context_value: DateTime<Utc> = context_value.parse().unwrap();
-                match ordinal_operation {
-                    OrdinalComparator::Lte => context_value <= date,
-                    OrdinalComparator::Lt => context_value < date,
-                    OrdinalComparator::Gte => context_value >= date,
-                    OrdinalComparator::Gt => context_value > date,
-                    OrdinalComparator::Eq => context_value == date,
+                let context_value = context_value.parse::<DateTime<Utc>>();
+
+                if let Ok(context_value) = context_value {
+                    match ordinal_operation {
+                        OrdinalComparator::Lte => context_value <= date,
+                        OrdinalComparator::Lt => context_value < date,
+                        OrdinalComparator::Gte => context_value >= date,
+                        OrdinalComparator::Gt => context_value > date,
+                        OrdinalComparator::Eq => context_value == date,
+                    }
+                    .invert(inverted)
+                } else {
+                    false
                 }
-                .invert(inverted)
             }
             None => false,
         }
