@@ -371,10 +371,12 @@ pub unsafe extern "C" fn should_emit_impression_event(
 mod tests {
     use std::ffi::{CStr, CString};
 
-    use unleash_types::client_features::{ClientFeature, ClientFeatures, Strategy};
-    use unleash_yggdrasil::EngineState;
+    use unleash_types::client_features::{
+        ClientFeature, ClientFeatures, Strategy, Variant, WeightType,
+    };
+    use unleash_yggdrasil::{EngineState, ExtendedVariantDef};
 
-    use crate::{check_enabled, new_engine, Response, ResponseCode};
+    use crate::{check_enabled, new_engine, Response, ResponseCode, check_variant};
 
     #[test]
     fn when_requesting_a_toggle_that_does_not_exist_then_a_response_with_no_error_and_not_found_is_returned(
@@ -511,6 +513,62 @@ mod tests {
 
             assert!(enabled_response.status_code == ResponseCode::Error);
             assert!(enabled_response.error_message.is_some());
+        }
+    }
+
+    #[test]
+    fn variant_response_is_enriched_with_toggle_enabled_status() {
+        let engine_ptr = new_engine();
+        let toggle_under_test = "some-toggle";
+
+        let c_toggle_name = CString::new(toggle_under_test).unwrap();
+        let c_context = CString::new("{}").unwrap();
+        let c_results = CString::new("{}").unwrap();
+
+        let toggle_name_ptr = c_toggle_name.as_ptr();
+        let context_ptr = c_context.as_ptr();
+        let results_ptr = c_results.as_ptr();
+
+        let client_features = ClientFeatures {
+            features: vec![ClientFeature {
+                name: toggle_under_test.into(),
+                enabled: true,
+                strategies: Some(vec![Strategy {
+                    name: "default".into(),
+                    constraints: None,
+                    parameters: None,
+                    segments: None,
+                    sort_order: None,
+                    variants: None,
+                }]),
+                variants: Some(vec![Variant {
+                    name: "variant".into(),
+                    weight: 100,
+                    payload: None,
+                    overrides: None,
+                    stickiness: Some("default".into()),
+                    weight_type: Some(WeightType::Fix),
+                }]),
+                ..Default::default()
+            }],
+            query: None,
+            segments: None,
+            version: 2,
+        };
+
+        unsafe {
+            let engine = &mut *(engine_ptr as *mut EngineState);
+            engine.take_state(client_features).unwrap();
+
+            let string_response =
+                check_variant(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
+            let response = CStr::from_ptr(string_response).to_str().unwrap();
+            let variant_response: Response<ExtendedVariantDef> = serde_json::from_str(response).unwrap();
+
+            assert!(variant_response.status_code == ResponseCode::Ok);
+            let variant_response = variant_response.value.expect("Expected variant response");
+
+            assert!(variant_response.feature_enabled);
         }
     }
 }
