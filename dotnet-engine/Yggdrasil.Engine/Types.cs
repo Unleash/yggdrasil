@@ -29,16 +29,19 @@ public class EngineResponse<TValue> : EngineResponse
 
 public class Variant
 {
-    public Variant(string name, Payload? payload, bool enabled)
+  public Variant(string name, Payload? payload, bool enabled, bool featureEnabled)
     {
         Name = name;
         Payload = payload;
         Enabled = enabled;
+        FeatureEnabled = featureEnabled;
     }
 
     public string Name { get; set; }
     public Payload? Payload { get; set; }
     public bool Enabled { get; set; }
+    [JsonPropertyName("feature_enabled")]
+    public bool FeatureEnabled { get; set; }
 }
 
 public class Payload
