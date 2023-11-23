@@ -29,7 +29,7 @@ public class EngineResponse<TValue> : EngineResponse
 
 public class Variant
 {
-  public Variant(string name, Payload? payload, bool enabled, bool featureEnabled)
+    public Variant(string name, Payload? payload, bool enabled, bool featureEnabled)
     {
         Name = name;
         Payload = payload;
