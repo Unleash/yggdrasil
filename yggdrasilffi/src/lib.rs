@@ -7,7 +7,7 @@ use std::{
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
-use unleash_yggdrasil::{Context, EngineState, VariantDef};
+use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef};
 
 #[derive(Serialize, Deserialize)]
 struct Response<T> {
@@ -211,14 +211,21 @@ pub unsafe extern "C" fn check_variant(
     context_ptr: *const c_char,
     custom_strategy_results_ptr: *const c_char,
 ) -> *const c_char {
-    let result: Result<Option<VariantDef>, FFIError> = (|| {
+    let result: Result<Option<ExtendedVariantDef>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
         let toggle_name = get_str(toggle_name_ptr)?;
         let context: Context = get_json(context_ptr)?;
         let custom_strategy_results =
             get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
-
-        Ok(engine.check_variant(toggle_name, &context, &Some(custom_strategy_results)))
+        let base_variant = engine.check_variant(
+            toggle_name,
+            &context,
+            &Some(custom_strategy_results.clone()),
+        );
+        let toggle_enabled = engine
+            .check_enabled(toggle_name, &context, &Some(custom_strategy_results))
+            .unwrap_or_default();
+        Ok(base_variant.map(|variant| variant.to_enriched_response(toggle_enabled)))
     })();
 
     result_to_json_ptr(result)
