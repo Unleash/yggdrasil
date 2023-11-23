@@ -33,8 +33,6 @@ class TestSuite {
 
 class UnleashEngineTest {
 
-    private static final VariantDef DEFAULT_VARIANT = new VariantDef("disabled", null, false);
-
     // Assume this is set up to be your feature JSON
     private final String simpleFeatures =
             loadFeaturesFromFile("../client-specification/specifications/01-simple-examples.json");
@@ -90,7 +88,8 @@ class UnleashEngineTest {
         VariantDef variant = engine.getVariant("Feature.A", context);
 
         if (variant == null) {
-            variant = DEFAULT_VARIANT;
+            variant =
+                    new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context));
         }
 
         assertEquals("disabled", variant.getName());
@@ -150,7 +149,12 @@ class UnleashEngineTest {
                     VariantDef result = engine.getVariant(toggleName, context);
                     if (result == null) {
                         // this behavior should be implemented in the SDK
-                        result = DEFAULT_VARIANT;
+                        result =
+                                new VariantDef(
+                                        "disabled",
+                                        null,
+                                        false,
+                                        engine.isEnabled(toggleName, context));
                     }
 
                     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
