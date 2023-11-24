@@ -963,4 +963,15 @@ mod tests {
 
         std::env::remove_var("HOSTNAME");
     }
+
+    #[test]
+    fn evaluates_host_name_to_false_when_missing_hostname_values() {
+        std::env::set_var("HOSTNAME", "DOS");
+
+        let rule = compile_rule("hostname in [\"\"]").unwrap();
+        let context = Context::default();
+        assert!(!rule(&context));
+
+        std::env::remove_var("HOSTNAME");
+    }
 }
