@@ -14,6 +14,7 @@ enum StrategyType {
     GradualRolloutRandom,
     FlexibleRollout,
     RemoteAddress,
+    ApplicationHostname,
     Custom(String),
 }
 
@@ -104,6 +105,7 @@ impl From<&str> for StrategyType {
             "gradualRolloutRandom" => StrategyType::GradualRolloutRandom,
             "flexibleRollout" => StrategyType::FlexibleRollout,
             "remoteAddress" => StrategyType::RemoteAddress,
+            "applicationHostname" => StrategyType::ApplicationHostname,
             _ => StrategyType::Custom(strategy.to_string()),
         }
     }
@@ -122,6 +124,7 @@ fn upgrade_strategy(
         StrategyType::GradualRolloutRandom => upgrade_random(strategy),
         StrategyType::FlexibleRollout => upgrade_flexible_rollout_strategy(strategy),
         StrategyType::RemoteAddress => upgrade_remote_address(strategy),
+        StrategyType::ApplicationHostname => upgrade_hostname(strategy),
         StrategyType::Custom(_) => format!("external_value[\"customStrategy{strategy_count}\"]"),
     };
 
@@ -231,6 +234,23 @@ fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
         }
         _ => "".into(),
     }
+}
+
+fn upgrade_hostname(strategy: &Strategy) -> String {
+    let hostnames = strategy
+        .get_param("hostNames")
+        .cloned()
+        .unwrap_or_else(|| "".to_owned()); //intentional, unleash returns "" when no hostnames are set
+
+    let hosts = hostnames
+        .split(',')
+        .collect::<Vec<&str>>()
+        .iter()
+        .map(|x| x.trim())
+        .map(|x| format!("\"{x}\""))
+        .collect::<Vec<String>>()
+        .join(", ");
+    format!("remote_address in [{hosts}]")
 }
 
 fn upgrade_random(strategy: &Strategy) -> String {
@@ -373,6 +393,8 @@ fn upgrade_context_name(context_name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::strategy_parsing::compile_rule;
+
     use super::*;
     use std::collections::HashMap;
     use test_case::test_case;
@@ -820,5 +842,23 @@ mod tests {
         };
         let rule = upgrade_constraint(&constraint);
         assert_eq!(rule.as_str(), "user_id contains_any [\"some\\\"thing\"]");
+    }
+
+    #[test]
+    fn generates_valid_hostname_strategy_from_hostname_strategy() {
+        let mut strategy_parameters = HashMap::new();
+        strategy_parameters.insert("hostNames".into(), "DOS, pop-os".into());
+        let strategy = Strategy {
+            name: "applicationHostname".into(),
+            parameters: Some(strategy_parameters),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+
+        let output = upgrade(&vec![strategy], &HashMap::new());
+        assert!(compile_rule(&output).is_ok());
+        assert_eq!(output.as_str(), "remote_address in [\"DOS\", \"pop-os\"]");
     }
 }
