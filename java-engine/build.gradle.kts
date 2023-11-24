@@ -2,6 +2,7 @@ plugins {
     // Apply the java-library plugin for API and implementation separation.
     `java-library`
     id("com.diffplug.spotless") version "6.13.0"
+    id("com.github.johnrengelman.shadow") version "7.1.0"
 }
 
 repositories {
@@ -46,6 +47,26 @@ java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
+
+tasks.jar {
+    manifest {
+        attributes(
+                "Implementation-Title" to project.name,
+                "Implementation-Version" to project.version
+        )
+    }
+    // Optionally, include other configurations if needed
+}
+
+tasks.shadowJar {
+    archiveBaseName.set("unleash-engine")
+    manifest {
+        attributes["Implementation-Title"] = project.name
+        attributes["Implementation-Version"] = project.version
+    }
+    // Include or exclude specific dependencies or files if needed
+}
+
 
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
