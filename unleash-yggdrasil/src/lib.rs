@@ -28,7 +28,7 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "5.0.2";
+pub const SUPPORTED_SPEC_VERSION: &str = "5.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 
 pub struct CompiledToggle {
@@ -208,7 +208,7 @@ pub struct ResolvedToggle {
     pub enabled: bool,
     pub impression_data: bool,
     pub project: String,
-    pub variant: VariantDef,
+    pub variant: ExtendedVariantDef,
 }
 
 impl EngineState {
@@ -528,26 +528,22 @@ impl EngineState {
         name: &str,
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
-    ) -> VariantDef {
+    ) -> ExtendedVariantDef {
         let toggle = self.get_toggle(name);
+        let enabled = toggle
+            .map(|t| self.enabled(t, context, external_values))
+            .unwrap_or_default();
 
-        let variant = if let Some(toggle) = toggle {
-            let enabled = self.enabled(toggle, context, external_values);
-            self.count_toggle(name, enabled);
-
-            if enabled {
-                self.check_variant_by_toggle(toggle, context)
-            } else {
-                None
-            }
-        } else {
-            self.count_toggle(name, false);
-            None
+        let variant = match toggle {
+            Some(toggle) if enabled => self.check_variant_by_toggle(toggle, context),
+            _ => None,
         }
         .unwrap_or_default();
 
+        self.count_toggle(name, enabled);
         self.count_variant(name, &variant.name);
-        variant
+
+        variant.to_enriched_response(enabled)
     }
 
     pub fn take_state(&mut self, toggles: ClientFeatures) -> Result<(), SdkError> {
@@ -622,6 +618,26 @@ pub struct VariantDef {
     pub enabled: bool,
 }
 
+impl VariantDef {
+    pub fn to_enriched_response(&self, toggle_enabled: bool) -> ExtendedVariantDef {
+        ExtendedVariantDef {
+            name: self.name.clone(),
+            payload: self.payload.clone(),
+            enabled: self.enabled,
+            feature_enabled: toggle_enabled,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+pub struct ExtendedVariantDef {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payload: Option<Payload>,
+    pub enabled: bool,
+    pub feature_enabled: bool,
+}
+
 impl Default for VariantDef {
     fn default() -> Self {
         Self {
@@ -641,7 +657,7 @@ mod test {
 
     use crate::{
         check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
-        EngineState, VariantDef,
+        EngineState, ExtendedVariantDef, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -669,7 +685,7 @@ mod test {
         pub(crate) description: String,
         pub(crate) context: Context,
         pub(crate) toggle_name: String,
-        pub(crate) expected_result: VariantDef,
+        pub(crate) expected_result: ExtendedVariantDef,
     }
 
     fn load_spec(spec_name: &str) -> TestSuite {
@@ -778,7 +794,7 @@ mod test {
 
         assert_eq!(
             state.get_variant("test", &context, &None),
-            VariantDef::default()
+            VariantDef::default().to_enriched_response(true)
         );
     }
 
@@ -1087,7 +1103,10 @@ mod test {
             .unwrap()
             .clone();
 
-        assert_eq!(first_variant, VariantDef::default());
+        assert_eq!(
+            first_variant,
+            VariantDef::default().to_enriched_response(true)
+        );
         assert_eq!(first_variant.name, second_variant.name);
 
         assert_eq!(get_variant_metrics.variants.len(), 1);
