@@ -158,11 +158,13 @@ fn upgrade_strategy(
 }
 
 fn upgrade_flexible_rollout_strategy(strategy: &Strategy) -> String {
-    let rollout = strategy.get_param("rollout");
+    let rollout = strategy
+        .get_param("rollout")
+        .map(|value| value.parse::<usize>())
+        .and_then(Result::ok);
+
     match rollout {
         Some(rollout) => {
-            //should probably validate at this point that the rollout looks like a percent
-
             let mut rule: String = format!("{rollout}%");
 
             rule = format!(
@@ -190,7 +192,7 @@ fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
                 .join(",");
             format!("user_id in [{user_ids}]")
         }
-        None => "".into(),
+        None => "false".into(),
     }
 }
 
@@ -207,37 +209,48 @@ fn upgrade_remote_address(strategy: &Strategy) -> String {
                 .join(", ");
             format!("remote_address in [{ips}]")
         }
-        None => "".into(),
+        None => "false".into(),
     }
 }
 
 fn upgrade_session_id_rollout_strategy(strategy: &Strategy) -> String {
-    let percentage = strategy.get_param("percentage");
+    let percentage = get_rollout_percent(strategy);
+
     let group_id = strategy.get_param("groupId");
     match (percentage, group_id) {
         (Some(percentage), Some(group_id)) => {
             format!("{percentage}% sticky on session_id with group_id of \"{group_id}\"")
         }
-        _ => "".into(),
+        _ => "false".into(),
     }
 }
 
 fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
-    let percentage = strategy.get_param("percentage");
+    let percentage = get_rollout_percent(strategy);
+
     let group_id = strategy.get_param("groupId");
     match (percentage, group_id) {
         (Some(percentage), Some(group_id)) => {
             format!("{percentage}% sticky on user_id with group_id of \"{group_id}\"")
         }
-        _ => "".into(),
+        _ => "false".into(),
     }
 }
 
 fn upgrade_random(strategy: &Strategy) -> String {
-    match strategy.get_param("percentage") {
+    let percentage = get_rollout_percent(strategy);
+
+    match percentage {
         Some(percent) => format!("random < {percent}"),
-        None => "".into(),
+        None => "false".into(),
     }
+}
+
+fn get_rollout_percent(strategy: &Strategy) -> Option<usize> {
+    strategy
+        .get_param("percentage")
+        .map(|value| value.parse::<usize>())
+        .and_then(Result::ok)
 }
 
 fn upgrade_constraints(constraints: Vec<Constraint>) -> Option<String> {
@@ -820,5 +833,54 @@ mod tests {
         };
         let rule = upgrade_constraint(&constraint);
         assert_eq!(rule.as_str(), "user_id contains_any [\"some\\\"thing\"]");
+    }
+
+    #[test_case("gradualRolloutUserId")]
+    #[test_case("gradualRolloutSessionId")]
+    #[test_case("gradualRolloutRandom")]
+    fn gradual_rollout_strategies_with_invalid_parameters_are_false(strategy_type: &str) {
+        let strategy = Strategy {
+            name: strategy_type.into(),
+            parameters: Some(
+                vec![("percentage".into(), "nonsense-value".into())]
+                    .into_iter()
+                    .collect(),
+            ),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        assert_eq!(rule.as_str(), "false");
+    }
+
+    #[test]
+    fn remote_address_with_invalid_parameters_is_false() {
+        let strategy = Strategy {
+            name: "remoteAddress".into(),
+            parameters: Some(HashMap::new()),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        assert_eq!(rule.as_str(), "false");
+    }
+
+    #[test]
+    fn user_id_strategy_with_no_user_ids_is_false() {
+        let strategy = Strategy {
+            name: "userWithId".into(),
+            parameters: Some(HashMap::new()),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        assert_eq!(rule.as_str(), "false");
     }
 }
