@@ -64,6 +64,7 @@ constraint = {
     invert_operation* ~
     (
         rollout_constraint
+        | hostname_constraint
         | date_constraint
         | semver_constraint
         | numeric_constraint
@@ -74,6 +75,9 @@ constraint = {
     )
 }
     default_strategy_constraint = { boolean }
+    hostname_constraint = { hostname ~ in ~ string_list }
+        hostname = _{ "hostname" }
+        in = _{ "in" }
     string_fragment_constraint = { context_value ~ ( string_list_operation_without_case | string_list_operation ) ~ string_list }
     list_constraint = { context_value ~ list_operation ~ ( numeric_list | string_list | empty_list ) }
     date_constraint = { context_value ~ ordinal_operation ~ date }

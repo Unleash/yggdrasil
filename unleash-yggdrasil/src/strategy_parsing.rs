@@ -1,12 +1,15 @@
 extern crate pest;
 
 use std::collections::HashSet;
+use std::env;
 use std::io::Cursor;
 use std::num::ParseFloatError;
 
 use crate::sendable_closures::{SendableContextResolver, SendableFragment};
+use crate::state::SdkError;
 use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
+use hostname;
 use murmur3::murmur3_32;
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
@@ -327,6 +330,30 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
     })
 }
 
+fn get_hostname() -> Result<String, SdkError> {
+    //This is primarily for testing purposes
+    if let Ok(hostname_env) = env::var("HOSTNAME") {
+        return Ok(hostname_env);
+    }
+
+    hostname::get()
+        .map_err(|_| SdkError::StrategyEvaluationError)
+        .and_then(|os_str| {
+            os_str
+                .into_string()
+                .map_err(|_| SdkError::StrategyEvaluationError)
+        })
+}
+
+fn hostname_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
+    let target_hostnames = harvest_set(node.next().unwrap().into_inner());
+
+    Box::new(move |_: &Context| match get_hostname() {
+        Ok(hostname) => target_hostnames.contains(&hostname).invert(inverted),
+        Err(_) => false,
+    })
+}
+
 fn list_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let context_getter = context_value(node.next().unwrap().into_inner());
     let comparator = to_content_comparator(node.next().unwrap());
@@ -461,6 +488,7 @@ fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
             string_fragment_constraint(inverted, child.into_inner())
         }
         Rule::list_constraint => list_constraint(inverted, child.into_inner()),
+        Rule::hostname_constraint => hostname_constraint(inverted, child.into_inner()),
         Rule::external_value => external_value(inverted, child.into_inner()),
         _ => unreachable!(),
     }
@@ -923,5 +951,27 @@ mod tests {
         let context = context_from_user_id("some\"thing");
 
         assert!(rule(&context));
+    }
+
+    #[test]
+    fn evaluates_host_name_constraint_correctly() {
+        std::env::set_var("HOSTNAME", "DOS");
+
+        let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
+        let context = Context::default();
+        assert!(rule(&context));
+
+        std::env::remove_var("HOSTNAME");
+    }
+
+    #[test]
+    fn evaluates_host_name_to_false_when_missing_hostname_values() {
+        std::env::set_var("HOSTNAME", "DOS");
+
+        let rule = compile_rule("hostname in [\"\"]").unwrap();
+        let context = Context::default();
+        assert!(!rule(&context));
+
+        std::env::remove_var("HOSTNAME");
     }
 }
