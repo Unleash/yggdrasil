@@ -158,10 +158,7 @@ fn upgrade_strategy(
 }
 
 fn upgrade_flexible_rollout_strategy(strategy: &Strategy) -> String {
-    let rollout = strategy
-        .get_param("rollout")
-        .map(|value| value.parse::<usize>())
-        .and_then(Result::ok);
+    let rollout = get_rollout_target(strategy, "rollout");
 
     match rollout {
         Some(rollout) => {
@@ -214,7 +211,7 @@ fn upgrade_remote_address(strategy: &Strategy) -> String {
 }
 
 fn upgrade_session_id_rollout_strategy(strategy: &Strategy) -> String {
-    let percentage = get_rollout_percent(strategy);
+    let percentage = get_rollout_target(strategy, "percentage");
 
     let group_id = strategy.get_param("groupId");
     match (percentage, group_id) {
@@ -226,7 +223,7 @@ fn upgrade_session_id_rollout_strategy(strategy: &Strategy) -> String {
 }
 
 fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
-    let percentage = get_rollout_percent(strategy);
+    let percentage = get_rollout_target(strategy, "percentage");
 
     let group_id = strategy.get_param("groupId");
     match (percentage, group_id) {
@@ -238,7 +235,7 @@ fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
 }
 
 fn upgrade_random(strategy: &Strategy) -> String {
-    let percentage = get_rollout_percent(strategy);
+    let percentage = get_rollout_target(strategy, "percentage");
 
     match percentage {
         Some(percent) => format!("random < {percent}"),
@@ -246,9 +243,9 @@ fn upgrade_random(strategy: &Strategy) -> String {
     }
 }
 
-fn get_rollout_percent(strategy: &Strategy) -> Option<usize> {
+fn get_rollout_target(strategy: &Strategy, target_property: &str) -> Option<usize> {
     strategy
-        .get_param("percentage")
+        .get_param(target_property)
         .map(|value| value.parse::<usize>())
         .and_then(Result::ok)
 }
