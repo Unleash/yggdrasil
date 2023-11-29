@@ -869,7 +869,7 @@ mod tests {
 
         let output = upgrade(&vec![strategy], &HashMap::new());
         assert!(compile_rule(&output).is_ok());
-        assert_eq!(output.as_str(), "remote_address in [\"DOS\", \"pop-os\"]");
+        assert_eq!(output.as_str(), "hostname in [\"DOS\", \"pop-os\"]");
     }
 
     #[test_case("gradualRolloutUserId")]
