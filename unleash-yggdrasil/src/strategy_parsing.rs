@@ -332,7 +332,7 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
 
 fn get_hostname() -> Result<String, SdkError> {
     //This is primarily for testing purposes
-    if let Ok(hostname_env) = env::var("HOSTNAME") {
+    if let Ok(hostname_env) = env::var("hostname") {
         return Ok(hostname_env);
     }
 
@@ -346,10 +346,15 @@ fn get_hostname() -> Result<String, SdkError> {
 }
 
 fn hostname_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
-    let target_hostnames = harvest_set(node.next().unwrap().into_inner());
+    let target_hostnames: HashSet<String> = harvest_string_list(node.next().unwrap().into_inner())
+        .iter()
+        .map(|x| x.to_lowercase())
+        .collect();
 
     Box::new(move |_: &Context| match get_hostname() {
-        Ok(hostname) => target_hostnames.contains(&hostname).invert(inverted),
+        Ok(hostname) => target_hostnames
+            .contains(&hostname.to_lowercase())
+            .invert(inverted),
         Err(_) => false,
     })
 }
@@ -955,23 +960,34 @@ mod tests {
 
     #[test]
     fn evaluates_host_name_constraint_correctly() {
-        std::env::set_var("HOSTNAME", "DOS");
+        std::env::set_var("hostname", "DOS");
 
         let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
         let context = Context::default();
         assert!(rule(&context));
 
-        std::env::remove_var("HOSTNAME");
+        std::env::remove_var("hostname");
     }
 
     #[test]
     fn evaluates_host_name_to_false_when_missing_hostname_values() {
-        std::env::set_var("HOSTNAME", "DOS");
+        std::env::set_var("hostname", "DOS");
 
         let rule = compile_rule("hostname in [\"\"]").unwrap();
         let context = Context::default();
         assert!(!rule(&context));
 
-        std::env::remove_var("HOSTNAME");
+        std::env::remove_var("hostname");
+    }
+
+    #[test]
+    fn hostname_constraint_ignores_casing() {
+        std::env::set_var("hostname", "DoS");
+
+        let rule = compile_rule("hostname in [\"dOS\", \"pop-os\"]").unwrap();
+        let context = Context::default();
+        assert!(rule(&context));
+
+        std::env::remove_var("hostname");
     }
 }

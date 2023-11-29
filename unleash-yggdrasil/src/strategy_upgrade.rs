@@ -251,7 +251,7 @@ fn upgrade_hostname(strategy: &Strategy) -> String {
         .map(|x| format!("\"{x}\""))
         .collect::<Vec<String>>()
         .join(", ");
-    format!("remote_address in [{hosts}]")
+    format!("hostname in [{hosts}]")
 }
 
 fn upgrade_random(strategy: &Strategy) -> String {
