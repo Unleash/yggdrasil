@@ -982,9 +982,9 @@ mod tests {
 
     #[test]
     fn hostname_constraint_ignores_casing() {
-        std::env::set_var("hostname", "DoS");
+        std::env::set_var("hostname", "DaRWin");
 
-        let rule = compile_rule("hostname in [\"dOS\", \"pop-os\"]").unwrap();
+        let rule = compile_rule("hostname in [\"dArWin\", \"pop-os\"]").unwrap();
         let context = Context::default();
         assert!(rule(&context));
 
