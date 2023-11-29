@@ -251,7 +251,7 @@ fn upgrade_hostname(strategy: &Strategy) -> String {
         .map(|x| format!("\"{x}\""))
         .collect::<Vec<String>>()
         .join(", ");
-    format!("remote_address in [{hosts}]")
+    format!("hostname in [{hosts}]")
 }
 
 fn upgrade_random(strategy: &Strategy) -> String {
@@ -869,7 +869,7 @@ mod tests {
 
         let output = upgrade(&vec![strategy], &HashMap::new());
         assert!(compile_rule(&output).is_ok());
-        assert_eq!(output.as_str(), "remote_address in [\"DOS\", \"pop-os\"]");
+        assert_eq!(output.as_str(), "hostname in [\"DOS\", \"pop-os\"]");
     }
 
     #[test_case("gradualRolloutUserId")]
