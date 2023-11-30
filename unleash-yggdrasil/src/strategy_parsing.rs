@@ -1039,6 +1039,7 @@ mod tests {
     #[test_case("::1", "2001:DB8::/48", false; "Rejects ipv6 not in subnet")]
     #[test_case("::1", "::1, 127.0.0.1", true; "Matches ipv6 in mixed ipv4/ipv6 list")]
     #[test_case("127.0.0.1", "::1, 127.0.0.1", true; "Matches ipv4 in mixed ipv4/ipv6 list")]
+    #[test_case("127.0.0.1", "::1, 127.0.0.1, complete-nonsense", true; "Tolerates broken ip in strategy list")]
     fn remote_address_constraint_respects_subnets_and_ipv6(
         context_ip: &str,
         constraint_ips: &str,
