@@ -22,7 +22,7 @@ class YggdrasilFFITest {
         assertNotNull(ffi);
     }
 
-    //TODO: we need this?
+    // TODO: we need this?
     // @Test
     // void testFailedLibraryLoad() {
     //     assertThrows(UnsatisfiedLinkError.class, () -> new YggdrasilFFI("/invalid/path"));
@@ -57,7 +57,7 @@ class YggdrasilFFITest {
                     new YggdrasilFFI();
                 });
 
-                // TODO: We need this?
+        // TODO: We need this?
         // assertThrows(
         //         UnsatisfiedLinkError.class,
         //         () -> {

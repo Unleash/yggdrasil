@@ -3,14 +3,20 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    id("com.diffplug.spotless") version "6.13.0"
+    id("com.diffplug.spotless") version "6.23.2"
     id("com.github.johnrengelman.shadow") version "7.1.0"
-    id("io.github.gradle-nexus.publish-plugin").version("1.2.0")
-    id("pl.allegro.tech.build.axion-release").version("1.13.6")
+    id("io.github.gradle-nexus.publish-plugin").version("1.3.0")
+    id("pl.allegro.tech.build.axion-release").version("1.16.0")
 }
 
 val tagVersion = System.getenv("GITHUB_REF")?.split('/')?.last()
-
+scmVersion {
+  repository {
+    type.set("git")
+    directory.set("$rootDir/..")
+    remote.set("origin")
+  }
+}
 project.version = scmVersion.version
 
 repositories {
@@ -50,7 +56,7 @@ tasks.named<ProcessResources>("processResources") {
 
 spotless {
     java {
-        googleJavaFormat("1.7").aosp()
+        googleJavaFormat("1.18.1").aosp()
         removeUnusedImports()
         importOrder()
     }

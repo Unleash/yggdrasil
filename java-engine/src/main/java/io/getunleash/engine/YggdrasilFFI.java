@@ -4,14 +4,12 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +67,7 @@ class YggdrasilFFI {
     private static Path extractLibraryFromJar(String libName) throws IOException {
         Path tempFile = Files.createTempFile("lib", libName);
         try (InputStream in = UnleashFFI.class.getResourceAsStream("/" + libName);
-            OutputStream out = Files.newOutputStream(tempFile)) {
+                OutputStream out = Files.newOutputStream(tempFile)) {
             if (in == null) {
                 throw new FileNotFoundException("File " + libName + " was not found inside JAR.");
             }

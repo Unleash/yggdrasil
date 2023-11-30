@@ -237,8 +237,7 @@ class UnleashEngineTest {
             Context context,
             boolean expectedIsEnabled)
             throws Exception {
-        UnleashEngine customEngine =
-                new UnleashEngine(new YggdrasilFFI(), customStrategies);
+        UnleashEngine customEngine = new UnleashEngine(new YggdrasilFFI(), customStrategies);
         takeFeaturesFromResource(customEngine, "custom-strategy-tests.json");
         Boolean result = customEngine.isEnabled(featureName, context);
         assertNotNull(result);
