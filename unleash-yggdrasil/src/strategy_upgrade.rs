@@ -207,7 +207,7 @@ fn upgrade_remote_address(strategy: &Strategy) -> String {
                 .map(|x| format!("\"{x}\""))
                 .collect::<Vec<String>>()
                 .join(", ");
-            format!("remote_address in [{ips}]")
+            format!("remote_address contains_ip [{ips}]")
         }
         None => "false".into(),
     }
@@ -919,5 +919,26 @@ mod tests {
         };
         let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
         assert_eq!(rule.as_str(), "false");
+    }
+
+    #[test]
+    fn remote_address_strategy_upgrades_to_ip_contains_constraint() {
+        let strategy = Strategy {
+            name: "remoteAddress".into(),
+            parameters: Some(
+                vec![("IPs".into(), "192.168.0.1, 192.168.0.2, 192.168.0.3".into())]
+                    .into_iter()
+                    .collect(),
+            ),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        assert_eq!(
+            rule.as_str(),
+            "remote_address contains_ip [\"192.168.0.1\", \"192.168.0.2\", \"192.168.0.3\"]"
+        );
     }
 }

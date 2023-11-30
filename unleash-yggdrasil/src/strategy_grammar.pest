@@ -64,6 +64,7 @@ constraint = {
     invert_operation* ~
     (
         rollout_constraint
+        | ip_constraint
         | hostname_constraint
         | date_constraint
         | semver_constraint
@@ -78,6 +79,8 @@ constraint = {
     hostname_constraint = { hostname ~ in ~ string_list }
         hostname = _{ "hostname" }
         in = _{ "in" }
+    ip_constraint = { context_value ~ ip_contains_operation ~ string_list }
+        ip_contains_operation = _{ "contains_ip" }
     string_fragment_constraint = { context_value ~ ( string_list_operation_without_case | string_list_operation ) ~ string_list }
     list_constraint = { context_value ~ list_operation ~ ( numeric_list | string_list | empty_list ) }
     date_constraint = { context_value ~ ordinal_operation ~ date }
