@@ -54,7 +54,7 @@ class UnleashEngineTest {
 
     @BeforeEach
     void createEngine() {
-        engine = new UnleashEngine(new YggdrasilFFI("../target/release"));
+        engine = new UnleashEngine();
     }
 
     @Test
@@ -238,7 +238,7 @@ class UnleashEngineTest {
             boolean expectedIsEnabled)
             throws Exception {
         UnleashEngine customEngine =
-                new UnleashEngine(new YggdrasilFFI("../target/release"), customStrategies);
+                new UnleashEngine(new YggdrasilFFI(), customStrategies);
         takeFeaturesFromResource(customEngine, "custom-strategy-tests.json");
         Boolean result = customEngine.isEnabled(featureName, context);
         assertNotNull(result);

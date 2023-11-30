@@ -4,6 +4,13 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,29 +46,45 @@ class YggdrasilFFI {
     private final UnleashFFI ffi;
     private final Pointer enginePtr;
 
-    /** If we want singleton we just make the constructors private */
-    YggdrasilFFI() {
-        this(System.getenv("YGGDRASIL_LIB_PATH"));
-    }
-
-    static UnleashFFI loadLibrary(String libraryPath) {
-        if (libraryPath == null) {
-            libraryPath = "."; // assume it's accessible in current path
-        }
-        log.info("Loading library from " + Paths.get(libraryPath).toAbsolutePath());
-        String libImpl = "libyggdrasilffi.so";
+    static UnleashFFI loadLibrary() {
+        String libName;
         if (Platform.isMac()) {
-            libImpl = "libyggdrasilffi.dylib";
+            libName = "libyggdrasilffi.dylib";
         } else if (Platform.isWindows()) {
-            libImpl = "libyggdrasilffi.dll";
+            libName = "libyggdrasilffi.dll";
+        } else {
+            libName = "libyggdrasilffi.so";
         }
 
-        String combinedPath = Paths.get(libraryPath, libImpl).toAbsolutePath().toString();
-        return Native.load(combinedPath, UnleashFFI.class);
+        try {
+            // Extract and load the native library from the JAR
+            Path tempLib = extractLibraryFromJar(libName);
+            System.load(tempLib.toAbsolutePath().toString());
+            return Native.load(libName, UnleashFFI.class);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load native library", e);
+        }
     }
 
-    YggdrasilFFI(String libraryPath) {
-        this(loadLibrary(libraryPath));
+    private static Path extractLibraryFromJar(String libName) throws IOException {
+        Path tempFile = Files.createTempFile("lib", libName);
+        try (InputStream in = UnleashFFI.class.getResourceAsStream("/" + libName);
+            OutputStream out = Files.newOutputStream(tempFile)) {
+            if (in == null) {
+                throw new FileNotFoundException("File " + libName + " was not found inside JAR.");
+            }
+
+            byte[] buffer = new byte[1024];
+            int readBytes;
+            while ((readBytes = in.read(buffer)) != -1) {
+                out.write(buffer, 0, readBytes);
+            }
+        }
+        return tempFile;
+    }
+
+    YggdrasilFFI() {
+        this(loadLibrary());
     }
 
     YggdrasilFFI(UnleashFFI ffi) {
