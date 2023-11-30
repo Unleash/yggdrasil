@@ -55,7 +55,7 @@ protobuf==3.12.4
 pycairo==1.20.1
 pycups==2.0.1
 pydbus==0.6.0
-Pygments==2.11.2
+Pygments==2.15.0
 PyGObject==3.42.1
 PyJWT==2.3.0
 pymacaroons==0.13.0
