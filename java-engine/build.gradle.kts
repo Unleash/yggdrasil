@@ -18,7 +18,7 @@ scmVersion {
     remote.set("origin")
   }
   tag {
-    prefix.set("java-engine")
+    prefix.set("java-engine-")
   }
 }
 project.version = scmVersion.version
