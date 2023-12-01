@@ -7,6 +7,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "7.1.0"
     id("io.github.gradle-nexus.publish-plugin").version("1.3.0")
     id("pl.allegro.tech.build.axion-release").version("1.16.0")
+    id("com.google.osdetector").version("1.7.3")
 }
 
 val tagVersion = System.getenv("GITHUB_REF")?.split('/')?.last()
@@ -15,6 +16,9 @@ scmVersion {
     type.set("git")
     directory.set("$rootDir/..")
     remote.set("origin")
+  }
+  tag {
+    prefix.set("java-engine")
   }
 }
 project.version = scmVersion.version
@@ -46,8 +50,8 @@ dependencies {
 }
 
 val copyNativeLibs by tasks.registering(Copy::class) {
-    from("$rootDir/../target/release/libyggdrasilffi.so")
-    into("$buildDir/resources/main")
+        from("$rootDir/../target/release/libyggdrasilffi.so", "$rootDir/../target/release/libyggdrasil.dll", "$rootDir/../target/release/libyggdrasil.dylib")
+        into(layout.buildDirectory.dir("resources/main"))
 }
 
 tasks.named<ProcessResources>("processResources") {
@@ -75,18 +79,10 @@ tasks.jar {
     manifest {
         attributes(
                 "Implementation-Title" to project.name,
-                "Implementation-Version" to project.version
+                "Implementation-Version" to project.version,
+                "Implementation-Platform" to osdetector.classifier
         )
     }
-}
-
-tasks.shadowJar {
-    archiveBaseName.set("unleash-engine")
-    manifest {
-        attributes["Implementation-Title"] = project.name
-        attributes["Implementation-Version"] = project.version
-    }
-    // Include or exclude specific dependencies or files if needed
 }
 
 
@@ -104,7 +100,7 @@ publishing {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
             groupId = group
-            artifactId = "yggdrasil-engine"
+            artifactId = "yggdrasil-engine-${osdetector.os}"
             version = "${version}"
             pom {
                 name.set("Unleash Yggdrasil Engine")
@@ -112,20 +108,30 @@ publishing {
                 url.set("https://docs.getunleash.io/yggdrasil-engine/index.html")
                 licenses {
                     license {
-                        name.set("The Apache License, Version 2.0")
-                        url.set("https://www.apache.org/licenses/LICENSE-2.0.txt")
+                        name.set("MIT")
+                        url.set("https://opensource.org/license/mit/")
                     }
                 }
                 developers {
                     developer {
                         id.set("chrkolst")
                         name.set("Christopher Kolstad")
-                        email.set("chriswk@getunleash.ai")
+                        email.set("chriswk@getunleash.io")
                     }
                     developer {
                         id.set("ivarconr")
                         name.set("Ivar Conradi Østhus")
-                        email.set("ivarconr@getunleash.ai")
+                        email.set("ivarconr@getunleash.io")
+                    }
+                    developer {
+                        id.set("gastonfournier")
+                        name.set("Gaston Fournier")
+                        email.set("gaston@getunleash.io")
+                    }
+                    developer {
+                        id.set("sighphyre")
+                        name.set("Simon Hornby")
+                        email.set("simon@getunleash.io")
                     }
                 }
                 scm {
