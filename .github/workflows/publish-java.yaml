@@ -1,3 +1,5 @@
+---
+name: Publish Java Engine
 on:
   push:
     tags:
