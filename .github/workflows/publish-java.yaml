@@ -18,6 +18,12 @@ jobs:
       - name: Build Rust library for linux
         run: |
           cargo build --release
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          cache: "gradle"
+          distribution: "temurin"
       - name: Deploy release
         uses: burrunan/gradle-cache-action@v1
         env:
@@ -48,6 +54,13 @@ jobs:
           cd yggdrasilffi
           cargo build --release --target x86_64-pc-windows-gnu
         working-directory: ${{ github.workspace }}
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          cache: "gradle"
+          distribution: "temurin"
+
       - name: Deploy release
         uses: burrunan/gradle-cache-action@v1
         env:
@@ -77,6 +90,12 @@ jobs:
           cd yggdrasilffi
           cargo build --release --target x86_64-apple-darwin
         working-directory: ${{ github.workspace }}
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          cache: "gradle"
+          distribution: "temurin"
       - name: Deploy release
         uses: burrunan/gradle-cache-action@v1
         env:
