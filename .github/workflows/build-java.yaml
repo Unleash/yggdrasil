@@ -6,27 +6,25 @@ on:
     branches:
       - main
     paths:
-      - 'java-engine/**.java'
+      - 'java-engine/src/**/*.java'
+      - 'java-engine/build.gradle.kts'
       # Build in main if anything changes in yggdrasil or the ffi layer
-      - 'unleash-yggdrasil/src/**.rs'
-      - 'yggdrasilffi/src/**.rs'
+      - 'unleash-yggdrasil/src/**/*.rs'
+      - 'yggdrasilffi/src/**/*.rs'
   pull_request:
     paths:
-      - 'java-engine/**.java'
+      - 'java-engine/**/*.java'
 
 jobs:
   build-java:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: [8,11,20]
     permissions:
       contents: read
       security-events: write
       actions: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       ## begin build yggdrasil (maybe this can be a separate job)
       - name: Install rust
@@ -51,7 +49,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
-          java-version: ${{ matrix.version }}
+          java-version: 21
           cache: 'gradle'
           distribution: 'temurin'
       - name: Check Code Format

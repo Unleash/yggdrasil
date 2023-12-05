@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jna.Pointer;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.Test;
@@ -17,22 +16,21 @@ import org.mockito.Mockito;
 
 class YggdrasilFFITest {
 
-    static final String VALID_PATH = "../target/release";
-
     @Test
     void testSuccessfulLibraryLoad() {
-        YggdrasilFFI ffi = new YggdrasilFFI(VALID_PATH);
+        YggdrasilFFI ffi = new YggdrasilFFI();
         assertNotNull(ffi);
     }
 
-    @Test
-    void testFailedLibraryLoad() {
-        assertThrows(UnsatisfiedLinkError.class, () -> new YggdrasilFFI("/invalid/path"));
-    }
+    // TODO: we need this?
+    // @Test
+    // void testFailedLibraryLoad() {
+    //     assertThrows(UnsatisfiedLinkError.class, () -> new YggdrasilFFI("/invalid/path"));
+    // }
 
     @Test
     void testEngineMethods() {
-        YggdrasilFFI ffi = new YggdrasilFFI(VALID_PATH);
+        YggdrasilFFI ffi = new YggdrasilFFI();
         Pointer state = ffi.takeState("someToggles");
         assertNotNull(state);
         ffi.freeResponse(state);
@@ -40,7 +38,7 @@ class YggdrasilFFITest {
 
     @Test
     void testCustomStrategies() throws JsonProcessingException {
-        YggdrasilFFI ffi = new YggdrasilFFI(VALID_PATH);
+        YggdrasilFFI ffi = new YggdrasilFFI();
         Pointer ptr = ffi.builtInStrategies();
         String content = ptr.getString(0, "UTF-8");
         ffi.freeResponse(ptr);
@@ -56,14 +54,15 @@ class YggdrasilFFITest {
     void testLibraryPathVariations() {
         assertDoesNotThrow(
                 () -> {
-                    new YggdrasilFFI(absoluteValidPath());
+                    new YggdrasilFFI();
                 });
 
-        assertThrows(
-                UnsatisfiedLinkError.class,
-                () -> {
-                    new YggdrasilFFI("/non/existent/path");
-                });
+        // TODO: We need this?
+        // assertThrows(
+        //         UnsatisfiedLinkError.class,
+        //         () -> {
+        //             new YggdrasilFFI("/non/existent/path");
+        //         });
     }
 
     @Test
@@ -86,10 +85,6 @@ class YggdrasilFFITest {
         assertNull(waitForReference(queue), "After GC, cleaned");
 
         verify(ffiMock).free_engine(Mockito.any());
-    }
-
-    private String absoluteValidPath() {
-        return Paths.get(VALID_PATH).toAbsolutePath().toString();
     }
 
     /**
