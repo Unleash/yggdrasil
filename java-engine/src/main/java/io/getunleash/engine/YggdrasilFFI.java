@@ -39,7 +39,7 @@ interface UnleashFFI extends Library {
 }
 
 class YggdrasilFFI {
-    private static final Logger log = LoggerFactory.getLogger(YggdrasilFFI.class);
+    private static final Logger LOG = LoggerFactory.getLogger(YggdrasilFFI.class);
 
     private final UnleashFFI ffi;
     private final Pointer enginePtr;
