@@ -17,9 +17,6 @@ on:
 jobs:
   build-java:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: [8,11,20]
     permissions:
       contents: read
       security-events: write
@@ -51,7 +48,7 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
-          java-version: ${{ matrix.version }}
+          java-version: 21
           cache: 'gradle'
           distribution: 'temurin'
       - name: Check Code Format
