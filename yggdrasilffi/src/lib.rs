@@ -376,7 +376,7 @@ mod tests {
     };
     use unleash_yggdrasil::{EngineState, ExtendedVariantDef};
 
-    use crate::{check_enabled, new_engine, Response, ResponseCode, check_variant};
+    use crate::{check_enabled, check_variant, new_engine, Response, ResponseCode};
 
     #[test]
     fn when_requesting_a_toggle_that_does_not_exist_then_a_response_with_no_error_and_not_found_is_returned(
@@ -563,7 +563,8 @@ mod tests {
             let string_response =
                 check_variant(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();
-            let variant_response: Response<ExtendedVariantDef> = serde_json::from_str(response).unwrap();
+            let variant_response: Response<ExtendedVariantDef> =
+                serde_json::from_str(response).unwrap();
 
             assert!(variant_response.status_code == ResponseCode::Ok);
             let variant_response = variant_response.value.expect("Expected variant response");

@@ -102,9 +102,6 @@ fn compile_variant_rule(
         )
         .iter()
         .map(|(rule_string, strategy_variants, stickiness, group_id)| {
-            if strategy_variants.is_empty() {
-                return None;
-            };
             let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
             compiled_rule.map(|rule| {
                 (
@@ -496,7 +493,11 @@ impl EngineState {
                 });
 
         let variant = if let Some(strategy_variants) = strategy_variants {
-            self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
+            if strategy_variants.0.is_empty() {
+                self.resolve_variant(&toggle.variants, &toggle.name, context)
+            } else {
+                self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
+            }
         } else {
             self.resolve_variant(&toggle.variants, &toggle.name, context)
         };
@@ -1665,5 +1666,98 @@ mod test {
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
         assert!(metrics.toggles.get("parent-flag").is_none());
+    }
+
+    #[test]
+    pub fn strategy_variants_are_selected_over_base_variants_if_present_and_also_when_previous_failing_strategy_has_none(
+    ) {
+        let raw_state = r#"
+      {
+          "version": 2,
+          "features": [
+              {
+                  "name": "toggle1",
+                  "type": "release",
+                  "enabled": true,
+                  "project": "TestProject20",
+                  "stale": false,
+                  "strategies": [
+                      {
+                          "name": "flexibleRollout",
+                          "constraints": [
+                            {
+                              "contextName": "userId",
+                              "operator": "IN",
+                              "values": [
+                                "17"
+                              ],
+                              "inverted": false,
+                              "caseInsensitive": false
+                            }
+                          ],
+                          "parameters": {
+                              "groupId": "toggle1",
+                              "rollout": "100",
+                              "stickiness": "default"
+                          },
+                          "variants": []
+                      },
+                      {
+                        "name": "flexibleRollout",
+                        "constraints": [],
+                        "parameters": {
+                            "groupId": "toggle1",
+                            "rollout": "100",
+                            "stickiness": "default"
+                        },
+                        "variants": [
+                          {
+                            "name": "theselectedone",
+                            "weight": 1000,
+                            "overrides": [],
+                            "stickiness": "default",
+                            "weightType": "variable"
+                          }
+                      ]
+                    }
+                ],
+                  "variants": [
+                      {
+                          "name": "notselected",
+                          "weight": 1000,
+                          "overrides": [],
+                          "stickiness": "default",
+                          "weightType": "variable"
+                      }
+                  ],
+                  "description": null,
+                  "impressionData": false
+              }
+          ],
+          "query": {
+              "environment": "development",
+              "inlineSegmentConstraints": true
+          },
+          "meta": {
+              "revisionId": 12137,
+              "etag": "\"76d8bb0e:12137\"",
+              "queryHash": "76d8bb0e"
+          }
+      }
+      "#;
+
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+        let context = Context {
+            ..Context::default()
+        };
+
+        engine.take_state(feature_set).unwrap();
+
+        let results = engine.resolve_all(&context, &None);
+        let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
+
+        assert!(targeted_toggle.enabled);
+        assert_eq!(targeted_toggle.variant.name, "theselectedone");
     }
 }
