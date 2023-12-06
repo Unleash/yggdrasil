@@ -36,7 +36,6 @@ impl EnrichedContext {
     }
 }
 
-
 #[derive(Debug)]
 pub enum SdkError {
     StrategyEvaluationError,

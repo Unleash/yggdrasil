@@ -1668,8 +1668,9 @@ mod test {
     }
 
     #[test]
-    pub fn strategy_variants_are_selected_over_base_variants_if_present_and_also_when_previous_failing_strategy_has_none() {
-      let raw_state = r#"
+    pub fn strategy_variants_are_selected_over_base_variants_if_present_and_also_when_previous_failing_strategy_has_none(
+    ) {
+        let raw_state = r#"
       {
           "version": 2,
           "features": [
@@ -1744,19 +1745,18 @@ mod test {
       }
       "#;
 
-      let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
-      let mut engine = EngineState::default();
-      let context = Context {
-          ..Context::default()
-      };
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+        let context = Context {
+            ..Context::default()
+        };
 
-      engine.take_state(feature_set).unwrap();
+        engine.take_state(feature_set).unwrap();
 
-      let results = engine.resolve_all(&context, &None);
-      let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
+        let results = engine.resolve_all(&context, &None);
+        let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
 
-      assert!(targeted_toggle.enabled);
-      assert_eq!(targeted_toggle.variant.name, "theselectedone");
-  }
-
+        assert!(targeted_toggle.enabled);
+        assert_eq!(targeted_toggle.variant.name, "theselectedone");
+    }
 }
