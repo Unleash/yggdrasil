@@ -102,9 +102,6 @@ fn compile_variant_rule(
         )
         .iter()
         .map(|(rule_string, strategy_variants, stickiness, group_id)| {
-            if strategy_variants.is_empty() {
-                return None;
-            };
             let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
             compiled_rule.map(|rule| {
                 (
@@ -496,7 +493,11 @@ impl EngineState {
                 });
 
         let variant = if let Some(strategy_variants) = strategy_variants {
-            self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
+            if strategy_variants.0.is_empty() {
+                self.resolve_variant(&toggle.variants, &toggle.name, context)
+            } else {
+                self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
+            }
         } else {
             self.resolve_variant(&toggle.variants, &toggle.name, context)
         };
