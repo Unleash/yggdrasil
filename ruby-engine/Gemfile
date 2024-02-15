@@ -5,7 +5,6 @@ source "https://rubygems.org"
 # Gemfile
 
 gem "ffi"
-gem "fiddle"
 group :development do
   gem "get_process_mem", "~> 0.2.7"
 end
