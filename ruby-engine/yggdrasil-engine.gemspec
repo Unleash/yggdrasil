@@ -11,6 +11,5 @@ Gem::Specification.new do |s|
     'http://github.com/username/my_gem'
   s.license     = 'MIT'
 
-  s.add_dependency "ffi", "~> 1.15.5"
-  s.add_dependency "fiddle", "~> 1.0.6"
+  s.add_dependency "ffi", "~> 1.15.5"  
 end
