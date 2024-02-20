@@ -16,7 +16,7 @@ use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
-use state::EnrichedContext;
+use state::{EnrichedContext, SdkError};
 use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
@@ -28,7 +28,7 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "5.0.2";
+pub const SUPPORTED_SPEC_VERSION: &str = "5.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 
 pub struct CompiledToggle {
@@ -102,9 +102,6 @@ fn compile_variant_rule(
         )
         .iter()
         .map(|(rule_string, strategy_variants, stickiness, group_id)| {
-            if strategy_variants.is_empty() {
-                return None;
-            };
             let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
             compiled_rule.map(|rule| {
                 (
@@ -128,7 +125,7 @@ fn compile_variant_rule(
     variant_rules
 }
 
-pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> {
+pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledToggle>, SdkError> {
     let mut compiled_state = HashMap::new();
     let segment_map = build_segment_map(&state.segments);
     for toggle in &state.features {
@@ -141,7 +138,9 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
                 enabled: toggle.enabled,
                 compiled_variant_strategy: variant_rule,
                 variants: compile_variants(&toggle.variants),
-                compiled_strategy: compile_rule(rule.as_str()).unwrap(),
+                compiled_strategy: compile_rule(rule.as_str()).map_err(|err| {
+                    SdkError::StrategyParseError(format!("Failed to parse rule, {:?}", err))
+                })?,
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
                 dependencies: toggle.dependencies.clone().unwrap_or_default(),
@@ -149,7 +148,7 @@ pub fn compile_state(state: &ClientFeatures) -> HashMap<String, CompiledToggle> 
         );
     }
 
-    compiled_state
+    Ok(compiled_state)
 }
 
 fn compile_variants(variants: &Option<Vec<Variant>>) -> Vec<CompiledVariant> {
@@ -206,7 +205,7 @@ pub struct ResolvedToggle {
     pub enabled: bool,
     pub impression_data: bool,
     pub project: String,
-    pub variant: VariantDef,
+    pub variant: ExtendedVariantDef,
 }
 
 impl EngineState {
@@ -351,8 +350,11 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> bool {
-        let enriched_context =
-            EnrichedContext::from(context.clone(), toggle.name.clone(), external_values.clone());
+        let enriched_context = EnrichedContext::from(
+            context.clone(),
+            toggle.name.clone(),
+            external_values.clone(),
+        );
         toggle.enabled
             && self.is_parent_dependency_satisfied(toggle, context)
             && (toggle.compiled_strategy)(&enriched_context)
@@ -398,13 +400,15 @@ impl EngineState {
         })
     }
 
-    pub fn should_emit_impression_event(
-        &self,
-        name: &str,
-    ) -> bool {
-        self.compiled_state.as_ref().and_then(|state| {
-            state.get(name).map(|compiled_toggle| compiled_toggle.impression_data)
-        }).unwrap_or_default()
+    pub fn should_emit_impression_event(&self, name: &str) -> bool {
+        self.compiled_state
+            .as_ref()
+            .and_then(|state| {
+                state
+                    .get(name)
+                    .map(|compiled_toggle| compiled_toggle.impression_data)
+            })
+            .unwrap_or_default()
     }
 
     pub fn check_enabled(
@@ -489,7 +493,11 @@ impl EngineState {
                 });
 
         let variant = if let Some(strategy_variants) = strategy_variants {
-            self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
+            if strategy_variants.0.is_empty() {
+                self.resolve_variant(&toggle.variants, &toggle.name, context)
+            } else {
+                self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
+            }
         } else {
             self.resolve_variant(&toggle.variants, &toggle.name, context)
         };
@@ -521,30 +529,27 @@ impl EngineState {
         name: &str,
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
-    ) -> VariantDef {
+    ) -> ExtendedVariantDef {
         let toggle = self.get_toggle(name);
+        let enabled = toggle
+            .map(|t| self.enabled(t, context, external_values))
+            .unwrap_or_default();
 
-        let variant = if let Some(toggle) = toggle {
-            let enabled = self.enabled(toggle, context, external_values);
-            self.count_toggle(name, enabled);
-
-            if enabled {
-                self.check_variant_by_toggle(toggle, context)
-            } else {
-                None
-            }
-        } else {
-            self.count_toggle(name, false);
-            None
+        let variant = match toggle {
+            Some(toggle) if enabled => self.check_variant_by_toggle(toggle, context),
+            _ => None,
         }
         .unwrap_or_default();
 
+        self.count_toggle(name, enabled);
         self.count_variant(name, &variant.name);
-        variant
+
+        variant.to_enriched_response(enabled)
     }
 
-    pub fn take_state(&mut self, toggles: ClientFeatures) {
-        self.compiled_state = Some(compile_state(&toggles));
+    pub fn take_state(&mut self, toggles: ClientFeatures) -> Result<(), SdkError> {
+        self.compiled_state = Some(compile_state(&toggles)?);
+        Ok(())
     }
 }
 
@@ -614,6 +619,26 @@ pub struct VariantDef {
     pub enabled: bool,
 }
 
+impl VariantDef {
+    pub fn to_enriched_response(&self, toggle_enabled: bool) -> ExtendedVariantDef {
+        ExtendedVariantDef {
+            name: self.name.clone(),
+            payload: self.payload.clone(),
+            enabled: self.enabled,
+            feature_enabled: toggle_enabled,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+pub struct ExtendedVariantDef {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payload: Option<Payload>,
+    pub enabled: bool,
+    pub feature_enabled: bool,
+}
+
 impl Default for VariantDef {
     fn default() -> Self {
         Self {
@@ -633,7 +658,7 @@ mod test {
 
     use crate::{
         check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
-        EngineState, VariantDef,
+        EngineState, ExtendedVariantDef, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -661,7 +686,7 @@ mod test {
         pub(crate) description: String,
         pub(crate) context: Context,
         pub(crate) toggle_name: String,
-        pub(crate) expected_result: VariantDef,
+        pub(crate) expected_result: ExtendedVariantDef,
     }
 
     fn load_spec(spec_name: &str) -> TestSuite {
@@ -691,7 +716,7 @@ mod test {
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::default();
-        engine.take_state(spec.state);
+        engine.take_state(spec.state).unwrap();
 
         if let Some(mut tests) = spec.tests {
             while let Some(test_case) = tests.pop() {
@@ -770,7 +795,7 @@ mod test {
 
         assert_eq!(
             state.get_variant("test", &context, &None),
-            VariantDef::default()
+            VariantDef::default().to_enriched_response(true)
         );
     }
 
@@ -1079,7 +1104,10 @@ mod test {
             .unwrap()
             .clone();
 
-        assert_eq!(first_variant, VariantDef::default());
+        assert_eq!(
+            first_variant,
+            VariantDef::default().to_enriched_response(true)
+        );
         assert_eq!(first_variant.name, second_variant.name);
 
         assert_eq!(get_variant_metrics.variants.len(), 1);
@@ -1413,13 +1441,80 @@ mod test {
             ..Context::default()
         };
 
-        engine.take_state(feature_set);
+        engine.take_state(feature_set).unwrap();
 
         let results = engine.resolve_all(&context, &None);
         let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
 
         assert!(targeted_toggle.enabled);
         assert_eq!(targeted_toggle.variant.name, "another");
+    }
+
+    #[test]
+    pub fn invalid_date_format_bubbles_up_a_nice_error_message() {
+        let raw_state = r#"
+        {
+            "version": 2,
+            "segments": [
+                {
+                    "id": 0,
+                    "name": "hasEnoughWins",
+                    "description": null,
+                    "constraints": [
+                        {
+                            "contextName": "dateLastWin",
+                            "operator": "DATE_AFTER",
+                            "value": "2022-05-01T12:00:00",
+                            "inverted": false,
+                            "caseInsensitive": true
+                        }
+                    ]
+                }
+            ],
+            "features": [
+                {
+                    "name": "toggle1",
+                    "type": "release",
+                    "enabled": true,
+                    "project": "TestProject20",
+                    "stale": false,
+                    "strategies": [
+                        {
+                            "name": "default",
+                            "segments": [
+                                0
+                            ]
+                        }
+                    ],
+                    "variants": [],
+                    "description": null,
+                    "impressionData": false
+                }
+            ],
+            "query": {
+                "environment": "development",
+                "inlineSegmentConstraints": true
+            },
+            "meta": {
+                "revisionId": 12137,
+                "etag": "\"76d8bb0e:12137\"",
+                "queryHash": "76d8bb0e"
+            }
+        }
+        "#;
+
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+
+        let maybe_error = engine.take_state(feature_set);
+
+        if let Err(error) = maybe_error {
+            let error_as_string = format!("{:?}", error);
+            // TODO make error message better
+            assert!(error_as_string.contains("StrategyParseError"));
+        } else {
+            panic!("Expected an error from yggdrasil take state but got an Ok instead!")
+        }
     }
 
     #[test]
@@ -1571,5 +1666,98 @@ mod test {
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
         assert!(metrics.toggles.get("parent-flag").is_none());
+    }
+
+    #[test]
+    pub fn strategy_variants_are_selected_over_base_variants_if_present_and_also_when_previous_failing_strategy_has_none(
+    ) {
+        let raw_state = r#"
+      {
+          "version": 2,
+          "features": [
+              {
+                  "name": "toggle1",
+                  "type": "release",
+                  "enabled": true,
+                  "project": "TestProject20",
+                  "stale": false,
+                  "strategies": [
+                      {
+                          "name": "flexibleRollout",
+                          "constraints": [
+                            {
+                              "contextName": "userId",
+                              "operator": "IN",
+                              "values": [
+                                "17"
+                              ],
+                              "inverted": false,
+                              "caseInsensitive": false
+                            }
+                          ],
+                          "parameters": {
+                              "groupId": "toggle1",
+                              "rollout": "100",
+                              "stickiness": "default"
+                          },
+                          "variants": []
+                      },
+                      {
+                        "name": "flexibleRollout",
+                        "constraints": [],
+                        "parameters": {
+                            "groupId": "toggle1",
+                            "rollout": "100",
+                            "stickiness": "default"
+                        },
+                        "variants": [
+                          {
+                            "name": "theselectedone",
+                            "weight": 1000,
+                            "overrides": [],
+                            "stickiness": "default",
+                            "weightType": "variable"
+                          }
+                      ]
+                    }
+                ],
+                  "variants": [
+                      {
+                          "name": "notselected",
+                          "weight": 1000,
+                          "overrides": [],
+                          "stickiness": "default",
+                          "weightType": "variable"
+                      }
+                  ],
+                  "description": null,
+                  "impressionData": false
+              }
+          ],
+          "query": {
+              "environment": "development",
+              "inlineSegmentConstraints": true
+          },
+          "meta": {
+              "revisionId": 12137,
+              "etag": "\"76d8bb0e:12137\"",
+              "queryHash": "76d8bb0e"
+          }
+      }
+      "#;
+
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+        let context = Context {
+            ..Context::default()
+        };
+
+        engine.take_state(feature_set).unwrap();
+
+        let results = engine.resolve_all(&context, &None);
+        let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
+
+        assert!(targeted_toggle.enabled);
+        assert_eq!(targeted_toggle.variant.name, "theselectedone");
     }
 }

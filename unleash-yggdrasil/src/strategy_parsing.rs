@@ -1,12 +1,18 @@
 extern crate pest;
 
 use std::collections::HashSet;
+use std::env;
 use std::io::Cursor;
+use std::net::IpAddr;
 use std::num::ParseFloatError;
+use std::str::FromStr;
 
 use crate::sendable_closures::{SendableContextResolver, SendableFragment};
+use crate::state::SdkError;
 use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
+use hostname;
+use ipnetwork::{IpNetwork, IpNetworkError};
 use murmur3::murmur3_32;
 use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
@@ -210,6 +216,10 @@ fn string(node: Pair<Rule>) -> String {
     string.replace("\\\"", "\"")
 }
 
+fn ip(node: Pair<Rule>) -> Result<IpNetwork, IpNetworkError> {
+    IpNetwork::from_str(&string(node))
+}
+
 //Constraints
 fn numeric_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
     let context_getter = context_value(node.next().unwrap().into_inner());
@@ -244,15 +254,20 @@ fn date_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
         let context_value = context_getter(context);
         match context_value {
             Some(context_value) => {
-                let context_value: DateTime<Utc> = context_value.parse().unwrap();
-                match ordinal_operation {
-                    OrdinalComparator::Lte => context_value <= date,
-                    OrdinalComparator::Lt => context_value < date,
-                    OrdinalComparator::Gte => context_value >= date,
-                    OrdinalComparator::Gt => context_value > date,
-                    OrdinalComparator::Eq => context_value == date,
+                let context_value = context_value.parse::<DateTime<Utc>>();
+
+                if let Ok(context_value) = context_value {
+                    match ordinal_operation {
+                        OrdinalComparator::Lte => context_value <= date,
+                        OrdinalComparator::Lt => context_value < date,
+                        OrdinalComparator::Gte => context_value >= date,
+                        OrdinalComparator::Gt => context_value > date,
+                        OrdinalComparator::Eq => context_value == date,
+                    }
+                    .invert(inverted)
+                } else {
+                    false
                 }
-                .invert(inverted)
             }
             None => false,
         }
@@ -319,6 +334,50 @@ fn rollout_constraint(mut node: Pairs<Rule>) -> RuleFragment {
             // don't feed enough input to the hashing function
             false
         }
+    })
+}
+
+fn get_hostname() -> Result<String, SdkError> {
+    //This is primarily for testing purposes
+    if let Ok(hostname_env) = env::var("hostname") {
+        return Ok(hostname_env);
+    }
+
+    hostname::get()
+        .map_err(|_| SdkError::StrategyEvaluationError)
+        .and_then(|os_str| {
+            os_str
+                .into_string()
+                .map_err(|_| SdkError::StrategyEvaluationError)
+        })
+}
+
+fn hostname_constraint(inverted: bool, mut node: Pairs<Rule>) -> RuleFragment {
+    let target_hostnames: HashSet<String> = harvest_string_list(node.next().unwrap().into_inner())
+        .iter()
+        .map(|x| x.to_lowercase())
+        .collect();
+
+    Box::new(move |_: &Context| match get_hostname() {
+        Ok(hostname) => target_hostnames
+            .contains(&hostname.to_lowercase())
+            .invert(inverted),
+        Err(_) => false,
+    })
+}
+
+fn ip_matching_constraint(mut node: Pairs<Rule>) -> RuleFragment {
+    let context_getter = context_value(node.next().unwrap().into_inner());
+
+    let ip_list = harvest_ip_list(node.next().unwrap().into_inner());
+
+    Box::new(move |context| {
+        if let Some(context_value) = context_getter(context) {
+            if let Ok(context_ip) = context_value.parse::<IpAddr>() {
+                return ip_list.iter().any(|range| range.contains(context_ip));
+            }
+        }
+        false
     })
 }
 
@@ -400,6 +459,15 @@ fn harvest_list(node: Pairs<Rule>) -> Vec<f64> {
     nodes.unwrap()
 }
 
+fn harvest_ip_list(node: Pairs<Rule>) -> Vec<IpNetwork> {
+    node.into_iter()
+        .filter_map(|n| match ip(n) {
+            Ok(net) => Some(net),
+            Err(_) => None,
+        })
+        .collect()
+}
+
 fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
     let enabled: bool = node.as_str().chars().as_str().parse().unwrap();
     Box::new(move |_: &Context| enabled.invert(inverted))
@@ -456,7 +524,9 @@ fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
             string_fragment_constraint(inverted, child.into_inner())
         }
         Rule::list_constraint => list_constraint(inverted, child.into_inner()),
+        Rule::hostname_constraint => hostname_constraint(inverted, child.into_inner()),
         Rule::external_value => external_value(inverted, child.into_inner()),
+        Rule::ip_constraint => ip_matching_constraint(child.into_inner()),
         _ => unreachable!(),
     }
 }
@@ -918,5 +988,85 @@ mod tests {
         let context = context_from_user_id("some\"thing");
 
         assert!(rule(&context));
+    }
+
+    #[test]
+    fn evaluates_host_name_constraint_correctly() {
+        std::env::set_var("hostname", "DOS");
+
+        let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
+        let context = Context::default();
+        assert!(rule(&context));
+
+        std::env::remove_var("hostname");
+    }
+
+    #[test]
+    fn evaluates_host_name_to_false_when_missing_hostname_values() {
+        std::env::set_var("hostname", "DOS");
+
+        let rule = compile_rule("hostname in [\"\"]").unwrap();
+        let context = Context::default();
+        assert!(!rule(&context));
+
+        std::env::remove_var("hostname");
+    }
+
+    #[test]
+    fn hostname_constraint_ignores_casing() {
+        std::env::set_var("hostname", "DaRWin");
+
+        let rule = compile_rule("hostname in [\"dArWin\", \"pop-os\"]").unwrap();
+        let context = Context::default();
+        assert!(rule(&context));
+
+        std::env::remove_var("hostname");
+    }
+
+    #[test_case("127.0.0.1", "127.0.0.1", true; "Exact match")]
+    #[test_case("127.0.0.1", "127.0.0.1, 10.0.0.1, 196.0.0.1, 192.168.0.0/16", true; "Contains exact match on first")]
+    #[test_case("10.0.0.1", "127.0.0.1, 10.0.0.1, 196.0.0.1, 192.168.0.0/16", true; "Contains exact match on second")]
+    #[test_case("196.0.0.1", "127.0.0.1, 10.0.0.1, 196.0.0.1, 192.168.0.0/16", true; "Contains exact match on third")]
+    #[test_case("192.168.42.23", "127.0.0.1, 10.0.0.1, 196.0.0.1, 192.168.0.0/16", true; "Contains subnet match on fourth")]
+    #[test_case("127.0.0.1", "10.0.0.1", false; "Rejects non containing ip address")]
+    #[test_case("127.0.0.1", "192.168.0.0/16", false; "Rejects ip address not in subnet")]
+    #[test_case("192.168.42.23", "192.168.0.0/16", true; "Matches ip address in subnet")]
+    #[test_case("::1", "::1", true; "Matches base ipv6 address")]
+    #[test_case("::1", "::1, 2001:DB8:0:0:0:0:0:1, 2001:DB8::1, 2001:DB8::/48", true; "Matches first in ipv6 list")]
+    #[test_case("2001:DB8:0:0:0:0:0:1", "::1, 2001:DB8:0:0:0:0:0:1, 2001:DB8::1, 2001:DB8::/48", true; "Matches second in ipv6 list")]
+    #[test_case("2001:DB8::1", "::1, 2001:DB8:0:0:0:0:0:1, 2001:DB8::1, 2001:DB8::/48", true; "Matches third in ipv6 list")]
+    #[test_case("::1", "2001:DB8:0:0:0:0:0:1", false; "Rejects non matching ipv6")]
+    #[test_case("::1", "2001:DB8::/48", false; "Rejects ipv6 not in subnet")]
+    #[test_case("::1", "::1, 127.0.0.1", true; "Matches ipv6 in mixed ipv4/ipv6 list")]
+    #[test_case("127.0.0.1", "::1, 127.0.0.1", true; "Matches ipv4 in mixed ipv4/ipv6 list")]
+    #[test_case("127.0.0.1", "::1, 127.0.0.1, complete-nonsense", true; "Tolerates broken ip in strategy list")]
+    fn remote_address_constraint_respects_subnets_and_ipv6(
+        context_ip: &str,
+        constraint_ips: &str,
+        expected_value: bool,
+    ) {
+        let constraint_ips = constraint_ips
+            .split(",")
+            .map(|x| format!("\"{}\"", x.trim()))
+            .collect::<Vec<String>>();
+
+        let rule = format!("remote_address contains_ip [{}]", constraint_ips.join(","));
+        println!("Current rule {}", rule);
+        let rule = compile_rule(&rule).unwrap();
+
+        let context = Context {
+            remote_address: Some(context_ip.into()),
+            ..Context::default()
+        };
+
+        assert_eq!(rule(&context), expected_value);
+    }
+
+    #[test]
+    fn remote_address_constraint_never_matches_missing_context() {
+        let rule = compile_rule("remote_address contains_ip [\"127.0.0.1\"]").unwrap();
+        let context = Context::default();
+
+        assert!(!rule(&context));
     }
 }

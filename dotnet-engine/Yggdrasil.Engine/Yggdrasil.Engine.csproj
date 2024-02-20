@@ -12,6 +12,12 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <Target Name="YggdrasilPreBuild" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="
+      cd ../../ 
+      cargo build --release" />
+  </Target>
+
   <ItemGroup>
     <Content Include="../../target/release/libyggdrasilffi.so" Condition="Exists('../../target/release/libyggdrasilffi.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

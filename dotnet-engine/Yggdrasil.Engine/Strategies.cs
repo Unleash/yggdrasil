@@ -10,24 +10,19 @@ internal class CustomStrategies
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    private static readonly string[] knownStrategies = new [] {
-        "default",
-        "userWithId",
-        "gradualRolloutUserId",
-        "gradualRolloutRandom",
-        "applicationHostname",
-        "gradualRolloutSessionId",
-        "remoteAddress",
-        "flexibleRollout",
-    };
+    private string[]? knownStrategies = null;
 
     private Dictionary<string, IStrategy> strategies = new Dictionary<string, IStrategy>();
     private Dictionary<string, MappedFeature>? mappedFeatures = null;
 
+    internal CustomStrategies(string[]? knownStrategies)
+    {
+        this.knownStrategies = knownStrategies;
+    }
 
     private bool IsCustomStrategy(StrategyDefinition strategy)
     {
-        return !knownStrategies.Contains(strategy.Name);
+        return !knownStrategies?.Contains(strategy.Name) ?? false;
     }
 
     private List<MappedStrategy> MapCustomStrategies(List<StrategyDefinition>? strategies)
@@ -40,7 +35,7 @@ internal class CustomStrategies
         return strategies
             .Where(IsCustomStrategy)
             .Where(definition => this.strategies?.ContainsKey(definition.Name) ?? false)
-            .Select((definition, index) => 
+            .Select((definition, index) =>
                 new MappedStrategy(
                     index,
                     definition.Name,
@@ -48,8 +43,9 @@ internal class CustomStrategies
                     this.strategies[definition.Name]))
             .ToList();
     }
-    
-    internal void MapFeatures(string json) {
+
+    internal void MapFeatures(string json)
+    {
         var features = JsonSerializer.Deserialize<FeatureCollection>(json, options)?.Features;
         mappedFeatures = features?
             .Select(feature => new MappedFeature(feature, MapCustomStrategies(feature.Strategies)))
@@ -73,8 +69,8 @@ internal class CustomStrategies
         var strategies = new Dictionary<string, bool>(
         feature.Strategies
             .Where(strategy => strategy.IsEnabled(context))
-            .Select(strategy => 
-                new KeyValuePair<string, bool> (
+            .Select(strategy =>
+                new KeyValuePair<string, bool>(
                     strategy.ResultName,
                     strategy.IsEnabled(context)))
             .ToList());

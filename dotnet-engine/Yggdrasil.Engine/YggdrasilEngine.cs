@@ -1,11 +1,10 @@
-﻿using System.Runtime.InteropServices;
-using System.Text.Json;
+﻿using System.Text.Json;
 
 namespace Yggdrasil;
 
 public class YggdrasilEngine
 {
-    private CustomStrategies customStrategies = new CustomStrategies();
+    private CustomStrategies customStrategies;
 
     private JsonSerializerOptions options = new JsonSerializerOptions
     {
@@ -18,6 +17,11 @@ public class YggdrasilEngine
     {
         state = FFI.NewEngine();
 
+        var knownStrategiesPtr = FFI.BuiltInStrategies(state);
+        var knownStrategies = FFIReader.ReadResponse<string[]>(knownStrategiesPtr);
+
+        customStrategies = new CustomStrategies(knownStrategies);
+
         if (strategies != null)
         {
             customStrategies.RegisterCustomStrategies(strategies);
@@ -27,26 +31,9 @@ public class YggdrasilEngine
     public bool ShouldEmitImpressionEvent(string featureName)
     {
         var shouldEmitImpressionEventPtr = FFI.ShouldEmitImpressionEvent(state, featureName);
-        if (shouldEmitImpressionEventPtr == IntPtr.Zero)
-        {
-            return false;
-        }
+        var shouldEmitImpressionEvent = FFIReader.ReadPrimitive<bool>(shouldEmitImpressionEventPtr);
 
-        var shouldEmitImpressionEventJson = Marshal.PtrToStringUTF8(shouldEmitImpressionEventPtr);
-
-        FFI.FreeResponse(shouldEmitImpressionEventPtr);
-
-        var shouldEmitImpressionEventResult =
-            shouldEmitImpressionEventJson != null
-                ? JsonSerializer.Deserialize<EngineResponse<bool>>(shouldEmitImpressionEventJson, options)
-                : null;
-        
-        if (shouldEmitImpressionEventResult?.StatusCode == "Error")
-        {
-            throw new YggdrasilEngineException($"Error: {shouldEmitImpressionEventResult?.ErrorMessage}");
-        }
-
-        return shouldEmitImpressionEventResult?.Value ?? false;
+        return shouldEmitImpressionEvent ?? false;
     }
 
     public void Dispose()
@@ -58,25 +45,7 @@ public class YggdrasilEngine
     public void TakeState(string json)
     {
         var takeStatePtr = FFI.TakeState(state, json);
-
-        if (takeStatePtr == IntPtr.Zero)
-        {
-            return;
-        }
-
-        var takeStateJson = Marshal.PtrToStringUTF8(takeStatePtr);
-
-        FFI.FreeResponse(takeStatePtr);
-
-        var takeStateResult =
-            takeStateJson != null
-                ? JsonSerializer.Deserialize<EngineResponse>(takeStateJson, options)
-                : null;
-
-        if (takeStateResult?.StatusCode == "Error")
-        {
-            throw new YggdrasilEngineException($"Error: {takeStateResult?.ErrorMessage}");
-        }
+        FFIReader.CheckResponse(takeStatePtr);
 
         customStrategies.MapFeatures(json);
     }
@@ -87,26 +56,7 @@ public class YggdrasilEngine
         string contextJson = JsonSerializer.Serialize(context, options);
         var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, customStrategyPayload);
 
-        if (isEnabledPtr == IntPtr.Zero)
-        {
-            return false;
-        }
-
-        var isEnabledJson = Marshal.PtrToStringUTF8(isEnabledPtr);
-
-        FFI.FreeResponse(isEnabledPtr);
-
-        var isEnabledResult =
-            isEnabledJson != null
-                ? JsonSerializer.Deserialize<EngineResponse<bool?>>(isEnabledJson, options)
-                : null;
-
-        if (isEnabledResult?.StatusCode == "Error")
-        {
-            throw new YggdrasilEngineException($"Error: {isEnabledResult?.ErrorMessage}");
-        }
-
-        return isEnabledResult?.Value;
+        return FFIReader.ReadPrimitive<bool>(isEnabledPtr);
     }
 
     public Variant? GetVariant(string toggleName, Context context)
@@ -115,52 +65,13 @@ public class YggdrasilEngine
         var contextJson = JsonSerializer.Serialize(context, options);
         var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, customStrategyPayload);
 
-        if (variantPtr == IntPtr.Zero)
-        {
-            return null;
-        }
-
-        var variantJson = Marshal.PtrToStringUTF8(variantPtr);
-
-        FFI.FreeResponse(variantPtr);
-
-        var variantResult =
-            variantJson != null
-                ? JsonSerializer.Deserialize<EngineResponse<Variant>>(variantJson, options)
-                : null;
-
-        if (variantResult?.StatusCode == "Error")
-        {
-            throw new YggdrasilEngineException($"Error: {variantResult?.ErrorMessage}");
-        }
-
-        return variantResult?.Value;
+        return FFIReader.ReadComplex<Variant>(variantPtr);
     }
 
     public MetricsBucket? GetMetrics()
     {
         var metricsPtr = FFI.GetMetrics(state);
-
-        if (metricsPtr == IntPtr.Zero)
-        {
-            return null;
-        }
-
-        var metricsJson = Marshal.PtrToStringUTF8(metricsPtr);
-
-        FFI.FreeResponse(metricsPtr);
-
-        var metricsResult =
-            metricsJson != null
-                ? JsonSerializer.Deserialize<EngineResponse<MetricsBucket>>(metricsJson, options)
-                : null;
-
-        if (metricsResult?.StatusCode == "Error")
-        {
-            throw new YggdrasilEngineException($"Error: {metricsResult?.ErrorMessage}");
-        }
-
-        return metricsResult?.Value;
+        return FFIReader.ReadComplex<MetricsBucket>(metricsPtr);
     }
 
     public void CountFeature(string featureName, bool enabled)

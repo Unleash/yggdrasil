@@ -1,21 +1,29 @@
 package io.getunleash.engine;
 
+import static io.getunleash.engine.TestStrategies.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.params.provider.Arguments.of;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class TestSuite {
     public String name;
@@ -25,8 +33,6 @@ class TestSuite {
 }
 
 class UnleashEngineTest {
-
-    private static final VariantDef DEFAULT_VARIANT = new VariantDef("disabled", null, false);
 
     // Assume this is set up to be your feature JSON
     private final String simpleFeatures =
@@ -48,7 +54,7 @@ class UnleashEngineTest {
 
     @BeforeEach
     void createEngine() {
-        engine = new UnleashEngine(new YggdrasilFFI("../target/release"));
+        engine = new UnleashEngine();
     }
 
     @Test
@@ -83,7 +89,8 @@ class UnleashEngineTest {
         VariantDef variant = engine.getVariant("Feature.A", context);
 
         if (variant == null) {
-            variant = DEFAULT_VARIANT;
+            variant =
+                    new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context));
         }
 
         assertEquals("disabled", variant.getName());
@@ -93,13 +100,16 @@ class UnleashEngineTest {
     @Test
     public void testClientSpec() throws Exception {
         ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         File basePath = Paths.get("../client-specification/specifications").toFile();
         File indexFile = new File(basePath, "index.json");
-        List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<>() {});
+        List<String> testSuites =
+                objectMapper.readValue(indexFile, new TypeReference<List<String>>() {});
 
         for (String suite : testSuites) {
             File suiteFile = new File(basePath, suite);
-            TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<>() {});
+            TestSuite suiteData =
+                    objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {});
 
             engine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
@@ -141,7 +151,12 @@ class UnleashEngineTest {
                     VariantDef result = engine.getVariant(toggleName, context);
                     if (result == null) {
                         // this behavior should be implemented in the SDK
-                        result = DEFAULT_VARIANT;
+                        result =
+                                new VariantDef(
+                                        "disabled",
+                                        null,
+                                        false,
+                                        engine.isEnabled(toggleName, context));
                     }
 
                     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
@@ -197,45 +212,103 @@ class UnleashEngineTest {
         assertEquals(2, bucket.getToggles().get("Feature.C").getNo());
     }
 
-    @Test
-    void testImpressionData() throws Exception {
-        String features =
-                Files.readString(
-                        Paths.get(
-                                Objects.requireNonNull(
-                                                getClass()
-                                                        .getClassLoader()
-                                                        .getResource("impression-data-tests.json"))
-                                        .toURI()));
-        String featureName = "with.impression.data";
-
+    @ParameterizedTest
+    @CsvSource({
+        "with.impression.data, true",
+        "with.impression.data.false, false",
+        "with.impression.data.undefined, false"
+    })
+    void impressionData_whenFeature_shouldReturn(String featureName, boolean expectedImpressionData)
+            throws Exception {
         assertFalse(engine.shouldEmitImpressionEvent(featureName));
 
-        engine.takeState(features);
+        takeFeaturesFromResource(engine, "impression-data-tests.json");
         Boolean result = engine.isEnabled(featureName, new Context());
         assertNotNull(result);
         assertTrue(result);
-        assertTrue(engine.shouldEmitImpressionEvent(featureName));
+        assertEquals(expectedImpressionData, engine.shouldEmitImpressionEvent(featureName));
     }
 
-    @Test
-    void testImpressionDataFalse() throws Exception {
-        String features =
-                Files.readString(
+    @ParameterizedTest
+    @MethodSource("customStrategiesInput")
+    void customStrategiesRequired_whenNotConfigured_returnsFalse(
+            List<IStrategy> customStrategies,
+            String featureName,
+            Context context,
+            boolean expectedIsEnabled)
+            throws Exception {
+        UnleashEngine customEngine = new UnleashEngine(new YggdrasilFFI(), customStrategies);
+        takeFeaturesFromResource(customEngine, "custom-strategy-tests.json");
+        Boolean result = customEngine.isEnabled(featureName, context);
+        assertNotNull(result);
+        assertEquals(expectedIsEnabled, result);
+    }
+
+    private static Stream<Arguments> customStrategiesInput() {
+        Context oneYesContext = new Context();
+        oneYesContext.setProperties(mapOf("one", "yes"));
+        return Stream.of(
+                of(null, "Feature.Custom.Strategies", new Context(), false),
+                of(Collections.emptyList(), "Feature.Custom.Strategies", new Context(), false),
+                of(
+                        Collections.singletonList(alwaysTrue("custom")),
+                        "Feature.Custom.Strategies",
+                        new Context(),
+                        true),
+                of(
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+                        "Feature.Custom.Strategies",
+                        new Context(),
+                        false),
+                of(
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+                        "Feature.Custom.Strategies",
+                        oneYesContext,
+                        true),
+                of(
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+                        "Feature.Mixed.Strategies",
+                        oneYesContext,
+                        true),
+                of(
+                        Collections.singletonList(alwaysTrue("custom")),
+                        "Feature.Mixed.Strategies",
+                        oneYesContext,
+                        true),
+                of(Collections.emptyList(), "Feature.Mixed.Strategies", oneYesContext, true),
+                of(
+                        Collections.singletonList(alwaysFails("custom")),
+                        "Feature.Mixed.Strategies",
+                        oneYesContext,
+                        true));
+    }
+
+    static Map<String, String> mapOf(String key, String value) {
+        return new HashMap<String, String>() {
+            {
+                put(key, value);
+            }
+        };
+    }
+
+    private void takeFeaturesFromResource(UnleashEngine engine, String resource) {
+        try {
+            String features = readResource(resource);
+            engine.takeState(features);
+        } catch (Exception e) {
+            throw new RuntimeException("Something went wrong here", e);
+        }
+    }
+
+    public static String readResource(String resource) throws IOException, URISyntaxException {
+        return new String(
+                Files.readAllBytes(
                         Paths.get(
                                 Objects.requireNonNull(
-                                                getClass()
+                                                UnleashEngineTest.class
                                                         .getClassLoader()
-                                                        .getResource("impression-data-tests.json"))
-                                        .toURI()));
-        String featureName = "with.impression.data.false";
-
-        assertFalse(engine.shouldEmitImpressionEvent(featureName));
-
-        engine.takeState(features);
-        Boolean result = engine.isEnabled(featureName, new Context());
-        assertNotNull(result);
-        assertTrue(result);
-        assertFalse(engine.shouldEmitImpressionEvent(featureName));
+                                                        .getResource(resource))
+                                        .toURI())),
+                StandardCharsets.UTF_8);
     }
 }

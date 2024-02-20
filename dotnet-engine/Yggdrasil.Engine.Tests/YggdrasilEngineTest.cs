@@ -16,7 +16,8 @@ public class Tests
     };
 
     //[Test]
-    public void MassTestMemoryUsage() {
+    public void MassTestMemoryUsage()
+    {
         // Arrange
         var basePath = Path.Combine("..", "..", "..", "..", "..", "client-specification", "specifications");
         var suitePath = Path.Combine(basePath, "01-simple-examples.json");
@@ -24,10 +25,12 @@ public class Tests
 
         var yggdrasilEngine = new YggdrasilEngine();
 
-        var runTestFor = (Action lambda, string process) => {
+        var runTestFor = (Action lambda, string process) =>
+        {
 
             // Baseline / warm up
-            for (var i = 0; i < 1000000; i++) {
+            for (var i = 0; i < 1000000; i++)
+            {
                 lambda();
             }
             GC.Collect();
@@ -35,7 +38,8 @@ public class Tests
             var baseline = GC.GetTotalMemory(true);
 
             // Act
-            for (var i = 0; i < 1000000; i++) {
+            for (var i = 0; i < 1000000; i++)
+            {
                 lambda();
             }
             GC.Collect();
@@ -92,7 +96,8 @@ public class Tests
                 // Silly hack to apply formatting to the string from the spec
                 var expectedResult = JsonSerializer.Serialize(JsonSerializer.Deserialize<Variant>(test["expectedResult"].ToString(), options), options);
 
-                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant("disabled", null, false );
+                var enabled = yggdrasilEngine.IsEnabled(toggleName, context) ?? false;
+                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant("disabled", null, false, enabled);
                 var jsonResult = JsonSerializer.Serialize(result, options);
 
                 Assert.AreEqual(expectedResult, jsonResult, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");
@@ -103,7 +108,8 @@ public class Tests
     }
 
     [Test]
-    public void Custom_Strategies_Required_But_Not_Configured_Returns_False() {
+    public void Custom_Strategies_Required_But_Not_Configured_Returns_False()
+    {
 
         var yggdrasilEngine = new YggdrasilEngine();
         var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
@@ -115,7 +121,8 @@ public class Tests
     }
 
     [Test]
-    public void Custom_Strategies_Required_And_Configured_Succeeds() {
+    public void Custom_Strategies_Required_And_Configured_Succeeds()
+    {
         var yggdrasilEngine = new YggdrasilEngine(new List<IStrategy>
         {
             new CustomStrategyReturningTrue("custom"),
@@ -131,7 +138,8 @@ public class Tests
     }
 
     [Test]
-    public void Custom_Strategies_Correct_Names_Despite_Ordering() {
+    public void Custom_Strategies_Correct_Names_Despite_Ordering()
+    {
         var yggdrasilEngine = new YggdrasilEngine(new List<IStrategy>
         {
             new CustomStrategyReturningTrue("custom"),
@@ -147,10 +155,12 @@ public class Tests
     }
 
     [Test]
-    public void Impression_Data_Test_Enabled() {
-        var testDataObject = new {
+    public void Impression_Data_Test_Enabled()
+    {
+        var testDataObject = new
+        {
             Version = 2,
-            Features = new [] {
+            Features = new[] {
                 new {
                     Name = "with.impression.data",
                     Type = "release",
@@ -179,10 +189,12 @@ public class Tests
     }
 
     [Test]
-    public void Impression_Data_Test_Disabled() {
-        var testDataObject = new {
+    public void Impression_Data_Test_Disabled()
+    {
+        var testDataObject = new
+        {
             Version = 2,
-            Features = new [] {
+            Features = new[] {
                 new {
                     Name = "with.impression.data.false",
                     Type = "release",

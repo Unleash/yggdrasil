@@ -14,6 +14,7 @@ enum StrategyType {
     GradualRolloutRandom,
     FlexibleRollout,
     RemoteAddress,
+    ApplicationHostname,
     Custom(String),
 }
 
@@ -104,6 +105,7 @@ impl From<&str> for StrategyType {
             "gradualRolloutRandom" => StrategyType::GradualRolloutRandom,
             "flexibleRollout" => StrategyType::FlexibleRollout,
             "remoteAddress" => StrategyType::RemoteAddress,
+            "applicationHostname" => StrategyType::ApplicationHostname,
             _ => StrategyType::Custom(strategy.to_string()),
         }
     }
@@ -122,6 +124,7 @@ fn upgrade_strategy(
         StrategyType::GradualRolloutRandom => upgrade_random(strategy),
         StrategyType::FlexibleRollout => upgrade_flexible_rollout_strategy(strategy),
         StrategyType::RemoteAddress => upgrade_remote_address(strategy),
+        StrategyType::ApplicationHostname => upgrade_hostname(strategy),
         StrategyType::Custom(_) => format!("external_value[\"customStrategy{strategy_count}\"]"),
     };
 
@@ -158,11 +161,10 @@ fn upgrade_strategy(
 }
 
 fn upgrade_flexible_rollout_strategy(strategy: &Strategy) -> String {
-    let rollout = strategy.get_param("rollout");
+    let rollout = get_rollout_target(strategy, "rollout");
+
     match rollout {
         Some(rollout) => {
-            //should probably validate at this point that the rollout looks like a percent
-
             let mut rule: String = format!("{rollout}%");
 
             rule = format!(
@@ -190,7 +192,7 @@ fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
                 .join(",");
             format!("user_id in [{user_ids}]")
         }
-        None => "".into(),
+        None => "false".into(),
     }
 }
 
@@ -205,39 +207,67 @@ fn upgrade_remote_address(strategy: &Strategy) -> String {
                 .map(|x| format!("\"{x}\""))
                 .collect::<Vec<String>>()
                 .join(", ");
-            format!("remote_address in [{ips}]")
+            format!("remote_address contains_ip [{ips}]")
         }
-        None => "".into(),
+        None => "false".into(),
     }
 }
 
 fn upgrade_session_id_rollout_strategy(strategy: &Strategy) -> String {
-    let percentage = strategy.get_param("percentage");
+    let percentage = get_rollout_target(strategy, "percentage");
+
     let group_id = strategy.get_param("groupId");
     match (percentage, group_id) {
         (Some(percentage), Some(group_id)) => {
             format!("{percentage}% sticky on session_id with group_id of \"{group_id}\"")
         }
-        _ => "".into(),
+        _ => "false".into(),
     }
 }
 
 fn upgrade_user_id_rollout_strategy(strategy: &Strategy) -> String {
-    let percentage = strategy.get_param("percentage");
+    let percentage = get_rollout_target(strategy, "percentage");
+
     let group_id = strategy.get_param("groupId");
     match (percentage, group_id) {
         (Some(percentage), Some(group_id)) => {
             format!("{percentage}% sticky on user_id with group_id of \"{group_id}\"")
         }
-        _ => "".into(),
+        _ => "false".into(),
     }
 }
 
+fn upgrade_hostname(strategy: &Strategy) -> String {
+    let hostnames = strategy
+        .get_param("hostNames")
+        .cloned()
+        .unwrap_or_else(|| "".to_owned()); //intentional, unleash returns "" when no hostnames are set
+
+    let hosts = hostnames
+        .split(',')
+        .collect::<Vec<&str>>()
+        .iter()
+        .map(|x| x.trim())
+        .map(|x| format!("\"{x}\""))
+        .collect::<Vec<String>>()
+        .join(", ");
+    format!("hostname in [{hosts}]")
+}
+
 fn upgrade_random(strategy: &Strategy) -> String {
-    match strategy.get_param("percentage") {
+    let percentage = get_rollout_target(strategy, "percentage");
+
+    match percentage {
         Some(percent) => format!("random < {percent}"),
-        None => "".into(),
+        None => "false".into(),
     }
+}
+
+fn get_rollout_target(strategy: &Strategy, target_property: &str) -> Option<usize> {
+    strategy
+        .get_param(target_property)
+        .map(|value| value.parse::<usize>())
+        .and_then(Result::ok)
 }
 
 fn upgrade_constraints(constraints: Vec<Constraint>) -> Option<String> {
@@ -373,6 +403,8 @@ fn upgrade_context_name(context_name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::strategy_parsing::compile_rule;
+
     use super::*;
     use std::collections::HashMap;
     use test_case::test_case;
@@ -820,5 +852,93 @@ mod tests {
         };
         let rule = upgrade_constraint(&constraint);
         assert_eq!(rule.as_str(), "user_id contains_any [\"some\\\"thing\"]");
+    }
+
+    #[test]
+    fn generates_valid_hostname_strategy_from_hostname_strategy() {
+        let mut strategy_parameters = HashMap::new();
+        strategy_parameters.insert("hostNames".into(), "DOS, pop-os".into());
+        let strategy = Strategy {
+            name: "applicationHostname".into(),
+            parameters: Some(strategy_parameters),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+
+        let output = upgrade(&vec![strategy], &HashMap::new());
+        assert!(compile_rule(&output).is_ok());
+        assert_eq!(output.as_str(), "hostname in [\"DOS\", \"pop-os\"]");
+    }
+
+    #[test_case("gradualRolloutUserId")]
+    #[test_case("gradualRolloutSessionId")]
+    #[test_case("gradualRolloutRandom")]
+    fn gradual_rollout_strategies_with_invalid_parameters_are_false(strategy_type: &str) {
+        let strategy = Strategy {
+            name: strategy_type.into(),
+            parameters: Some(
+                vec![("percentage".into(), "nonsense-value".into())]
+                    .into_iter()
+                    .collect(),
+            ),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        assert_eq!(rule.as_str(), "false");
+    }
+
+    #[test]
+    fn remote_address_with_invalid_parameters_is_false() {
+        let strategy = Strategy {
+            name: "remoteAddress".into(),
+            parameters: Some(HashMap::new()),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        assert_eq!(rule.as_str(), "false");
+    }
+
+    #[test]
+    fn user_id_strategy_with_no_user_ids_is_false() {
+        let strategy = Strategy {
+            name: "userWithId".into(),
+            parameters: Some(HashMap::new()),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        assert_eq!(rule.as_str(), "false");
+    }
+
+    #[test]
+    fn remote_address_strategy_upgrades_to_ip_contains_constraint() {
+        let strategy = Strategy {
+            name: "remoteAddress".into(),
+            parameters: Some(
+                vec![("IPs".into(), "192.168.0.1, 192.168.0.2, 192.168.0.3".into())]
+                    .into_iter()
+                    .collect(),
+            ),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        assert_eq!(
+            rule.as_str(),
+            "remote_address contains_ip [\"192.168.0.1\", \"192.168.0.2\", \"192.168.0.3\"]"
+        );
     }
 }
