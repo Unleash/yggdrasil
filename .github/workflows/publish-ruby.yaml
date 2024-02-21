@@ -1,0 +1,122 @@
+name: Build Ruby
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build-binaries:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            output: libyggdrasilffi.so
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            output: yggdrasilffi.dll
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            output: libyggdrasilffi.dylib
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install rust
+      run: |
+        rustup set auto-self-update disable
+        rustup toolchain install stable --profile default
+        rustup show
+
+    - name: Rust cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Build Rust Library
+      run: |
+        cargo build -p yggdrasilffi --release --target ${{ matrix.target }}
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.output }}
+        path: target/${{ matrix.target }}/release/${{ matrix.output }}
+
+  build_single_binary_gems:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            binary: libyggdrasilffi.so
+          - os: windows-latest
+            binary: yggdrasilffi.dll
+          - os: macos-latest
+            binary: libyggdrasilffi.dylib
+            platform: universal-darwin
+
+    needs: build-binaries
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Overwrite Build Platform
+        if: matrix.platform != ''
+        run: echo "YGG_BUILD_PLATFORM=${{ matrix.platform }}" >> $GITHUB_ENV
+
+      - name: Download Compiled Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.binary }}
+          path: ruby-engine/lib
+          merge-multiple: true
+
+      - name: Build and Publish Linux Gem
+        run: |
+          cd ruby-engine
+          gem build yggdrasil-engine.gemspec
+          gem push *.gem
+        working-directory: ${{ github.workspace }}
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
+
+  build_jruby_gems:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - java: 8
+            ruby: jruby-9.2
+          - java: 11
+            ruby: jruby-9.3
+          - java: 17
+            ruby: jruby-9.4
+
+    needs: build-binaries
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+
+      - name: Setup JRuby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+
+      - name: Download Compiled Binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: ruby-engine/lib
+          merge-multiple: true
+
+      - name: Build and Publish Gem for JRuby
+        run: |
+          cd ruby-engine
+          gem build yggdrasil-engine.gemspec
+          gem push *.gem
+        working-directory: ${{ github.workspace }}
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
