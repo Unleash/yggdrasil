@@ -46,21 +46,25 @@ pub fn normalized_hash(
     murmur3_32(&mut reader, seed).map(|hash_result| hash_result % modulus + 1)
 }
 
-fn drain<const N: usize>(node: Pairs<Rule>) -> [Pair<Rule>; N] {
-    drain_partial(node).0
+fn drain<const N: usize>(node: Pairs<Rule>) -> CompileResult<[Pair<Rule>; N]> {
+    Ok(drain_partial(node)?.0)
 }
 
-fn drain_partial<const N: usize>(mut node: Pairs<Rule>) -> ([Pair<Rule>; N], Pairs<Rule>) {
+fn drain_partial<const N: usize>(
+    mut node: Pairs<Rule>,
+) -> CompileResult<([Pair<Rule>; N], Pairs<Rule>)> {
     let mut results = vec![];
     for _ in 0..N {
-        results.push(node.next().expect(&format!(
-            "Expected at least {N} elements when parsing the following pairs {node:?}"
-        )));
+        results.push(node.next().ok_or_else(|| {
+            SdkError::StrategyParseError(format!(
+                "Expected at least {N} more elements when parsing the following pairs {node:?}"
+            ))
+        })?);
     }
     let array: [Pair<Rule>; N] = results.try_into().expect(&format!(
         "Expected exactly {N} elements when parsing the following pairs {node:?}"
     ));
-    (array, node)
+    Ok((array, node))
 }
 
 type CompileResult<T> = Result<T, SdkError>;
@@ -112,7 +116,8 @@ struct StringComparatorType {
 
 //Context lifting properties - these resolve properties from the context
 fn context_value(node: Pairs<Rule>) -> ContextResolver {
-    let [child] = drain(node);
+    let [child] = drain(node)
+        .expect("Context node is empty, this should only happen if the grammar is missing");
 
     match child.as_rule() {
         Rule::user_id => Box::new(|context: &Context| context.user_id.clone()),
@@ -144,7 +149,8 @@ pub(crate) fn coalesce_context_property(node: Pairs<Rule>) -> ContextResolver {
 }
 
 fn context_property(node: Pairs<Rule>) -> ContextResolver {
-    let [content_node] = drain(node);
+    let [content_node] = drain(node)
+        .expect("Context node is empty, this should only happen if the grammar is missing");
     let mut chars = content_node.as_str().chars();
     chars.next();
     chars.next_back();
@@ -221,18 +227,26 @@ fn date(node: Pair<Rule>) -> Result<DateTime<Utc>, SdkError> {
     })
 }
 
-fn semver(node: Pair<Rule>) -> Version {
-    Version::parse(node.as_str()).unwrap()
+fn semver(node: Pair<Rule>) -> CompileResult<Version> {
+    let value = node.as_str();
+    Version::parse(value).map_err(|e| {
+        SdkError::StrategyParseError(format!("Failed to compile {value} as a semver value: {e}"))
+    })
 }
 
-fn percentage(node: Pair<Rule>) -> u8 {
+fn percentage(node: Pair<Rule>) -> CompileResult<u8> {
     let mut chars = node.as_str().chars();
     chars.next_back();
-    chars.as_str().parse::<u8>().unwrap()
+    let value = chars.as_str();
+    value.parse::<u8>().map_err(|e| {
+        SdkError::StrategyParseError(format!(
+            "Failed to compile {value} as a percentage value: {e}"
+        ))
+    })
 }
 
 fn group_id_param(node: Pairs<Rule>) -> String {
-    let [content_node] = drain(node);
+    let [content_node] = drain(node).expect("This cant fail");
     string(content_node)
 }
 
@@ -250,7 +264,7 @@ fn ip(node: Pair<Rule>) -> Result<IpNetwork, IpNetworkError> {
 
 //Constraints
 fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let [context_getter, ordinal_operation, number] = drain(node);
+    let [context_getter, ordinal_operation, number] = drain(node)?;
 
     let context_getter = context_value(context_getter.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation);
@@ -260,7 +274,10 @@ fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFr
         let context_value = context_getter(context);
         match context_value {
             Some(context_value) => {
-                let context_value: f64 = context_value.parse().unwrap();
+                let Ok(context_value) = context_value.parse::<f64>() else {
+                    return false;
+                };
+
                 match ordinal_operation {
                     OrdinalComparator::Lte => context_value <= number,
                     OrdinalComparator::Lt => context_value < number,
@@ -276,7 +293,7 @@ fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFr
 }
 
 fn date_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let [context_getter_node, ordinal_operation_node, date_node] = drain(node);
+    let [context_getter_node, ordinal_operation_node, date_node] = drain(node)?;
 
     let context_getter = context_value(context_getter_node.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
@@ -288,18 +305,18 @@ fn date_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
             Some(context_value) => {
                 let context_value = context_value.parse::<DateTime<Utc>>();
 
-                if let Ok(context_value) = context_value {
-                    match ordinal_operation {
-                        OrdinalComparator::Lte => context_value <= date,
-                        OrdinalComparator::Lt => context_value < date,
-                        OrdinalComparator::Gte => context_value >= date,
-                        OrdinalComparator::Gt => context_value > date,
-                        OrdinalComparator::Eq => context_value == date,
-                    }
-                    .invert(inverted)
-                } else {
-                    false
+                let Ok(context_value) = context_value else {
+                    return false;
+                };
+
+                match ordinal_operation {
+                    OrdinalComparator::Lte => context_value <= date,
+                    OrdinalComparator::Lt => context_value < date,
+                    OrdinalComparator::Gte => context_value >= date,
+                    OrdinalComparator::Gt => context_value > date,
+                    OrdinalComparator::Eq => context_value == date,
                 }
+                .invert(inverted)
             }
             None => false,
         }
@@ -307,19 +324,24 @@ fn date_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
 }
 
 fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let children: [Pair<Rule>; 3] = drain(node);
+    let children: [Pair<Rule>; 3] = drain(node)?;
     let [context_getter_node, ordinal_operation_node, semver_node] = children;
 
     let context_getter = context_value(context_getter_node.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
-    let semver = semver(semver_node);
+    let semver = semver(semver_node)?;
 
     Ok(Box::new(move |context: &Context| {
         let context_value = context_getter(context);
 
         match context_value {
             Some(context_value) => {
-                let context_value = context_value.parse::<Version>().unwrap();
+                let context_value = context_value.parse::<Version>();
+
+                let Ok(context_value) = context_value else {
+                    return false;
+                };
+
                 match ordinal_operation {
                     OrdinalComparator::Lte => context_value <= semver,
                     OrdinalComparator::Lt => context_value < semver,
@@ -335,10 +357,10 @@ fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFra
 }
 
 fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let (children, mut node) = drain_partial(node);
+    let (children, mut node) = drain_partial(node)?;
     let [rollout_node, stickiness_node] = children;
 
-    let percent_rollout = percentage(rollout_node);
+    let percent_rollout = percentage(rollout_node)?;
 
     let stickiness_resolver = coalesce_context_property(stickiness_node.into_inner());
     let group_id = node.next().map(|node| group_id_param(node.into_inner()));
@@ -375,7 +397,7 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     }))
 }
 
-fn get_hostname() -> Result<String, SdkError> {
+fn get_hostname() -> CompileResult<String> {
     //This is primarily for testing purposes
     if let Ok(hostname_env) = env::var("hostname") {
         return Ok(hostname_env);
@@ -391,7 +413,7 @@ fn get_hostname() -> Result<String, SdkError> {
 }
 
 fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let [hostname_node] = drain(node);
+    let [hostname_node] = drain(node)?;
 
     let target_hostnames: HashSet<String> = harvest_string_list(hostname_node.into_inner())
         .iter()
@@ -407,7 +429,7 @@ fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleF
 }
 
 fn ip_matching_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let [context_node, ip_node] = drain(node);
+    let [context_node, ip_node] = drain(node)?;
 
     let context_getter = context_value(context_node.into_inner());
     let ip_list = harvest_ip_list(ip_node.into_inner());
@@ -423,7 +445,7 @@ fn ip_matching_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 }
 
 fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let [context_node, comparator_node, list_node] = drain(node);
+    let [context_node, comparator_node, list_node] = drain(node)?;
 
     let context_getter = context_value(context_node.into_inner());
     let comparator = to_content_comparator(comparator_node);
@@ -435,12 +457,14 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
             ContentComparator::NotIn => true.invert(inverted),
         }),
         Rule::numeric_list => {
-            let values = harvest_list(list.into_inner());
+            let values = harvest_list(list.into_inner())?;
             Box::new(move |context: &Context| {
                 let context_value = context_getter(context);
                 match context_value {
                     Some(context_value) => {
-                        let context_value: f64 = context_value.parse().unwrap();
+                        let Ok(context_value) = context_value.parse::<f64>() else {
+                            return false;
+                        };
                         match comparator {
                             ContentComparator::In => {
                                 values.contains(&context_value).invert(inverted)
@@ -476,7 +500,7 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
 }
 
 fn external_value(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let [index_node] = drain(node);
+    let [index_node] = drain(node)?;
     let strategy_index = string(index_node);
     Ok(Box::new(move |context| {
         context
@@ -497,10 +521,13 @@ fn harvest_string_list(node: Pairs<Rule>) -> Vec<String> {
     node.into_iter().map(string).collect::<Vec<String>>()
 }
 
-fn harvest_list(node: Pairs<Rule>) -> Vec<f64> {
+fn harvest_list(node: Pairs<Rule>) -> CompileResult<Vec<f64>> {
     let nodes: Result<Vec<f64>, ParseFloatError> =
         node.into_iter().map(|x| x.as_str().parse()).collect();
-    nodes.unwrap()
+
+    nodes.map_err(|e| {
+        SdkError::StrategyParseError(format!("Failed to compile list as a numeric list: {e}"))
+    })
 }
 
 fn harvest_ip_list(node: Pairs<Rule>) -> Vec<IpNetwork> {
@@ -521,7 +548,7 @@ fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResu
 }
 
 fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
-    let [context_getter_node, comparator_node, list_node] = drain(node);
+    let [context_getter_node, comparator_node, list_node] = drain(node)?;
 
     let context_getter = context_value(context_getter_node.into_inner());
     let comparator_details = to_string_comparator(comparator_node);
