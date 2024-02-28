@@ -187,7 +187,10 @@ fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
         Some(user_ids) => {
             let user_ids = user_ids
                 .split(',')
-                .map(|id| format!("\"{}\"", id.trim()))
+                //The escaping of quotes is to tolerate a legacy validation in bug in the Unleash server,
+                // which would save an incorrect parameter set for the strategy. This will still likely
+                // cause Yggdrasil to evalute the strategy as off for most cases, but it will allow the rule to compile
+                .map(|id| format!("\"{}\"", escape_quotes(id.trim())))
                 .collect::<Vec<String>>()
                 .join(",");
             format!("user_id in [{user_ids}]")
