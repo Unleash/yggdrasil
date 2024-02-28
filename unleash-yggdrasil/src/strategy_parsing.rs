@@ -36,8 +36,6 @@ lazy_static! {
     };
 }
 
-type ParseResult = Result<RuleFragment, Error<Rule>>;
-
 pub fn normalized_hash(
     group: &str,
     identifier: &str,
@@ -64,6 +62,8 @@ fn drain_partial<const N: usize>(mut node: Pairs<Rule>) -> ([Pair<Rule>; N], Pai
     ));
     (array, node)
 }
+
+type ParseResult<T> = Result<T, SdkError>;
 
 pub type RuleFragment = Box<dyn SendableFragment + Send + Sync + 'static>;
 
@@ -207,12 +207,18 @@ fn to_string_comparator(node: Pair<Rule>) -> StringComparatorType {
     }
 }
 
-fn numeric(node: Pair<Rule>) -> f64 {
-    node.as_str().parse::<f64>().unwrap()
+fn numeric(node: Pair<Rule>) -> Result<f64, SdkError> {
+    let value = node.as_str();
+    value.parse::<f64>().map_err(|e| {
+        SdkError::StrategyParseError(format!("Failed to compile {value} as a numeric value: {e}"))
+    })
 }
 
-fn date(node: Pair<Rule>) -> DateTime<Utc> {
-    node.as_str().parse::<DateTime<Utc>>().unwrap()
+fn date(node: Pair<Rule>) -> Result<DateTime<Utc>, SdkError> {
+    let value = node.as_str();
+    value.parse::<DateTime<Utc>>().map_err(|e| {
+        SdkError::StrategyParseError(format!("Failed to compile {value} as a date value: {e}"))
+    })
 }
 
 fn semver(node: Pair<Rule>) -> Version {
@@ -243,12 +249,12 @@ fn ip(node: Pair<Rule>) -> Result<IpNetwork, IpNetworkError> {
 }
 
 //Constraints
-fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
+fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let [context_getter, ordinal_operation, number] = drain(node);
 
     let context_getter = context_value(context_getter.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation);
-    let number = numeric(number);
+    let number = numeric(number)?;
 
     Ok(Box::new(move |context: &Context| {
         let context_value = context_getter(context);
@@ -269,12 +275,12 @@ fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     }))
 }
 
-fn date_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
+fn date_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let [context_getter_node, ordinal_operation_node, date_node] = drain(node);
 
     let context_getter = context_value(context_getter_node.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
-    let date = date(date_node);
+    let date = date(date_node)?;
 
     Ok(Box::new(move |context: &Context| {
         let context_value = context_getter(context);
@@ -300,7 +306,7 @@ fn date_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     }))
 }
 
-fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
+fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let children: [Pair<Rule>; 3] = drain(node);
     let [context_getter_node, ordinal_operation_node, semver_node] = children;
 
@@ -328,7 +334,7 @@ fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     }))
 }
 
-fn rollout_constraint(node: Pairs<Rule>) -> ParseResult {
+fn rollout_constraint(node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let (children, mut node) = drain_partial(node);
     let [rollout_node, stickiness_node] = children;
 
@@ -384,7 +390,7 @@ fn get_hostname() -> Result<String, SdkError> {
         })
 }
 
-fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
+fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let [hostname_node] = drain(node);
 
     let target_hostnames: HashSet<String> = harvest_string_list(hostname_node.into_inner())
@@ -400,7 +406,7 @@ fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     }))
 }
 
-fn ip_matching_constraint(node: Pairs<Rule>) -> ParseResult {
+fn ip_matching_constraint(node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let [context_node, ip_node] = drain(node);
 
     let context_getter = context_value(context_node.into_inner());
@@ -416,7 +422,7 @@ fn ip_matching_constraint(node: Pairs<Rule>) -> ParseResult {
     }))
 }
 
-fn list_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
+fn list_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let [context_node, comparator_node, list_node] = drain(node);
 
     let context_getter = context_value(context_node.into_inner());
@@ -469,7 +475,7 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     })
 }
 
-fn external_value(inverted: bool, node: Pairs<Rule>) -> ParseResult {
+fn external_value(inverted: bool, node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let [index_node] = drain(node);
     let strategy_index = string(index_node);
     Ok(Box::new(move |context| {
@@ -506,12 +512,15 @@ fn harvest_ip_list(node: Pairs<Rule>) -> Vec<IpNetwork> {
         .collect()
 }
 
-fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
-    let enabled: bool = node.as_str().chars().as_str().parse().unwrap();
+fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult<RuleFragment> {
+    let value = node.as_str();
+    let enabled: bool = value.parse().map_err(|e| {
+        SdkError::StrategyParseError(format!("Failed to compile {value} as a boolean value: {e}"))
+    })?;
     Ok(Box::new(move |_: &Context| enabled.invert(inverted)))
 }
 
-fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
+fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let [context_getter_node, comparator_node, list_node] = drain(node);
 
     let context_getter = context_value(context_getter_node.into_inner());
@@ -543,7 +552,7 @@ fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult 
     }))
 }
 
-fn constraint(mut node: Pairs<Rule>) -> ParseResult {
+fn constraint(mut node: Pairs<Rule>) -> ParseResult<RuleFragment> {
     let first = node.next();
     let second = node.next();
 
@@ -572,7 +581,7 @@ fn constraint(mut node: Pairs<Rule>) -> ParseResult {
     }
 }
 
-fn eval(expression: Pairs<Rule>) -> ParseResult {
+fn eval(expression: Pairs<Rule>) -> ParseResult<RuleFragment> {
     PRATT_PARSER
         .map_primary(|primary| match primary.as_rule() {
             Rule::constraint => constraint(primary.into_inner()),
