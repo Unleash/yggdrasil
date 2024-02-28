@@ -36,6 +36,8 @@ lazy_static! {
     };
 }
 
+type ParseResult = Result<RuleFragment, Error<Rule>>;
+
 pub fn normalized_hash(
     group: &str,
     identifier: &str,
@@ -241,14 +243,14 @@ fn ip(node: Pair<Rule>) -> Result<IpNetwork, IpNetworkError> {
 }
 
 //Constraints
-fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
+fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     let [context_getter, ordinal_operation, number] = drain(node);
 
     let context_getter = context_value(context_getter.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation);
     let number = numeric(number);
 
-    Box::new(move |context: &Context| {
+    Ok(Box::new(move |context: &Context| {
         let context_value = context_getter(context);
         match context_value {
             Some(context_value) => {
@@ -264,17 +266,17 @@ fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
             }
             None => false,
         }
-    })
+    }))
 }
 
-fn date_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
+fn date_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     let [context_getter_node, ordinal_operation_node, date_node] = drain(node);
 
     let context_getter = context_value(context_getter_node.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
     let date = date(date_node);
 
-    Box::new(move |context: &Context| {
+    Ok(Box::new(move |context: &Context| {
         let context_value = context_getter(context);
         match context_value {
             Some(context_value) => {
@@ -295,10 +297,10 @@ fn date_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
             }
             None => false,
         }
-    })
+    }))
 }
 
-fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
+fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     let children: [Pair<Rule>; 3] = drain(node);
     let [context_getter_node, ordinal_operation_node, semver_node] = children;
 
@@ -306,7 +308,7 @@ fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
     let semver = semver(semver_node);
 
-    Box::new(move |context: &Context| {
+    Ok(Box::new(move |context: &Context| {
         let context_value = context_getter(context);
 
         match context_value {
@@ -323,10 +325,10 @@ fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
             }
             None => false,
         }
-    })
+    }))
 }
 
-fn rollout_constraint(node: Pairs<Rule>) -> RuleFragment {
+fn rollout_constraint(node: Pairs<Rule>) -> ParseResult {
     let (children, mut node) = drain_partial(node);
     let [rollout_node, stickiness_node] = children;
 
@@ -335,7 +337,7 @@ fn rollout_constraint(node: Pairs<Rule>) -> RuleFragment {
     let stickiness_resolver = coalesce_context_property(stickiness_node.into_inner());
     let group_id = node.next().map(|node| group_id_param(node.into_inner()));
 
-    Box::new(move |context: &Context| {
+    Ok(Box::new(move |context: &Context| {
         let stickiness = stickiness_resolver(context);
 
         if stickiness.is_none() {
@@ -364,7 +366,7 @@ fn rollout_constraint(node: Pairs<Rule>) -> RuleFragment {
             // don't feed enough input to the hashing function
             false
         }
-    })
+    }))
 }
 
 fn get_hostname() -> Result<String, SdkError> {
@@ -382,7 +384,7 @@ fn get_hostname() -> Result<String, SdkError> {
         })
 }
 
-fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
+fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     let [hostname_node] = drain(node);
 
     let target_hostnames: HashSet<String> = harvest_string_list(hostname_node.into_inner())
@@ -390,38 +392,38 @@ fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
         .map(|x| x.to_lowercase())
         .collect();
 
-    Box::new(move |_: &Context| match get_hostname() {
+    Ok(Box::new(move |_: &Context| match get_hostname() {
         Ok(hostname) => target_hostnames
             .contains(&hostname.to_lowercase())
             .invert(inverted),
         Err(_) => false,
-    })
+    }))
 }
 
-fn ip_matching_constraint(node: Pairs<Rule>) -> RuleFragment {
+fn ip_matching_constraint(node: Pairs<Rule>) -> ParseResult {
     let [context_node, ip_node] = drain(node);
 
     let context_getter = context_value(context_node.into_inner());
     let ip_list = harvest_ip_list(ip_node.into_inner());
 
-    Box::new(move |context| {
+    Ok(Box::new(move |context| {
         if let Some(context_value) = context_getter(context) {
             if let Ok(context_ip) = context_value.parse::<IpAddr>() {
                 return ip_list.iter().any(|range| range.contains(context_ip));
             }
         }
         false
-    })
+    }))
 }
 
-fn list_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
+fn list_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     let [context_node, comparator_node, list_node] = drain(node);
 
     let context_getter = context_value(context_node.into_inner());
     let comparator = to_content_comparator(comparator_node);
     let list = list_node;
 
-    match list.as_rule() {
+    Ok(match list.as_rule() {
         Rule::empty_list => Box::new(move |_context: &Context| match comparator {
             ContentComparator::In => false.invert(inverted),
             ContentComparator::NotIn => true.invert(inverted),
@@ -464,13 +466,13 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
             })
         }
         _ => unreachable!(),
-    }
+    })
 }
 
-fn external_value(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
+fn external_value(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     let [index_node] = drain(node);
     let strategy_index = string(index_node);
-    Box::new(move |context| {
+    Ok(Box::new(move |context| {
         context
             .external_results
             .as_ref()
@@ -478,7 +480,7 @@ fn external_value(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
             .copied()
             .map(|result| result.invert(inverted))
             .unwrap_or(false)
-    })
+    }))
 }
 
 fn harvest_set(node: Pairs<Rule>) -> HashSet<String> {
@@ -504,12 +506,12 @@ fn harvest_ip_list(node: Pairs<Rule>) -> Vec<IpNetwork> {
         .collect()
 }
 
-fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
+fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     let enabled: bool = node.as_str().chars().as_str().parse().unwrap();
-    Box::new(move |_: &Context| enabled.invert(inverted))
+    Ok(Box::new(move |_: &Context| enabled.invert(inverted)))
 }
 
-fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment {
+fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> ParseResult {
     let [context_getter_node, comparator_node, list_node] = drain(node);
 
     let context_getter = context_value(context_getter_node.into_inner());
@@ -523,7 +525,7 @@ fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment
         list = list.into_iter().map(|item| item.to_lowercase()).collect();
     };
 
-    Box::new(move |context: &Context| {
+    Ok(Box::new(move |context: &Context| {
         let mut value = context_getter(context);
         if ignore_case {
             value = value.map(|value| value.to_lowercase())
@@ -538,10 +540,10 @@ fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> RuleFragment
         } else {
             false
         }
-    })
+    }))
 }
 
-fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
+fn constraint(mut node: Pairs<Rule>) -> ParseResult {
     let first = node.next();
     let second = node.next();
 
@@ -570,7 +572,7 @@ fn constraint(mut node: Pairs<Rule>) -> RuleFragment {
     }
 }
 
-fn eval(expression: Pairs<Rule>) -> RuleFragment {
+fn eval(expression: Pairs<Rule>) -> ParseResult {
     PRATT_PARSER
         .map_primary(|primary| match primary.as_rule() {
             Rule::constraint => constraint(primary.into_inner()),
@@ -578,10 +580,18 @@ fn eval(expression: Pairs<Rule>) -> RuleFragment {
             _ => unreachable!(),
         })
         .map_infix(|lhs, op, rhs| match op.as_rule() {
-            Rule::and => {
-                Box::new(move |context: &Context| -> bool { lhs(context) && rhs(context) })
-            }
-            Rule::or => Box::new(move |context: &Context| -> bool { lhs(context) || rhs(context) }),
+            Rule::and => Ok(Box::new({
+                let lhs = lhs.unwrap();
+                let rhs = rhs.unwrap();
+
+                move |context: &Context| -> bool { lhs(context) && rhs(context) }
+            })),
+            Rule::or => Ok(Box::new({
+                let lhs = lhs.unwrap();
+                let rhs = rhs.unwrap();
+
+                move |context: &Context| -> bool { lhs(context) || rhs(context) }
+            })),
             _ => unreachable!(),
         })
         .parse(expression)
@@ -590,7 +600,7 @@ fn eval(expression: Pairs<Rule>) -> RuleFragment {
 #[allow(clippy::result_large_err)] //Valid complaint on Clippy's part but this should be on the cold path and not a major issue
 pub fn compile_rule(rule: &str) -> Result<RuleFragment, Error<Rule>> {
     let parse_result = Strategy::parse(Rule::strategy, rule);
-    parse_result.map(|mut x| eval(x.next().unwrap().into_inner()))
+    parse_result.map(|mut x| eval(x.next().unwrap().into_inner()).unwrap())
 }
 
 #[cfg(test)]
