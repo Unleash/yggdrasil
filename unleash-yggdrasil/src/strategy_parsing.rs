@@ -46,13 +46,8 @@ pub fn normalized_hash(
     murmur3_32(&mut reader, seed).map(|hash_result| hash_result % modulus + 1)
 }
 
-fn drain<const N: usize>(mut node: Pairs<Rule>) -> [Pair<Rule>; N] {
-    let mut results = vec![];
-    for _ in 0..N {
-        results.push(node.next().unwrap());
-    }
-    let array: [Pair<Rule>; N] = results.try_into().unwrap();
-    array
+fn drain<const N: usize>(node: Pairs<Rule>) -> [Pair<Rule>; N] {
+    drain_partial(node).0
 }
 
 fn drain_partial<const N: usize>(mut node: Pairs<Rule>) -> ([Pair<Rule>; N], Pairs<Rule>) {
