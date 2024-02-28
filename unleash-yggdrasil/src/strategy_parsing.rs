@@ -53,9 +53,13 @@ fn drain<const N: usize>(node: Pairs<Rule>) -> [Pair<Rule>; N] {
 fn drain_partial<const N: usize>(mut node: Pairs<Rule>) -> ([Pair<Rule>; N], Pairs<Rule>) {
     let mut results = vec![];
     for _ in 0..N {
-        results.push(node.next().unwrap());
+        results.push(node.next().expect(&format!(
+            "Expected at least {N} elements when parsing the following pairs {node:?}"
+        )));
     }
-    let array: [Pair<Rule>; N] = results.try_into().unwrap();
+    let array: [Pair<Rule>; N] = results.try_into().expect(&format!(
+        "Expected exactly {N} elements when parsing the following pairs {node:?}"
+    ));
     (array, node)
 }
 
