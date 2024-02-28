@@ -617,14 +617,14 @@ fn eval(expression: Pairs<Rule>) -> CompileResult<RuleFragment> {
         })
         .map_infix(|lhs, op, rhs| match op.as_rule() {
             Rule::and => Ok(Box::new({
-                let lhs = lhs.unwrap();
-                let rhs = rhs.unwrap();
+                let lhs = lhs?;
+                let rhs = rhs?;
 
                 move |context: &Context| -> bool { lhs(context) && rhs(context) }
             })),
             Rule::or => Ok(Box::new({
-                let lhs = lhs.unwrap();
-                let rhs = rhs.unwrap();
+                let lhs = lhs?;
+                let rhs = rhs?;
 
                 move |context: &Context| -> bool { lhs(context) || rhs(context) }
             })),
