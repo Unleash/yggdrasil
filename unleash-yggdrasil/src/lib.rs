@@ -138,9 +138,9 @@ pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledT
                 enabled: toggle.enabled,
                 compiled_variant_strategy: variant_rule,
                 variants: compile_variants(&toggle.variants),
-                compiled_strategy: compile_rule(rule.as_str()).map_err(|err| {
-                    SdkError::StrategyParseError(format!("Failed to parse rule, {:?}", err))
-                })?,
+                compiled_strategy: compile_rule(rule.as_str())
+                    .unwrap_or_else(|_| Box::new(|_| false)),
+
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
                 dependencies: toggle.dependencies.clone().unwrap_or_default(),
@@ -1448,73 +1448,6 @@ mod test {
 
         assert!(targeted_toggle.enabled);
         assert_eq!(targeted_toggle.variant.name, "another");
-    }
-
-    #[test]
-    pub fn invalid_date_format_bubbles_up_a_nice_error_message() {
-        let raw_state = r#"
-        {
-            "version": 2,
-            "segments": [
-                {
-                    "id": 0,
-                    "name": "hasEnoughWins",
-                    "description": null,
-                    "constraints": [
-                        {
-                            "contextName": "dateLastWin",
-                            "operator": "DATE_AFTER",
-                            "value": "2022-05-01T12:00:00",
-                            "inverted": false,
-                            "caseInsensitive": true
-                        }
-                    ]
-                }
-            ],
-            "features": [
-                {
-                    "name": "toggle1",
-                    "type": "release",
-                    "enabled": true,
-                    "project": "TestProject20",
-                    "stale": false,
-                    "strategies": [
-                        {
-                            "name": "default",
-                            "segments": [
-                                0
-                            ]
-                        }
-                    ],
-                    "variants": [],
-                    "description": null,
-                    "impressionData": false
-                }
-            ],
-            "query": {
-                "environment": "development",
-                "inlineSegmentConstraints": true
-            },
-            "meta": {
-                "revisionId": 12137,
-                "etag": "\"76d8bb0e:12137\"",
-                "queryHash": "76d8bb0e"
-            }
-        }
-        "#;
-
-        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
-        let mut engine = EngineState::default();
-
-        let maybe_error = engine.take_state(feature_set);
-
-        if let Err(error) = maybe_error {
-            let error_as_string = format!("{:?}", error);
-            // TODO make error message better
-            assert!(error_as_string.contains("StrategyParseError"));
-        } else {
-            panic!("Expected an error from yggdrasil take state but got an Ok instead!")
-        }
     }
 
     #[test]
