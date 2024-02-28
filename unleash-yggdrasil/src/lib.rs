@@ -1702,37 +1702,27 @@ mod test {
             "features": [
               {
                 "name": "Should_always_be_off",
-                "type": "permission",
                 "enabled": true,
-                "project": "test",
-                "stale": false,
                 "strategies": [
                   {
                     "name": "userWithId",
-                    "constraints": [],
                     "parameters": {
                       "userIds": "[\"this\",\"is\",\"broken\"]"
                     }
                   }
-                ],
-                "variants": []
+                ]
               },
               {
                 "name": "This_should_be_okay",
-                "type": "permission",
                 "enabled": true,
-                "project": "test",
-                "stale": false,
                 "strategies": [
                   {
                     "name": "userWithId",
-                    "constraints": [],
                     "parameters": {
                       "userIds": "this,is,okay"
                     }
                   }
-                ],
-                "variants": []
+                ]
               }
             ]
           }
