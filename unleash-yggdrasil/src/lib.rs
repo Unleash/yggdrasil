@@ -1760,4 +1760,62 @@ mod test {
         assert!(targeted_toggle.enabled);
         assert_eq!(targeted_toggle.variant.name, "theselectedone");
     }
+
+    #[test]
+    fn invalid_toggles_do_not_affect_other_toggles() {
+        let raw_state = r#"
+        {
+            "version": 2,
+            "features": [
+              {
+                "name": "Should_always_be_off",
+                "type": "permission",
+                "enabled": true,
+                "project": "test",
+                "stale": false,
+                "strategies": [
+                  {
+                    "name": "userWithId",
+                    "constraints": [],
+                    "parameters": {
+                      "userIds": "[\"this\",\"is\",\"broken\"]"
+                    }
+                  }
+                ],
+                "variants": []
+              },
+              {
+                "name": "This_should_be_okay",
+                "type": "permission",
+                "enabled": true,
+                "project": "test",
+                "stale": false,
+                "strategies": [
+                  {
+                    "name": "userWithId",
+                    "constraints": [],
+                    "parameters": {
+                      "userIds": "this,is,okay"
+                    }
+                  }
+                ],
+                "variants": []
+              }
+            ]
+          }
+        "#;
+
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+
+        engine.take_state(feature_set).unwrap();
+
+        let context = Context {
+            user_id: Some("okay".into()),
+            ..Context::default()
+        };
+
+        assert!(!engine.is_enabled("Should_always_be_off", &context, &None));
+        assert!(engine.is_enabled("This_should_be_okay", &context, &None));
+    }
 }
