@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.11.0 (2024-02-29)
+
+### Chore
+
+ - <csr-id-39b586ff9b4b44d7f6660c5cedbaf7003e3fc36a/> allow take_state to bubble warnings to caller
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#123](https://github.com/Unleash/yggdrasil/issues/123)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#123](https://github.com/Unleash/yggdrasil/issues/123)**
+    - Allow take_state to bubble warnings to caller ([`39b586f`](https://github.com/Unleash/yggdrasil/commit/39b586ff9b4b44d7f6660c5cedbaf7003e3fc36a))
+</details>
+
 ## v0.10.0 (2024-02-29)
 
 <csr-id-3a72666241cb30d45d3a52cbca723f996570713b/>
@@ -27,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release.
+ - 6 commits contributed to the release.
  - 36 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#120](https://github.com/Unleash/yggdrasil/issues/120), [#121](https://github.com/Unleash/yggdrasil/issues/121), [#122](https://github.com/Unleash/yggdrasil/issues/122)
@@ -45,6 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#122](https://github.com/Unleash/yggdrasil/issues/122)**
     - Toggle compile failures now bubble ([`d5023d1`](https://github.com/Unleash/yggdrasil/commit/d5023d13858e23c2ffababe70e398a340ba00a6b))
  * **Uncategorized**
+    - Release unleash-yggdrasil v0.10.0 ([`e6adf79`](https://github.com/Unleash/yggdrasil/commit/e6adf79f80abf760ba3f07eaced8601eb1cee655))
     - Release unleash-yggdrasil v0.10.0 ([`e528c7a`](https://github.com/Unleash/yggdrasil/commit/e528c7acaf9c06575212541dfcb2b8e1c71b7bb6))
     - Remove orig file ([`3a72666`](https://github.com/Unleash/yggdrasil/commit/3a72666241cb30d45d3a52cbca723f996570713b))
 </details>
