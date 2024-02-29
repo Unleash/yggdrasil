@@ -435,7 +435,7 @@ mod tests {
 
         unsafe {
             let engine = &mut *(engine_ptr as *mut EngineState);
-            engine.take_state(client_features).unwrap();
+            let warnings = engine.take_state(client_features);
 
             let string_response =
                 check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
@@ -444,6 +444,7 @@ mod tests {
 
             assert!(enabled_response.status_code == ResponseCode::Ok);
             assert!(enabled_response.error_message.is_none());
+            assert!(warnings.is_none());
         }
     }
 
@@ -556,7 +557,7 @@ mod tests {
 
         unsafe {
             let engine = &mut *(engine_ptr as *mut EngineState);
-            engine.take_state(client_features).unwrap();
+            let warnings = engine.take_state(client_features);
 
             let string_response =
                 check_variant(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
@@ -568,6 +569,7 @@ mod tests {
             let variant_response = variant_response.value.expect("Expected variant response");
 
             assert!(variant_response.feature_enabled);
+            assert!(warnings.is_none());
         }
     }
 }

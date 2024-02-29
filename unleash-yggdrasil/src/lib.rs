@@ -125,6 +125,7 @@ fn compile_variant_rule(
     variant_rules
 }
 
+#[derive(Debug, Serialize)]
 pub struct EvalWarning {
     pub toggle_name: String,
     pub message: String,
@@ -147,12 +148,12 @@ pub fn compile_state(
                 enabled: toggle.enabled,
                 compiled_variant_strategy: variant_rule,
                 variants: compile_variants(&toggle.variants),
-                compiled_strategy: compile_rule(rule.as_str()).unwrap_or_else({
+                compiled_strategy: compile_rule(rule.as_str()).unwrap_or_else(|e| {
                     warnings.push(EvalWarning {
                         toggle_name: toggle.name.clone(),
-                        message: "Failed to toggle, this will always be off".to_string(),
+                        message: format!("Failed to compile toggle, this will always be off {e:?}"),
                     });
-                    |_| Box::new(|_| false)
+                    Box::new(|_| false)
                 }),
 
                 impression_data: toggle.impression_data.unwrap_or_default(),
@@ -735,7 +736,9 @@ mod test {
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::default();
-        engine.take_state(spec.state).unwrap();
+        let warnings = engine.take_state(spec.state);
+
+        assert!(warnings.is_none());
 
         if let Some(mut tests) = spec.tests {
             while let Some(test_case) = tests.pop() {
@@ -1460,13 +1463,14 @@ mod test {
             ..Context::default()
         };
 
-        engine.take_state(feature_set).unwrap();
+        let warnings = engine.take_state(feature_set);
 
         let results = engine.resolve_all(&context, &None);
         let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
 
         assert!(targeted_toggle.enabled);
         assert_eq!(targeted_toggle.variant.name, "another");
+        assert!(warnings.is_none());
     }
 
     #[test]
@@ -1704,13 +1708,14 @@ mod test {
             ..Context::default()
         };
 
-        engine.take_state(feature_set).unwrap();
+        let warnings = engine.take_state(feature_set);
 
         let results = engine.resolve_all(&context, &None);
         let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
 
         assert!(targeted_toggle.enabled);
         assert_eq!(targeted_toggle.variant.name, "theselectedone");
+        assert!(warnings.is_none());
     }
 
     #[test]
@@ -1750,7 +1755,7 @@ mod test {
         let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
         let mut engine = EngineState::default();
 
-        engine.take_state(feature_set).unwrap();
+        let warnings = engine.take_state(feature_set);
 
         let context = Context {
             user_id: Some("okay".into()),
@@ -1759,5 +1764,7 @@ mod test {
 
         assert!(!engine.is_enabled("Should_always_be_off", &context, &None));
         assert!(engine.is_enabled("This_should_be_okay", &context, &None));
+        println!("{:?}", warnings);
+        assert!(warnings.is_none());
     }
 }
