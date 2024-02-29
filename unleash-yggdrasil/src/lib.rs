@@ -16,7 +16,7 @@ use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
-use state::{EnrichedContext, SdkError};
+use state::EnrichedContext;
 use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
@@ -125,9 +125,18 @@ fn compile_variant_rule(
     variant_rules
 }
 
-pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledToggle>, SdkError> {
+pub struct EvalWarning {
+    pub toggle_name: String,
+    pub message: String,
+}
+
+pub fn compile_state(
+    state: &ClientFeatures,
+) -> (HashMap<String, CompiledToggle>, Vec<EvalWarning>) {
     let mut compiled_state = HashMap::new();
     let segment_map = build_segment_map(&state.segments);
+    let mut warnings = vec![];
+
     for toggle in &state.features {
         let rule = upgrade(&toggle.strategies.clone().unwrap_or_default(), &segment_map);
         let variant_rule = compile_variant_rule(toggle, &segment_map);
@@ -138,8 +147,13 @@ pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledT
                 enabled: toggle.enabled,
                 compiled_variant_strategy: variant_rule,
                 variants: compile_variants(&toggle.variants),
-                compiled_strategy: compile_rule(rule.as_str())
-                    .unwrap_or_else(|_| Box::new(|_| false)),
+                compiled_strategy: compile_rule(rule.as_str()).unwrap_or_else({
+                    warnings.push(EvalWarning {
+                        toggle_name: toggle.name.clone(),
+                        message: "Failed to toggle, this will always be off".to_string(),
+                    });
+                    |_| Box::new(|_| false)
+                }),
 
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
@@ -148,7 +162,7 @@ pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledT
         );
     }
 
-    Ok(compiled_state)
+    (compiled_state, warnings)
 }
 
 fn compile_variants(variants: &Option<Vec<Variant>>) -> Vec<CompiledVariant> {
@@ -547,9 +561,14 @@ impl EngineState {
         variant.to_enriched_response(enabled)
     }
 
-    pub fn take_state(&mut self, toggles: ClientFeatures) -> Result<(), SdkError> {
-        self.compiled_state = Some(compile_state(&toggles)?);
-        Ok(())
+    pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
+        let (compiled_state, warnings) = compile_state(&toggles);
+        self.compiled_state = Some(compiled_state);
+        if !warnings.is_empty() {
+            Some(warnings)
+        } else {
+            None
+        }
     }
 }
 

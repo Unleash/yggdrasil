@@ -51,7 +51,6 @@ impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
 enum FFIError {
     Utf8Error,
     InvalidJson,
-    InvalidRule(String),
     NullError(String),
 }
 
@@ -153,9 +152,8 @@ pub unsafe extern "C" fn take_state(
         let engine = get_engine(engine_ptr)?;
         let toggles: ClientFeatures = get_json(json_ptr)?;
 
-        engine
-            .take_state(toggles)
-            .map_err(|err| FFIError::InvalidRule(format!("{:#?}", err)))?;
+        let _ = engine.take_state(toggles);
+
         Ok(Some(()))
     })();
 
