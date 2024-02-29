@@ -215,14 +215,14 @@ fn to_string_comparator(node: Pair<Rule>) -> StringComparatorType {
     }
 }
 
-fn numeric(node: Pair<Rule>) -> Result<f64, SdkError> {
+fn numeric(node: Pair<Rule>) -> CompileResult<f64> {
     let value = node.as_str();
     value.parse::<f64>().map_err(|e| {
         SdkError::StrategyParseError(format!("Failed to compile {value} as a numeric value: {e}"))
     })
 }
 
-fn date(node: Pair<Rule>) -> Result<DateTime<Utc>, SdkError> {
+fn date(node: Pair<Rule>) -> CompileResult<DateTime<Utc>> {
     let value = node.as_str();
     value.parse::<DateTime<Utc>>().map_err(|e| {
         SdkError::StrategyParseError(format!("Failed to compile {value} as a date value: {e}"))
