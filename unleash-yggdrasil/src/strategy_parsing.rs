@@ -14,7 +14,6 @@ use chrono::{DateTime, Utc};
 use hostname;
 use ipnetwork::{IpNetwork, IpNetworkError};
 use murmur3::murmur3_32;
-use pest::error::Error;
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
@@ -57,13 +56,16 @@ fn drain_partial<const N: usize>(
     for _ in 0..N {
         results.push(node.next().ok_or_else(|| {
             SdkError::StrategyParseError(format!(
-                "Expected at least {N} more elements when parsing the following pairs {node:?}"
+                "Expected at least {N} elements when parsing the following pairs {node:?}"
             ))
         })?);
     }
-    let array: [Pair<Rule>; N] = results.try_into().expect(&format!(
-        "Expected exactly {N} elements when parsing the following pairs {node:?}"
-    ));
+    let array: [Pair<Rule>; N] = results.try_into().map_err(|_| {
+        SdkError::StrategyParseError(format!(
+            "Expected exactly {N} elements when parsing the following pairs {node:?}"
+        ))
+    })?;
+
     Ok((array, node))
 }
 
@@ -245,9 +247,9 @@ fn percentage(node: Pair<Rule>) -> CompileResult<u8> {
     })
 }
 
-fn group_id_param(node: Pairs<Rule>) -> String {
-    let [content_node] = drain(node).expect("This cant fail");
-    string(content_node)
+fn group_id_param(node: Pairs<Rule>) -> CompileResult<String> {
+    let [content_node] = drain(node)?;
+    Ok(string(content_node))
 }
 
 fn string(node: Pair<Rule>) -> String {
@@ -363,7 +365,10 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let percent_rollout = percentage(rollout_node)?;
 
     let stickiness_resolver = coalesce_context_property(stickiness_node.into_inner());
-    let group_id = node.next().map(|node| group_id_param(node.into_inner()));
+    let group_id = node
+        .next()
+        .map(|node| group_id_param(node.into_inner()))
+        .transpose()?;
 
     Ok(Box::new(move |context: &Context| {
         let stickiness = stickiness_resolver(context);
@@ -633,10 +638,14 @@ fn eval(expression: Pairs<Rule>) -> CompileResult<RuleFragment> {
         .parse(expression)
 }
 
-#[allow(clippy::result_large_err)] //Valid complaint on Clippy's part but this should be on the cold path and not a major issue
-pub fn compile_rule(rule: &str) -> Result<RuleFragment, Error<Rule>> {
-    let parse_result = Strategy::parse(Rule::strategy, rule);
-    parse_result.map(|mut x| eval(x.next().unwrap().into_inner()).unwrap())
+pub fn compile_rule(rule: &str) -> CompileResult<RuleFragment> {
+    let nodes = Strategy::parse(Rule::strategy, rule)
+        .map_err(|e| SdkError::StrategyParseError(format!("Failed to parse rule {rule}: {e}")))?;
+
+    let [strategy_node] = drain(nodes)?;
+    let rule = eval(strategy_node.into_inner())?;
+
+    Ok(rule)
 }
 
 #[cfg(test)]
