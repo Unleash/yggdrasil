@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## v0.10.0 (2024-02-29)
 
+<csr-id-3a72666241cb30d45d3a52cbca723f996570713b/>
+<csr-id-b8cecbcab3a39e353a259fd0a7517b9301857f57/>
+
 ### Chore
 
  - <csr-id-3a72666241cb30d45d3a52cbca723f996570713b/> remove orig file
@@ -24,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 4 commits contributed to the release.
+ - 5 commits contributed to the release.
  - 36 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#120](https://github.com/Unleash/yggdrasil/issues/120), [#121](https://github.com/Unleash/yggdrasil/issues/121), [#122](https://github.com/Unleash/yggdrasil/issues/122)
@@ -42,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#122](https://github.com/Unleash/yggdrasil/issues/122)**
     - Toggle compile failures now bubble ([`d5023d1`](https://github.com/Unleash/yggdrasil/commit/d5023d13858e23c2ffababe70e398a340ba00a6b))
  * **Uncategorized**
+    - Release unleash-yggdrasil v0.10.0 ([`e528c7a`](https://github.com/Unleash/yggdrasil/commit/e528c7acaf9c06575212541dfcb2b8e1c71b7bb6))
     - Remove orig file ([`3a72666`](https://github.com/Unleash/yggdrasil/commit/3a72666241cb30d45d3a52cbca723f996570713b))
 </details>
 
