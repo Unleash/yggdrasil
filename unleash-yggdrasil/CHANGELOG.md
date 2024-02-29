@@ -5,7 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.10.0 (2024-02-29)
+
+### Chore
+
+ - <csr-id-3a72666241cb30d45d3a52cbca723f996570713b/> remove orig file
+
+### Bug Fixes
+
+ - <csr-id-d5023d13858e23c2ffababe70e398a340ba00a6b/> toggle compile failures now bubble
+ - <csr-id-cc58f306862bb1105732ffc73c653e240f333a46/> one toggle failing to compile will no longer affect other toggles
+
+### Refactor
+
+ - <csr-id-b8cecbcab3a39e353a259fd0a7517b9301857f57/> better handling for unwrapping grammar nodes
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 4 commits contributed to the release.
+ - 36 days passed between releases.
+ - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 3 unique issues were worked on: [#120](https://github.com/Unleash/yggdrasil/issues/120), [#121](https://github.com/Unleash/yggdrasil/issues/121), [#122](https://github.com/Unleash/yggdrasil/issues/122)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#120](https://github.com/Unleash/yggdrasil/issues/120)**
+    - One toggle failing to compile will no longer affect other toggles ([`cc58f30`](https://github.com/Unleash/yggdrasil/commit/cc58f306862bb1105732ffc73c653e240f333a46))
+ * **[#121](https://github.com/Unleash/yggdrasil/issues/121)**
+    - Better handling for unwrapping grammar nodes ([`b8cecbc`](https://github.com/Unleash/yggdrasil/commit/b8cecbcab3a39e353a259fd0a7517b9301857f57))
+ * **[#122](https://github.com/Unleash/yggdrasil/issues/122)**
+    - Toggle compile failures now bubble ([`d5023d1`](https://github.com/Unleash/yggdrasil/commit/d5023d13858e23c2ffababe70e398a340ba00a6b))
+ * **Uncategorized**
+    - Remove orig file ([`3a72666`](https://github.com/Unleash/yggdrasil/commit/3a72666241cb30d45d3a52cbca723f996570713b))
+</details>
+
 ## v0.9.0 (2024-01-23)
+
+<csr-id-799674dcf4f2937451f815525e60017d7e8ae830/>
+<csr-id-1611a117751d847763acc4f57592c627c39d4523/>
 
 ### Chore
 
@@ -19,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-5225301a1c8c5922bb3314ddf5ed513da39302c3/> add feature enabled property to variant checks
  - <csr-id-054cac7ccbf1b5127de3b2f5f761f6464ffd725a/> Bubble up errors on take state
    * Add test for parse error
-   * Propagate errors in parse date
+* Propagate errors in parse date
 
 ### Bug Fixes
 
@@ -30,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 9 commits contributed to the release over the course of 62 calendar days.
+ - 10 commits contributed to the release over the course of 62 calendar days.
  - 71 days passed between releases.
  - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 9 unique issues were worked on: [#101](https://github.com/Unleash/yggdrasil/issues/101), [#102](https://github.com/Unleash/yggdrasil/issues/102), [#103](https://github.com/Unleash/yggdrasil/issues/103), [#109](https://github.com/Unleash/yggdrasil/issues/109), [#110](https://github.com/Unleash/yggdrasil/issues/110), [#114](https://github.com/Unleash/yggdrasil/issues/114), [#118](https://github.com/Unleash/yggdrasil/issues/118), [#97](https://github.com/Unleash/yggdrasil/issues/97), [#98](https://github.com/Unleash/yggdrasil/issues/98)
@@ -59,6 +102,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Bubble up errors on take state ([`054cac7`](https://github.com/Unleash/yggdrasil/commit/054cac7ccbf1b5127de3b2f5f761f6464ffd725a))
  * **[#98](https://github.com/Unleash/yggdrasil/issues/98)**
     - Add feature enabled property to variant checks ([`5225301`](https://github.com/Unleash/yggdrasil/commit/5225301a1c8c5922bb3314ddf5ed513da39302c3))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.9.0 ([`fd92260`](https://github.com/Unleash/yggdrasil/commit/fd92260da07fb3cda2a1fa526ad84bc70d9a1283))
 </details>
 
 ## v0.8.0 (2023-11-13)
@@ -115,9 +160,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Release unleash-yggdrasil v0.8.0, safety bump 2 crates ([`d11c481`](https://github.com/Unleash/yggdrasil/commit/d11c4819117491ad882d516807f54ae5608e8277))
     - Release unleash-yggdrasil v0.7.0 ([`d9204d6`](https://github.com/Unleash/yggdrasil/commit/d9204d6e4301f64a038f2bed447bf3db08c0f8a8))
 </details>
-
-<csr-unknown>
- custom strategies in ruby and support in the core engine<csr-unknown/>
 
 ## v0.7.0 (2023-10-30)
 
