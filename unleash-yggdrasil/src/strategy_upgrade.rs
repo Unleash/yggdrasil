@@ -187,7 +187,10 @@ fn upgrade_user_id_strategy(strategy: &Strategy) -> String {
         Some(user_ids) => {
             let user_ids = user_ids
                 .split(',')
-                .map(|id| format!("\"{}\"", id.trim()))
+                //The escaping of quotes is to tolerate a legacy validation in bug in the Unleash server,
+                // which would save an incorrect parameter set for the strategy. This will still likely
+                // cause Yggdrasil to evalute the strategy as off for most cases, but it will allow the rule to compile
+                .map(|id| format!("\"{}\"", escape_quotes(id.trim())))
                 .collect::<Vec<String>>()
                 .join(",");
             format!("user_id in [{user_ids}]")
@@ -940,5 +943,27 @@ mod tests {
             rule.as_str(),
             "remote_address contains_ip [\"192.168.0.1\", \"192.168.0.2\", \"192.168.0.3\"]"
         );
+    }
+
+    #[test]
+    fn produces_compilable_rule_from_incorrectly_formatted_user_id_strategy_parameters() {
+        let strategy = Strategy {
+            name: "userWithId".into(),
+            parameters: Some(
+                vec![("userIds".into(), "[\"123\",\"456\",\"789\"]".into())]
+                    .into_iter()
+                    .collect(),
+            ),
+            constraints: None,
+            segments: None,
+            sort_order: None,
+            variants: None,
+        };
+
+        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+
+        assert!(compile_rule(&rule).is_ok());
+
+        assert_eq!(rule.as_str(), "user_id in [\"[\\\"123\\\"\",\"\\\"456\\\"\",\"\\\"789\\\"]\"]");
     }
 }
