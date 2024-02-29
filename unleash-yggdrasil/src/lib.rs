@@ -16,7 +16,7 @@ use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
-use state::{EnrichedContext, SdkError};
+use state::EnrichedContext;
 use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
@@ -125,9 +125,19 @@ fn compile_variant_rule(
     variant_rules
 }
 
-pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledToggle>, SdkError> {
+#[derive(Debug, Serialize)]
+pub struct EvalWarning {
+    pub toggle_name: String,
+    pub message: String,
+}
+
+pub fn compile_state(
+    state: &ClientFeatures,
+) -> (HashMap<String, CompiledToggle>, Vec<EvalWarning>) {
     let mut compiled_state = HashMap::new();
     let segment_map = build_segment_map(&state.segments);
+    let mut warnings = vec![];
+
     for toggle in &state.features {
         let rule = upgrade(&toggle.strategies.clone().unwrap_or_default(), &segment_map);
         let variant_rule = compile_variant_rule(toggle, &segment_map);
@@ -138,8 +148,13 @@ pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledT
                 enabled: toggle.enabled,
                 compiled_variant_strategy: variant_rule,
                 variants: compile_variants(&toggle.variants),
-                compiled_strategy: compile_rule(rule.as_str())
-                    .unwrap_or_else(|_| Box::new(|_| false)),
+                compiled_strategy: compile_rule(rule.as_str()).unwrap_or_else(|e| {
+                    warnings.push(EvalWarning {
+                        toggle_name: toggle.name.clone(),
+                        message: format!("Failed to compile toggle, this will always be off {e:?}"),
+                    });
+                    Box::new(|_| false)
+                }),
 
                 impression_data: toggle.impression_data.unwrap_or_default(),
                 project: toggle.project.clone().unwrap_or("default".to_string()),
@@ -148,7 +163,7 @@ pub fn compile_state(state: &ClientFeatures) -> Result<HashMap<String, CompiledT
         );
     }
 
-    Ok(compiled_state)
+    (compiled_state, warnings)
 }
 
 fn compile_variants(variants: &Option<Vec<Variant>>) -> Vec<CompiledVariant> {
@@ -547,9 +562,14 @@ impl EngineState {
         variant.to_enriched_response(enabled)
     }
 
-    pub fn take_state(&mut self, toggles: ClientFeatures) -> Result<(), SdkError> {
-        self.compiled_state = Some(compile_state(&toggles)?);
-        Ok(())
+    pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
+        let (compiled_state, warnings) = compile_state(&toggles);
+        self.compiled_state = Some(compiled_state);
+        if !warnings.is_empty() {
+            Some(warnings)
+        } else {
+            None
+        }
     }
 }
 
@@ -716,7 +736,9 @@ mod test {
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::default();
-        engine.take_state(spec.state).unwrap();
+        let warnings = engine.take_state(spec.state);
+
+        assert!(warnings.is_none());
 
         if let Some(mut tests) = spec.tests {
             while let Some(test_case) = tests.pop() {
@@ -1441,13 +1463,14 @@ mod test {
             ..Context::default()
         };
 
-        engine.take_state(feature_set).unwrap();
+        let warnings = engine.take_state(feature_set);
 
         let results = engine.resolve_all(&context, &None);
         let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
 
         assert!(targeted_toggle.enabled);
         assert_eq!(targeted_toggle.variant.name, "another");
+        assert!(warnings.is_none());
     }
 
     #[test]
@@ -1685,13 +1708,14 @@ mod test {
             ..Context::default()
         };
 
-        engine.take_state(feature_set).unwrap();
+        let warnings = engine.take_state(feature_set);
 
         let results = engine.resolve_all(&context, &None);
         let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
 
         assert!(targeted_toggle.enabled);
         assert_eq!(targeted_toggle.variant.name, "theselectedone");
+        assert!(warnings.is_none());
     }
 
     #[test]
@@ -1731,7 +1755,7 @@ mod test {
         let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
         let mut engine = EngineState::default();
 
-        engine.take_state(feature_set).unwrap();
+        let warnings = engine.take_state(feature_set);
 
         let context = Context {
             user_id: Some("okay".into()),
@@ -1740,5 +1764,7 @@ mod test {
 
         assert!(!engine.is_enabled("Should_always_be_off", &context, &None));
         assert!(engine.is_enabled("This_should_be_okay", &context, &None));
+        println!("{:?}", warnings);
+        assert!(warnings.is_none());
     }
 }

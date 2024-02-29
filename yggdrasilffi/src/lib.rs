@@ -51,7 +51,6 @@ impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
 enum FFIError {
     Utf8Error,
     InvalidJson,
-    InvalidRule(String),
     NullError(String),
 }
 
@@ -153,9 +152,8 @@ pub unsafe extern "C" fn take_state(
         let engine = get_engine(engine_ptr)?;
         let toggles: ClientFeatures = get_json(json_ptr)?;
 
-        engine
-            .take_state(toggles)
-            .map_err(|err| FFIError::InvalidRule(format!("{:#?}", err)))?;
+        let _ = engine.take_state(toggles);
+
         Ok(Some(()))
     })();
 
@@ -437,7 +435,7 @@ mod tests {
 
         unsafe {
             let engine = &mut *(engine_ptr as *mut EngineState);
-            engine.take_state(client_features).unwrap();
+            let warnings = engine.take_state(client_features);
 
             let string_response =
                 check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
@@ -446,6 +444,7 @@ mod tests {
 
             assert!(enabled_response.status_code == ResponseCode::Ok);
             assert!(enabled_response.error_message.is_none());
+            assert!(warnings.is_none());
         }
     }
 
@@ -558,7 +557,7 @@ mod tests {
 
         unsafe {
             let engine = &mut *(engine_ptr as *mut EngineState);
-            engine.take_state(client_features).unwrap();
+            let warnings = engine.take_state(client_features);
 
             let string_response =
                 check_variant(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
@@ -570,6 +569,7 @@ mod tests {
             let variant_response = variant_response.value.expect("Expected variant response");
 
             assert!(variant_response.feature_enabled);
+            assert!(warnings.is_none());
         }
     }
 }
