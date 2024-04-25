@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.12.0 (2024-04-25)
+
+### Chore
+
+ - <csr-id-1912fdaddb4f4adcfbd3cf2e5b3b11fc50366794/> bump unleash types to 0.12
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 56 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#124](https://github.com/Unleash/yggdrasil/issues/124)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#124](https://github.com/Unleash/yggdrasil/issues/124)**
+    - Bump unleash types to 0.12 ([`1912fda`](https://github.com/Unleash/yggdrasil/commit/1912fdaddb4f4adcfbd3cf2e5b3b11fc50366794))
+</details>
+
 ## v0.11.0 (2024-02-29)
+
+<csr-id-39b586ff9b4b44d7f6660c5cedbaf7003e3fc36a/>
 
 ### Chore
 
@@ -15,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#123](https://github.com/Unleash/yggdrasil/issues/123)
 
@@ -27,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#123](https://github.com/Unleash/yggdrasil/issues/123)**
     - Allow take_state to bubble warnings to caller ([`39b586f`](https://github.com/Unleash/yggdrasil/commit/39b586ff9b4b44d7f6660c5cedbaf7003e3fc36a))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.11.0 ([`ddb8216`](https://github.com/Unleash/yggdrasil/commit/ddb82163acf9246214478202f1e20f4078609e8a))
 </details>
 
 ## v0.10.0 (2024-02-29)
