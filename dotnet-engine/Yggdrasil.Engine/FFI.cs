@@ -42,50 +42,50 @@ internal static class FFI
     static FFI()
     {
         string dllPath = GetLibraryPath();
-        IntPtr libHandle = NativeLibrary.Load(dllPath);
+        IntPtr libHandle = NativeLibraryHelper.Load(dllPath);
 
         _newEngine = Marshal.GetDelegateForFunctionPointer<NewEngineDelegate>(
-            NativeLibrary.GetExport(libHandle, "new_engine")
+            NativeLibraryHelper.GetExport(libHandle, "new_engine")
         );
 
         _freeEngine = Marshal.GetDelegateForFunctionPointer<FreeEngineDelegate>(
-            NativeLibrary.GetExport(libHandle, "free_engine")
+            NativeLibraryHelper.GetExport(libHandle, "free_engine")
         );
 
         _getMetrics = Marshal.GetDelegateForFunctionPointer<GetMetricsDelegate>(
-            NativeLibrary.GetExport(libHandle, "get_metrics")
+            NativeLibraryHelper.GetExport(libHandle, "get_metrics")
         );
 
         _take_state = Marshal.GetDelegateForFunctionPointer<TakeStateDelegate>(
-            NativeLibrary.GetExport(libHandle, "take_state")
+            NativeLibraryHelper.GetExport(libHandle, "take_state")
         );
 
         _check_enabled = Marshal.GetDelegateForFunctionPointer<CheckEnabledDelegate>(
-            NativeLibrary.GetExport(libHandle, "check_enabled")
+            NativeLibraryHelper.GetExport(libHandle, "check_enabled")
         );
 
         _check_variant = Marshal.GetDelegateForFunctionPointer<CheckVariantDelegate>(
-            NativeLibrary.GetExport(libHandle, "check_variant")
+            NativeLibraryHelper.GetExport(libHandle, "check_variant")
         );
 
         _free_response = Marshal.GetDelegateForFunctionPointer<FreeResponseDelegate>(
-            NativeLibrary.GetExport(libHandle, "free_response")
+            NativeLibraryHelper.GetExport(libHandle, "free_response")
         );
 
         _count_toggle = Marshal.GetDelegateForFunctionPointer<CountToggleDelegate>(
-            NativeLibrary.GetExport(libHandle, "count_toggle")
+            NativeLibraryHelper.GetExport(libHandle, "count_toggle")
         );
 
         _count_variant = Marshal.GetDelegateForFunctionPointer<CountVariantDelegate>(
-            NativeLibrary.GetExport(libHandle, "count_variant")
+            NativeLibraryHelper.GetExport(libHandle, "count_variant")
         );
 
         _should_emit_impression_event = Marshal.GetDelegateForFunctionPointer<ShouldEmitImpressionEventDelegate>(
-            NativeLibrary.GetExport(libHandle, "should_emit_impression_event")
+            NativeLibraryHelper.GetExport(libHandle, "should_emit_impression_event")
         );
 
         _built_in_strategies = Marshal.GetDelegateForFunctionPointer<BuiltInStrategiesDelegate>(
-            NativeLibrary.GetExport(libHandle, "built_in_strategies")
+            NativeLibraryHelper.GetExport(libHandle, "built_in_strategies")
         );
     }
 

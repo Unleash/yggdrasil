@@ -1,5 +1,6 @@
 namespace Yggdrasil;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 
 public static class FFIReader
@@ -84,6 +85,14 @@ public static class FFIReader
         }
     }
 
+    private static string PtrToStringUTF8(IntPtr nativeUtf8) {
+        int len = 0;
+        while (Marshal.ReadByte(nativeUtf8, len) != 0) ++len;
+        byte[] buffer = new byte[len];
+        Marshal.Copy(nativeUtf8, buffer, 0, buffer.Length);
+        return Encoding.UTF8.GetString(buffer);
+    }
+
     internal static T? ReadResponse<T>(IntPtr ptr)
         where T : class
     {
@@ -94,7 +103,7 @@ public static class FFIReader
 
         try
         {
-            var json = Marshal.PtrToStringUTF8(ptr);
+            var json = PtrToStringUTF8(ptr);
 
             var result = json != null ? JsonSerializer.Deserialize<T>(json, options) : null;
 

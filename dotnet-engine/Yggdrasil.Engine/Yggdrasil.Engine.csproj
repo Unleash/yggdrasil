@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Yggdrasil.Engine</PackageId>
@@ -11,6 +12,10 @@
     <IncludeSymbols>True</IncludeSymbols>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.3" />
+  </ItemGroup>
 
   <Target Name="YggdrasilPreBuild" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
     <Exec Command="
