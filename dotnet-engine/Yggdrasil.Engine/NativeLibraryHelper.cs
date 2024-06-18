@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 
-static class NativeLibraryWindowsHelper {
+static class NativeLibraryWindowsHelper
+{
     [DllImport("kernel32", SetLastError = true)]
     private static extern IntPtr LoadLibraryWindows(string dllToLoad);
 
@@ -10,20 +11,24 @@ static class NativeLibraryWindowsHelper {
     [DllImport("kernel32", SetLastError = true)]
     private static extern IntPtr GetProcAddressWindows(IntPtr hModule, string procedureName);
 
-    public static IntPtr Load(string libraryPath) {
+    public static IntPtr Load(string libraryPath)
+    {
         return LoadLibraryWindows(libraryPath);
     }
 
-    public static void Free(IntPtr handle) {
+    public static void Free(IntPtr handle)
+    {
         FreeLibraryWindows(handle);
     }
 
-    public static IntPtr GetExport(IntPtr handle, string name) {
+    public static IntPtr GetExport(IntPtr handle, string name)
+    {
         return GetProcAddressWindows(handle, name);
     }
 }
 
-static class NativeLibraryLinuxHelper {
+static class NativeLibraryLinuxHelper
+{
     [DllImport("libdl.so.2", SetLastError = true)]
     private static extern IntPtr dlopen(string fileName, int flags);
 
@@ -70,7 +75,8 @@ static class NativeLibraryLinuxHelper {
     }
 }
 
-static class NativeLibraryOSXHelper {
+static class NativeLibraryOSXHelper
+{
     [DllImport("libc.dylib", SetLastError = true)]
     private static extern IntPtr dlopen(string fileName, int flags);
 
