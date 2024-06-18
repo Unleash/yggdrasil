@@ -16,6 +16,8 @@ dotnet build
 
 ## Running the tests
 
+The current target is .NET 6.0, so in order to run the tests you should have the respective runtime installed: https://dotnet.microsoft.com/en-us/download/dotnet/6.0/runtime
+
 ```bash
 dotnet test
 ```
