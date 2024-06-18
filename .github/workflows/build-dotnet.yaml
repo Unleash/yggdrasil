@@ -27,20 +27,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libc6-dev
-
-      - name: Create symlink for libdl
-        run: |
-          sudo ln -s /usr/lib/x86_64-linux-gnu/libdl.so.2 /usr/lib/x86_64-linux-gnu/libdl.so
-
-      - name: Verify libdl installation
-        run: |
-          ls -la /usr/lib/x86_64-linux-gnu/libdl.so
-
-      - name: Set up environment variables
-        run: |
-          echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
       ## snatched from build-java.yml
       ## begin build yggdrasil (maybe this can be a separate job)
