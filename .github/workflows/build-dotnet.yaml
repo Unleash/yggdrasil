@@ -30,6 +30,12 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y libc6-dev
 
+      - name: Verify libdl installation
+        run: ls -la /usr/lib/x86_64-linux-gnu/libdl.so
+
+      - name: Set up environment variables
+        run: echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
       ## snatched from build-java.yml
       ## begin build yggdrasil (maybe this can be a separate job)
       - name: Install rust
