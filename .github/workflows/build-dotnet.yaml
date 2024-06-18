@@ -27,6 +27,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libc6-dev
+
       ## snatched from build-java.yml
       ## begin build yggdrasil (maybe this can be a separate job)
       - name: Install rust
