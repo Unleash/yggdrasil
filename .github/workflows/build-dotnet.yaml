@@ -27,7 +27,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-
       ## snatched from build-java.yml
       ## begin build yggdrasil (maybe this can be a separate job)
       - name: Install rust
