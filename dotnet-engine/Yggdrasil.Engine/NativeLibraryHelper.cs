@@ -127,7 +127,7 @@ public static class NativeLibraryHelper
 {
     public static IntPtr Load(string libraryPath)
     {
-        IntPtr handle = IntPtr.Zero;
+        IntPtr handle;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
