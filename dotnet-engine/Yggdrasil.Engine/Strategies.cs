@@ -66,14 +66,10 @@ internal class CustomStrategies
             return "{}";
         }
 
-        var strategies = new Dictionary<string, bool>(
-        feature.Strategies
-            .Where(strategy => strategy.IsEnabled(context))
-            .Select(strategy =>
-                new KeyValuePair<string, bool>(
-                    strategy.ResultName,
-                    strategy.IsEnabled(context)))
-            .ToList());
+        var strategies = feature.Strategies
+            .ToDictionary(strategy => strategy.ResultName,
+                strategy => strategy.IsEnabled(context));
+
         return JsonSerializer.Serialize(strategies, options);
     }
 }

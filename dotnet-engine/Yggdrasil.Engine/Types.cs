@@ -60,7 +60,7 @@ public class Payload
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Value, PayloadType);
+        return new { Value, PayloadType }.GetHashCode();
     }
 }
 
