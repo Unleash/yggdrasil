@@ -49,7 +49,7 @@ static class NativeLibraryLinuxHelper
         if (handle == IntPtr.Zero)
         {
             IntPtr errorPtr = dlerror();
-            string errorMessage = Marshal.PtrToStringAnsi(errorPtr);
+            string errorMessage = Marshal.PtrToStringAuto(errorPtr);
             throw new InvalidOperationException($"Failed to load library {libraryPath}: {errorMessage}");
         }
 
@@ -68,7 +68,7 @@ static class NativeLibraryLinuxHelper
         IntPtr errorPtr = dlerror();
         if (errorPtr != IntPtr.Zero)
         {
-            string errorMessage = Marshal.PtrToStringAnsi(errorPtr);
+            string errorMessage = Marshal.PtrToStringAuto(errorPtr);
             throw new InvalidOperationException($"Failed to get function pointer for {name}: {errorMessage}");
         }
         return res;
@@ -97,7 +97,7 @@ static class NativeLibraryOSXHelper
         if (handle == IntPtr.Zero)
         {
             IntPtr errorPtr = dlerror();
-            string errorMessage = Marshal.PtrToStringAnsi(errorPtr);
+            string errorMessage = Marshal.PtrToStringAuto(errorPtr);
             throw new InvalidOperationException($"Failed to load library {libraryPath}: {errorMessage}");
         }
 
@@ -116,7 +116,7 @@ static class NativeLibraryOSXHelper
         IntPtr errorPtr = dlerror();
         if (errorPtr != IntPtr.Zero)
         {
-            string errorMessage = Marshal.PtrToStringAnsi(errorPtr);
+            string errorMessage = Marshal.PtrToStringAuto(errorPtr);
             throw new InvalidOperationException($"Failed to get function pointer for {name}: {errorMessage}");
         }
         return res;

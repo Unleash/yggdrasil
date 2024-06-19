@@ -85,15 +85,6 @@ public static class FFIReader
         }
     }
 
-    private static string PtrToStringUTF8(IntPtr nativeUtf8)
-    {
-        int len = 0;
-        while (Marshal.ReadByte(nativeUtf8, len) != 0) ++len;
-        byte[] buffer = new byte[len];
-        Marshal.Copy(nativeUtf8, buffer, 0, buffer.Length);
-        return Encoding.UTF8.GetString(buffer);
-    }
-
     internal static T? ReadResponse<T>(IntPtr ptr)
         where T : class
     {
@@ -104,7 +95,7 @@ public static class FFIReader
 
         try
         {
-            var json = PtrToStringUTF8(ptr);
+            var json = Marshal.PtrToStringAuto(ptr);
 
             var result = json != null ? JsonSerializer.Deserialize<T>(json, options) : null;
 
