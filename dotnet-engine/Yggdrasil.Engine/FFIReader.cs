@@ -1,6 +1,5 @@
 namespace Yggdrasil;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Text.Json;
 
 public static class FFIReader
