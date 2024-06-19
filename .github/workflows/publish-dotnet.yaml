@@ -1,0 +1,48 @@
+---
+name: .NET Publish
+
+on:
+  # TODO: For testing purposes only. Remove this before merging.
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build-binaries:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            output: libyggdrasilffi.so
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            output: yggdrasilffi.dll
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            output: libyggdrasilffi.dylib
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rust
+        run: |
+          rustup set auto-self-update disable
+          rustup toolchain install stable --profile default
+          rustup show
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Rust Library
+        run: |
+          cargo build -p yggdrasilffi --release --target ${{ matrix.target }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: target/${{ matrix.target }}/release/${{ matrix.output }}
