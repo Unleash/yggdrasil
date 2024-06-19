@@ -1,135 +1,51 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Yggdrasil;
 
 internal static class FFI
 {
-    private delegate IntPtr NewEngineDelegate();
-    private delegate void FreeEngineDelegate(IntPtr ptr);
-    private delegate IntPtr GetMetricsDelegate(IntPtr ptr);
-    private delegate IntPtr TakeStateDelegate(IntPtr ptr, string json);
-    private delegate IntPtr CheckEnabledDelegate(
-        IntPtr ptr,
-        string toggle_name,
-        string context,
-        string customStrategyResults
-    );
-    private delegate IntPtr CheckVariantDelegate(
-        IntPtr ptr,
-        string toggle_name,
-        string context,
-        string customStrategyResults
-    );
-    private delegate void FreeResponseDelegate(IntPtr ptr);
-    private delegate void CountToggleDelegate(IntPtr ptr, string toggle_name, bool enabled);
-    private delegate void CountVariantDelegate(IntPtr ptr, string toggle_name, string variant_name);
-    private delegate IntPtr ShouldEmitImpressionEventDelegate(IntPtr ptr, string toggle_name);
-    private delegate IntPtr BuiltInStrategiesDelegate(IntPtr ptr);
 
-    private static readonly NewEngineDelegate _newEngine;
-    private static readonly FreeEngineDelegate _freeEngine;
-    private static readonly GetMetricsDelegate _getMetrics;
-    private static readonly TakeStateDelegate _take_state;
-    private static readonly CheckEnabledDelegate _check_enabled;
-    private static readonly CheckVariantDelegate _check_variant;
-    private static readonly FreeResponseDelegate _free_response;
-    private static readonly CountToggleDelegate _count_toggle;
-    private static readonly CountVariantDelegate _count_variant;
-    private static readonly ShouldEmitImpressionEventDelegate _should_emit_impression_event;
-    private static readonly BuiltInStrategiesDelegate _built_in_strategies;
-
-    static FFI()
-    {
-        string dllPath = GetLibraryPath();
-        IntPtr libHandle = NativeLibraryHelper.Load(dllPath);
-
-        _newEngine = Marshal.GetDelegateForFunctionPointer<NewEngineDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "new_engine")
-        );
-
-        _freeEngine = Marshal.GetDelegateForFunctionPointer<FreeEngineDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "free_engine")
-        );
-
-        _getMetrics = Marshal.GetDelegateForFunctionPointer<GetMetricsDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "get_metrics")
-        );
-
-        _take_state = Marshal.GetDelegateForFunctionPointer<TakeStateDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "take_state")
-        );
-
-        _check_enabled = Marshal.GetDelegateForFunctionPointer<CheckEnabledDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "check_enabled")
-        );
-
-        _check_variant = Marshal.GetDelegateForFunctionPointer<CheckVariantDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "check_variant")
-        );
-
-        _free_response = Marshal.GetDelegateForFunctionPointer<FreeResponseDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "free_response")
-        );
-
-        _count_toggle = Marshal.GetDelegateForFunctionPointer<CountToggleDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "count_toggle")
-        );
-
-        _count_variant = Marshal.GetDelegateForFunctionPointer<CountVariantDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "count_variant")
-        );
-
-        _should_emit_impression_event = Marshal.GetDelegateForFunctionPointer<ShouldEmitImpressionEventDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "should_emit_impression_event")
-        );
-
-        _built_in_strategies = Marshal.GetDelegateForFunctionPointer<BuiltInStrategiesDelegate>(
-            NativeLibraryHelper.GetExport(libHandle, "built_in_strategies")
-        );
-    }
-
-    private static string GetLibraryPath()
-    {
-        string libraryName;
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            libraryName = "libyggdrasilffi.dll";
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            libraryName = "libyggdrasilffi.so";
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            libraryName = "libyggdrasilffi.dylib";
-        else
-            throw new PlatformNotSupportedException("Unsupported platform");
-
-        var assemblyLocation = Assembly.GetExecutingAssembly().Location;
-        if (assemblyLocation == null)
-            throw new PlatformNotSupportedException("Unsupported platform");
-
-        var assemblyDirectory = Path.GetDirectoryName(assemblyLocation);
-        if (assemblyDirectory == null)
-            throw new PlatformNotSupportedException("Unsupported platform");
-
-        return Path.Combine(assemblyDirectory, libraryName);
-    }
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern IntPtr new_engine();
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern void free_engine(IntPtr ptr);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern IntPtr get_metrics(IntPtr ptr);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern IntPtr take_state(IntPtr ptr, string json);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern IntPtr check_enabled(IntPtr ptr, string toggle_name, string context, string customStrategyResults);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern IntPtr check_variant(IntPtr ptr, string toggle_name, string context, string customStrategyResults);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern void free_response(IntPtr ptr);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern void count_toggle(IntPtr ptr, string toggle_name, bool enabled);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern void count_variant(IntPtr ptr, string toggle_name, string variant_name);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern IntPtr should_emit_impression_event(IntPtr ptr, string toggle_name);
+    [DllImport("libyggdrasilffi", SetLastError = true)]
+    private static extern IntPtr built_in_strategies(IntPtr ptr);
 
     public static IntPtr NewEngine()
     {
-        return _newEngine();
+        return new_engine();
     }
 
     public static void FreeEngine(IntPtr ptr)
     {
-        _freeEngine(ptr);
+        free_engine(ptr);
     }
 
     public static IntPtr GetMetrics(IntPtr ptr)
     {
-        return _getMetrics(ptr);
+        return get_metrics(ptr);
     }
 
     public static IntPtr TakeState(IntPtr ptr, string json)
     {
-        return _take_state(ptr, json);
+        return take_state(ptr, json);
     }
 
     public static IntPtr CheckEnabled(
@@ -139,7 +55,7 @@ internal static class FFI
         string customStrategyResults
     )
     {
-        return _check_enabled(ptr, toggle_name, context, customStrategyResults);
+        return check_enabled(ptr, toggle_name, context, customStrategyResults);
     }
 
     public static IntPtr CheckVariant(
@@ -149,31 +65,31 @@ internal static class FFI
         string customStrategyResults
     )
     {
-        return _check_variant(ptr, toggle_name, context, customStrategyResults);
+        return check_variant(ptr, toggle_name, context, customStrategyResults);
     }
 
     public static void FreeResponse(IntPtr ptr)
     {
-        _free_response(ptr);
+        free_response(ptr);
     }
 
     public static void CountToggle(IntPtr ptr, string toggle_name, bool enabled)
     {
-        _count_toggle(ptr, toggle_name, enabled);
+        count_toggle(ptr, toggle_name, enabled);
     }
 
     public static void CountVariant(IntPtr ptr, string toggle_name, string variant_name)
     {
-        _count_variant(ptr, toggle_name, variant_name);
+        count_variant(ptr, toggle_name, variant_name);
     }
 
     public static IntPtr ShouldEmitImpressionEvent(IntPtr ptr, string toggle_name)
     {
-        return _should_emit_impression_event(ptr, toggle_name);
+        return should_emit_impression_event(ptr, toggle_name);
     }
 
     public static IntPtr BuiltInStrategies(IntPtr ptr)
     {
-        return _built_in_strategies(ptr);
+        return built_in_strategies(ptr);
     }
 }
