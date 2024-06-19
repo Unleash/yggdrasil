@@ -176,7 +176,7 @@ public static class NativeLibraryHelper
 
     public static IntPtr GetExport(IntPtr handle, string name)
     {
-        IntPtr functionPointer = IntPtr.Zero;
+        IntPtr functionPointer;
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
