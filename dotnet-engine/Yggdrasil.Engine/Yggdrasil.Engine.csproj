@@ -32,7 +32,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
     </Content>
-    <Content Include="../../target/release/libyggdrasilffi.dll" Condition="Exists('../../target/release/libyggdrasilffi.dll')">
+    <Content Include="../../target/release/yggdrasilffi.dll" Condition="Exists('../../target/release/yggdrasilffi.dll')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
     </Content>

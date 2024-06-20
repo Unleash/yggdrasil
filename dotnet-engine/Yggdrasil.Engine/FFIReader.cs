@@ -94,7 +94,12 @@ public static class FFIReader
 
         try
         {
-            var json = Marshal.PtrToStringAuto(ptr);
+            string? json;
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                json = Marshal.PtrToStringAnsi(ptr);
+            else
+                json = Marshal.PtrToStringAuto(ptr);
 
             var result = json != null ? JsonSerializer.Deserialize<T>(json, options) : null;
 

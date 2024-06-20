@@ -17,33 +17,45 @@ on:
       - "dotnet-engine/**"
 
 jobs:
-  build-dotnet:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  build-binaries:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+          - os: windows-latest
+          - os: macos-latest
 
-      ## snatched from build-java.yml
-      ## begin build yggdrasil (maybe this can be a separate job)
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Install rust
         run: |
           rustup set auto-self-update disable
           rustup toolchain install stable --profile default
           rustup show
+
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
-      - name: Build yggdrasil
-        run: cargo build --release
-      ## end build yggdrasil
 
-      ## snatched from build-java.yml
-      ## Test requirements
+      - name: Build yggdrasilffi
+        run: |
+          cargo build -p yggdrasilffi --release
+
+      - name: Log yggdrasilffi build output (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          echo "Listing yggdrasilffi build output:"
+          ls -la target/release
+
+      - name: Log yggdrasilffi build output (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "Listing yggdrasilffi build output:"
+          dir target\release
+
       - name: Get client spec
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: Unleash/client-specification
           ref: v5.1.0
@@ -69,7 +81,19 @@ jobs:
           cd dotnet-engine
           dotnet build dotnet-engine.sln --configuration Release --no-restore
 
+      - name: Log .NET build output (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          echo "Listing dotnet-engine build output:"
+          ls -la dotnet-engine/Yggdrasil.Engine/bin/Release/netstandard2.0
+
+      - name: Log .NET build output (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "Listing dotnet-engine build output:"
+          dir dotnet-engine\Yggdrasil.Engine\bin\Release\netstandard2.0
+
       - name: Test
         run: |
           cd dotnet-engine/Yggdrasil.Engine.Tests
-          dotnet test --no-restore
+          dotnet test --configuration Release --no-restore
