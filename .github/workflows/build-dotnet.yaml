@@ -42,10 +42,17 @@ jobs:
         run: |
           cargo build -p yggdrasilffi --release
 
-      - name: Log yggdrasilffi build output
+      - name: Log yggdrasilffi build output (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
-          echo "Build output:"
+          echo "Listing yggdrasilffi build output:"
           ls -la target/release
+
+      - name: Log yggdrasilffi build output (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "Listing yggdrasilffi build output:"
+          dir target\release
 
       - name: Get client spec
         uses: actions/checkout@v4
@@ -74,10 +81,17 @@ jobs:
           cd dotnet-engine
           dotnet build dotnet-engine.sln --configuration Release --no-restore
 
-      - name: Log .NET build output
+      - name: Log .NET build output (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
-          echo "Build output:"
-          ls -la dotnet-engine/Yggdrasil.Engine/bin/Release/netstandard2.0
+          echo "Listing dotnet-engine build output:"
+          ls -la dotnet-engine/bin/Release/netstandard2.0
+
+      - name: Log .NET build output (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "Listing dotnet-engine build output:"
+          dir dotnet-engine\bin\Release\netstandard2.0
 
       - name: Test
         run: |
