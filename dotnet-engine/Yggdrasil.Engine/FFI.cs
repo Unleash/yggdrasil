@@ -5,27 +5,27 @@ namespace Yggdrasil;
 internal static class FFI
 {
 
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr new_engine();
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern void free_engine(IntPtr ptr);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr get_metrics(IntPtr ptr);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr take_state(IntPtr ptr, string json);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr check_enabled(IntPtr ptr, string toggle_name, string context, string customStrategyResults);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr check_variant(IntPtr ptr, string toggle_name, string context, string customStrategyResults);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern void free_response(IntPtr ptr);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern void count_toggle(IntPtr ptr, string toggle_name, bool enabled);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern void count_variant(IntPtr ptr, string toggle_name, string variant_name);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr should_emit_impression_event(IntPtr ptr, string toggle_name);
-    [DllImport("libyggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("libyggdrasilffi.dll", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr built_in_strategies(IntPtr ptr);
 
     public static IntPtr NewEngine()
