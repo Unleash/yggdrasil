@@ -23,14 +23,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            binary: libyggdrasilffi.so
           - os: windows-latest
-            target: x86_64-pc-windows-gnu
-            binary: yggdrasilffi.dll
           - os: macos-latest
-            target: x86_64-apple-darwin
-            binary: libyggdrasilffi.dylib
 
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +33,6 @@ jobs:
         run: |
           rustup set auto-self-update disable
           rustup toolchain install stable --profile default
-          rustup target add ${{ matrix.target }}
           rustup show
 
       - name: Rust cache
@@ -47,39 +40,7 @@ jobs:
 
       - name: Build yggdrasilffi
         run: |
-          cargo build -p yggdrasilffi --release --target ${{ matrix.target }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.binary }}
-          path: target/${{ matrix.target }}/release/${{ matrix.binary }}
-
-  build-dotnet:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            arch: linux-x64
-            binary: libyggdrasilffi.so
-          - os: windows-latest
-            arch: win-x64
-            binary: yggdrasilffi.dll
-          - os: macos-latest
-            arch: osx-x64
-            binary: libyggdrasilffi.dylib
-
-    needs: build-binaries
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.binary }}
-          path: dotnet-engine/runtimes/${{ matrix.arch }}/native
+          cargo build -p yggdrasilffi --release
 
       - name: Get client spec
         uses: actions/checkout@v4
