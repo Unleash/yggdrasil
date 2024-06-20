@@ -94,7 +94,7 @@ public static class FFIReader
 
         try
         {
-            var json = Marshal.PtrToStringAuto(ptr);
+            var json = Marshal.PtrToStringUni(ptr);
 
             var result = json != null ? JsonSerializer.Deserialize<T>(json, options) : null;
 
