@@ -85,13 +85,13 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           echo "Listing dotnet-engine build output:"
-          ls -la dotnet-engine/bin/Release/netstandard2.0
+          ls -la dotnet-engine/Yggdrasil.Engine/bin/Release/netstandard2.0
 
       - name: Log .NET build output (Windows)
         if: runner.os == 'Windows'
         run: |
           echo "Listing dotnet-engine build output:"
-          dir dotnet-engine\bin\Release\netstandard2.0
+          dir dotnet-engine\Yggdrasil.Engine\bin\Release\netstandard2.0
 
       - name: Test
         run: |
