@@ -40,3 +40,17 @@ dotnet nuget add source ~/path/to/local/feed
 ```
 
 Now you can switch package source in package manager and import your locally published package to work with.
+
+```bash
+dotnet add package Yggdrasil.Engine --prerelease
+```
+
+Whenever you update your package you should:
+
+```bash
+# On the .nupkg folder
+dotnet nuget push "*.nupkg" -s ~/path/to/local/feed
+# On the project where it's used
+dotnet nuget locals all --clear
+dotnet restore
+```

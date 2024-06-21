@@ -10,6 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
+  # TODO: Consider making this its own workflow to be reused by other workflows.
   build-binaries:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -17,12 +18,27 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            rid: linux-x64
+            output: libyggdrasilffi.so
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            rid: linux-arm64
             output: libyggdrasilffi.so
           - os: windows-latest
             target: x86_64-pc-windows-gnu
+            rid: win-x64
+            output: yggdrasilffi.dll
+          - os: windows-latest
+            target: aarch64-pc-windows-gnu
+            rid: win-arm64
             output: yggdrasilffi.dll
           - os: macos-latest
             target: x86_64-apple-darwin
+            rid: osx-x64
+            output: libyggdrasilffi.dylib
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            rid: osx-arm64
             output: libyggdrasilffi.dylib
 
     steps:
@@ -38,12 +54,59 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Build Rust Library
+      - name: Build yggdrasilffi
         run: |
           cargo build -p yggdrasilffi --release --target ${{ matrix.target }}
 
-      - name: Upload Artifact
+      - name: Upload yggdrasilffi binary
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.output }}
+          name: ${{ matrix.rid }}
           path: target/${{ matrix.target }}/release/${{ matrix.output }}
+
+  publish:
+    needs: build-binaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download yggdrasilffi binaries
+        run: |
+          mkdir -p dotnet-engine/runtimes
+          artifacts=($(gh run list --json name -q '.[].name'))
+          for artifact in "${artifacts[@]}"; do
+            echo "Downloading artifact: $artifact"
+            gh run download ${{ github.run_id }} --name "$artifact" --dir "dotnet-engine/runtimes/$artifact/native"
+          done
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore dependencies
+        run: |
+          cd dotnet-engine
+          dotnet restore dotnet-engine.sln
+
+      - name: Build
+        run: |
+          cd dotnet-engine
+          dotnet build dotnet-engine.sln -c Release --no-restore
+
+      - name: Pack
+        run: |
+          cd dotnet-engine
+          dotnet pack dotnet-engine.sln -c Release --no-build --no-restore
+
+      - name: Check package size
+        run: |
+          cd dotnet-engine
+          ls -lh bin/Release/*.nupkg
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-package
+          path: dotnet-engine/bin/Release/*.nupkg
