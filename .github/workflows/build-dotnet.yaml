@@ -10,11 +10,12 @@ on:
       # Build in main if anything changes in yggdrasil or the ffi layer
       - "unleash-yggdrasil/src/**.rs"
       - "yggdrasilffi/src/**.rs"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "dotnet-engine/**"
+  # TODO: Commented out for testing purposes only. Remove this before merging.
+  # pull_request:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "dotnet-engine/**"
 
 jobs:
   build-binaries:
@@ -64,7 +65,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: "6.0.x"
+          dotnet-version: '6.0.x'
 
       - name: Restore dependencies
         run: |

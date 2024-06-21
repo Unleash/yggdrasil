@@ -64,27 +64,24 @@ jobs:
           name: ${{ matrix.rid }}
           path: target/${{ matrix.target }}/release/${{ matrix.output }}
 
+      - name: Set artifact names output
+        run: echo "artifact_name=${{ matrix.rid }}" >> $GITHUB_ENV
+
   publish:
     needs: build-binaries
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch artifact names
-        id: fetch-artifacts
-        run: |
-          artifacts=$(gh run list --workflow ".NET Publish" --json artifacts --jq '.[].artifacts[].name')
-          echo "::set-output name=artifacts::${artifacts}"
-
       - name: Download yggdrasilffi binaries
         run: |
-          IFS=',' read -ra artifacts <<< "${{ steps.fetch-artifacts.outputs.artifacts }}"
-          for artifact in "${artifacts[@]}"; do
-            echo "Downloading artifact: $artifact"
-            gh run download ${{ github.run_id }} --name "$artifact" --dir "dotnet-engine/runtimes/$artifact/native"
+          rids=(linux-x64 linux-arm64 win-x64 win-arm64 osx-x64 osx-arm64)
+          for rid in "${rids[@]}"; do
+            echo "Attempting to download artifact for $rid"
+            if ! gh run download ${{ github.run_id }} --name "$rid" --dir "dotnet-engine/runtimes/$rid/native"; then
+              echo "Artifact for $rid not found, continuing..."
+            fi
           done
 
       - name: Set up .NET
