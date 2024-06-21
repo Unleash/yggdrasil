@@ -79,6 +79,8 @@ jobs:
             echo "Downloading artifact: $artifact"
             gh run download ${{ github.run_id }} --name "$artifact" --dir "dotnet-engine/runtimes/$artifact/native"
           done
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v3
