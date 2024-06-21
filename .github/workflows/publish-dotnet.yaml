@@ -107,10 +107,10 @@ jobs:
       - name: Check package size
         run: |
           cd dotnet-engine
-          ls -lh bin/Release/*.nupkg
+          ls -lh Yggdrasil.Engine/bin/Release/*.nupkg
 
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: nuget-package
-          path: dotnet-engine/bin/Release/*.nupkg
+          path: Yggdrasil.Engine/bin/Release/*.nupkg
