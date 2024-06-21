@@ -113,4 +113,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nuget-package
-          path: Yggdrasil.Engine/bin/Release/*.nupkg
+          path: dotnet-engine/Yggdrasil.Engine/bin/Release/*.nupkg
