@@ -64,9 +64,6 @@ jobs:
           name: ${{ matrix.rid }}
           path: target/${{ matrix.target }}/release/${{ matrix.output }}
 
-      - name: Set artifact names output
-        run: echo "artifact_name=${{ matrix.rid }}" >> $GITHUB_ENV
-
   publish:
     needs: build-binaries
     runs-on: ubuntu-latest
@@ -74,14 +71,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download yggdrasilffi binaries
+      - name: Download artifacts
         run: |
-          rids=(linux-x64 linux-arm64 win-x64 win-arm64 osx-x64 osx-arm64)
-          for rid in "${rids[@]}"; do
-            echo "Attempting to download artifact for $rid"
-            if ! gh run download ${{ github.run_id }} --name "$rid" --dir "dotnet-engine/runtimes/$rid/native"; then
-              echo "Artifact for $rid not found, continuing..."
-            fi
+          for rid in linux-x64 win-x64 osx-x64 osx-arm64; do
+            mkdir -p dotnet-engine/runtimes/${rid}/native
+            echo "Downloading artifact for $rid"
+            gh workflow run actions/download-artifact@v4 --name $rid --path dotnet-engine/runtimes/${rid}/native || echo "Failed to download artifact for $rid, continuing..."
           done
 
       - name: Set up .NET
