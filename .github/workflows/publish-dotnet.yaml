@@ -28,10 +28,10 @@ jobs:
             target: x86_64-pc-windows-gnu
             rid: win-x64
             output: yggdrasilffi.dll
-          # - os: windows-latest
-          #   target: aarch64-pc-windows-gnu
-          #   rid: win-arm64
-          #   output: yggdrasilffi.dll
+          - os: windows-latest
+            target: aarch64-pc-windows-gnu
+            rid: win-arm64
+            output: yggdrasilffi.dll
           - os: macos-latest
             target: x86_64-apple-darwin
             rid: osx-x64
@@ -111,5 +111,5 @@ jobs:
       - name: Upload package
         uses: actions/upload-artifact@v4
         with:
-          name: nuget-package
+          name: yggdrasil-nuget
           path: dotnet-engine/Yggdrasil.Engine/bin/Release/*.nupkg
