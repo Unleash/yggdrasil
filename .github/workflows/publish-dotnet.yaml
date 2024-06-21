@@ -74,9 +74,9 @@ jobs:
       - name: Download yggdrasilffi binaries
         run: |
           for rid in linux-x64 win-x64 osx-x64 osx-arm64; do
-            mkdir -p runtimes/${rid}/native
+            mkdir -p dotnet-engine/runtimes/${rid}/native
             echo "Downloading artifact for $rid"
-            if ! gh run download --name $rid --dir runtimes/${rid}/native; then
+            if ! gh run download --name $rid --dir dotnet-engine/runtimes/${rid}/native; then
               echo "Failed to download artifact for $rid, continuing..."
             fi
           done
