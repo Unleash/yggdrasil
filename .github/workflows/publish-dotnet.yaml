@@ -80,6 +80,8 @@ jobs:
               echo "Failed to download artifact for $rid, continuing..."
             fi
           done
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v3
