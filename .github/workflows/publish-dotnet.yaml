@@ -2,11 +2,6 @@
 name: .NET Publish
 
 on:
-  # TODO: For testing purposes only. Remove this before merging.
-  pull_request:
-    branches:
-      - main
-
   workflow_dispatch:
 
 jobs:
