@@ -67,20 +67,25 @@ jobs:
   publish:
     needs: build-binaries
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fetch artifact names
+        id: fetch-artifacts
+        run: |
+          artifacts=$(gh run list --workflow ".NET Publish" --json artifacts --jq '.[].artifacts[].name')
+          echo "::set-output name=artifacts::${artifacts}"
+
       - name: Download yggdrasilffi binaries
         run: |
-          mkdir -p dotnet-engine/runtimes
-          artifacts=($(gh run list --json name -q '.[].name'))
+          IFS=',' read -ra artifacts <<< "${{ steps.fetch-artifacts.outputs.artifacts }}"
           for artifact in "${artifacts[@]}"; do
             echo "Downloading artifact: $artifact"
             gh run download ${{ github.run_id }} --name "$artifact" --dir "dotnet-engine/runtimes/$artifact/native"
           done
-        env:
-          GH_TOKEN: ${{ github.token }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v3
