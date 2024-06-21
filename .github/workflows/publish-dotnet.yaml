@@ -71,12 +71,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download yggdrasilffi binaries
         run: |
           for rid in linux-x64 win-x64 osx-x64 osx-arm64; do
-            mkdir -p dotnet-engine/runtimes/${rid}/native
+            mkdir -p runtimes/${rid}/native
             echo "Downloading artifact for $rid"
-            gh workflow run actions/download-artifact@v4 --name $rid --path dotnet-engine/runtimes/${rid}/native || echo "Failed to download artifact for $rid, continuing..."
+            if ! gh run download --name $rid --dir runtimes/${rid}/native; then
+              echo "Failed to download artifact for $rid, continuing..."
+            fi
           done
 
       - name: Set up .NET
