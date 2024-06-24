@@ -3,10 +3,10 @@ name: .NET Publish
 
 on:
   workflow_dispatch:
-  # Test purposes only
-  push:
-    branches:
-      - chore-publish-dotnet
+    inputs:
+      version:
+        description: What version number would you like to use? The version number should be **without** a leading `v`, e.g. `5.7.1` or `6.2.4`.
+        required: true
 
 jobs:
   # TODO: Consider making this its own workflow to be reused by other workflows.
@@ -102,6 +102,12 @@ jobs:
         run: |
           cd dotnet-engine
           dotnet restore dotnet-engine.sln
+
+      - name: Set version
+        run: |
+          cd dotnet-engine
+          version=${{ github.event.inputs.version }}
+          sed -i "s/<Version>.*<\/Version>/<Version>$version<\/Version>/" Yggdrasil.Engine/Yggdrasil.Engine.csproj
 
       - name: Build
         run: |
