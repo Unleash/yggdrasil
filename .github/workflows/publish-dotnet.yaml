@@ -7,6 +7,10 @@ on:
       version:
         description: What version number would you like to use? The version number should be **without** a leading `v`, e.g. `5.7.1` or `6.2.4`.
         required: true
+  # Test purposes only
+  push:
+    branches:
+      - chore-publish-dotnet
 
 jobs:
   # TODO: Consider making this its own workflow to be reused by other workflows.
@@ -47,7 +51,7 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
 
-      - name: Configure Cargo for Cross-Compilation
+      - name: Configure cargo for cross-compilation
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           mkdir -p .cargo
@@ -106,7 +110,7 @@ jobs:
       - name: Set version
         run: |
           cd dotnet-engine
-          version=${{ github.event.inputs.version }}
+          version=1.0.0-beta.1
           sed -i "s/<Version>.*<\/Version>/<Version>$version<\/Version>/" Yggdrasil.Engine/Yggdrasil.Engine.csproj
 
       - name: Build
