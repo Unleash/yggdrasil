@@ -3,6 +3,10 @@ name: .NET Publish
 
 on:
   workflow_dispatch:
+  # Test purposes only
+  push:
+    branches:
+      - chore-publish-dotnet
 
 jobs:
   # TODO: Consider making this its own workflow to be reused by other workflows.

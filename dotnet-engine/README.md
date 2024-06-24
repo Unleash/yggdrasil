@@ -1,4 +1,11 @@
-# CSharp Bindings for Yggdrasil
+# Unleash Yggdrasil .NET Engine
+
+Unleash Yggdrasil Engine for .NET.
+
+This is a .NET wrapper containing the core of the Unleash SDK domain logic, enabling you to develop your own Unleash .NET SDK.
+If you're looking for the ready-to-use Unleash .NET SDK instead, you can find it [here](https://github.com/Unleash/unleash-client-dotnet).
+
+Read more about Unleash at: https://www.getunleash.io/
 
 ## Build
 
