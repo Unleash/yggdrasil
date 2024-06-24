@@ -110,7 +110,7 @@ jobs:
       - name: Set version
         run: |
           cd dotnet-engine
-          version=1.0.0-beta.1
+          version=1.0.0-beta.2
           sed -i "s/<Version>.*<\/Version>/<Version>$version<\/Version>/" Yggdrasil.Engine/Yggdrasil.Engine.csproj
 
       - name: Build
@@ -137,4 +137,4 @@ jobs:
       - name: Publish package
         run: |
           cd dotnet-engine
-          dotnet nuget push Yggdrasil.Engine/bin/Release/*nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+          dotnet nuget push Yggdrasil.Engine/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
