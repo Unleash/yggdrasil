@@ -1,0 +1,136 @@
+---
+name: .NET Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: What version number would you like to use? The version number should be **without** a leading `v`, e.g. `5.7.1` or `6.2.4`.
+        required: true
+
+jobs:
+  # TODO: Consider making this its own workflow to be reused by other workflows.
+  build-binaries:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            rid: linux-x64
+            output: libyggdrasilffi.so
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            rid: linux-arm64
+            output: libyggdrasilffi.so
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            rid: win-x64
+            output: yggdrasilffi.dll
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            rid: win-arm64
+            output: yggdrasilffi.dll
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            rid: osx-x64
+            output: libyggdrasilffi.dylib
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            rid: osx-arm64
+            output: libyggdrasilffi.dylib
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies for aarch64-unknown-linux-gnu
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Configure cargo for cross-compilation
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p .cargo
+          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config
+
+      - name: Install rust
+        run: |
+          rustup set auto-self-update disable
+          rustup toolchain install stable --profile default
+          rustup target add ${{ matrix.target }}
+          rustup show
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build yggdrasilffi
+        run: |
+          cargo build -p yggdrasilffi --release --target ${{ matrix.target }}
+
+      - name: Upload yggdrasilffi binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.rid }}
+          path: target/${{ matrix.target }}/release/${{ matrix.output }}
+
+  publish:
+    needs: build-binaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download yggdrasilffi binaries
+        run: |
+          for rid in linux-x64 linux-arm64 win-x64 win-arm64 osx-x64 osx-arm64; do
+            mkdir -p dotnet-engine/runtimes/${rid}/native
+            echo "Downloading artifact for $rid"
+            if ! gh run download --name $rid --dir dotnet-engine/runtimes/${rid}/native; then
+              echo "Failed to download artifact for $rid, continuing..."
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore dependencies
+        run: |
+          cd dotnet-engine
+          dotnet restore dotnet-engine.sln
+
+      - name: Set version
+        run: |
+          cd dotnet-engine
+          version=${{ github.event.inputs.version }}
+          sed -i "s/<Version>.*<\/Version>/<Version>$version<\/Version>/" Yggdrasil.Engine/Yggdrasil.Engine.csproj
+
+      - name: Build
+        run: |
+          cd dotnet-engine
+          dotnet build dotnet-engine.sln -c Release --no-restore
+
+      - name: Pack
+        run: |
+          cd dotnet-engine
+          dotnet pack dotnet-engine.sln -c Release --no-build --no-restore
+
+      - name: Check package size
+        run: |
+          cd dotnet-engine
+          ls -lh Yggdrasil.Engine/bin/Release/*nupkg
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yggdrasil-nuget
+          path: dotnet-engine/Yggdrasil.Engine/bin/Release/*nupkg
+
+      - name: Publish package
+        run: |
+          cd dotnet-engine
+          dotnet nuget push Yggdrasil.Engine/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}

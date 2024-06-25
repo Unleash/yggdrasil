@@ -1,4 +1,11 @@
-# CSharp Bindings for Yggdrasil
+# Unleash Yggdrasil .NET Engine
+
+Unleash Yggdrasil Engine for .NET.
+
+This is a .NET wrapper containing the core of the Unleash SDK domain logic, enabling you to develop your own Unleash .NET SDK.
+If you're looking for the ready-to-use Unleash .NET SDK instead, you can find it [here](https://github.com/Unleash/unleash-client-dotnet).
+
+Read more about Unleash at: https://www.getunleash.io/
 
 ## Build
 
@@ -40,3 +47,17 @@ dotnet nuget add source ~/path/to/local/feed
 ```
 
 Now you can switch package source in package manager and import your locally published package to work with.
+
+```bash
+dotnet add package Yggdrasil.Engine --prerelease
+```
+
+Whenever you update your package you should:
+
+```bash
+# On the .nupkg folder
+dotnet nuget push "*.nupkg" -s ~/path/to/local/feed
+# On the project where it's used
+dotnet nuget locals all --clear
+dotnet restore
+```

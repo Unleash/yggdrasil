@@ -5,12 +5,19 @@
     <LangVersion>10.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageId>Yggdrasil.Engine</PackageId>
+    <PackageId>Unleash.Yggdrasil</PackageId>
     <Version>1.0.0-beta.0</Version>
     <Company>Bricks Software AS</Company>
     <Authors>Unleash</Authors>
     <IncludeSymbols>True</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RepositoryUrl>https://github.com/Unleash/yggdrasil</RepositoryUrl>
+    <PackageTags>unleash feature-flag feature-toggle engine</PackageTags>
+    <Description>Unleash Yggdrasil Engine for .NET. This is a .NET wrapper containing the core of the Unleash SDK domain logic, enabling you to develop your own Unleash .NET SDK.</Description>
+    <PackageIcon>worldtree_icon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +29,11 @@
       cd ../../ 
       cargo build --release" />
   </Target>
+
+  <ItemGroup>
+      <None Include="../../worldtree_icon.png" Pack="true" PackagePath="\"/>
+      <None Include="../README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="../../target/release/libyggdrasilffi.so" Condition="Exists('../../target/release/libyggdrasilffi.so')">
@@ -36,5 +48,14 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <PackageCopyToOutput>true</PackageCopyToOutput>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../runtimes/win-x64/native/yggdrasilffi.dll" Pack="true" PackagePath="runtimes/win-x64/native/" Condition="Exists('../runtimes/win-x64/native/yggdrasilffi.dll')" />
+    <None Include="../runtimes/win-arm64/native/yggdrasilffi.dll" Pack="true" PackagePath="runtimes/win-arm64/native/" Condition="Exists('../runtimes/win-arm64/native/yggdrasilffi.dll')" />
+    <None Include="../runtimes/linux-x64/native/libyggdrasilffi.so" Pack="true" PackagePath="runtimes/linux-x64/native/" Condition="Exists('../runtimes/linux-x64/native/libyggdrasilffi.so')" />
+    <None Include="../runtimes/linux-arm64/native/libyggdrasilffi.so" Pack="true" PackagePath="runtimes/linux-arm64/native/" Condition="Exists('../runtimes/linux-arm64/native/libyggdrasilffi.so')" />
+    <None Include="../runtimes/osx-x64/native/libyggdrasilffi.dylib" Pack="true" PackagePath="runtimes/osx-x64/native/" Condition="Exists('../runtimes/osx-x64/native/libyggdrasilffi.dylib')" />
+    <None Include="../runtimes/osx-arm64/native/libyggdrasilffi.dylib" Pack="true" PackagePath="runtimes/osx-arm64/native/" Condition="Exists('../runtimes/osx-arm64/native/libyggdrasilffi.dylib')" />
   </ItemGroup>
 </Project>
