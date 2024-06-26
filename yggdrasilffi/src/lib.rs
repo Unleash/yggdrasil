@@ -170,7 +170,7 @@ pub unsafe extern "C" fn take_state(
         let toggles: ClientFeatures = get_json(json_ptr)?;
 
         if let Some(warnings) = engine.take_state(toggles) {
-            return Err(FFIError::PartialUpdate(warnings));
+            Err(FFIError::PartialUpdate(warnings))
         } else {
             Ok(Some(()))
         }
