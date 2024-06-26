@@ -1140,7 +1140,7 @@ mod tests {
         expected_value: bool,
     ) {
         let constraint_ips = constraint_ips
-            .split(",")
+            .split(',')
             .map(|x| format!("\"{}\"", x.trim()))
             .collect::<Vec<String>>();
 
