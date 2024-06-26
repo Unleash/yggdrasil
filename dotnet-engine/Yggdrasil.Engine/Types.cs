@@ -29,38 +29,48 @@ public class EngineResponse<TValue> : EngineResponse
 
 public class Variant
 {
-    public Variant(string name, Payload? payload, bool enabled, bool featureEnabled)
+    public Variant(string name, Payload? payload, bool isEnabled, bool featureEnabled)
     {
         Name = name;
         Payload = payload;
-        Enabled = enabled;
+        IsEnabled = isEnabled;
         FeatureEnabled = featureEnabled;
     }
 
+    public static readonly Variant DISABLED_VARIANT = new Variant("disabled", null, false, false);
+
     public string Name { get; set; }
     public Payload? Payload { get; set; }
-    public bool Enabled { get; set; }
+    [JsonPropertyName("enabled")]
+    public bool IsEnabled { get; set; }
     [JsonPropertyName("feature_enabled")]
     public bool FeatureEnabled { get; set; }
 }
 
 public class Payload
 {
-    public string? PayloadType { get; set; }
-    public string? Value { get; set; }
-
-    public override bool Equals(object? obj)
+    public Payload(string type, string value)
     {
-        if (obj == null)
-            return false;
+        Type = type;
+        Value = value;
+    }
+
+    public string Type { get; set; }
+    public string Value { get; set; }
+
+    public override bool Equals(object obj)
+    {
+        if (obj == this) return true;
+        if (obj == null) return false;
 
         var payload = (Payload)obj;
-        return Value == payload.Value && PayloadType == payload.PayloadType;
+
+        return Equals(payload.Type, Type) && Equals(payload.Value, Value);
     }
 
     public override int GetHashCode()
     {
-        return new { Value, PayloadType }.GetHashCode();
+        return new { Type, Value }.GetHashCode();
     }
 }
 
