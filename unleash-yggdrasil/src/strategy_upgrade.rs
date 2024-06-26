@@ -15,6 +15,9 @@ enum StrategyType {
     FlexibleRollout,
     RemoteAddress,
     ApplicationHostname,
+    //This is a catch all handler on the enum type because we don't know what the
+    // custom strategy will be called ahead of time
+    #[allow(dead_code)]
     Custom(String),
 }
 
@@ -31,7 +34,7 @@ impl IsCustom for Strategy {
     }
 }
 
-pub fn upgrade(strategies: &Vec<Strategy>, segment_map: &HashMap<i32, Segment>) -> String {
+pub fn upgrade(strategies: &[Strategy], segment_map: &HashMap<i32, Segment>) -> String {
     if strategies.is_empty() {
         return "true".into();
     }

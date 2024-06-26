@@ -51,7 +51,7 @@ impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
 enum FFIError {
     Utf8Error,
     InvalidJson,
-    NullError(String),
+    NullError,
 }
 
 const KNOWN_STRATEGIES: [&str; 8] = [
@@ -79,7 +79,7 @@ impl From<serde_json::Error> for FFIError {
 
 unsafe fn get_engine<'a>(engine_ptr: *mut c_void) -> Result<&'a mut EngineState, FFIError> {
     if engine_ptr.is_null() {
-        Err(FFIError::NullError("Null engine pointer".into()))
+        Err(FFIError::NullError)
     } else {
         Ok(unsafe { &mut *(engine_ptr as *mut EngineState) })
     }
@@ -87,7 +87,7 @@ unsafe fn get_engine<'a>(engine_ptr: *mut c_void) -> Result<&'a mut EngineState,
 
 unsafe fn get_str<'a>(ptr: *const c_char) -> Result<&'a str, FFIError> {
     if ptr.is_null() {
-        Err(FFIError::NullError("Null pointer".into()))
+        Err(FFIError::NullError)
     } else {
         unsafe { CStr::from_ptr(ptr).to_str().map_err(FFIError::from) }
     }

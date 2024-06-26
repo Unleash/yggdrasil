@@ -466,8 +466,7 @@ impl EngineState {
         }
         let total_weight: u32 = variants.iter().map(|var| var.weight as u32).sum();
 
-        let stickiness = variants
-            .get(0)
+        let stickiness = variants.first()
             .and_then(|variant| variant.stickiness.clone());
 
         let target = get_seed(stickiness, context)
