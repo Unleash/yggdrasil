@@ -220,4 +220,20 @@ public class Tests
         Assert.IsTrue(result);
         Assert.IsFalse(shouldEmit);
     }
+
+    [Test]
+    public void Invalid_Json_Raises_An_Error()
+    {
+        var testData = "{\"weCloseBraces\": false";
+        var engine = new YggdrasilEngine();
+        Assert.Throws<YggdrasilEngineException>(() => engine.TakeState(testData));
+    }
+
+    [Test]
+    public void Valid_Json_With_An_Invalid_State_Update_Raises_An_Error()
+    {
+        var testData = "{\"weCloseBraces\": true}";
+        var engine = new YggdrasilEngine();
+        Assert.Throws<YggdrasilEngineException>(() => engine.TakeState(testData));
+    }
 }

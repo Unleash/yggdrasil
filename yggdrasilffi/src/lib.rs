@@ -1,13 +1,14 @@
 use std::{
     collections::HashMap,
     ffi::{c_char, CStr, CString},
+    fmt::{self, Display, Formatter},
     str::Utf8Error,
 };
 
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
-use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef};
+use unleash_yggdrasil::{Context, EngineState, EvalWarning, ExtendedVariantDef};
 
 #[derive(Serialize, Deserialize)]
 struct Response<T> {
@@ -41,17 +42,32 @@ impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
             Err(e) => Response {
                 status_code: ResponseCode::Error,
                 value: None,
-                error_message: Some(format!("{:?}", e)),
+                error_message: Some(e.to_string()),
             },
         }
     }
 }
 
-#[derive(Debug)]
 enum FFIError {
     Utf8Error,
-    InvalidJson,
     NullError,
+    InvalidJson(String),
+    PartialUpdate(Vec<EvalWarning>),
+}
+
+impl Display for FFIError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            FFIError::Utf8Error => write!(f, "Detected a non UTF-8 string in the input, this is a serious issue and you should report this as a bug."),
+            FFIError::NullError => write!(f, "Null error detected, this is a serious issue and you should report this as a bug."),
+            FFIError::InvalidJson(message) => write!(f, "Failed to parse JSON: {}", message),
+            FFIError::PartialUpdate(messages) => write!(
+                f,
+                "Engine state was updated but warnings were reported, this may result in some flags evaluating in unexpected ways, please report this: {:?}",
+                messages
+            ),
+        }
+    }
 }
 
 const KNOWN_STRATEGIES: [&str; 8] = [
@@ -72,8 +88,8 @@ impl From<Utf8Error> for FFIError {
 }
 
 impl From<serde_json::Error> for FFIError {
-    fn from(_: serde_json::Error) -> Self {
-        FFIError::InvalidJson
+    fn from(e: serde_json::Error) -> Self {
+        FFIError::InvalidJson(e.to_string())
     }
 }
 
@@ -134,8 +150,9 @@ pub unsafe extern "C" fn free_engine(engine_ptr: *mut c_void) {
     drop(Box::from_raw(engine_ptr as *mut EngineState));
 }
 
-/// Takes a JSON string representing a set of toggles. Returns a JSON string representing
-/// the metrics that should be sent to the server.
+/// Takes a JSON string representing a set of toggles. Returns a JSON encoded response object
+/// specifying whether the update was successful or not. The caller is responsible
+/// for freeing this response object.
 ///
 /// # Safety
 ///
@@ -152,9 +169,11 @@ pub unsafe extern "C" fn take_state(
         let engine = get_engine(engine_ptr)?;
         let toggles: ClientFeatures = get_json(json_ptr)?;
 
-        let _ = engine.take_state(toggles);
-
-        Ok(Some(()))
+        if let Some(warnings) = engine.take_state(toggles) {
+            Err(FFIError::PartialUpdate(warnings))
+        } else {
+            Ok(Some(()))
+        }
     })();
 
     result_to_json_ptr(result)
