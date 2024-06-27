@@ -58,7 +58,7 @@ enum FFIError {
 impl Display for FFIError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            FFIError::Utf8Error => write!(f, "Detected a non UTF-8 string in the input, this is a serious issue and you should report his as a bug."),
+            FFIError::Utf8Error => write!(f, "Detected a non UTF-8 string in the input, this is a serious issue and you should report this as a bug."),
             FFIError::NullError => write!(f, "Null error detected, this is a serious issue and you should report this as a bug."),
             FFIError::InvalidJson(message) => write!(f, "Failed to parse JSON: {}", message),
             FFIError::PartialUpdate(messages) => write!(
