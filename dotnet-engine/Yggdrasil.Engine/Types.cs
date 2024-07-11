@@ -33,8 +33,8 @@ public class Variant
     {
         Name = name;
         Payload = payload;
-        IsEnabled = enabled;
-        FeatureEnabled = feature_enabled;
+        Enabled = enabled;
+        Feature_Enabled = feature_enabled;
     }
 
     public static readonly Variant DISABLED_VARIANT = new Variant("disabled", null, false, false);
@@ -42,9 +42,9 @@ public class Variant
     public string Name { get; set; }
     public Payload? Payload { get; set; }
     [JsonPropertyName("enabled")]
-    public bool IsEnabled { get; set; }
+    public bool Enabled { get; set; }
     [JsonPropertyName("feature_enabled")]
-    public bool FeatureEnabled { get; set; }
+    public bool Feature_Enabled { get; set; }
 }
 
 public class Payload
