@@ -29,12 +29,12 @@ public class EngineResponse<TValue> : EngineResponse
 
 public class Variant
 {
-    public Variant(string name, Payload? payload, bool isEnabled, bool featureEnabled)
+    public Variant(string name, Payload? payload, bool enabled, bool feature_enabled)
     {
         Name = name;
         Payload = payload;
-        IsEnabled = isEnabled;
-        FeatureEnabled = featureEnabled;
+        IsEnabled = enabled;
+        FeatureEnabled = feature_enabled;
     }
 
     public static readonly Variant DISABLED_VARIANT = new Variant("disabled", null, false, false);
