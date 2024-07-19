@@ -5,7 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.13.0 (2024-07-19)
+
+### Chore
+
+ - <csr-id-4743bd064343e4971dbcb8098edf73cc4219e962/> update unleash-types and chrono
+ - <csr-id-c1b10122322044b12e62c7bf873982c2c46f3c3f/> apply some lints and fixes
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release over the course of 22 calendar days.
+ - 84 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#130](https://github.com/Unleash/yggdrasil/issues/130)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#130](https://github.com/Unleash/yggdrasil/issues/130)**
+    - Apply some lints and fixes ([`c1b1012`](https://github.com/Unleash/yggdrasil/commit/c1b10122322044b12e62c7bf873982c2c46f3c3f))
+ * **Uncategorized**
+    - Update unleash-types and chrono ([`4743bd0`](https://github.com/Unleash/yggdrasil/commit/4743bd064343e4971dbcb8098edf73cc4219e962))
+</details>
+
 ## v0.12.0 (2024-04-25)
+
+<csr-id-1912fdaddb4f4adcfbd3cf2e5b3b11fc50366794/>
 
 ### Chore
 
@@ -15,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 56 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#124](https://github.com/Unleash/yggdrasil/issues/124)
@@ -28,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#124](https://github.com/Unleash/yggdrasil/issues/124)**
     - Bump unleash types to 0.12 ([`1912fda`](https://github.com/Unleash/yggdrasil/commit/1912fdaddb4f4adcfbd3cf2e5b3b11fc50366794))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.12.0 ([`5c82cb1`](https://github.com/Unleash/yggdrasil/commit/5c82cb1f53c7944237c4a87403d0e727c872ec70))
 </details>
 
 ## v0.11.0 (2024-02-29)

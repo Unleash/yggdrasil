@@ -1,6 +1,6 @@
 [package]
 name = "yggdrasil-engine"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["sighphyre <simon@getunleash.io>"]
 repository = "https://github.com/unleash/yggdrasil"
 description = "Direct bindings to the Yggdrasil grammar for NodeJS"
