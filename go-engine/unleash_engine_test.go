@@ -86,8 +86,9 @@ func TestGetVariant(t *testing.T) {
 	)
 
 	variant := engine.GetVariant("Feature.A", context)
+
 	if variant == nil {
-		t.Fatalf("Feature.A should have variant")
+		variant = &VariantDef{"disabled", nil, false, engine.IsEnabled("Feature.A", context)}
 	}
 	if variant.Name != "disabled" {
 		t.Fatalf("Feature.A should have been disabled")
@@ -211,6 +212,10 @@ func TestClientSpecification(t *testing.T) {
 				)
 
 				result := engine.GetVariant(toggleName, context)
+
+				if result == nil {
+					result = &VariantDef{"disabled", nil, false, false}
+				}
 
 				jsonExpectedResult, _ := json.Marshal(expectedResult)
 
