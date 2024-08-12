@@ -468,7 +468,7 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
                 match context_value {
                     Some(context_value) => {
                         let Ok(context_value) = context_value.parse::<f64>() else {
-                            return false;
+                            return false.invert(inverted);
                         };
                         match comparator {
                             ContentComparator::In => {
@@ -479,7 +479,16 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
                             }
                         }
                     }
-                    None => false,
+                    None => {
+                        match comparator {
+                            ContentComparator::In => {
+                                false.invert(inverted)
+                            },
+                            ContentComparator::NotIn => {
+                                true.invert(inverted)
+                            }
+                        }
+                    },
                 }
             })
         }
@@ -491,11 +500,11 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
                 match comparator {
                     ContentComparator::In => match context_value {
                         Some(context_value) => values.contains(&context_value).invert(inverted),
-                        None => false,
+                        None => false.invert(inverted),
                     },
                     ContentComparator::NotIn => match context_value {
                         Some(context_value) => !values.contains(&context_value).invert(inverted),
-                        None => true,
+                        None => true.invert(inverted),
                     },
                 }
             })
@@ -879,6 +888,13 @@ mod tests {
     #[test_case("user_id not_in [1, 3, 5]", true)]
     #[test_case("user_id in [\"dfsfsd\"]", false)]
     #[test_case("user_id not_in [\"dfsfsd\"]", true)]
+    #[test_case("!user_id in [\"foo\"]", true)]
+    #[test_case("!user_id in [1, 3, 6]", false)]
+    #[test_case("!user_id not_in [1, 3, 6]", true)]
+    #[test_case("!context[\"i_do_not_exist\"] in [\"dfsfsd\"]", true)]
+    #[test_case("!context[\"i_do_not_exist\"] not_in [\"dfsfsd\"]", false)]
+    #[test_case("!context[\"i_do_not_exist\"] in [1, 3, 5]", true)]
+    #[test_case("!context[\"i_do_not_exist\"] not_in [1, 3, 5]", false)]
     fn run_numeric_list_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6");
