@@ -868,6 +868,10 @@ mod tests {
     #[test_case("user_id not_in [1, 3, 5]", true)]
     #[test_case("user_id in [\"dfsfsd\"]", false)]
     #[test_case("user_id not_in [\"dfsfsd\"]", true)]
+    #[test_case("!user_id in [1, 3, 6]", false)]
+    #[test_case("!user_id not_in [1, 3, 6]", true)]
+    #[test_case("!context[\"i_do_not_exist\"] in [\"dfsfsd\"]", true)]
+    #[test_case("!context[\"i_do_not_exist\"] not_in [\"dfsfsd\"]", false)]
     fn run_numeric_list_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6");
