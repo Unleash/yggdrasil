@@ -598,8 +598,7 @@ fn constraint(mut node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     }?;
 
     Ok(Box::new(move |context: &Context| {
-        let result = constraint(context).invert(inverted);
-        result.invert(inverted)
+        constraint(context).invert(inverted)
     }))
 }
 
