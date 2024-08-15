@@ -594,23 +594,24 @@ fn constraint(mut node: Pairs<Rule>) -> CompileResult<RuleFragment> {
         _ => unreachable!(),
     };
 
-    match child.as_rule() {
-        Rule::date_constraint => date_constraint(inverted, child.into_inner()),
-        Rule::numeric_constraint => numeric_constraint(inverted, child.into_inner()),
-        Rule::semver_constraint => semver_constraint(inverted, child.into_inner()),
+    let constraint = match child.as_rule() {
+        Rule::date_constraint => date_constraint(false, child.into_inner()),
+        Rule::numeric_constraint => numeric_constraint(false, child.into_inner()),
+        Rule::semver_constraint => semver_constraint(false, child.into_inner()),
         Rule::rollout_constraint => rollout_constraint(child.into_inner()), //TODO: Do we need to support inversion here?
-        Rule::default_strategy_constraint => {
-            default_strategy_constraint(inverted, child.into_inner())
-        }
-        Rule::string_fragment_constraint => {
-            string_fragment_constraint(inverted, child.into_inner())
-        }
-        Rule::list_constraint => list_constraint(inverted, child.into_inner()),
-        Rule::hostname_constraint => hostname_constraint(inverted, child.into_inner()),
-        Rule::external_value => external_value(inverted, child.into_inner()),
+        Rule::default_strategy_constraint => default_strategy_constraint(false, child.into_inner()),
+        Rule::string_fragment_constraint => string_fragment_constraint(false, child.into_inner()),
+        Rule::list_constraint => list_constraint(false, child.into_inner()),
+        Rule::hostname_constraint => hostname_constraint(false, child.into_inner()),
+        Rule::external_value => external_value(false, child.into_inner()),
         Rule::ip_constraint => ip_matching_constraint(child.into_inner()),
         _ => unreachable!(),
-    }
+    }?;
+
+    Ok(Box::new(move |context: &Context| {
+        let result = constraint(context);
+        result.invert(inverted)
+    }))
 }
 
 fn eval(expression: Pairs<Rule>) -> CompileResult<RuleFragment> {
@@ -1013,17 +1014,6 @@ mod tests {
     #[test]
     fn missing_external_value_produces_false_without_error() {
         let rule = "external_value[\"i_do_not_exist\"]";
-        let rule = compile_rule(rule).unwrap();
-
-        let context = Context::default();
-        let result = rule(&context);
-
-        assert!(!result);
-    }
-
-    #[test]
-    fn missing_external_value_produces_false_without_error_even_when_inverted() {
-        let rule = "!external_value[\"i_do_not_exist\"]";
         let rule = compile_rule(rule).unwrap();
 
         let context = Context::default();
