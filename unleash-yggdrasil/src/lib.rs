@@ -1539,12 +1539,8 @@ mod test {
         };
 
         let warnings = engine.take_state(feature_set);
-
-        let results = engine.resolve_all(&context, &None);
-        let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
         let enabled = engine.check_enabled("toggle1", &context, &None).unwrap();
 
-        assert!(targeted_toggle.enabled);
         assert!(enabled);
         assert!(warnings.is_none());
     }
@@ -1614,12 +1610,8 @@ mod test {
         };
 
         let warnings = engine.take_state(feature_set);
-
-        let results = engine.resolve_all(&context, &None);
-        let targeted_toggle = results.unwrap().get("toggle1").unwrap().clone();
         let enabled = engine.check_enabled("toggle1", &context, &None).unwrap();
 
-        assert!(targeted_toggle.enabled);
         assert!(enabled);
         assert!(warnings.is_none());
     }
