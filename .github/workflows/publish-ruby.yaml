@@ -44,16 +44,11 @@ jobs:
       run: |
         cargo build -p yggdrasilffi --release --target ${{ matrix.target }}
 
-    - name: Rename Output Binary
-      if: ${{ matrix.output != matrix.name }}
-      run: |
-        mv target/${{ matrix.target }}/release/${{ matrix.output }} target/${{ matrix.target }}/release/${{ matrix.name }}
-
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.output }}
-        path: target/${{ matrix.target }}/release/${{ matrix.name }}
+        name: ${{ matrix.name }}
+        path: target/${{ matrix.target }}/release/${{ matrix.output }}
 
   build_single_binary_gems:
     runs-on: ${{ matrix.os }}
