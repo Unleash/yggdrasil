@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
 
 jobs:
   build-binaries:
@@ -16,9 +17,12 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             output: yggdrasilffi.dll
-          - os: macos-latest
+          - os: macos-13
             target: x86_64-apple-darwin
-            output: libyggdrasilffi.dylib
+            output: libyggdrasilffi_x86_64.dylib
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            output: libyggdrasilffi_arm64.dylib
 
     steps:
     - uses: actions/checkout@v4
@@ -51,9 +55,12 @@ jobs:
             binary: libyggdrasilffi.so
           - os: windows-latest
             binary: yggdrasilffi.dll
+          - os: macos-13
+            binary: libyggdrasilffi_x86_64.dylib
+            platform: x86_64-darwin
           - os: macos-latest
-            binary: libyggdrasilffi.dylib
-            platform: universal-darwin
+            binary: libyggdrasilffi_arm64.dylib
+            platform: arm64-darwin
 
     needs: build-binaries
     steps:
