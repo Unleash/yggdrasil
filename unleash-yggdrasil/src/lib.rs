@@ -1473,6 +1473,150 @@ mod test {
     }
 
     #[test]
+    pub fn inverted_list_constraint_still_invert_when_context_field_missing() {
+        let raw_state = r#"
+        {
+            "version": 2,
+            "features": [
+                {
+                    "name": "toggle1",
+                    "type": "release",
+                    "enabled": true,
+                    "project": "TestProject20",
+                    "stale": false,
+                    "strategies": [
+                        {
+                            "name": "flexibleRollout",
+                            "constraints": [
+                                {
+                                "contextName": "missing_field",
+                                "operator": "IN",
+                                "values": [
+                                    "17"
+                                ],
+                                "inverted": true,
+                                "caseInsensitive": false
+                                }
+                            ],
+                            "parameters": {
+                                "groupId": "toggle1",
+                                "rollout": "100",
+                                "stickiness": "default"
+                            },
+                            "variants": []
+                        }
+                    ],
+                    "variants": [
+                        {
+                            "name": "another",
+                            "weight": 1000,
+                            "overrides": [],
+                            "stickiness": "default",
+                            "weightType": "variable"
+                        }
+                    ],
+                    "description": null,
+                    "impressionData": false
+                }
+            ],
+            "query": {
+                "environment": "development",
+                "inlineSegmentConstraints": true
+            },
+            "meta": {
+                "revisionId": 12137,
+                "etag": "\"76d8bb0e:12137\"",
+                "queryHash": "76d8bb0e"
+            }
+        }
+        "#;
+
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+        let context = Context {
+            user_id: Some("7".into()),
+            ..Context::default()
+        };
+
+        let warnings = engine.take_state(feature_set);
+        let enabled = engine.check_enabled("toggle1", &context, &None).unwrap();
+
+        assert!(enabled);
+        assert!(warnings.is_none());
+    }
+
+    #[test]
+    pub fn inverted_numerical_constraint_still_invert_when_context_field_missing() {
+        let raw_state = r#"
+        {
+            "version": 2,
+            "features": [
+                {
+                    "name": "toggle1",
+                    "type": "release",
+                    "enabled": true,
+                    "project": "TestProject20",
+                    "stale": false,
+                    "strategies": [
+                        {
+                            "name": "flexibleRollout",
+                            "constraints": [
+                                {
+                                "contextName": "missing_field",
+                                "operator": "NUM_EQ",
+                                "value": "17",
+                                "inverted": true,
+                                "caseInsensitive": false
+                                }
+                            ],
+                            "parameters": {
+                                "groupId": "toggle1",
+                                "rollout": "100",
+                                "stickiness": "default"
+                            },
+                            "variants": []
+                        }
+                    ],
+                    "variants": [
+                        {
+                            "name": "another",
+                            "weight": 1000,
+                            "overrides": [],
+                            "stickiness": "default",
+                            "weightType": "variable"
+                        }
+                    ],
+                    "description": null,
+                    "impressionData": false
+                }
+            ],
+            "query": {
+                "environment": "development",
+                "inlineSegmentConstraints": true
+            },
+            "meta": {
+                "revisionId": 12137,
+                "etag": "\"76d8bb0e:12137\"",
+                "queryHash": "76d8bb0e"
+            }
+        }
+        "#;
+
+        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let mut engine = EngineState::default();
+        let context = Context {
+            user_id: Some("7".into()),
+            ..Context::default()
+        };
+
+        let warnings = engine.take_state(feature_set);
+        let enabled = engine.check_enabled("toggle1", &context, &None).unwrap();
+
+        assert!(enabled);
+        assert!(warnings.is_none());
+    }
+
+    #[test]
     pub fn metrics_are_not_recorded_for_parent_flags() {
         let mut compiled_state = HashMap::new();
         compiled_state.insert(
