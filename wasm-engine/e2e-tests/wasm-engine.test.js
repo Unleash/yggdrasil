@@ -1,4 +1,4 @@
-const yggdrasil = require("../pkg/wasm_engine.js");
+const yggdrasil = require("../pkg/yggdrasil_engine.js");
 
 test("Rule evaluates correctly", () => {
   const context = {

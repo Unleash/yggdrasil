@@ -11,6 +11,7 @@ use crate::sendable_closures::{SendableContextResolver, SendableFragment};
 use crate::state::SdkError;
 use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
+#[cfg(not(target_family = "wasm"))]
 use hostname;
 use ipnetwork::{IpNetwork, IpNetworkError};
 use murmur3::murmur3_32;
@@ -399,6 +400,7 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     }))
 }
 
+#[cfg(not(target_family = "wasm"))]
 fn get_hostname() -> CompileResult<String> {
     //This is primarily for testing purposes
     if let Ok(hostname_env) = env::var("hostname") {
@@ -412,6 +414,11 @@ fn get_hostname() -> CompileResult<String> {
                 .into_string()
                 .map_err(|_| SdkError::StrategyEvaluationError)
         })
+}
+
+#[cfg(target_family = "wasm")]
+fn get_hostname() -> CompileResult<String> {
+    Err(SdkError::StrategyParseError("Hostname is not supported on this platform".into()))
 }
 
 fn hostname_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {

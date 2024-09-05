@@ -19,7 +19,7 @@ $ yarn add @unleash/yggdrasil-engine
 Then, you can use it in your code:
 
 ```js
-  const yggdrasil = require("../pkg/wasm_engine.js");
+  const yggdrasil = require("../pkg/yggdrasil_engine.js");
 
   const context = {
     userId: "7",
