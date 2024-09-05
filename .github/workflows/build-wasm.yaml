@@ -40,3 +40,12 @@ jobs:
         run: |
           cd wasm-engine
           wasm-pack build --target nodejs
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Run tests
+        run: |
+          cd wasm-engine/e2e-tests
+          bun i
+          bun test
