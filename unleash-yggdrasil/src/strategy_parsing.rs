@@ -265,7 +265,7 @@ fn ip(node: Pair<Rule>) -> Result<IpNetwork, IpNetworkError> {
 }
 
 //Constraints
-fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+fn numeric_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_getter, ordinal_operation, number] = drain(node)?;
 
     let context_getter = context_value(context_getter.into_inner());
@@ -287,14 +287,13 @@ fn numeric_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFr
                     OrdinalComparator::Gt => context_value > number,
                     OrdinalComparator::Eq => (context_value - number).abs() < f64::EPSILON,
                 }
-                .invert(inverted)
             }
             None => false,
         }
     }))
 }
 
-fn date_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+fn date_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_getter_node, ordinal_operation_node, date_node] = drain(node)?;
 
     let context_getter = context_value(context_getter_node.into_inner());
@@ -318,14 +317,13 @@ fn date_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
                     OrdinalComparator::Gt => context_value > date,
                     OrdinalComparator::Eq => context_value == date,
                 }
-                .invert(inverted)
             }
             None => false,
         }
     }))
 }
 
-fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+fn semver_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let children: [Pair<Rule>; 3] = drain(node)?;
     let [context_getter_node, ordinal_operation_node, semver_node] = children;
 
@@ -351,7 +349,6 @@ fn semver_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFra
                     OrdinalComparator::Gt => context_value > semver,
                     OrdinalComparator::Eq => context_value == semver,
                 }
-                .invert(inverted)
             }
             None => false,
         }
@@ -417,7 +414,7 @@ fn get_hostname() -> CompileResult<String> {
         })
 }
 
-fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+fn hostname_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [hostname_node] = drain(node)?;
 
     let target_hostnames: HashSet<String> = harvest_string_list(hostname_node.into_inner())
@@ -426,9 +423,7 @@ fn hostname_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleF
         .collect();
 
     Ok(Box::new(move |_: &Context| match get_hostname() {
-        Ok(hostname) => target_hostnames
-            .contains(&hostname.to_lowercase())
-            .invert(inverted),
+        Ok(hostname) => target_hostnames.contains(&hostname.to_lowercase()),
         Err(_) => false,
     }))
 }
@@ -449,7 +444,7 @@ fn ip_matching_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     }))
 }
 
-fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+fn list_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_node, comparator_node, list_node] = drain(node)?;
 
     let context_getter = context_value(context_node.into_inner());
@@ -458,8 +453,8 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
 
     Ok(match list.as_rule() {
         Rule::empty_list => Box::new(move |_context: &Context| match comparator {
-            ContentComparator::In => false.invert(inverted),
-            ContentComparator::NotIn => true.invert(inverted),
+            ContentComparator::In => false,
+            ContentComparator::NotIn => true,
         }),
         Rule::numeric_list => {
             let values = harvest_list(list.into_inner())?;
@@ -471,12 +466,8 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
                             return false;
                         };
                         match comparator {
-                            ContentComparator::In => {
-                                values.contains(&context_value).invert(inverted)
-                            }
-                            ContentComparator::NotIn => {
-                                !values.contains(&context_value).invert(inverted)
-                            }
+                            ContentComparator::In => values.contains(&context_value),
+                            ContentComparator::NotIn => !values.contains(&context_value),
                         }
                     }
                     None => false,
@@ -490,11 +481,11 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
 
                 match comparator {
                     ContentComparator::In => match context_value {
-                        Some(context_value) => values.contains(&context_value).invert(inverted),
+                        Some(context_value) => values.contains(&context_value),
                         None => false,
                     },
                     ContentComparator::NotIn => match context_value {
-                        Some(context_value) => !values.contains(&context_value).invert(inverted),
+                        Some(context_value) => !values.contains(&context_value),
                         None => true,
                     },
                 }
@@ -504,7 +495,7 @@ fn list_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragm
     })
 }
 
-fn external_value(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+fn external_value(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [index_node] = drain(node)?;
     let strategy_index = string(index_node);
     Ok(Box::new(move |context| {
@@ -513,7 +504,6 @@ fn external_value(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragme
             .as_ref()
             .and_then(|strategy_results| strategy_results.get(&strategy_index))
             .copied()
-            .map(|result| result.invert(inverted))
             .unwrap_or(false)
     }))
 }
@@ -544,15 +534,15 @@ fn harvest_ip_list(node: Pairs<Rule>) -> Vec<IpNetwork> {
         .collect()
 }
 
-fn default_strategy_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+fn default_strategy_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let value = node.as_str();
     let enabled: bool = value.parse().map_err(|e| {
         SdkError::StrategyParseError(format!("Failed to compile {value} as a boolean value: {e}"))
     })?;
-    Ok(Box::new(move |_: &Context| enabled.invert(inverted)))
+    Ok(Box::new(move |_: &Context| enabled))
 }
 
-fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+fn string_fragment_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_getter_node, comparator_node, list_node] = drain(node)?;
 
     let context_getter = context_value(context_getter_node.into_inner());
@@ -577,7 +567,6 @@ fn string_fragment_constraint(inverted: bool, node: Pairs<Rule>) -> CompileResul
                 StringComparator::StartsWith => list.iter().any(|item| value.starts_with(item)),
                 StringComparator::EndsWith => list.iter().any(|item| value.ends_with(item)),
             }
-            .invert(inverted)
         } else {
             false
         }
@@ -594,23 +583,23 @@ fn constraint(mut node: Pairs<Rule>) -> CompileResult<RuleFragment> {
         _ => unreachable!(),
     };
 
-    match child.as_rule() {
-        Rule::date_constraint => date_constraint(inverted, child.into_inner()),
-        Rule::numeric_constraint => numeric_constraint(inverted, child.into_inner()),
-        Rule::semver_constraint => semver_constraint(inverted, child.into_inner()),
+    let constraint = match child.as_rule() {
+        Rule::date_constraint => date_constraint(child.into_inner()),
+        Rule::numeric_constraint => numeric_constraint(child.into_inner()),
+        Rule::semver_constraint => semver_constraint(child.into_inner()),
         Rule::rollout_constraint => rollout_constraint(child.into_inner()), //TODO: Do we need to support inversion here?
-        Rule::default_strategy_constraint => {
-            default_strategy_constraint(inverted, child.into_inner())
-        }
-        Rule::string_fragment_constraint => {
-            string_fragment_constraint(inverted, child.into_inner())
-        }
-        Rule::list_constraint => list_constraint(inverted, child.into_inner()),
-        Rule::hostname_constraint => hostname_constraint(inverted, child.into_inner()),
-        Rule::external_value => external_value(inverted, child.into_inner()),
+        Rule::default_strategy_constraint => default_strategy_constraint(child.into_inner()),
+        Rule::string_fragment_constraint => string_fragment_constraint(child.into_inner()),
+        Rule::list_constraint => list_constraint(child.into_inner()),
+        Rule::hostname_constraint => hostname_constraint(child.into_inner()),
+        Rule::external_value => external_value(child.into_inner()),
         Rule::ip_constraint => ip_matching_constraint(child.into_inner()),
         _ => unreachable!(),
-    }
+    }?;
+
+    Ok(Box::new(move |context: &Context| {
+        constraint(context).invert(inverted)
+    }))
 }
 
 fn eval(expression: Pairs<Rule>) -> CompileResult<RuleFragment> {
@@ -879,6 +868,10 @@ mod tests {
     #[test_case("user_id not_in [1, 3, 5]", true)]
     #[test_case("user_id in [\"dfsfsd\"]", false)]
     #[test_case("user_id not_in [\"dfsfsd\"]", true)]
+    #[test_case("!user_id in [1, 3, 6]", false)]
+    #[test_case("!user_id not_in [1, 3, 6]", true)]
+    #[test_case("!context[\"i_do_not_exist\"] in [\"dfsfsd\"]", true)]
+    #[test_case("!context[\"i_do_not_exist\"] not_in [\"dfsfsd\"]", false)]
     fn run_numeric_list_test(rule: &str, expected: bool) {
         let rule = compile_rule(rule).expect("");
         let context = context_from_user_id("6");
@@ -1013,17 +1006,6 @@ mod tests {
     #[test]
     fn missing_external_value_produces_false_without_error() {
         let rule = "external_value[\"i_do_not_exist\"]";
-        let rule = compile_rule(rule).unwrap();
-
-        let context = Context::default();
-        let result = rule(&context);
-
-        assert!(!result);
-    }
-
-    #[test]
-    fn missing_external_value_produces_false_without_error_even_when_inverted() {
-        let rule = "!external_value[\"i_do_not_exist\"]";
         let rule = compile_rule(rule).unwrap();
 
         let context = Context::default();
