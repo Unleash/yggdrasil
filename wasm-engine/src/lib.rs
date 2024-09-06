@@ -9,13 +9,19 @@ pub struct Engine {
     engine: EngineState,
 }
 
+impl Default for Engine {
+  fn default() -> Self {
+      Engine {
+          engine: EngineState::default(),
+      }
+  }
+}
+
 #[wasm_bindgen]
 impl Engine {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Engine {
-        Engine {
-            engine: EngineState::default(),
-        }
+        Engine::default()
     }
 
     #[wasm_bindgen(js_name = takeState)]
