@@ -79,5 +79,6 @@ There's also a set of integration tests in the `e2e-tests` directory, which will
 
 ```sh
 $ cd e2e-tests
+$ bun i
 $ bun test
 ```
