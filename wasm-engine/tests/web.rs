@@ -1,12 +1,12 @@
 //! Test suite for the Web and headless browsers.
 
-#![cfg(target_arch = "wasm32")]
+#![cfg(target_family = "wasm")]
 
 extern crate wasm_bindgen_test;
 use serde_wasm_bindgen::to_value;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_test::*;
-use wasm_engine::{evaluate, Context};
+use yggdrasil_engine::{evaluate, Context};
 
 #[wasm_bindgen_test]
 fn dsl_evaluates_correct() {

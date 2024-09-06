@@ -1,7 +1,6 @@
 extern crate pest;
 
 use std::collections::HashSet;
-use std::env;
 use std::io::Cursor;
 use std::net::IpAddr;
 use std::num::ParseFloatError;
@@ -11,7 +10,6 @@ use crate::sendable_closures::{SendableContextResolver, SendableFragment};
 use crate::state::SdkError;
 use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
-use hostname;
 use ipnetwork::{IpNetwork, IpNetworkError};
 use murmur3::murmur3_32;
 use pest::iterators::{Pair, Pairs};
@@ -19,6 +17,11 @@ use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
 use rand::Rng;
 use semver::Version;
+
+#[cfg(feature = "hostname")]
+use std::env;
+#[cfg(feature = "hostname")]
+use hostname;
 
 #[derive(Parser)]
 #[grammar = "strategy_grammar.pest"]
@@ -399,6 +402,7 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     }))
 }
 
+#[cfg(feature = "hostname")]
 fn get_hostname() -> CompileResult<String> {
     //This is primarily for testing purposes
     if let Ok(hostname_env) = env::var("hostname") {
@@ -412,6 +416,11 @@ fn get_hostname() -> CompileResult<String> {
                 .into_string()
                 .map_err(|_| SdkError::StrategyEvaluationError)
         })
+}
+
+#[cfg(not(feature = "hostname"))]
+fn get_hostname() -> CompileResult<String> {
+    Err(SdkError::StrategyParseError("Hostname is not supported on this platform".into()))
 }
 
 fn hostname_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
@@ -1066,37 +1075,42 @@ mod tests {
         assert!(rule(&context));
     }
 
-    #[test]
-    fn evaluates_host_name_constraint_correctly() {
-        std::env::set_var("hostname", "DOS");
+    #[cfg(feature = "hostname")]
+    mod hostname_tests {
+      use super::*;
+    
+      #[test]
+      fn evaluates_host_name_constraint_correctly() {
+          std::env::set_var("hostname", "DOS");
 
-        let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
-        let context = Context::default();
-        assert!(rule(&context));
+          let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
+          let context = Context::default();
+          assert!(rule(&context));
 
-        std::env::remove_var("hostname");
-    }
+          std::env::remove_var("hostname");
+      }
 
-    #[test]
-    fn evaluates_host_name_to_false_when_missing_hostname_values() {
-        std::env::set_var("hostname", "DOS");
+      #[test]
+      fn evaluates_host_name_to_false_when_missing_hostname_values() {
+          std::env::set_var("hostname", "DOS");
 
-        let rule = compile_rule("hostname in [\"\"]").unwrap();
-        let context = Context::default();
-        assert!(!rule(&context));
+          let rule = compile_rule("hostname in [\"\"]").unwrap();
+          let context = Context::default();
+          assert!(!rule(&context));
 
-        std::env::remove_var("hostname");
-    }
+          std::env::remove_var("hostname");
+      }
 
-    #[test]
-    fn hostname_constraint_ignores_casing() {
-        std::env::set_var("hostname", "DaRWin");
+      #[test]
+      fn hostname_constraint_ignores_casing() {
+          std::env::set_var("hostname", "DaRWin");
 
-        let rule = compile_rule("hostname in [\"dArWin\", \"pop-os\"]").unwrap();
-        let context = Context::default();
-        assert!(rule(&context));
+          let rule = compile_rule("hostname in [\"dArWin\", \"pop-os\"]").unwrap();
+          let context = Context::default();
+          assert!(rule(&context));
 
-        std::env::remove_var("hostname");
+          std::env::remove_var("hostname");
+      }
     }
 
     #[test_case("127.0.0.1", "127.0.0.1", true; "Exact match")]

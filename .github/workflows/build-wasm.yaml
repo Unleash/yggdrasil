@@ -37,4 +37,6 @@ jobs:
         uses: jetli/wasm-pack-action@v0.3.0
 
       - name: Build WASM
-        run: wasm-pack build --target nodejs
+        run: |
+          cd wasm-engine
+          wasm-pack build --target nodejs
