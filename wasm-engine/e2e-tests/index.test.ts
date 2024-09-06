@@ -1,56 +1,50 @@
-import { expect, test } from 'bun:test'
-import yggdrasil from '../pkg/yggdrasil_engine'
+import { describe, beforeEach, test, expect } from 'bun:test'
+import { Engine } from '../pkg/yggdrasil_engine'
 
-test('Rule evaluates correctly', () => {
-  const context = {
-    userId: '7'
-  }
+describe('Client Spec Tests', () => {
+  let engine: Engine
 
-  const result = yggdrasil.evaluate('user_id > 6', context)
-  expect(result).toBe(true)
-})
+  beforeEach(() => {
+    engine = new Engine()
+  })
 
-test('Unknown base properties are ignored', () => {
-  const context = {
-    thisPropDoesNotExist: '7'
-  }
+  test('Client Spec', async () => {
+    const basePath = '../../client-specification/specifications'
+    const indexFile = Bun.file(`${basePath}/index.json`)
+    const testSuites = await indexFile.json()
 
-  const result = yggdrasil.evaluate('user_id > 6', context)
-  expect(result).toBe(false)
-})
+    for (const suite of testSuites) {
+      const suiteFile = Bun.file(`${basePath}/${suite}`)
+      const {
+        state,
+        tests: toggleTests = [],
+        variantTests = []
+      } = await suiteFile.json()
 
-test('Properties correctly propagate', () => {
-  const context = {
-    properties: {
-      customProperty: '7'
+      engine.takeState(state)
+
+      describe(`Suite: ${suite}`, () => {
+        for (const toggleTest of toggleTests) {
+          const toggleName = toggleTest.toggleName as string
+          const expectedResult = toggleTest.expectedResult as boolean
+
+          test(`Toggle Test: ${toggleTest.description}`, () => {
+            const result = engine.isEnabled(toggleName, toggleTest.context)
+            expect(result).toBe(expectedResult)
+          })
+        }
+
+        for (const variantTest of variantTests) {
+          const toggleName = variantTest.toggleName as string
+          const expectedResult = JSON.stringify(variantTest.expectedResult)
+
+          test(`Variant Test: ${variantTest.description}`, () => {
+            const result = engine.checkVariant(toggleName, variantTest.context)
+            const jsonResult = JSON.stringify(result)
+            expect(jsonResult).toBe(expectedResult)
+          })
+        }
+      })
     }
-  }
-
-  const result = yggdrasil.evaluate('context["customProperty"] > 6', context)
-  expect(result).toBe(true)
-})
-
-test('Invalid rules raise an error', () => {
-  expect(() => {
-    yggdrasil.evaluate('This is not a valid rule', {})
-  }).toThrow()
-})
-
-test('Context can be empty but not null or undefined', () => {
-  const rule = 'user_id > 6'
-
-  yggdrasil.evaluate(rule, {}) // should not throw
-
-  expect(() => {
-    yggdrasil.evaluate(rule, null)
-  }).toThrow()
-
-  expect(() => {
-    yggdrasil.evaluate(rule, undefined)
-  }).toThrow()
-
-  expect(() => {
-    // @ts-expect-error
-    yggdrasil.evaluate(rule)
-  }).toThrow()
+  })
 })
