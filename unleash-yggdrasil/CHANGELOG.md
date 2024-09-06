@@ -5,15 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## v0.13.1 (2024-09-06)
+
+### Chore
+
+ - <csr-id-645f6062535ff1ee966ed544639864d4872a1e55/> add changelog
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 4 commits contributed to the release.
  - 48 days passed between releases.
- - 0 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#139](https://github.com/Unleash/yggdrasil/issues/139)
 
 ### Commit Details
@@ -25,11 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#139](https://github.com/Unleash/yggdrasil/issues/139)**
     - Fix/inversion always supported ([`9bd0aac`](https://github.com/Unleash/yggdrasil/commit/9bd0aace1b304b6c9660bb52f63abd2fa0755a62))
  * **Uncategorized**
+    - Add changelog ([`645f606`](https://github.com/Unleash/yggdrasil/commit/645f6062535ff1ee966ed544639864d4872a1e55))
     - Adjusting changelogs prior to release of unleash-yggdrasil v0.13.1 ([`2130699`](https://github.com/Unleash/yggdrasil/commit/2130699da93d945f35db5d27ce742f3abdc4272f))
     - Merge branch 'main' of github.com:Unleash/yggdrasil ([`abc78e7`](https://github.com/Unleash/yggdrasil/commit/abc78e7ba019dae94536d200e5ed7f76e2b43847))
 </details>
-
-## v0.13.1 (2024-09-06)
 
 ## v0.13.0 (2024-07-19)
 
