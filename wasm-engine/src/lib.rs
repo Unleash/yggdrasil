@@ -5,16 +5,9 @@ use unleash_yggdrasil::{Context, EngineState};
 use unleash_types::client_features::ClientFeatures;
 
 #[wasm_bindgen]
+#[derive(Default)]
 pub struct Engine {
     engine: EngineState,
-}
-
-impl Default for Engine {
-  fn default() -> Self {
-      Engine {
-          engine: EngineState::default(),
-      }
-  }
 }
 
 #[wasm_bindgen]
