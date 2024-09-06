@@ -1,8 +1,6 @@
 extern crate pest;
 
 use std::collections::HashSet;
-#[cfg(feature = "hostname")]
-use std::env;
 use std::io::Cursor;
 use std::net::IpAddr;
 use std::num::ParseFloatError;
@@ -12,8 +10,6 @@ use crate::sendable_closures::{SendableContextResolver, SendableFragment};
 use crate::state::SdkError;
 use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
-#[cfg(feature = "hostname")]
-use hostname;
 use ipnetwork::{IpNetwork, IpNetworkError};
 use murmur3::murmur3_32;
 use pest::iterators::{Pair, Pairs};
@@ -21,6 +17,11 @@ use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
 use rand::Rng;
 use semver::Version;
+
+#[cfg(feature = "hostname")]
+use std::env;
+#[cfg(feature = "hostname")]
+use hostname;
 
 #[derive(Parser)]
 #[grammar = "strategy_grammar.pest"]
