@@ -49,6 +49,13 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Get client spec
+        uses: actions/checkout@v4
+        with:
+          repository: Unleash/client-specification
+          ref: v5.1.0
+          path: client-specification
+
       - name: Run e2e tests
         run: |
           cd wasm-engine/e2e-tests
