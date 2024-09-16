@@ -31,11 +31,13 @@ const getDisabledVariant = (feature_enabled: boolean) => ({
   feature_enabled
 })
 
-const extractResult = <T>(response: {
+type Response = {
   status_code: 'Ok' | 'Error' | 'NotFound'
-  value: T | null
+  value: unknown | null
   error_message?: string
-}): T => {
+}
+
+const extractResult = <T>(response: Response): T => {
   expect(response.error_message).toBeFalsy()
   expect(response.status_code).toBe('Ok')
   return response.value as T
