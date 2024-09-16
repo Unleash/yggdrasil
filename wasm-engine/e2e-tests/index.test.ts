@@ -1,13 +1,47 @@
 import { describe, beforeEach, test, expect } from 'bun:test'
 import { Engine } from '../pkg/yggdrasil_engine'
 
+type BaseTest = {
+  toggleName: string
+  description: string
+  context: Record<string, unknown>
+}
+
+type ToggleTest = BaseTest & {
+  expectedResult: boolean
+}
+
+type VariantTest = BaseTest & {
+  expectedResult: Record<string, unknown>
+}
+
+type TestSuite = {
+  state: Record<string, unknown>
+  tests: ToggleTest[]
+  variantTests: VariantTest[]
+}
+
+const DISABLED_VARIANT = {
+  name: 'disabled',
+  enabled: false
+}
+
+const getDisabledVariant = (feature_enabled: boolean) => ({
+  ...DISABLED_VARIANT,
+  feature_enabled
+})
+
+const extractResult = <T>(response: {
+  status_code: 'Ok' | 'Error' | 'NotFound'
+  value: T | null
+  error_message?: string
+}): T => {
+  expect(response.error_message).toBeFalsy()
+  expect(response.status_code).toBe('Ok')
+  return response.value as T
+}
+
 describe('Client Spec Tests', () => {
-  let engine: Engine
-
-  beforeEach(() => {
-    engine = new Engine()
-  })
-
   test('Client Spec', async () => {
     const basePath = '../../client-specification/specifications'
     const indexFile = Bun.file(`${basePath}/index.json`)
@@ -19,29 +53,57 @@ describe('Client Spec Tests', () => {
         state,
         tests: toggleTests = [],
         variantTests = []
-      } = await suiteFile.json()
-
-      engine.takeState(state)
+      }: TestSuite = await suiteFile.json()
 
       describe(`Suite: ${suite}`, () => {
+        let engine: Engine
+
+        beforeEach(() => {
+          engine = new Engine()
+          engine.takeState(state)
+        })
+
         for (const toggleTest of toggleTests) {
-          const toggleName = toggleTest.toggleName as string
-          const expectedResult = toggleTest.expectedResult as boolean
+          const toggleName = toggleTest.toggleName
+          const expectedResult = toggleTest.expectedResult
 
           test(`Toggle Test: ${toggleTest.description}`, () => {
-            const result = engine.isEnabled(toggleName, toggleTest.context)
+            const toggleResponse = engine.isEnabled(
+              toggleName,
+              toggleTest.context,
+              undefined
+            )
+
+            const result = extractResult<boolean>(toggleResponse)
+
             expect(result).toBe(expectedResult)
           })
         }
 
         for (const variantTest of variantTests) {
-          const toggleName = variantTest.toggleName as string
+          const toggleName = variantTest.toggleName
           const expectedResult = JSON.stringify(variantTest.expectedResult)
 
           test(`Variant Test: ${variantTest.description}`, () => {
-            const result = engine.checkVariant(toggleName, variantTest.context)
-            const jsonResult = JSON.stringify(result)
-            expect(jsonResult).toBe(expectedResult)
+            const variantResponse = engine.checkVariant(
+              toggleName,
+              variantTest.context,
+              undefined
+            )
+
+            const toggleResponse = engine.isEnabled(
+              toggleName,
+              variantTest.context,
+              undefined
+            )
+
+            const feature_enabled = extractResult<boolean>(toggleResponse)
+
+            const result =
+              extractResult(variantResponse) ??
+              getDisabledVariant(feature_enabled)
+
+            expect(JSON.stringify(result)).toBe(expectedResult)
           })
         }
       })

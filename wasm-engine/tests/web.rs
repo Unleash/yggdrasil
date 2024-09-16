@@ -3,10 +3,10 @@
 #![cfg(target_family = "wasm")]
 
 extern crate wasm_bindgen_test;
-use serde_wasm_bindgen::to_value;
+use serde_wasm_bindgen::{to_value, from_value};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_test::*;
-use yggdrasil_engine::Engine;
+use yggdrasil_engine::{Engine, Response, ResponseCode};
 use unleash_types::client_features::{ClientFeature, ClientFeatures, Constraint, Context, Operator, Strategy};
 
 #[wasm_bindgen_test]
@@ -19,19 +19,19 @@ fn is_enabled_evaluates_correctly() {
             name: "feature".into(),
             enabled: true,
             strategies: Some(vec![Strategy {
-              name: "default".into(),
-              constraints: Some(vec![Constraint {
-                  context_name: "userId".into(),
-                  operator: Operator::In,
-                  values: Some(vec!["5".into()]),
-                  case_insensitive: false,
-                  inverted: false,
-                  value: None,
-              }]),
-              segments: None,
-              variants: None,
-              parameters: None,
-              sort_order: None,
+                name: "default".into(),
+                constraints: Some(vec![Constraint {
+                    context_name: "userId".into(),
+                    operator: Operator::In,
+                    values: Some(vec!["5".into()]),
+                    case_insensitive: false,
+                    inverted: false,
+                    value: None,
+                }]),
+                segments: None,
+                variants: None,
+                parameters: None,
+                sort_order: None,
             }]),
             ..ClientFeature::default()
         }],
@@ -51,6 +51,11 @@ fn is_enabled_evaluates_correctly() {
         properties: None,
     }).unwrap();
 
-    let result = engine.is_enabled("feature", context).unwrap();
-    assert_eq!(result, true);
+    let result: JsValue = engine.is_enabled("feature", context, JsValue::NULL);
+    
+    let response: Response<bool> = from_value(result).unwrap();
+
+    assert_eq!(response.status_code, ResponseCode::Ok);
+    assert_eq!(response.value, Some(true));
+    assert_eq!(response.error_message, None);
 }
