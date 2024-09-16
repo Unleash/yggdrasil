@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use serde_wasm_bindgen::from_value;
 use wasm_bindgen::prelude::*;
 
