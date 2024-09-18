@@ -70,13 +70,13 @@ describe('Client Spec Tests', () => {
           const expectedResult = toggleTest.expectedResult
 
           test(`Toggle Test: ${toggleTest.description}`, () => {
-            const toggleResponse = engine.isEnabled(
+            const toggleResponse = engine.checkEnabled(
               toggleName,
               toggleTest.context,
               undefined
             )
 
-            const result = extractResult<boolean>(toggleResponse)
+            const result = extractResult<boolean>(toggleResponse) ?? false
 
             expect(result).toBe(expectedResult)
           })
@@ -93,13 +93,14 @@ describe('Client Spec Tests', () => {
               undefined
             )
 
-            const toggleResponse = engine.isEnabled(
+            const toggleResponse = engine.checkEnabled(
               toggleName,
               variantTest.context,
               undefined
             )
 
-            const feature_enabled = extractResult<boolean>(toggleResponse)
+            const feature_enabled =
+              extractResult<boolean>(toggleResponse) ?? false
 
             const result =
               extractResult(variantResponse) ??
