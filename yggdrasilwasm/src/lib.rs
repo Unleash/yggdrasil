@@ -69,8 +69,8 @@ impl Engine {
         serde_wasm_bindgen::to_value(&response).unwrap()
     }
 
-    #[wasm_bindgen(js_name = isEnabled)]
-    pub fn is_enabled(&self, toggle_name: &str, context: JsValue, custom_strategy_results: JsValue) -> JsValue {
+    #[wasm_bindgen(js_name = checkEnabled)]
+    pub fn check_enabled(&self, toggle_name: &str, context: JsValue, custom_strategy_results: JsValue) -> JsValue {
         let context: Context = match from_value(context) {
             Ok(ctx) => ctx,
             Err(e) => {
@@ -99,11 +99,11 @@ impl Engine {
             }
         };
 
-        let is_enabled = self.engine.is_enabled(toggle_name, &context, &custom_strategy_results);
+        let check_enabled = self.engine.check_enabled(toggle_name, &context, &custom_strategy_results);
 
         let response = Response {
             status_code: ResponseCode::Ok,
-            value: Some(is_enabled),
+            value: check_enabled,
             error_message: None,
         };
 
