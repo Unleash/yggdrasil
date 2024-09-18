@@ -3,6 +3,6 @@ resolver = "2"
 
 members = [
   "unleash-yggdrasil",
-  "wasm-engine",
+  "yggdrasilwasm",
   "yggdrasilffi",
 ]
