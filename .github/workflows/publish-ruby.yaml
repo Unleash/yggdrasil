@@ -14,11 +14,11 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             output: libyggdrasilffi.so
-            name: libyggdrasilffi.so
+            name: libyggdrasilffi_x86_64.so
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             output: yggdrasilffi.dll
-            name: yggdrasilffi.dll
+            name: libyggdrasilffi_x86_64.dll
           - os: macos-13
             target: x86_64-apple-darwin
             output: libyggdrasilffi.dylib
@@ -44,11 +44,15 @@ jobs:
       run: |
         cargo build -p yggdrasilffi --release --target ${{ matrix.target }}
 
+    - name: Rename Output Binary
+      run: |
+        mv target/${{ matrix.target }}/release/${{ matrix.output }} target/${{ matrix.target }}/release/${{ matrix.name }}
+
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.name }}
-        path: target/${{ matrix.target }}/release/${{ matrix.output }}
+        path: target/${{ matrix.target }}/release/${{ matrix.name }}
 
   build_single_binary_gems:
     runs-on: ${{ matrix.os }}
@@ -56,9 +60,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            binary: libyggdrasilffi.so
+            binary: libyggdrasilffi_x86_64.so
           - os: windows-latest
-            binary: yggdrasilffi.dll
+            binary: libyggdrasilffi_x86_64.dll
           - os: macos-13
             binary: libyggdrasilffi_x86_64.dylib
             platform: x86_64-darwin
