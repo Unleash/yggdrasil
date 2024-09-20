@@ -1,5 +1,5 @@
 num = @{ int ~ ("." ~ ASCII_DIGIT*)? ~ (^"e" ~ int)? }
-    int = { ("+" | "-")? ~ ASCII_DIGIT+ }
+int = { ("+" | "-")? ~ ASCII_DIGIT+ }
 
 percentage = { ("100" | (ASCII_DIGIT ~ ASCII_DIGIT?)) ~ "%" }
 
@@ -29,7 +29,7 @@ semver_list = { "[" ~ semver ~ ( "," ~ semver )* ~ "]" }
 WHITESPACE = _{ " " | "\t" }
 NULL_COALESCE = _{ "|" }
 
-random = { "random" }
+random = { "random[" ~ int ~ "]" | "random" }
 
 boolean_operation = _{ and | or }
     and     = { "and" }
