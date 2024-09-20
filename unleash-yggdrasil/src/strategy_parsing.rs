@@ -19,9 +19,9 @@ use rand::Rng;
 use semver::Version;
 
 #[cfg(feature = "hostname")]
-use std::env;
-#[cfg(feature = "hostname")]
 use hostname;
+#[cfg(feature = "hostname")]
+use std::env;
 
 #[derive(Parser)]
 #[grammar = "strategy_grammar.pest"]
@@ -380,25 +380,23 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
         .transpose()?;
 
     Ok(Box::new(move |context: &Context| {
-        let stickiness = stickiness_resolver(context);
-        if stickiness.is_none() {
-            return false;
-        }
+        if let Some(stickiness) = stickiness_resolver(context) {
 
-        let stickiness = stickiness.unwrap();
+            let group_id = match &group_id {
+                Some(group_id) => group_id.clone(),
+                None => context.toggle_name.clone(),
+            };
 
-        let group_id = match &group_id {
-            Some(group_id) => group_id.clone(),
-            None => context.toggle_name.clone(),
-        };
+            let hash = normalized_hash(&group_id, &stickiness, 100, 0);
 
-        let hash = normalized_hash(&group_id, &stickiness, 100, 0);
-
-        if let Ok(hash) = hash {
-            hash <= percent_rollout.into()
+            if let Ok(hash) = hash {
+                hash <= percent_rollout.into()
+            } else {
+                // This should probably never occur, it only happens if we
+                // don't feed enough input to the hashing function
+                false
+            }
         } else {
-            // This should probably never occur, it only happens if we
-            // don't feed enough input to the hashing function
             false
         }
     }))
@@ -422,7 +420,9 @@ fn get_hostname() -> CompileResult<String> {
 
 #[cfg(not(feature = "hostname"))]
 fn get_hostname() -> CompileResult<String> {
-    Err(SdkError::StrategyParseError("Hostname is not supported on this platform".into()))
+    Err(SdkError::StrategyParseError(
+        "Hostname is not supported on this platform".into(),
+    ))
 }
 
 fn hostname_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
@@ -1079,40 +1079,40 @@ mod tests {
 
     #[cfg(feature = "hostname")]
     mod hostname_tests {
-      use super::*;
-    
-      #[test]
-      fn evaluates_host_name_constraint_correctly() {
-          std::env::set_var("hostname", "DOS");
+        use super::*;
 
-          let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
-          let context = Context::default();
-          assert!(rule(&context));
+        #[test]
+        fn evaluates_host_name_constraint_correctly() {
+            std::env::set_var("hostname", "DOS");
 
-          std::env::remove_var("hostname");
-      }
+            let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
+            let context = Context::default();
+            assert!(rule(&context));
 
-      #[test]
-      fn evaluates_host_name_to_false_when_missing_hostname_values() {
-          std::env::set_var("hostname", "DOS");
+            std::env::remove_var("hostname");
+        }
 
-          let rule = compile_rule("hostname in [\"\"]").unwrap();
-          let context = Context::default();
-          assert!(!rule(&context));
+        #[test]
+        fn evaluates_host_name_to_false_when_missing_hostname_values() {
+            std::env::set_var("hostname", "DOS");
 
-          std::env::remove_var("hostname");
-      }
+            let rule = compile_rule("hostname in [\"\"]").unwrap();
+            let context = Context::default();
+            assert!(!rule(&context));
 
-      #[test]
-      fn hostname_constraint_ignores_casing() {
-          std::env::set_var("hostname", "DaRWin");
+            std::env::remove_var("hostname");
+        }
 
-          let rule = compile_rule("hostname in [\"dArWin\", \"pop-os\"]").unwrap();
-          let context = Context::default();
-          assert!(rule(&context));
+        #[test]
+        fn hostname_constraint_ignores_casing() {
+            std::env::set_var("hostname", "DaRWin");
 
-          std::env::remove_var("hostname");
-      }
+            let rule = compile_rule("hostname in [\"dArWin\", \"pop-os\"]").unwrap();
+            let context = Context::default();
+            assert!(rule(&context));
+
+            std::env::remove_var("hostname");
+        }
     }
 
     #[test_case("127.0.0.1", "127.0.0.1", true; "Exact match")]
