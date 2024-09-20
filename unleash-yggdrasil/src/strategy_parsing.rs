@@ -132,7 +132,16 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
         Rule::remote_address => Box::new(|context: &Context| context.remote_address.clone()),
         Rule::current_time => Box::new(|context: &Context| context.current_time.clone()),
         Rule::random => {
-            Box::new(|_: &Context| Some(rand::thread_rng().gen_range(0..99).to_string()))
+            let value = child
+                .into_inner()
+                .next()
+                .map(|rule| {
+                    rule.as_str().parse::<usize>().expect(
+                        "Failed to parse random content value in the grammar, this shouldn't happen",
+                    )
+                })
+                .unwrap_or(100);
+            Box::new(move |_: &Context| Some(rand::thread_rng().gen_range(1..value).to_string()))
         }
         Rule::property => context_property(child.into_inner()),
         _ => unreachable!(),
@@ -372,25 +381,18 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
     Ok(Box::new(move |context: &Context| {
         let stickiness = stickiness_resolver(context);
-
         if stickiness.is_none() {
             return false;
         }
+
+        let stickiness = stickiness.unwrap();
 
         let group_id = match &group_id {
             Some(group_id) => group_id.clone(),
             None => context.toggle_name.clone(),
         };
 
-        let hash = if let Some(stickiness) = stickiness {
-            normalized_hash(&group_id, &stickiness, 100, 0)
-        } else {
-            // The original code does something different here - if we're using the
-            // default strategy it generates a string of a number between 1 and 101
-            // then uses that as the hash. This instead doesn't do that and just
-            // uses a random number in place of the hash. Pretty sure it's the same thing
-            Ok(rand::thread_rng().gen_range(0..99) as u32)
-        };
+        let hash = normalized_hash(&group_id, &stickiness, 100, 0);
 
         if let Ok(hash) = hash {
             hash <= percent_rollout.into()
