@@ -5,7 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.13.2 (2024-09-20)
+
+### Chore
+
+ - <csr-id-33cd400eb57f52386ba9d583a68b0401a14b47a8/> make wasm build again
+   * chore: make wasm build again
+   
+   * chore: make hostname a feature instead
+   
+   * fix: put tests behind feature, include env when needed
+   
+   * refactor: organize imports slightly differently
+   
+   * chore: test all features
+
+### Bug Fixes
+
+ - <csr-id-5c8ba06563dc48a13188fe1fabb4794e5959ef9c/> makes random distribution better distributed
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release over the course of 13 calendar days.
+ - 14 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#141](https://github.com/Unleash/yggdrasil/issues/141), [#144](https://github.com/Unleash/yggdrasil/issues/144)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#141](https://github.com/Unleash/yggdrasil/issues/141)**
+    - Make wasm build again ([`33cd400`](https://github.com/Unleash/yggdrasil/commit/33cd400eb57f52386ba9d583a68b0401a14b47a8))
+ * **[#144](https://github.com/Unleash/yggdrasil/issues/144)**
+    - Makes random distribution better distributed ([`5c8ba06`](https://github.com/Unleash/yggdrasil/commit/5c8ba06563dc48a13188fe1fabb4794e5959ef9c))
+</details>
+
+## v0.13.1 (2024-09-06)
+
+<csr-id-645f6062535ff1ee966ed544639864d4872a1e55/>
+
+### Chore
+
+ - <csr-id-645f6062535ff1ee966ed544639864d4872a1e55/> add changelog
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 5 commits contributed to the release.
+ - 48 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#139](https://github.com/Unleash/yggdrasil/issues/139)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#139](https://github.com/Unleash/yggdrasil/issues/139)**
+    - Fix/inversion always supported ([`9bd0aac`](https://github.com/Unleash/yggdrasil/commit/9bd0aace1b304b6c9660bb52f63abd2fa0755a62))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.13.1 ([`f8de91a`](https://github.com/Unleash/yggdrasil/commit/f8de91a2516fb70616e23c68357c75fad7a6ac2d))
+    - Add changelog ([`645f606`](https://github.com/Unleash/yggdrasil/commit/645f6062535ff1ee966ed544639864d4872a1e55))
+    - Adjusting changelogs prior to release of unleash-yggdrasil v0.13.1 ([`2130699`](https://github.com/Unleash/yggdrasil/commit/2130699da93d945f35db5d27ce742f3abdc4272f))
+    - Merge branch 'main' of github.com:Unleash/yggdrasil ([`abc78e7`](https://github.com/Unleash/yggdrasil/commit/abc78e7ba019dae94536d200e5ed7f76e2b43847))
+</details>
+
 ## v0.13.0 (2024-07-19)
+
+<csr-id-4743bd064343e4971dbcb8098edf73cc4219e962/>
+<csr-id-c1b10122322044b12e62c7bf873982c2c46f3c3f/>
 
 ### Chore
 
@@ -16,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release over the course of 22 calendar days.
+ - 3 commits contributed to the release over the course of 23 calendar days.
  - 84 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#130](https://github.com/Unleash/yggdrasil/issues/130)
@@ -30,6 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#130](https://github.com/Unleash/yggdrasil/issues/130)**
     - Apply some lints and fixes ([`c1b1012`](https://github.com/Unleash/yggdrasil/commit/c1b10122322044b12e62c7bf873982c2c46f3c3f))
  * **Uncategorized**
+    - Release unleash-yggdrasil v0.13.0, safety bump 2 crates ([`b6c0a25`](https://github.com/Unleash/yggdrasil/commit/b6c0a25793de0c6d2f3ef0cfe2f6c7c753320b96))
     - Update unleash-types and chrono ([`4743bd0`](https://github.com/Unleash/yggdrasil/commit/4743bd064343e4971dbcb8098edf73cc4219e962))
 </details>
 

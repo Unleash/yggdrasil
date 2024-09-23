@@ -1,7 +1,6 @@
 extern crate pest;
 
 use std::collections::HashSet;
-use std::env;
 use std::io::Cursor;
 use std::net::IpAddr;
 use std::num::ParseFloatError;
@@ -11,7 +10,6 @@ use crate::sendable_closures::{SendableContextResolver, SendableFragment};
 use crate::state::SdkError;
 use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
-use hostname;
 use ipnetwork::{IpNetwork, IpNetworkError};
 use murmur3::murmur3_32;
 use pest::iterators::{Pair, Pairs};
@@ -19,6 +17,11 @@ use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
 use rand::Rng;
 use semver::Version;
+
+#[cfg(feature = "hostname")]
+use hostname;
+#[cfg(feature = "hostname")]
+use std::env;
 
 #[derive(Parser)]
 #[grammar = "strategy_grammar.pest"]
@@ -129,7 +132,16 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
         Rule::remote_address => Box::new(|context: &Context| context.remote_address.clone()),
         Rule::current_time => Box::new(|context: &Context| context.current_time.clone()),
         Rule::random => {
-            Box::new(|_: &Context| Some(rand::thread_rng().gen_range(0..99).to_string()))
+            let value = child
+                .into_inner()
+                .next()
+                .map(|rule| {
+                    rule.as_str().parse::<usize>().expect(
+                        "Failed to parse random content value in the grammar, this shouldn't happen",
+                    )
+                })
+                .unwrap_or(100);
+            Box::new(move |_: &Context| Some(rand::thread_rng().gen_range(1..value).to_string()))
         }
         Rule::property => context_property(child.into_inner()),
         _ => unreachable!(),
@@ -368,37 +380,29 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
         .transpose()?;
 
     Ok(Box::new(move |context: &Context| {
-        let stickiness = stickiness_resolver(context);
+        if let Some(stickiness) = stickiness_resolver(context) {
 
-        if stickiness.is_none() {
-            return false;
-        }
+            let group_id = match &group_id {
+                Some(group_id) => group_id.clone(),
+                None => context.toggle_name.clone(),
+            };
 
-        let group_id = match &group_id {
-            Some(group_id) => group_id.clone(),
-            None => context.toggle_name.clone(),
-        };
+            let hash = normalized_hash(&group_id, &stickiness, 100, 0);
 
-        let hash = if let Some(stickiness) = stickiness {
-            normalized_hash(&group_id, &stickiness, 100, 0)
+            if let Ok(hash) = hash {
+                hash <= percent_rollout.into()
+            } else {
+                // This should probably never occur, it only happens if we
+                // don't feed enough input to the hashing function
+                false
+            }
         } else {
-            // The original code does something different here - if we're using the
-            // default strategy it generates a string of a number between 1 and 101
-            // then uses that as the hash. This instead doesn't do that and just
-            // uses a random number in place of the hash. Pretty sure it's the same thing
-            Ok(rand::thread_rng().gen_range(0..99) as u32)
-        };
-
-        if let Ok(hash) = hash {
-            hash <= percent_rollout.into()
-        } else {
-            // This should probably never occur, it only happens if we
-            // don't feed enough input to the hashing function
             false
         }
     }))
 }
 
+#[cfg(feature = "hostname")]
 fn get_hostname() -> CompileResult<String> {
     //This is primarily for testing purposes
     if let Ok(hostname_env) = env::var("hostname") {
@@ -412,6 +416,13 @@ fn get_hostname() -> CompileResult<String> {
                 .into_string()
                 .map_err(|_| SdkError::StrategyEvaluationError)
         })
+}
+
+#[cfg(not(feature = "hostname"))]
+fn get_hostname() -> CompileResult<String> {
+    Err(SdkError::StrategyParseError(
+        "Hostname is not supported on this platform".into(),
+    ))
 }
 
 fn hostname_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
@@ -1066,37 +1077,42 @@ mod tests {
         assert!(rule(&context));
     }
 
-    #[test]
-    fn evaluates_host_name_constraint_correctly() {
-        std::env::set_var("hostname", "DOS");
+    #[cfg(feature = "hostname")]
+    mod hostname_tests {
+        use super::*;
 
-        let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
-        let context = Context::default();
-        assert!(rule(&context));
+        #[test]
+        fn evaluates_host_name_constraint_correctly() {
+            std::env::set_var("hostname", "DOS");
 
-        std::env::remove_var("hostname");
-    }
+            let rule = compile_rule("hostname in [\"DOS\"]").unwrap();
+            let context = Context::default();
+            assert!(rule(&context));
 
-    #[test]
-    fn evaluates_host_name_to_false_when_missing_hostname_values() {
-        std::env::set_var("hostname", "DOS");
+            std::env::remove_var("hostname");
+        }
 
-        let rule = compile_rule("hostname in [\"\"]").unwrap();
-        let context = Context::default();
-        assert!(!rule(&context));
+        #[test]
+        fn evaluates_host_name_to_false_when_missing_hostname_values() {
+            std::env::set_var("hostname", "DOS");
 
-        std::env::remove_var("hostname");
-    }
+            let rule = compile_rule("hostname in [\"\"]").unwrap();
+            let context = Context::default();
+            assert!(!rule(&context));
 
-    #[test]
-    fn hostname_constraint_ignores_casing() {
-        std::env::set_var("hostname", "DaRWin");
+            std::env::remove_var("hostname");
+        }
 
-        let rule = compile_rule("hostname in [\"dArWin\", \"pop-os\"]").unwrap();
-        let context = Context::default();
-        assert!(rule(&context));
+        #[test]
+        fn hostname_constraint_ignores_casing() {
+            std::env::set_var("hostname", "DaRWin");
 
-        std::env::remove_var("hostname");
+            let rule = compile_rule("hostname in [\"dArWin\", \"pop-os\"]").unwrap();
+            let context = Context::default();
+            assert!(rule(&context));
+
+            std::env::remove_var("hostname");
+        }
     }
 
     #[test_case("127.0.0.1", "127.0.0.1", true; "Exact match")]

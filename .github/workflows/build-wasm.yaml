@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'wasm-engine/**'
+      - 'yggdrasilwasm/**'
       # Build in main if anything changes in yggdrasil or the ffi layer
       - 'unleash-yggdrasil/src/**.rs'
       - 'yggdrasilffi/src/**.rs'
@@ -13,7 +13,7 @@ on:
       - '*'
   pull_request:
     paths:
-      - 'wasm-engine/**'
+      - 'yggdrasilwasm/**'
   workflow_dispatch:
     inputs:
       version:
@@ -37,4 +37,22 @@ jobs:
         uses: jetli/wasm-pack-action@v0.3.0
 
       - name: Build WASM
-        run: wasm-pack build --target nodejs
+        run: |
+          cd yggdrasilwasm
+          wasm-pack build --target nodejs
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Get client spec
+        uses: actions/checkout@v4
+        with:
+          repository: Unleash/client-specification
+          ref: v5.1.0
+          path: client-specification
+
+      - name: Run e2e tests
+        run: |
+          cd yggdrasilwasm/e2e-tests
+          bun i
+          bun test

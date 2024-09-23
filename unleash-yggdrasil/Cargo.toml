@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "unleash-yggdrasil"
-version = "0.13.0"
+version = "0.13.2"
 description = "This is the Unleash SDK domain logic extracted into a library to facilitate building your own Unleash SDKs in anything, anywhere."
 license = "MIT"
 
@@ -20,7 +20,7 @@ convert_case = "0.6.0"
 unleash-types = "0.13.0"
 chrono = "0.4.38"
 dashmap = "5.5.0"
-hostname = "0.3.1"
+hostname = { version = "0.3.1", optional = true }
 ipnetwork = "0.20.0"
 
 [dependencies.serde]
