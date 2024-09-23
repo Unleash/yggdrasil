@@ -38,6 +38,7 @@ def to_variant(raw_variant)
   {
     name: raw_variant[:name],
     enabled: raw_variant[:enabled],
+    feature_enabled: raw_variant[:featureEnabled],
     payload: payload,
   }
 end

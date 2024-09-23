@@ -131,6 +131,7 @@ RSpec.describe 'Client Specification' do
             expect(result[:name]).to eq(expected_result[:name])
             expect(result[:payload]).to eq(expected_result[:payload])
             expect(result[:enabled]).to eq(expected_result[:enabled])
+            expect(result[:feature_enabled]).to eq(expected_result[:feature_enabled])
           end
         end
       end
