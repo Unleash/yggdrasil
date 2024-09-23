@@ -105,6 +105,8 @@ jobs:
             ruby: jruby-9.3
           - java: 17
             ruby: jruby-9.4
+          - java: 21
+            ruby: jruby-9.4
 
     needs: build-binaries
     steps:
