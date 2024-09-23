@@ -529,14 +529,12 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> Option<VariantDef> {
-        self.get_toggle(name).and_then(|toggle| {
+        self.get_toggle(name).map(|toggle| {
             if self.enabled(toggle, context, external_values) {
-                Some(
-                    self.check_variant_by_toggle(toggle, context)
-                        .unwrap_or_default(),
-                )
+                self.check_variant_by_toggle(toggle, context)
+                        .unwrap_or_default()
             } else {
-                Some(VariantDef::default())
+                VariantDef::default()
             }
         })
     }
