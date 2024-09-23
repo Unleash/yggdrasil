@@ -531,9 +531,12 @@ impl EngineState {
     ) -> Option<VariantDef> {
         self.get_toggle(name).and_then(|toggle| {
             if self.enabled(toggle, context, external_values) {
-                self.check_variant_by_toggle(toggle, context)
+                Some(
+                    self.check_variant_by_toggle(toggle, context)
+                        .unwrap_or_default(),
+                )
             } else {
-                None
+                Some(VariantDef::default())
             }
         })
     }
@@ -650,6 +653,7 @@ impl VariantDef {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ExtendedVariantDef {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
