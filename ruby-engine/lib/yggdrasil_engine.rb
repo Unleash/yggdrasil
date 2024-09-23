@@ -7,16 +7,30 @@ ERROR_RESPONSE = 'Error'.freeze
 OK_RESPONSE = 'Ok'.freeze
 
 def platform_specific_lib
-  case RbConfig::CONFIG['host_os']
+  os = RbConfig::CONFIG['host_os']
+  cpu = RbConfig::CONFIG['host_cpu']
+
+  extension = case os
   when /darwin|mac os/
-    'libyggdrasilffi.dylib'
+    'dylib'
   when /linux/
-    'libyggdrasilffi.so'
+    'so'
   when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
-    'libyggdrasilffi.dll'
+    'dll'
   else
-    raise "unsupported platform #{RbConfig::CONFIG['host_os']}"
+    raise "unsupported platform #{os}"
   end
+
+  arch_suffix = case cpu
+  when /x86_64/
+    'x86_64'
+  when /arm|aarch64/
+    'arm64'
+  else
+    raise "unsupported architecture #{cpu}"
+  end
+
+  "libyggdrasilffi_#{arch_suffix}.#{extension}"
 end
 
 def to_variant(raw_variant)
@@ -24,6 +38,7 @@ def to_variant(raw_variant)
   {
     name: raw_variant[:name],
     enabled: raw_variant[:enabled],
+    feature_enabled: raw_variant[:featureEnabled],
     payload: payload,
   }
 end

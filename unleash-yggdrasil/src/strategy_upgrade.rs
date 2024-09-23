@@ -430,7 +430,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(output, "user_id in [\"123\",\"222\",\"88\"]".to_string())
     }
 
@@ -448,7 +448,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(output, "user_id in [\"123\",\"222\",\"88\"]".to_string())
     }
 
@@ -472,7 +472,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(output, "(true and (user_id in [\"7\"]))".to_string())
     }
 
@@ -496,7 +496,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(
             output,
             "(true and (user_id in [\"7\"] and user_id in [\"7\"]))".to_string()
@@ -544,7 +544,7 @@ mod tests {
 
     #[test]
     fn no_strategy_is_always_true() {
-        let output = upgrade(&vec![], &HashMap::new());
+        let output = upgrade(&[], &HashMap::new());
         assert_eq!(output.as_str(), "true")
     }
 
@@ -568,7 +568,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             "(true and (context[\"country\"] in [\"norway\"]))"
@@ -592,7 +592,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             "55% sticky on user_id with group_id of \"Feature.flexibleRollout.userId.55\""
@@ -615,7 +615,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(output.as_str(), "55% sticky on user_id");
     }
 
@@ -635,7 +635,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             "55% sticky on user_id | session_id | random[10000] with group_id of \"Feature.flexibleRollout.userId.55\""
@@ -657,7 +657,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             "55% sticky on user_id | session_id | random[10000]"
@@ -681,7 +681,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             format!(
@@ -707,7 +707,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert_eq!(
             output.as_str(),
             format!("55% sticky on random[10000] with group_id of \"Feature.flexibleRollout.userId.55\"")
@@ -806,7 +806,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![custom_strategy], &HashMap::new());
+        let output = upgrade(&[custom_strategy], &HashMap::new());
         assert_eq!(output.as_str(), "external_value[\"customStrategy1\"]")
     }
 
@@ -874,7 +874,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new());
         assert!(compile_rule(&output).is_ok());
         assert_eq!(output.as_str(), "hostname in [\"DOS\", \"pop-os\"]");
     }

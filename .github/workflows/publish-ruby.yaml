@@ -1,8 +1,5 @@
 name: Build Ruby
 on:
-  push:
-    tags:
-      - "*"
   workflow_dispatch:
 
 jobs:
@@ -14,11 +11,11 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             output: libyggdrasilffi.so
-            name: libyggdrasilffi.so
+            name: libyggdrasilffi_x86_64.so
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             output: yggdrasilffi.dll
-            name: yggdrasilffi.dll
+            name: libyggdrasilffi_x86_64.dll
           - os: macos-13
             target: x86_64-apple-darwin
             output: libyggdrasilffi.dylib
@@ -51,7 +48,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.output }}
+        name: ${{ matrix.name }}
         path: target/${{ matrix.target }}/release/${{ matrix.name }}
 
   build_single_binary_gems:
@@ -60,9 +57,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            binary: libyggdrasilffi.so
+            binary: libyggdrasilffi_x86_64.so
           - os: windows-latest
-            binary: yggdrasilffi.dll
+            binary: libyggdrasilffi_x86_64.dll
           - os: macos-13
             binary: libyggdrasilffi_x86_64.dylib
             platform: x86_64-darwin
@@ -104,6 +101,8 @@ jobs:
           - java: 11
             ruby: jruby-9.3
           - java: 17
+            ruby: jruby-9.4
+          - java: 21
             ruby: jruby-9.4
 
     needs: build-binaries

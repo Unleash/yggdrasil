@@ -529,11 +529,12 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> Option<VariantDef> {
-        self.get_toggle(name).and_then(|toggle| {
+        self.get_toggle(name).map(|toggle| {
             if self.enabled(toggle, context, external_values) {
                 self.check_variant_by_toggle(toggle, context)
+                        .unwrap_or_default()
             } else {
-                None
+                VariantDef::default()
             }
         })
     }
@@ -650,6 +651,7 @@ impl VariantDef {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ExtendedVariantDef {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -673,11 +675,11 @@ mod test {
     use serde::Deserialize;
     use std::{collections::HashMap, fs};
     use test_case::test_case;
-    use unleash_types::client_features::{ClientFeatures, FeatureDependency, Override};
+    use unleash_types::client_features::{ClientFeatures, FeatureDependency, Override, Payload};
 
     use crate::{
         check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
-        EngineState, ExtendedVariantDef, VariantDef,
+        EngineState, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -705,7 +707,15 @@ mod test {
         pub(crate) description: String,
         pub(crate) context: Context,
         pub(crate) toggle_name: String,
-        pub(crate) expected_result: ExtendedVariantDef,
+        pub(crate) expected_result: TestCaseVariantDef,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct TestCaseVariantDef {
+        pub name: String,
+        pub payload: Option<Payload>,
+        pub enabled: bool,
+        pub feature_enabled: bool,
     }
 
     fn load_spec(spec_name: &str) -> TestSuite {
@@ -763,7 +773,10 @@ mod test {
                 );
                 let expected = test_case.expected_result;
                 let actual = engine.get_variant(&test_case.toggle_name, &test_case.context, &None);
-                assert_eq!(expected, actual);
+                assert_eq!(expected.enabled, actual.enabled);
+                assert_eq!(expected.feature_enabled, actual.feature_enabled);
+                assert_eq!(expected.name, actual.name);
+                assert_eq!(expected.payload, actual.payload);
             }
         }
     }

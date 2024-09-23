@@ -5,6 +5,16 @@ require_relative '../lib/yggdrasil_engine'
 index_file_path = '../client-specification/specifications/index.json'
 test_suites = JSON.parse(File.read(index_file_path))
 
+def test_suite_variant(base_variant)
+  payload = base_variant[:payload] && base_variant[:payload].transform_keys(&:to_s)
+  {
+    name: base_variant[:name],
+    enabled: base_variant[:enabled],
+    feature_enabled: base_variant[:feature_enabled],
+    payload: payload,
+  }
+end
+
 RSpec.describe YggdrasilEngine do
   let(:yggdrasil_engine) { YggdrasilEngine.new }
 
@@ -119,18 +129,20 @@ RSpec.describe 'Client Specification' do
         describe "Variant Test '#{test[:description]}'" do
           let(:context) { test[:context] }
           let(:toggle_name) { test[:toggleName] }
-          let(:expected_result) { to_variant(test[:expectedResult]) }
+          let(:expected_result) { test_suite_variant(test[:expectedResult]) }
 
           it 'returns correct result for `get_variant` method' do
             result = yggdrasil_engine.get_variant(toggle_name, context) || {
               :name => 'disabled',
               :payload => nil,
-              :enabled => false
+              :enabled => false,
+              :feature_enabled => false
             }
 
             expect(result[:name]).to eq(expected_result[:name])
             expect(result[:payload]).to eq(expected_result[:payload])
             expect(result[:enabled]).to eq(expected_result[:enabled])
+            expect(result[:feature_enabled]).to eq(expected_result[:feature_enabled])
           end
         end
       end
