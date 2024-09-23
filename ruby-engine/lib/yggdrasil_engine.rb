@@ -25,7 +25,7 @@ def platform_specific_lib
   when /x86_64/
     'x86_64'
   when /arm|aarch64/
-    'arm'
+    'arm64'
   else
     raise "unsupported architecture #{cpu}"
   end
