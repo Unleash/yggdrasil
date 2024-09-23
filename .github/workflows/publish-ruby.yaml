@@ -1,8 +1,5 @@
 name: Build Ruby
 on:
-  push:
-    tags:
-      - "*"
   workflow_dispatch:
 
 jobs:
