@@ -77,6 +77,7 @@ jobs:
             binary: libyggdrasilffi_x86_64.so
           - os: ubuntu-latest
             binary: libyggdrasilffi_arm64.so
+            platform: arm64-linux
           - os: windows-latest
             binary: libyggdrasilffi_x86_64.dll
           - os: macos-13
