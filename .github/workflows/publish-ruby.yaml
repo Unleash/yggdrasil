@@ -38,7 +38,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install cross (if needed)
-      if: ${{ matrix.cross == 'true' }}
+      if: ${{ matrix.cross == true }}
       run: cargo install cross
 
     - name: Install rust
@@ -51,11 +51,11 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Build Rust Library (Cross)
-      if: ${{ matrix.cross == 'true' }}
+      if: ${{ matrix.cross == true }}
       run: cross build -p yggdrasilffi --release --target ${{ matrix.target }};
 
     - name: Build Rust Library (Cargo)
-      if: ${{ matrix.cross != 'true' }}
+      if: ${{ matrix.cross == false }}
       run: cargo build -p yggdrasilffi --release --target ${{ matrix.target }};
 
     - name: Rename Output Binary
