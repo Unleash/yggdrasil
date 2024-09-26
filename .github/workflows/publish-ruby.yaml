@@ -18,6 +18,11 @@ jobs:
             output: libyggdrasilffi.so
             name: libyggdrasilffi_arm64.so
             cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            output: libyggdrasilffi.so
+            name: libyggdrasilffi_aarch64.so
+            cross: true
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             output: yggdrasilffi.dll
@@ -78,6 +83,9 @@ jobs:
           - os: ubuntu-latest
             binary: libyggdrasilffi_arm64.so
             platform: arm-linux
+          - os: ubuntu-latest
+            binary: libyggdrasilffi_aarch64.so
+            platform: aarch64-linux
           - os: windows-latest
             binary: libyggdrasilffi_x86_64.dll
           - os: macos-13
