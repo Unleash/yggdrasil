@@ -12,21 +12,39 @@ jobs:
             target: x86_64-unknown-linux-gnu
             output: libyggdrasilffi.so
             name: libyggdrasilffi_x86_64.so
+            cross: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            output: libyggdrasilffi.so
+            name: libyggdrasilffi_arm64.so
+            cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            output: libyggdrasilffi.so
+            name: libyggdrasilffi_aarch64.so
+            cross: true
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             output: yggdrasilffi.dll
             name: libyggdrasilffi_x86_64.dll
+            cross: false
           - os: macos-13
             target: x86_64-apple-darwin
             output: libyggdrasilffi.dylib
             name: libyggdrasilffi_x86_64.dylib
+            cross: false
           - os: macos-latest
             target: aarch64-apple-darwin
             output: libyggdrasilffi.dylib
             name: libyggdrasilffi_arm64.dylib
+            cross: false
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Install cross (if needed)
+      if: ${{ matrix.cross == true }}
+      run: cargo install cross
 
     - name: Install rust
       run: |
@@ -37,9 +55,13 @@ jobs:
     - name: Rust cache
       uses: Swatinem/rust-cache@v2
 
-    - name: Build Rust Library
-      run: |
-        cargo build -p yggdrasilffi --release --target ${{ matrix.target }}
+    - name: Build Rust Library (Cross)
+      if: ${{ matrix.cross == true }}
+      run: cross build -p yggdrasilffi --release --target ${{ matrix.target }};
+
+    - name: Build Rust Library (Cargo)
+      if: ${{ matrix.cross == false }}
+      run: cargo build -p yggdrasilffi --release --target ${{ matrix.target }};
 
     - name: Rename Output Binary
       run: |
@@ -58,6 +80,12 @@ jobs:
         include:
           - os: ubuntu-latest
             binary: libyggdrasilffi_x86_64.so
+          - os: ubuntu-latest
+            binary: libyggdrasilffi_arm64.so
+            platform: arm-linux
+          - os: ubuntu-latest
+            binary: libyggdrasilffi_aarch64.so
+            platform: aarch64-linux
           - os: windows-latest
             binary: libyggdrasilffi_x86_64.dll
           - os: macos-13

@@ -24,8 +24,10 @@ def platform_specific_lib
   arch_suffix = case cpu
   when /x86_64/
     'x86_64'
-  when /arm|aarch64/
+  when /arm/
     'arm64'
+  when /aarch64/
+    'aarch64'
   else
     raise "unsupported architecture #{cpu}"
   end
