@@ -14,5 +14,5 @@ name = "yggdrasilffi"
 libc = "0.2"
 serde_json = "1.0.68"
 serde = { version = "1.0.68", features = ["derive"] }
-unleash-types = "0.13.0"
+unleash-types = "0.14.0"
 unleash-yggdrasil = {path = "../unleash-yggdrasil"}
