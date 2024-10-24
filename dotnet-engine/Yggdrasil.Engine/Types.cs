@@ -29,22 +29,20 @@ public class EngineResponse<TValue> : EngineResponse
 
 public class Variant
 {
-    public Variant(string name, Payload? payload, bool enabled, bool feature_enabled)
+    public Variant(string name, Payload? payload, bool enabled, bool featureEnabled)
     {
         Name = name;
         Payload = payload;
         Enabled = enabled;
-        Feature_Enabled = feature_enabled;
+        FeatureEnabled = featureEnabled;
     }
 
     public static readonly Variant DISABLED_VARIANT = new Variant("disabled", null, false, false);
 
     public string Name { get; set; }
     public Payload? Payload { get; set; }
-    [JsonPropertyName("enabled")]
     public bool Enabled { get; set; }
-    [JsonPropertyName("feature_enabled")]
-    public bool Feature_Enabled { get; set; }
+    public bool FeatureEnabled { get; set; }
 }
 
 public class Payload
@@ -115,7 +113,7 @@ public class MetricsBucket
 public interface IStrategy
 {
     /// <summary>
-    /// Gets the stragegy name 
+    /// Gets the stragegy name
     /// </summary>
     string Name { get; }
 
