@@ -15,6 +15,20 @@ type VariantTest = BaseTest & {
   expectedResult: Record<string, unknown>
 }
 
+type VariantResponse = {
+  featureEnabled: boolean,
+  payload: Record<string, string>,
+  enabled: boolean,
+  name: string
+}
+
+type LegacyVariantResponse = {
+  feature_enabled: boolean,
+  payload: Record<string, string>,
+  enabled: boolean,
+  name: string
+}
+
 type TestSuite = {
   state: Record<string, unknown>
   tests: ToggleTest[]
@@ -26,9 +40,9 @@ const DISABLED_VARIANT = {
   enabled: false
 }
 
-const getDisabledVariant = (feature_enabled: boolean) => ({
+const getDisabledVariant = (featureEnabled: boolean) => ({
   ...DISABLED_VARIANT,
-  feature_enabled
+  featureEnabled
 })
 
 type Response = {
@@ -84,7 +98,8 @@ describe('Client Spec Tests', () => {
 
         for (const variantTest of variantTests) {
           const toggleName = variantTest.toggleName
-          const expectedResult = JSON.stringify(variantTest.expectedResult)
+          const expectedResult = variantTest.expectedResult as any as LegacyVariantResponse;
+
 
           test(`Variant Test: ${variantTest.description}`, () => {
             const variantResponse = engine.checkVariant(
@@ -99,14 +114,17 @@ describe('Client Spec Tests', () => {
               undefined
             )
 
-            const feature_enabled =
+            const featureEnabled =
               extractResult<boolean>(toggleResponse) ?? false
 
             const result =
-              extractResult(variantResponse) ??
-              getDisabledVariant(feature_enabled)
+              extractResult<VariantResponse>(variantResponse) ??
+              getDisabledVariant(featureEnabled)
 
-            expect(JSON.stringify(result)).toBe(expectedResult)
+            expect(result.name).toBe(expectedResult.name);
+            expect(result.enabled).toBe(expectedResult.enabled);
+            expect(result.featureEnabled).toBe(expectedResult.feature_enabled);
+            expect(result.payload).toEqual(expectedResult.payload);
           })
         }
       })
