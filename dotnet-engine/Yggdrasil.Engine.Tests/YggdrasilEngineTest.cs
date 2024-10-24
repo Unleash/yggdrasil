@@ -6,7 +6,25 @@ using System;
 using Newtonsoft.Json.Linq;
 using Yggdrasil;
 using Yggdrasil.Test;
+using System.Text.Json.Serialization;
 
+public class TestVariantReadModel
+{
+    public TestVariantReadModel(string name, Payload? payload, bool enabled, bool featureEnabled)
+    {
+        Name = name;
+        Payload = payload;
+        Enabled = enabled;
+        FeatureEnabled = featureEnabled;
+    }
+
+    public string Name { get; set; }
+    public Payload? Payload { get; set; }
+    public bool Enabled { get; set; }
+
+    [JsonPropertyName("feature_enabled")]
+    public bool FeatureEnabled { get; private set; }
+}
 
 public class Tests
 {
@@ -93,14 +111,16 @@ public class Tests
                 var contextJson = test["context"].ToString();
                 var context = JsonSerializer.Deserialize<Context>(contextJson, options) ?? new Context();
                 var toggleName = (string)test["toggleName"];
-                // Silly hack to apply formatting to the string from the spec
-                var expectedResult = JsonSerializer.Serialize(JsonSerializer.Deserialize<Variant>(test["expectedResult"].ToString(), options), options);
-
+                // Silly hack to deal with the legacy "feature_enabled" property on the specs
+                var expectedResult = JsonSerializer.Deserialize<TestVariantReadModel>(test["expectedResult"].ToString(), options);
                 var enabled = yggdrasilEngine.IsEnabled(toggleName, context) ?? false;
                 var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant("disabled", null, false, enabled);
-                var jsonResult = JsonSerializer.Serialize(result, options);
 
-                Assert.AreEqual(expectedResult, jsonResult, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");
+                Assert.AreEqual(expectedResult!.Name, result.Name, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Name}, got {result.Name}");
+                Assert.AreEqual(expectedResult!.Enabled, result.Enabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Enabled}, got {result.Enabled}");
+                Assert.AreEqual(expectedResult!.FeatureEnabled, result.FeatureEnabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.FeatureEnabled}, got {result.FeatureEnabled}");
+                Assert.AreEqual(expectedResult!.Payload?.Type, result.Payload?.Type, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Payload?.Type}, got {result.Payload?.Type}");
+                Assert.AreEqual(expectedResult!.Payload?.Value, result.Payload?.Value, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Payload?.Value}, got {result.Payload?.Value}");
             }
 
             Console.WriteLine($"Passed client specification {suite}");
