@@ -3,77 +3,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-binaries:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            output: libyggdrasilffi.so
-            name: libyggdrasilffi_x86_64.so
-            cross: false
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            output: libyggdrasilffi.so
-            name: libyggdrasilffi_arm64.so
-            cross: true
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            output: libyggdrasilffi.so
-            name: libyggdrasilffi_aarch64.so
-            cross: true
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
-            output: yggdrasilffi.dll
-            name: libyggdrasilffi_x86_64.dll
-            cross: false
-          - os: macos-13
-            target: x86_64-apple-darwin
-            output: libyggdrasilffi.dylib
-            name: libyggdrasilffi_x86_64.dylib
-            cross: false
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            output: libyggdrasilffi.dylib
-            name: libyggdrasilffi_arm64.dylib
-            cross: false
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install cross (if needed)
-      if: ${{ matrix.cross == true }}
-      run: cargo install cross
-
-    - name: Install rust
-      run: |
-        rustup set auto-self-update disable
-        rustup toolchain install stable --profile default
-        rustup show
-
-    - name: Rust cache
-      uses: Swatinem/rust-cache@v2
-
-    - name: Build Rust Library (Cross)
-      if: ${{ matrix.cross == true }}
-      run: cross build -p yggdrasilffi --release --target ${{ matrix.target }};
-
-    - name: Build Rust Library (Cargo)
-      if: ${{ matrix.cross == false }}
-      run: cargo build -p yggdrasilffi --release --target ${{ matrix.target }};
-
-    - name: Rename Output Binary
-      run: |
-        mv target/${{ matrix.target }}/release/${{ matrix.output }} target/${{ matrix.target }}/release/${{ matrix.name }}
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.name }}
-        path: target/${{ matrix.target }}/release/${{ matrix.name }}
-
   build_single_binary_gems:
+    needs: build-binaries
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -88,6 +19,9 @@ jobs:
             platform: aarch64-linux
           - os: windows-latest
             binary: libyggdrasilffi_x86_64.dll
+          - os: windows-latest
+            platform: arm64-mingw32
+            binary: libyggdrasilffi_arm64.dll
           - os: macos-13
             binary: libyggdrasilffi_x86_64.dylib
             platform: x86_64-darwin
@@ -114,6 +48,7 @@ jobs:
         run: |
           cd ruby-engine
           gem build yggdrasil-engine.gemspec
+          rspec
           gem push *.gem
         working-directory: ${{ github.workspace }}
         env:
