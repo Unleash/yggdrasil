@@ -3,6 +3,11 @@ on:
   workflow_dispatch:
 
 jobs:
+  no-op:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "No-op job to satisfy dependency requirements."
+
   build_single_binary_gems:
     needs: build-binaries
     runs-on: ${{ matrix.os }}
