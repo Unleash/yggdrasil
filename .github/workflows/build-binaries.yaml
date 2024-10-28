@@ -1,1 +1,119 @@
 
+name: Build Release Binaries
+
+on:
+  push:
+    tags:
+      - unleash-yggdrasil-*
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "The tag name for the release to upload binaries to, e.g. unleash-yggdrasil-v0.13.3"
+        required: true
+
+jobs:
+  build-binaries:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            output: libyggdrasilffi.so
+            name: libyggdrasilffi_x86_64.so
+            cross: false
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            output: libyggdrasilffi.so
+            name: libyggdrasilffi_arm64.so
+            cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            output: libyggdrasilffi.so
+            name: libyggdrasilffi_aarch64.so
+            cross: true
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            output: yggdrasilffi.dll
+            name: libyggdrasilffi_x86_64.dll
+            cross: false
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            output: yggdrasilffi.dll
+            name: libyggdrasilffi_arm64.dll
+            cross: false
+          - os: macos-13
+            target: x86_64-apple-darwin
+            output: libyggdrasilffi.dylib
+            name: libyggdrasilffi_x86_64.dylib
+            cross: false
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            output: libyggdrasilffi.dylib
+            name: libyggdrasilffi_arm64.dylib
+            cross: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install cross (if needed)
+      if: ${{ matrix.cross == true }}
+      run: cargo install cross
+
+    - name: Install rust
+      run: |
+        rustup set auto-self-update disable
+        rustup toolchain install stable --profile default
+        rustup show
+
+    - name: Rust cache
+      uses: Swatinem/rust-cache@v2
+
+    - name: Build Rust Library (Cross)
+      if: ${{ matrix.cross == true }}
+      run: cross build -p yggdrasilffi --release --target ${{ matrix.target }};
+
+    - name: Build Rust Library (Cargo)
+      if: ${{ matrix.cross == false }}
+      run: cargo build -p yggdrasilffi --release --target ${{ matrix.target }};
+
+    - name: Rename Output Binary
+      run: |
+        mv target/${{ matrix.target }}/release/${{ matrix.output }} target/${{ matrix.target }}/release/${{ matrix.name }}
+
+    - name: Set Tag Name
+      id: set_tag_name
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "tag=${{ github.event.inputs.release_tag }}" >> $GITHUB_ENV
+        else
+          echo "tag=${{ github.ref }}" | sed 's|refs/tags/||' >> $GITHUB_ENV
+        fi
+
+    - name: Get Release by Tag
+      id: get_release
+      uses: actions/github-script@v5
+      with:
+        script: |
+          const tag = process.env.tag;
+          const { data: releases } = await github.rest.repos.listReleases({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+          const release = releases.find(r => r.tag_name === tag);
+          if (release) {
+            return { release_id: release.id };
+          } else {
+            throw new Error(`Release with tag ${tag} not found.`);
+          }
+        result-encoding: json
+
+    - name: Upload Binary to Release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.get_release.outputs.release_id }}
+        asset_path: target/${{ matrix.target }}/release/${{ matrix.name }}
+        asset_name: "${{ matrix.name }}"
+        asset_content_type: application/octet-stream
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
