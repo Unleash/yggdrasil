@@ -29,7 +29,6 @@ jobs:
             binary: libyggdrasilffi_arm64.dylib
             platform: arm64-darwin
 
-    needs: build-binaries
     steps:
       - uses: actions/checkout@v4
 
