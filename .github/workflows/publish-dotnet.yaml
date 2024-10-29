@@ -10,18 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # - name: Download yggdrasilffi binaries
-      #   run: |
-      #     for rid in linux-x64 linux-arm64 win-x64 win-arm64 osx-x64 osx-arm64; do
-      #       mkdir -p dotnet-engine/runtimes/${rid}/native
-      #       echo "Downloading artifact for $rid"
-      #       if ! gh run download --name $rid --dir dotnet-engine/runtimes/${rid}/native; then
-      #         echo "Failed to download artifact for $rid, continuing..."
-      #       fi
-      #     done
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-
       - name: Set up .NET
         uses: actions/setup-dotnet@v3
         with:
@@ -36,6 +24,14 @@ jobs:
           echo "FFI Library Version: $CORE_VERSION"
           echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
 
+      - name: Download binaries
+        run: |
+          mkdir -p dotnet-engine/runtimes/linux-arm64/native
+          echo "Downloading artifact for linux-arm64"
+          curl -L -o dotnet-engine/runtimes/linux-arm64/native/libyggdrasilffi.so \
+            "https://github.com/Unleash/yggdrasil/releases/download/unleash-yggdrasil-v${{ env.CORE_VERSION }}/libyggdrasilffi_aarch64.so"
+
+
       - name: Restore dependencies
         run: |
           cd dotnet-engine
@@ -49,7 +45,7 @@ jobs:
       - name: Pack
         run: |
           cd dotnet-engine
-          dotnet pack dotnet-engine.sln -c Release --no-build --no-restore
+          dotnet pack dotnet-engine.sln -c Rele`ase --no-build --no-restore
 
       - name: Check package size
         run: |
