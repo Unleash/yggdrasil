@@ -24,11 +24,11 @@ jobs:
           echo "FFI Library Version: $CORE_VERSION"
           echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
 
-      - name: Set up artifact names
+      - name: Download and Organize Binaries
         env:
           RELEASE_VERSION: ${{ github.event.inputs.release_version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # List of binaries and corresponding target paths
           binaries=("libyggdrasilffi_aarch64.so linux/aarch64/libyggdrasilffi.so"
                     "libyggdrasilffi_arm64.dll windows/arm64/libyggdrasilffi.dll"
                     "libyggdrasilffi_arm64.dylib macos/arm64/libyggdrasilffi.dylib"
@@ -37,14 +37,8 @@ jobs:
                     "libyggdrasilffi_x86_64.dylib macos/x86_64/libyggdrasilffi.dylib"
                     "libyggdrasilffi_x86_64.so linux/x86_64/libyggdrasilffi.so")
 
-          echo "binaries=${binaries[@]}" >> $GITHUB_ENV
-
-      - name: Download and Organize Binaries
-        env:
-          RELEASE_VERSION: ${{ github.event.inputs.release_version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
           for binary in "${binaries[@]}"; do
+            # Split each item into source (release name) and target path
             src_name=$(echo "$binary" | awk '{print $1}')
             target_path=$(echo "$binary" | awk '{print $2}')
 
@@ -52,7 +46,6 @@ jobs:
 
             mkdir -p "$(dirname "$target_path")"
 
-            # Direct download using GitHub's release download URL
             curl -L -o "$target_path" \
               -H "Authorization: token $GITHUB_TOKEN" \
               "https://github.com/${{ github.repository }}/releases/download/${RELEASE_VERSION}/$src_name"
@@ -63,9 +56,6 @@ jobs:
               echo "Error: $src_name could not be downloaded to $target_path."
             fi
           done
-
-      - name: Verify Downloaded Files
-        run: |
           echo "Downloaded binaries:"
           find . -type f -name "libyggdrasilffi*"
 
