@@ -381,7 +381,6 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
     Ok(Box::new(move |context: &Context| {
         if let Some(stickiness) = stickiness_resolver(context) {
-
             let group_id = match &group_id {
                 Some(group_id) => group_id.clone(),
                 None => context.toggle_name.clone(),

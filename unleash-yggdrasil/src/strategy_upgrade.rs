@@ -968,6 +968,9 @@ mod tests {
 
         assert!(compile_rule(&rule).is_ok());
 
-        assert_eq!(rule.as_str(), "user_id in [\"[\\\"123\\\"\",\"\\\"456\\\"\",\"\\\"789\\\"]\"]");
+        assert_eq!(
+            rule.as_str(),
+            "user_id in [\"[\\\"123\\\"\",\"\\\"456\\\"\",\"\\\"789\\\"]\"]"
+        );
     }
 }

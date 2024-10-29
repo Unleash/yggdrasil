@@ -2,10 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
-use wasm_bindgen::prelude::*;
-use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef};
-use unleash_types::client_features::ClientFeatures;
 use std::collections::HashMap;
+use unleash_types::client_features::ClientFeatures;
+use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef};
+use wasm_bindgen::prelude::*;
 
 type CustomStrategyResults = HashMap<String, bool>;
 
@@ -70,7 +70,12 @@ impl Engine {
     }
 
     #[wasm_bindgen(js_name = checkEnabled)]
-    pub fn check_enabled(&self, toggle_name: &str, context: JsValue, custom_strategy_results: JsValue) -> JsValue {
+    pub fn check_enabled(
+        &self,
+        toggle_name: &str,
+        context: JsValue,
+        custom_strategy_results: JsValue,
+    ) -> JsValue {
         let context: Context = match from_value(context) {
             Ok(ctx) => ctx,
             Err(e) => {
@@ -83,23 +88,26 @@ impl Engine {
             }
         };
 
-        let custom_strategy_results: Option<CustomStrategyResults> = if custom_strategy_results.is_null() || custom_strategy_results.is_undefined() {
-            None
-        } else {
-            match from_value(custom_strategy_results) {
-                Ok(results) => Some(results),
-                Err(e) => {
-                    let response = Response::<bool> {
-                        status_code: ResponseCode::Error,
-                        value: None,
-                        error_message: Some(format!("Invalid strategy results: {}", e)),
-                    };
-                    return serde_wasm_bindgen::to_value(&response).unwrap();
+        let custom_strategy_results: Option<CustomStrategyResults> =
+            if custom_strategy_results.is_null() || custom_strategy_results.is_undefined() {
+                None
+            } else {
+                match from_value(custom_strategy_results) {
+                    Ok(results) => Some(results),
+                    Err(e) => {
+                        let response = Response::<bool> {
+                            status_code: ResponseCode::Error,
+                            value: None,
+                            error_message: Some(format!("Invalid strategy results: {}", e)),
+                        };
+                        return serde_wasm_bindgen::to_value(&response).unwrap();
+                    }
                 }
-            }
-        };
+            };
 
-        let check_enabled = self.engine.check_enabled(toggle_name, &context, &custom_strategy_results);
+        let check_enabled =
+            self.engine
+                .check_enabled(toggle_name, &context, &custom_strategy_results);
 
         let response = Response {
             status_code: ResponseCode::Ok,
@@ -111,7 +119,12 @@ impl Engine {
     }
 
     #[wasm_bindgen(js_name = checkVariant)]
-    pub fn check_variant(&self, toggle_name: &str, context: JsValue, custom_strategy_results: JsValue) -> JsValue {
+    pub fn check_variant(
+        &self,
+        toggle_name: &str,
+        context: JsValue,
+        custom_strategy_results: JsValue,
+    ) -> JsValue {
         let context: Context = match from_value(context) {
             Ok(ctx) => ctx,
             Err(e) => {
@@ -124,26 +137,32 @@ impl Engine {
             }
         };
 
-        let custom_strategy_results: Option<CustomStrategyResults> = if custom_strategy_results.is_null() || custom_strategy_results.is_undefined() {
-            None
-        } else {
-            match from_value(custom_strategy_results) {
-                Ok(results) => Some(results),
-                Err(e) => {
-                    let response = Response::<ExtendedVariantDef> {
-                        status_code: ResponseCode::Error,
-                        value: None,
-                        error_message: Some(format!("Invalid strategy results: {}", e)),
-                    };
-                    return serde_wasm_bindgen::to_value(&response).unwrap();
+        let custom_strategy_results: Option<CustomStrategyResults> =
+            if custom_strategy_results.is_null() || custom_strategy_results.is_undefined() {
+                None
+            } else {
+                match from_value(custom_strategy_results) {
+                    Ok(results) => Some(results),
+                    Err(e) => {
+                        let response = Response::<ExtendedVariantDef> {
+                            status_code: ResponseCode::Error,
+                            value: None,
+                            error_message: Some(format!("Invalid strategy results: {}", e)),
+                        };
+                        return serde_wasm_bindgen::to_value(&response).unwrap();
+                    }
                 }
-            }
-        };
+            };
 
-        let base_variant = self.engine.check_variant(toggle_name, &context, &custom_strategy_results);
-        let toggle_enabled = self.engine.is_enabled(toggle_name, &context, &custom_strategy_results);
+        let base_variant =
+            self.engine
+                .check_variant(toggle_name, &context, &custom_strategy_results);
+        let toggle_enabled =
+            self.engine
+                .is_enabled(toggle_name, &context, &custom_strategy_results);
 
-        let enriched_variant = base_variant.map(|variant| variant.to_enriched_response(toggle_enabled));
+        let enriched_variant =
+            base_variant.map(|variant| variant.to_enriched_response(toggle_enabled));
 
         let response = Response {
             status_code: ResponseCode::Ok,

@@ -35,6 +35,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Install required cargo packages for reporting format
         run: cargo install clippy-sarif sarif-fmt
+      - name: Check formatting
+        run: cargo fmt -- --check
       - name: Run rust-clippy
         run: |
           cargo clippy --all-features --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
