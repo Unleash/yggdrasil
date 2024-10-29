@@ -34,12 +34,22 @@ const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 pub struct CompiledToggle {
     pub name: String,
     pub enabled: bool,
+    pub feature_type: Option<String>,
     pub compiled_strategy: RuleFragment,
     pub compiled_variant_strategy: Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>>,
     pub variants: Vec<CompiledVariant>,
     pub impression_data: bool,
     pub project: String,
     pub dependencies: Vec<FeatureDependency>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToggleDefinition {
+    pub name: String,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub feature_type: Option<String>,
+    pub project: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -56,6 +66,7 @@ impl Default for CompiledToggle {
         Self {
             name: Default::default(),
             enabled: Default::default(),
+            feature_type: None,
             compiled_strategy: Box::new(|_| true),
             compiled_variant_strategy: None,
             variants: Default::default(),
@@ -146,6 +157,7 @@ pub fn compile_state(
             CompiledToggle {
                 name: toggle.name.clone(),
                 enabled: toggle.enabled,
+                feature_type: toggle.feature_type.clone(),
                 compiled_variant_strategy: variant_rule,
                 variants: compile_variants(&toggle.variants),
                 compiled_strategy: compile_rule(rule.as_str()).unwrap_or_else(|e| {
@@ -413,6 +425,25 @@ impl EngineState {
                 project: compiled_toggle.project.clone(),
             })
         })
+    }
+
+    pub fn list_known_toggles(&self) -> Vec<ToggleDefinition> {
+        self.compiled_state
+            .as_ref()
+            .map(|state| {
+                state
+                    .iter()
+                    .map(|pair| {
+                        let toggle = pair.1;
+                        ToggleDefinition {
+                            feature_type: toggle.feature_type.clone(),
+                            name: toggle.name.clone(),
+                            project: toggle.project.clone(),
+                        }
+                    })
+                    .collect::<Vec<ToggleDefinition>>()
+            })
+            .unwrap_or_default()
     }
 
     pub fn should_emit_impression_event(&self, name: &str) -> bool {

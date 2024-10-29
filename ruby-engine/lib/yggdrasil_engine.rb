@@ -61,6 +61,8 @@ class YggdrasilEngine
   attach_function :count_toggle, %i[pointer string bool], :void
   attach_function :count_variant, %i[pointer string string], :void
 
+  attach_function :list_known_toggles, [:pointer], :pointer
+
   def initialize
     @engine = YggdrasilEngine.new_engine
     @custom_strategy_handler = CustomStrategyHandler.new
@@ -123,6 +125,13 @@ class YggdrasilEngine
     metrics = JSON.parse(metrics_ptr.read_string, symbolize_names: true)
     YggdrasilEngine.free_response(metrics_ptr)
     metrics[:value]
+  end
+
+  def list_known_toggles
+    response_ptr = YggdrasilEngine.list_known_toggles(@engine)
+    response_json = response_ptr.read_string
+    YggdrasilEngine.free_response(response_ptr)
+    JSON.parse(response_json, symbolize_names: true)
   end
 
   def register_custom_strategies(strategies)

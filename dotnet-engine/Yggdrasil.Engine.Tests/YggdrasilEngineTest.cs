@@ -256,4 +256,33 @@ public class Tests
         var engine = new YggdrasilEngine();
         Assert.Throws<YggdrasilEngineException>(() => engine.TakeState(testData));
     }
+
+    [Test]
+    public void Features_That_Get_Set_Can_Be_Listed()
+    {
+        var testDataObject = new
+        {
+            Version = 2,
+            Features = new[] {
+                new {
+                    Name = "with.impression.data",
+                    Type = "release",
+                    Enabled = true,
+                    ImpressionData = true,
+                    Strategies = new [] {
+                        new {
+                            Name = "default",
+                            Parameters = new Dictionary<string, string>()
+                        }
+                    }
+                }
+            }
+        };
+
+        var testData = JsonSerializer.Serialize(testDataObject, options);
+        var engine = new YggdrasilEngine();
+        engine.TakeState(testData);
+        var knownFeatures = engine.ListKnownToggles();
+        Assert.AreEqual(1, knownFeatures.Count);
+    }
 }

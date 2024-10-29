@@ -193,4 +193,17 @@ impl Engine {
 
         serde_wasm_bindgen::to_value(&response).unwrap()
     }
+
+    #[wasm_bindgen(js_name = listKnownFeatures)]
+    pub fn list_known_toggles(&self) -> JsValue {
+        let known_toggles = self.engine.list_known_toggles();
+
+        let response = Response {
+            status_code: ResponseCode::Ok,
+            value: Some(known_toggles),
+            error_message: None,
+        };
+
+        serde_wasm_bindgen::to_value(&response).unwrap()
+    }
 }

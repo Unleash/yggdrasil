@@ -72,6 +72,21 @@ public class Payload
     }
 }
 
+public class FeatureDefinition
+{
+    public FeatureDefinition(string name, string project, string? type)
+    {
+        Name = name;
+        Project = project;
+        Type = type;
+    }
+    public string Name { get; set; }
+
+    public string Project { get; set; }
+
+    public string? Type { get; set; }
+}
+
 public class YggdrasilEngineException : Exception
 {
     public YggdrasilEngineException(string message) : base(message) { }
