@@ -466,7 +466,8 @@ impl EngineState {
         }
         let total_weight: u32 = variants.iter().map(|var| var.weight as u32).sum();
 
-        let stickiness = variants.first()
+        let stickiness = variants
+            .first()
             .and_then(|variant| variant.stickiness.clone());
 
         let target = get_seed(stickiness, context)
@@ -532,7 +533,7 @@ impl EngineState {
         self.get_toggle(name).map(|toggle| {
             if self.enabled(toggle, context, external_values) {
                 self.check_variant_by_toggle(toggle, context)
-                        .unwrap_or_default()
+                    .unwrap_or_default()
             } else {
                 VariantDef::default()
             }
