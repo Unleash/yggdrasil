@@ -45,7 +45,7 @@ jobs:
       - name: Pack
         run: |
           cd dotnet-engine
-          dotnet pack dotnet-engine.sln -c Rele`ase --no-build --no-restore
+          dotnet pack dotnet-engine.sln -c Release --no-build --no-restore
 
       - name: Check package size
         run: |
