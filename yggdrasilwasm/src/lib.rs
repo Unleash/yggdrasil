@@ -89,7 +89,7 @@ impl Engine {
         };
 
         let custom_strategy_results: Option<CustomStrategyResults> =
-                if custom_strategy_results.is_null() || custom_strategy_results.is_undefined() {
+            if custom_strategy_results.is_null() || custom_strategy_results.is_undefined() {
                 None
             } else {
                 match from_value(custom_strategy_results) {
