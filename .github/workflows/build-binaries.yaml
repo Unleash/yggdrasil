@@ -41,7 +41,7 @@ jobs:
             target: aarch64-pc-windows-msvc
             output: yggdrasilffi.dll
             name: libyggdrasilffi_arm64.dll
-            cross: false
+            cross: true
           - os: macos-13
             target: x86_64-apple-darwin
             output: libyggdrasilffi.dylib
@@ -71,7 +71,9 @@ jobs:
 
     - name: Build Rust Library (Cross)
       if: ${{ matrix.cross == true }}
-      run: cross build -p yggdrasilffi --release --target ${{ matrix.target }};
+      run: |
+        rustup target add aarch64-pc-windows-msvc
+        cross build -p yggdrasilffi --release --target ${{ matrix.target }};
 
     - name: Build Rust Library (Cargo)
       if: ${{ matrix.cross == false }}
@@ -81,8 +83,9 @@ jobs:
       run: |
         mv target/${{ matrix.target }}/release/${{ matrix.output }} target/${{ matrix.target }}/release/${{ matrix.name }}
 
-    - name: Set Tag Name
-      id: set_tag_name
+    - name: Set Tag Name on Linux/Mac
+      if: runner.os != 'Windows'
+      id: set_tag_name_unix
       run: |
         if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
           echo "tag=${{ github.event.inputs.release_tag }}" >> $GITHUB_ENV
@@ -90,28 +93,43 @@ jobs:
           echo "tag=${{ github.ref }}" | sed 's|refs/tags/||' >> $GITHUB_ENV
         fi
 
-    - name: Get Release by Tag
+    - name: Set Tag Name on Windows
+      if: runner.os == 'Windows'
+      id: set_tag_name_win
+      shell: pwsh
+      run: |
+        if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+          echo "tag=${{ github.event.inputs.release_tag }}" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        }
+        else {
+          $tag = $env:GITHUB_REF -replace 'refs/tags/', ''
+          echo "tag=$tag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        }
+
+    - name: Get Release Upload URL by Tag
       id: get_release
       uses: actions/github-script@v5
       with:
         script: |
           const tag = process.env.tag;
+          console.log(`Looking for release with tag: ${tag}`);
           const { data: releases } = await github.rest.repos.listReleases({
             owner: context.repo.owner,
             repo: context.repo.repo,
           });
           const release = releases.find(r => r.tag_name === tag);
           if (release) {
-            return { release_id: release.id };
+            core.setOutput("upload_url", release.upload_url);
           } else {
             throw new Error(`Release with tag ${tag} not found.`);
           }
         result-encoding: json
 
     - name: Upload Binary to Release
+      if: ${{ steps.get_release.outputs.upload_url }}
       uses: actions/upload-release-asset@v1
       with:
-        upload_url: ${{ steps.get_release.outputs.release_id }}
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
         asset_path: target/${{ matrix.target }}/release/${{ matrix.name }}
         asset_name: "${{ matrix.name }}"
         asset_content_type: application/octet-stream
