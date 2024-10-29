@@ -5,7 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.14.0 (2024-10-29)
+
+### Chore
+
+ - <csr-id-10369a0bd4b6139709aeb144ea23a6a51fa56a54/> add autoformatting config
+
+### New Features
+
+ - <csr-id-443f662a614ef3c207d8c4974b374db5ae93b956/> list known features
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 6 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#156](https://github.com/Unleash/yggdrasil/issues/156), [#157](https://github.com/Unleash/yggdrasil/issues/157)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#156](https://github.com/Unleash/yggdrasil/issues/156)**
+    - Add autoformatting config ([`10369a0`](https://github.com/Unleash/yggdrasil/commit/10369a0bd4b6139709aeb144ea23a6a51fa56a54))
+ * **[#157](https://github.com/Unleash/yggdrasil/issues/157)**
+    - List known features ([`443f662`](https://github.com/Unleash/yggdrasil/commit/443f662a614ef3c207d8c4974b374db5ae93b956))
+</details>
+
 ## v0.13.3 (2024-10-22)
+
+<csr-id-f8310a76fc2f23eb39127e88bbcef7bb49ff528c/>
 
 ### Chore
 
@@ -19,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release over the course of 28 calendar days.
+ - 3 commits contributed to the release over the course of 28 calendar days.
  - 32 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#145](https://github.com/Unleash/yggdrasil/issues/145), [#149](https://github.com/Unleash/yggdrasil/issues/149)
@@ -34,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - ARM ruby build ([`f8310a7`](https://github.com/Unleash/yggdrasil/commit/f8310a76fc2f23eb39127e88bbcef7bb49ff528c))
  * **[#149](https://github.com/Unleash/yggdrasil/issues/149)**
     - Move wasm engine to handle featureEnabled not feature_enabled ([`fc90974`](https://github.com/Unleash/yggdrasil/commit/fc9097467a2985d37559c7850b5f78b37a5b51fc))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.13.3 ([`c2f0cb7`](https://github.com/Unleash/yggdrasil/commit/c2f0cb758eb00d26d307aa7c76052f3b5529f6c6))
 </details>
 
 ## v0.13.2 (2024-09-20)
