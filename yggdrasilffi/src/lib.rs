@@ -8,7 +8,7 @@ use std::{
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
-use unleash_yggdrasil::{Context, EngineState, EvalWarning, ExtendedVariantDef};
+use unleash_yggdrasil::{Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition};
 
 #[derive(Serialize, Deserialize)]
 struct Response<T> {
@@ -384,6 +384,27 @@ pub unsafe extern "C" fn should_emit_impression_event(
     result_to_json_ptr(result)
 }
 
+/// Lists the features currently known by the engine, as set by take_state
+/// This is a reduced definition and only includes metadata for the feature,
+/// not the properties required to calculate the enabled state of the feature.
+/// Returns a JSON encoded response of type `Response`.
+///
+/// # Safety
+///
+/// The caller is responsible for ensuring the engine_ptr is a valid pointer to an unleash engine.
+/// An invalid pointer to unleash engine will result in undefined behaviour.
+/// The caller is responsible for freeing the allocated memory, in case the response is not null. This can be done by calling
+/// `free_response` and passing in the pointer returned by this method. Failure to do so will result in a leak.
+pub unsafe extern "C" fn list_known_toggles(engine_ptr: *mut c_void) -> *mut c_char {
+    let result: Result<Option<Vec<ToggleDefinition>>, FFIError> = (|| {
+        let engine = get_engine(engine_ptr)?;
+
+        Ok(Some(engine.list_known_toggles()))
+    })();
+
+    result_to_json_ptr(result)
+}
+
 #[cfg(test)]
 mod tests {
     use std::ffi::{CStr, CString};
@@ -589,6 +610,62 @@ mod tests {
 
             assert!(variant_response.feature_enabled);
             assert!(warnings.is_none());
+        }
+    }
+
+    #[test]
+    fn listing_known_features_returns_a_list_of_toggle_definitions() {
+        let engine_ptr = new_engine();
+
+        let client_features = ClientFeatures {
+            features: vec![
+                ClientFeature {
+                    name: "toggle1".into(),
+                    enabled: true,
+                    strategies: Some(vec![Strategy {
+                        name: "default".into(),
+                        constraints: None,
+                        parameters: None,
+                        segments: None,
+                        sort_order: None,
+                        variants: None,
+                    }]),
+                    ..Default::default()
+                },
+                ClientFeature {
+                    name: "toggle2".into(),
+                    enabled: true,
+                    strategies: Some(vec![Strategy {
+                        name: "default".into(),
+                        constraints: None,
+                        parameters: None,
+                        segments: None,
+                        sort_order: None,
+                        variants: None,
+                    }]),
+                    ..Default::default()
+                },
+            ],
+            query: None,
+            segments: None,
+            version: 2,
+        };
+
+        unsafe {
+            let engine = &mut *(engine_ptr as *mut EngineState);
+            engine.take_state(client_features);
+
+            let string_response = super::list_known_toggles(engine_ptr);
+            let response = CStr::from_ptr(string_response).to_str().unwrap();
+            let known_features: Response<Vec<super::ToggleDefinition>> =
+                serde_json::from_str(response).unwrap();
+
+            assert!(known_features.status_code == ResponseCode::Ok);
+            let known_features = known_features.value.expect("Expected known features");
+
+            assert_eq!(known_features.len(), 2);
+            assert!(known_features.iter().any(|t| t.name == "toggle1"));
+            assert!(known_features.iter().any(|t| t.name == "toggle2"));
         }
     }
 }
