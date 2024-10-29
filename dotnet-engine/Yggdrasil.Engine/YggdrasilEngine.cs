@@ -83,4 +83,15 @@ public class YggdrasilEngine
     {
         FFI.CountVariant(state, featureName, variantName);
     }
+
+    public ICollection<FeatureDefinition> ListKnownToggles()
+    {
+        var featureDefinitionsPtr = FFI.ListKnownToggles(state);
+        var knownFeatures = FFIReader.ReadComplex<List<FeatureDefinition>>(featureDefinitionsPtr);
+        if (knownFeatures == null)
+        {
+            return new List<FeatureDefinition>();
+        }
+        return knownFeatures;
+    }
 }

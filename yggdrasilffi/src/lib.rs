@@ -395,6 +395,7 @@ pub unsafe extern "C" fn should_emit_impression_event(
 /// An invalid pointer to unleash engine will result in undefined behaviour.
 /// The caller is responsible for freeing the allocated memory, in case the response is not null. This can be done by calling
 /// `free_response` and passing in the pointer returned by this method. Failure to do so will result in a leak.
+#[no_mangle]
 pub unsafe extern "C" fn list_known_toggles(engine_ptr: *mut c_void) -> *mut c_char {
     let result: Result<Option<Vec<ToggleDefinition>>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;

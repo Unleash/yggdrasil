@@ -93,6 +93,16 @@ RSpec.describe YggdrasilEngine do
 
       expect(metric[:variants][:disabled]).to eq(1)
     end
+
+    it 'should list all the features that were loaded' do
+      suite_path = File.join('../client-specification/specifications', '01-simple-examples.json')
+      suite_data = JSON.parse(File.read(suite_path))
+
+      yggdrasil_engine.take_state(suite_data['state'].to_json)
+
+      toggles = yggdrasil_engine.list_known_toggles()
+      expect(toggles.length).to eq(3)
+    end
   end
 end
 

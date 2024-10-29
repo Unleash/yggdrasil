@@ -27,6 +27,8 @@ internal static class FFI
     private static extern IntPtr should_emit_impression_event(IntPtr ptr, string toggle_name);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr built_in_strategies(IntPtr ptr);
+    [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    private static extern IntPtr list_known_toggles(IntPtr ptr);
 
     public static IntPtr NewEngine()
     {
@@ -91,5 +93,10 @@ internal static class FFI
     public static IntPtr BuiltInStrategies(IntPtr ptr)
     {
         return built_in_strategies(ptr);
+    }
+
+    public static IntPtr ListKnownToggles(IntPtr ptr)
+    {
+        return list_known_toggles(ptr);
     }
 }
