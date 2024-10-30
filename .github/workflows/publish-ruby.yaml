@@ -3,99 +3,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-binaries:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            output: libyggdrasilffi.so
-            name: libyggdrasilffi_x86_64.so
-            cross: false
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            output: libyggdrasilffi.so
-            name: libyggdrasilffi_arm64.so
-            cross: true
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            output: libyggdrasilffi.so
-            name: libyggdrasilffi_aarch64.so
-            cross: true
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
-            output: yggdrasilffi.dll
-            name: libyggdrasilffi_x86_64.dll
-            cross: false
-          - os: macos-13
-            target: x86_64-apple-darwin
-            output: libyggdrasilffi.dylib
-            name: libyggdrasilffi_x86_64.dylib
-            cross: false
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            output: libyggdrasilffi.dylib
-            name: libyggdrasilffi_arm64.dylib
-            cross: false
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install cross (if needed)
-      if: ${{ matrix.cross == true }}
-      run: cargo install cross
-
-    - name: Install rust
-      run: |
-        rustup set auto-self-update disable
-        rustup toolchain install stable --profile default
-        rustup show
-
-    - name: Rust cache
-      uses: Swatinem/rust-cache@v2
-
-    - name: Build Rust Library (Cross)
-      if: ${{ matrix.cross == true }}
-      run: cross build -p yggdrasilffi --release --target ${{ matrix.target }};
-
-    - name: Build Rust Library (Cargo)
-      if: ${{ matrix.cross == false }}
-      run: cargo build -p yggdrasilffi --release --target ${{ matrix.target }};
-
-    - name: Rename Output Binary
-      run: |
-        mv target/${{ matrix.target }}/release/${{ matrix.output }} target/${{ matrix.target }}/release/${{ matrix.name }}
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.name }}
-        path: target/${{ matrix.target }}/release/${{ matrix.name }}
 
   build_single_binary_gems:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            binary: libyggdrasilffi_x86_64.so
-          - os: ubuntu-latest
-            binary: libyggdrasilffi_arm64.so
+          - binary: libyggdrasilffi_x86_64.so
+            platform: x86_64-linux
+          - binary: libyggdrasilffi_arm64.so
             platform: arm-linux
-          - os: ubuntu-latest
-            binary: libyggdrasilffi_aarch64.so
+          - binary: libyggdrasilffi_aarch64.so
             platform: aarch64-linux
-          - os: windows-latest
-            binary: libyggdrasilffi_x86_64.dll
-          - os: macos-13
-            binary: libyggdrasilffi_x86_64.dylib
+          - binary: libyggdrasilffi_x86_64.dll
+            platform: x64-mingw32
+          - binary: libyggdrasilffi_x86_64.dylib
             platform: x86_64-darwin
-          - os: macos-latest
-            binary: libyggdrasilffi_arm64.dylib
+          - binary: libyggdrasilffi_arm64.dylib
             platform: arm64-darwin
+          - binary: libyggdrasilffi_arm64.dll
+            platform: arm64-mingw32
 
-    needs: build-binaries
     steps:
       - uses: actions/checkout@v4
 
@@ -103,18 +31,37 @@ jobs:
         if: matrix.platform != ''
         run: echo "YGG_BUILD_PLATFORM=${{ matrix.platform }}" >> $GITHUB_ENV
 
-      - name: Download Compiled Binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.binary }}
-          path: ruby-engine/lib
-          merge-multiple: true
+      - name: Extract Yggdrasil Core Version
+        run: |
+          cd ruby-engine
+          CORE_VERSION=$(ruby -e "puts Gem::Specification.load('yggdrasil-engine.gemspec').metadata['yggdrasil_core_version']")
+          echo "FFI Library Version: $CORE_VERSION"
+          echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
+
+      - name: Download Binary
+        run: |
+          BINARY_URL="https://github.com/${{ github.repository }}/releases/download/${CORE_VERSION}/${{ matrix.binary }}"
+          TARGET_DIR="ruby-engine/lib"
+
+          mkdir -p "$TARGET_DIR"
+          curl -L -o "$TARGET_DIR/${{ matrix.binary }}" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            "$BINARY_URL"
+
+          if [ -f "$TARGET_DIR/${{ matrix.binary }}" ]; then
+            echo "${{ matrix.binary }} downloaded successfully to $TARGET_DIR."
+          else
+            echo "Error: ${{ matrix.binary }} could not be downloaded."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Publish Linux Gem
         run: |
           cd ruby-engine
           gem build yggdrasil-engine.gemspec
-          gem push *.gem
+          # gem push *.gem
         working-directory: ${{ github.workspace }}
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
@@ -133,7 +80,6 @@ jobs:
           - java: 21
             ruby: jruby-9.4
 
-    needs: build-binaries
     steps:
       - uses: actions/checkout@v4
 
@@ -148,17 +94,57 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
 
-      - name: Download Compiled Binaries
-        uses: actions/download-artifact@v4
-        with:
-          path: ruby-engine/lib
-          merge-multiple: true
+      - name: Extract Yggdrasil Core Version
+        run: |
+          cd ruby-engine
+          CORE_VERSION=$(ruby -e "puts Gem::Specification.load('yggdrasil-engine.gemspec').metadata['yggdrasil_core_version']")
+          echo "FFI Library Version: $CORE_VERSION"
+          echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
+
+      - name: Set up Binary List
+        env:
+          CORE_VERSION: ${{ github.event.inputs.release_version }}
+        run: |
+          # List of binaries we want to download
+          binaries=(
+            "libyggdrasilffi_aarch64.so"
+            "libyggdrasilffi_arm64.dll"
+            "libyggdrasilffi_arm64.dylib"
+            "libyggdrasilffi_arm64.so"
+            "libyggdrasilffi_x86_64.dll"
+            "libyggdrasilffi_x86_64.dylib"
+            "libyggdrasilffi_x86_64.so"
+          )
+          echo "binaries=${binaries[@]}" >> $GITHUB_ENV
+
+      - name: Download All Binaries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CORE_VERSION: ${{ env.CORE_VERSION }}
+        run: |
+          TARGET_DIR="ruby-engine/lib"
+          mkdir -p "$TARGET_DIR"
+
+          # Loop through each binary and download it
+          for binary in ${binaries[@]}; do
+            echo "Downloading $binary..."
+            curl -L -o "$TARGET_DIR/$binary" \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              "https://github.com/${{ github.repository }}/releases/download/${CORE_VERSION}/$binary"
+
+            if [ -f "$TARGET_DIR/$binary" ]; then
+              echo "$binary downloaded successfully."
+            else
+              echo "Error: $binary could not be downloaded."
+              exit 1
+            fi
+          done
 
       - name: Build and Publish Gem for JRuby
         run: |
           cd ruby-engine
           gem build yggdrasil-engine.gemspec
-          gem push *.gem
+          # gem push *.gem
         working-directory: ${{ github.workspace }}
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
