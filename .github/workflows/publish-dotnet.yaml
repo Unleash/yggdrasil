@@ -29,36 +29,37 @@ jobs:
           RELEASE_VERSION: ${{ github.event.inputs.release_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          binaries=("libyggdrasilffi_aarch64.so dotnet-engine/runtimes/linux-aarch64/native/libyggdrasilffi.so"
-                    "libyggdrasilffi_arm64.so dotnet-engine/runtimes/linux-arm64/native/libyggdrasilffi.so"
-                    "libyggdrasilffi_x86_64.so dotnet-engine/runtimes/linux-x64/native/libyggdrasilffi.so"
-                    "libyggdrasilffi_arm64.dll dotnet-engine/runtimes/win-arm64/native/yggdrasilffi.dll"
-                    "libyggdrasilffi_x86_64.dll dotnet-engine/runtimes/win-x64/native/yggdrasilffi.dll"
-                    "libyggdrasilffi_arm64.dylib dotnet-engine/runtimes/osx-arm64/native/libyggdrasilffi.dylib"
-                    "libyggdrasilffi_x86_64.dylib dotnet-engine/runtimes/osx-x64/native/libyggdrasilffi.dylib")
+          binaries=("libyggdrasilffi_aarch64.so dotnet-engine/runtimes/linux-aarch64/native libyggdrasilffi.so"
+                    "libyggdrasilffi_arm64.so dotnet-engine/runtimes/linux-arm64/native libyggdrasilffi.so"
+                    "libyggdrasilffi_x86_64.so dotnet-engine/runtimes/linux-x64/native libyggdrasilffi.so"
+                    "libyggdrasilffi_arm64.dll dotnet-engine/runtimes/win-arm64/native yggdrasilffi.dll"
+                    "libyggdrasilffi_x86_64.dll dotnet-engine/runtimes/win-x64/native yggdrasilffi.dll"
+                    "libyggdrasilffi_arm64.dylib dotnet-engine/runtimes/osx-arm64/native libyggdrasilffi.dylib"
+                    "libyggdrasilffi_x86_64.dylib dotnet-engine/runtimes/osx-x64/native libyggdrasilffi.dylib")
 
           for binary in "${binaries[@]}"; do
             # Split each item into source (release name) and target path
             src_name=$(echo "$binary" | awk '{print $1}')
             target_path=$(echo "$binary" | awk '{print $2}')
+            binary_name=$(echo "$binary" | awk '{print $3}')
 
             echo "Downloading $src_name to $target_path..."
 
-            mkdir -p "$(dirname "$target_path")"
+            mkdir -p "$target_path"
 
-            curl -L -o "$target_path" \
+            curl -L -o "$target_path/$binary_name" \
               -H "Authorization: token $GITHUB_TOKEN" \
-              "https://github.com/${{ github.repository }}/releases/download/${RELEASE_VERSION}/$src_name"
+              "https://github.com/${{ github.repository }}/releases/download/${RELEASE_VERSION}/${src_name}"
 
-            if [ -f "$target_path" ]; then
+            if [ -f "$target_path/$binary_name" ]; then
               echo "$src_name downloaded successfully to $target_path."
             else
               echo "Error: $src_name could not be downloaded to $target_path."
               exit 1
             fi
+            ls -l "$target_path"
           done
-          echo "Downloaded binaries:"
-          find . -type f -name "libyggdrasilffi*"
+          echo "Downloaded binaries"
 
       - name: Build
         run: |
