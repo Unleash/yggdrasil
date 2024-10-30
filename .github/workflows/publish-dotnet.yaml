@@ -54,6 +54,7 @@ jobs:
               echo "$src_name downloaded successfully to $target_path."
             else
               echo "Error: $src_name could not be downloaded to $target_path."
+              exit 1
             fi
           done
           echo "Downloaded binaries:"
@@ -71,13 +72,7 @@ jobs:
           cd dotnet-engine
           ls -lh Yggdrasil.Engine/bin/Release/*nupkg
 
-      # - name: Upload package artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: yggdrasil-nuget
-      #     path: dotnet-engine/Yggdrasil.Engine/bin/Release/*nupkg
-
-      # - name: Publish package
-      #   run: |
-      #     cd dotnet-engine
-      #     dotnet nuget push Yggdrasil.Engine/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+      - name: Publish package
+        run: |
+          cd dotnet-engine
+          dotnet nuget push Yggdrasil.Engine/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
