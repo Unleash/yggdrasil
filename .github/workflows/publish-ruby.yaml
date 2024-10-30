@@ -61,7 +61,7 @@ jobs:
         run: |
           cd ruby-engine
           gem build yggdrasil-engine.gemspec
-          # gem push *.gem
+          gem push *.gem
         working-directory: ${{ github.workspace }}
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
@@ -144,7 +144,7 @@ jobs:
         run: |
           cd ruby-engine
           gem build yggdrasil-engine.gemspec
-          # gem push *.gem
+          gem push *.gem
         working-directory: ${{ github.workspace }}
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
