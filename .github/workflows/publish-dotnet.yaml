@@ -48,7 +48,6 @@ jobs:
             mkdir -p "$target_path"
 
             curl -L -o "$target_path/$binary_name" \
-              -H "Authorization: token $GITHUB_TOKEN" \
               "https://github.com/${{ github.repository }}/releases/download/${RELEASE_VERSION}/${src_name}"
 
             if [ -f "$target_path/$binary_name" ]; then
