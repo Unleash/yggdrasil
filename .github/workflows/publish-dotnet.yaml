@@ -77,4 +77,4 @@ jobs:
       - name: Publish package
         run: |
           cd dotnet-engine
-          # dotnet nuget push Yggdrasil.Engine/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+          dotnet nuget push Yggdrasil.Engine/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
