@@ -50,6 +50,8 @@ jobs:
               -H "Authorization: token $GITHUB_TOKEN" \
               "https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-${CORE_VERSION}/${src_name}"
 
+            echo "Downloading from https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-${CORE_VERSION}/${src_name}"
+
             if [ -f "$target_path/$binary_name" ]; then
               echo "$src_name downloaded successfully to $target_path."
             else
