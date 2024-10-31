@@ -50,8 +50,6 @@ jobs:
               -H "Authorization: token $GITHUB_TOKEN" \
               "https://github.com/${{ github.repository }}/releases/tag/unleash-yggdrasil-${CORE_VERSION}/${src_name}"
 
-            echo "Downloading from https://github.com/${{ github.repository }}/releases/tag/unleash-yggdrasil-${CORE_VERSION}/${src_name}"
-
             if [ -f "$target_path/$binary_name" ]; then
               echo "$src_name downloaded successfully to $target_path."
             else
@@ -77,4 +75,4 @@ jobs:
       - name: Publish package
         run: |
           cd dotnet-engine
-          # dotnet nuget push Yggdrasil.Engine/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+          dotnet nuget push Yggdrasil.Engine/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
