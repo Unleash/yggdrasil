@@ -13,11 +13,13 @@ jobs:
             platform: x86_64-linux
           - binary: libyggdrasilffi_arm64.so
             platform: arm-linux
-          - binary: libyggdrasilffi_aarch64.so
-            platform: aarch64-linux
-          - binary: libyggdrasilffi_x86_64.dll
+          - binary: libyggdrasilffi_x86_64-linux-musl.so
+            platform: x86_64-linux-musl
+          - binary: libyggdrasilffi_arm64-musl.so
+            platform: aarch64-linux-musl
+          - binary: yggdrasilffi_x86_64.dll
             platform: x64-mingw32
-          - binary: libyggdrasilffi_x86_64.dylib
+          - binary: yggdrasilffi_x86_64.dylib
             platform: x86_64-darwin
           - binary: libyggdrasilffi_arm64.dylib
             platform: arm64-darwin
@@ -107,13 +109,14 @@ jobs:
         run: |
           # List of binaries we want to download
           binaries=(
-            "libyggdrasilffi_aarch64.so"
-            "libyggdrasilffi_arm64.dll"
-            "libyggdrasilffi_arm64.dylib"
-            "libyggdrasilffi_arm64.so"
-            "libyggdrasilffi_x86_64.dll"
-            "libyggdrasilffi_x86_64.dylib"
             "libyggdrasilffi_x86_64.so"
+            "libyggdrasilffi_arm64.so"
+            "libyggdrasilffi_x86_64-linux-musl.so"
+            "libyggdrasilffi_arm64-musl.so"
+            "yggdrasilffi_x86_64.dll"
+            "yggdrasilffi_x86_64.dylib"
+            "libyggdrasilffi_arm64.dylib"
+            "libyggdrasilffi_arm64.dll"
           )
           echo "binaries=${binaries[@]}" >> $GITHUB_ENV
 
