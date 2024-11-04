@@ -167,12 +167,11 @@ jobs:
       - uses: actions/download-artifact@v4
         name: Download artifacts
         with:
-          path: ruby-engine
           pattern: yggdrasil-engine-*
 
       - name: Publish Gems
         run: |
-          gem push yggdrasil-engine-*.gem
+          gem push *.gem
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
 
