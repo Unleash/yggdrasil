@@ -67,10 +67,18 @@ jobs:
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
 
+      - name: Build Gem
+        run: |
+          cd ruby-engine
+          gem build yggdrasil-engine.gemspec
+          export GEM_FILE=$(ls yggdrasil-engine-*.gem)
+          echo "gem_file_name=$GEM_FILE" >> $GITHUB_ENV
+
       - name: Upload Gem
         uses: actions/upload-artifact@v4
         with:
-          path: ruby-engine/yggdrasil-engine-*.gem
+          name: ${{ env.gem_file_name }}
+          path: ruby-engine/${{ env.gem_file_name }}
 
   build_jruby_gems:
     runs-on: ubuntu-latest
@@ -148,6 +156,8 @@ jobs:
         run: |
           cd ruby-engine
           gem build yggdrasil-engine.gemspec
+          export GEM_FILE=$(ls yggdrasil-engine-*.gem)
+          echo "gem_file_name=$GEM_FILE" >> $GITHUB_ENV
         working-directory: ${{ github.workspace }}
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
@@ -155,7 +165,8 @@ jobs:
       - name: Upload JRuby Gem
         uses: actions/upload-artifact@v4
         with:
-          path: ruby-engine/yggdrasil-engine-*.gem
+          name: ${{ env.gem_file_name }}
+          path: ruby-engine/${{ env.gem_file_name }}
 
 
   publish_gems:
