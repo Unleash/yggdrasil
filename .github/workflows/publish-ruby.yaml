@@ -13,18 +13,18 @@ jobs:
             platform: x86_64-linux
           - binary: libyggdrasilffi_arm64.so
             platform: arm-linux
-          - binary: libyggdrasilffi_x86_64-linux-musl.so
+          - binary: libyggdrasilffi_x86_64-musl.so
             platform: x86_64-linux-musl
           - binary: libyggdrasilffi_arm64-musl.so
             platform: aarch64-linux-musl
           - binary: yggdrasilffi_x86_64.dll
             platform: x64-mingw32
-          - binary: yggdrasilffi_x86_64.dylib
+          - binary: yggdrasilffi_arm64.dll
+            platform: arm64-mingw32
+          - binary: libyggdrasilffi_x86_64.dylib
             platform: x86_64-darwin
           - binary: libyggdrasilffi_arm64.dylib
             platform: arm64-darwin
-          - binary: libyggdrasilffi_arm64.dll
-            platform: arm64-mingw32
 
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
 
       - name: Download Binary
         run: |
-          BINARY_URL="https://github.com/${{ github.repository }}/releases/download/${CORE_VERSION}/${{ matrix.binary }}"
+          BINARY_URL="https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-v${CORE_VERSION}/${{ matrix.binary }}"
           TARGET_DIR="ruby-engine/lib"
 
           mkdir -p "$TARGET_DIR"
@@ -109,26 +109,23 @@ jobs:
           echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
 
       - name: Set up Binary List
-        env:
-          CORE_VERSION: ${{ github.event.inputs.release_version }}
         run: |
           # List of binaries we want to download
           binaries=(
             "libyggdrasilffi_x86_64.so"
             "libyggdrasilffi_arm64.so"
-            "libyggdrasilffi_x86_64-linux-musl.so"
+            "libyggdrasilffi_x86_64-musl.so"
             "libyggdrasilffi_arm64-musl.so"
             "yggdrasilffi_x86_64.dll"
-            "yggdrasilffi_x86_64.dylib"
+            "yggdrasilffi_arm64.dll"
+            "libyggdrasilffi_x86_64.dylib"
             "libyggdrasilffi_arm64.dylib"
-            "libyggdrasilffi_arm64.dll"
           )
           echo "binaries=${binaries[@]}" >> $GITHUB_ENV
 
       - name: Download All Binaries
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CORE_VERSION: ${{ env.CORE_VERSION }}
         run: |
           TARGET_DIR="ruby-engine/lib"
           mkdir -p "$TARGET_DIR"
@@ -138,7 +135,7 @@ jobs:
             echo "Downloading $binary..."
             curl -L -o "$TARGET_DIR/$binary" \
               -H "Authorization: token $GITHUB_TOKEN" \
-              "https://github.com/${{ github.repository }}/releases/download/${CORE_VERSION}/$binary"
+              "https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-v${CORE_VERSION}/$binary"
 
             if [ -f "$TARGET_DIR/$binary" ]; then
               echo "$binary downloaded successfully."
@@ -175,7 +172,6 @@ jobs:
 
       - name: Publish Gems
         run: |
-          cd ruby-engine
           gem push yggdrasil-engine-*.gem
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
