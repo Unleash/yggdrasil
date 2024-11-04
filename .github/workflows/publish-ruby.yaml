@@ -183,7 +183,10 @@ jobs:
 
       - name: Publish Gems
         run: |
-          gem push *.gem
+          for gem_file in *.gem; do
+            echo "Pushing $gem_file..."
+            gem push "$gem_file"
+          done
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
 
