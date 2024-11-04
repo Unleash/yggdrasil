@@ -11,31 +11,31 @@ def platform_specific_lib
   cpu = RbConfig::CONFIG['host_cpu']
 
   extension, prefix = case os
-                      when /darwin|mac os/
-                        ['dylib', 'lib']
-                      when /linux/
-                        ['so', 'lib']
-                      when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
-                        ['dll', '']
-                      else
-                        raise "unsupported platform #{os}"
-                      end
+  when /darwin|mac os/
+    ['dylib', 'lib']
+  when /linux/
+    ['so', 'lib']
+  when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
+    ['dll', '']
+  else
+    raise "unsupported platform #{os}"
+  end
 
   arch_suffix = case cpu
-                when /x86_64/
-                  'x86_64'
-                when /arm|aarch64/
-                  'arm64'
-                else
-                  raise "unsupported architecture #{cpu}"
-                end
+  when /x86_64/
+    'x86_64'
+  when /arm|aarch64/
+    'arm64'
+  else
+    raise "unsupported architecture #{cpu}"
+  end
 
   lib_type_suffix = if os =~ /linux/
-                      musl = system("ldd /bin/sh | grep -q musl") # Check if musl is in use
-                      musl ? "-musl" : ""
-                    else
-                      ""
-                    end
+    musl = system("ldd /bin/sh | grep -q musl")
+    musl ? "-musl" : ""
+  else
+    ""
+  end
 
   "#{prefix}yggdrasilffi_#{arch_suffix}#{lib_type_suffix}.#{extension}"
 end
