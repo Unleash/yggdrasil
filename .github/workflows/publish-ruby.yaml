@@ -173,3 +173,10 @@ jobs:
           path: ruby-engine
           pattern: yggdrasil-engine-*
 
+      - name: Publish Gems
+        run: |
+          cd ruby-engine
+          gem push yggdrasil-engine-*.gem
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
+
