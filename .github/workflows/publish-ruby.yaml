@@ -182,8 +182,7 @@ jobs:
       - name: Publish Gems
         run: |
           cd gems
-          ls -l
-          for gem_file in *.gem; do
+          find . -name "*.gem" -type f | while read -r gem_file; do
             echo "Pushing $gem_file..."
             gem push "$gem_file"
           done
