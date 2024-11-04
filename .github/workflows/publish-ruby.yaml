@@ -177,12 +177,12 @@ jobs:
         name: Download artifacts
         with:
           pattern: yggdrasil-engine-*
-
-      - name: List gems
-        run: ls -l
+          path: gems
 
       - name: Publish Gems
         run: |
+          cd gems
+          ls -l
           for gem_file in *.gem; do
             echo "Pushing $gem_file..."
             gem push "$gem_file"
