@@ -3,7 +3,7 @@ Gem::Specification.new do |s|
   target_platform = -> { ENV['YGG_BUILD_PLATFORM'] || Gem::Platform::CURRENT }
 
   s.name = 'yggdrasil-engine'
-  s.version = '0.0.8.beta.2'
+  s.version = '0.0.8'
   s.date = '2023-06-28'
   s.summary = 'Unleash engine for evaluating feature toggles'
   s.description = '...'
