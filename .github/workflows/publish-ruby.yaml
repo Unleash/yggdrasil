@@ -169,6 +169,9 @@ jobs:
         with:
           pattern: yggdrasil-engine-*
 
+      - name: List gems
+        run: ls -l
+
       - name: Publish Gems
         run: |
           gem push *.gem
