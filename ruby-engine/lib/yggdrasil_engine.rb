@@ -10,13 +10,13 @@ def platform_specific_lib
   os = RbConfig::CONFIG['host_os']
   cpu = RbConfig::CONFIG['host_cpu']
 
-  extension = case os
+  extension, prefix = case os
   when /darwin|mac os/
-    'dylib'
+    ['dylib', 'lib']
   when /linux/
-    'so'
+    ['so', 'lib']
   when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
-    'dll'
+    ['dll', '']
   else
     raise "unsupported platform #{os}"
   end
@@ -24,15 +24,20 @@ def platform_specific_lib
   arch_suffix = case cpu
   when /x86_64/
     'x86_64'
-  when /arm/
+  when /arm|aarch64/
     'arm64'
-  when /aarch64/
-    'aarch64'
   else
     raise "unsupported architecture #{cpu}"
   end
 
-  "libyggdrasilffi_#{arch_suffix}.#{extension}"
+  lib_type_suffix = if os =~ /linux/
+    musl = system("ldd /bin/sh | grep -q musl")
+    musl ? "-musl" : ""
+  else
+    ""
+  end
+
+  "#{prefix}yggdrasilffi_#{arch_suffix}#{lib_type_suffix}.#{extension}"
 end
 
 def to_variant(raw_variant)
