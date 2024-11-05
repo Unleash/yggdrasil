@@ -13,16 +13,18 @@ jobs:
             platform: x86_64-linux
           - binary: libyggdrasilffi_arm64.so
             platform: arm-linux
-          - binary: libyggdrasilffi_aarch64.so
-            platform: aarch64-linux
-          - binary: libyggdrasilffi_x86_64.dll
+          - binary: libyggdrasilffi_x86_64-musl.so
+            platform: x86_64-linux-musl
+          - binary: libyggdrasilffi_arm64-musl.so
+            platform: aarch64-linux-musl
+          - binary: yggdrasilffi_x86_64.dll
             platform: x64-mingw32
+          - binary: yggdrasilffi_arm64.dll
+            platform: arm64-mingw32
           - binary: libyggdrasilffi_x86_64.dylib
             platform: x86_64-darwin
           - binary: libyggdrasilffi_arm64.dylib
             platform: arm64-darwin
-          - binary: libyggdrasilffi_arm64.dll
-            platform: arm64-mingw32
 
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +42,7 @@ jobs:
 
       - name: Download Binary
         run: |
-          BINARY_URL="https://github.com/${{ github.repository }}/releases/download/${CORE_VERSION}/${{ matrix.binary }}"
+          BINARY_URL="https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-v${CORE_VERSION}/${{ matrix.binary }}"
           TARGET_DIR="ruby-engine/lib"
 
           mkdir -p "$TARGET_DIR"
@@ -57,14 +59,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Publish Linux Gem
+      - name: Build Gem
         run: |
           cd ruby-engine
           gem build yggdrasil-engine.gemspec
-          gem push *.gem
         working-directory: ${{ github.workspace }}
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
+
+      - name: Build Gem
+        run: |
+          cd ruby-engine
+          gem build yggdrasil-engine.gemspec
+          export GEM_FILE=$(ls yggdrasil-engine-*.gem)
+          echo "gem_file_name=$GEM_FILE" >> $GITHUB_ENV
+
+      - name: Upload Gem
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.gem_file_name }}
+          path: ruby-engine/${{ env.gem_file_name }}
 
   build_jruby_gems:
     runs-on: ubuntu-latest
@@ -102,25 +116,23 @@ jobs:
           echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
 
       - name: Set up Binary List
-        env:
-          CORE_VERSION: ${{ github.event.inputs.release_version }}
         run: |
           # List of binaries we want to download
           binaries=(
-            "libyggdrasilffi_aarch64.so"
-            "libyggdrasilffi_arm64.dll"
-            "libyggdrasilffi_arm64.dylib"
-            "libyggdrasilffi_arm64.so"
-            "libyggdrasilffi_x86_64.dll"
-            "libyggdrasilffi_x86_64.dylib"
             "libyggdrasilffi_x86_64.so"
+            "libyggdrasilffi_arm64.so"
+            "libyggdrasilffi_x86_64-musl.so"
+            "libyggdrasilffi_arm64-musl.so"
+            "yggdrasilffi_x86_64.dll"
+            "yggdrasilffi_arm64.dll"
+            "libyggdrasilffi_x86_64.dylib"
+            "libyggdrasilffi_arm64.dylib"
           )
           echo "binaries=${binaries[@]}" >> $GITHUB_ENV
 
       - name: Download All Binaries
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CORE_VERSION: ${{ env.CORE_VERSION }}
         run: |
           TARGET_DIR="ruby-engine/lib"
           mkdir -p "$TARGET_DIR"
@@ -130,7 +142,7 @@ jobs:
             echo "Downloading $binary..."
             curl -L -o "$TARGET_DIR/$binary" \
               -H "Authorization: token $GITHUB_TOKEN" \
-              "https://github.com/${{ github.repository }}/releases/download/${CORE_VERSION}/$binary"
+              "https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-v${CORE_VERSION}/$binary"
 
             if [ -f "$TARGET_DIR/$binary" ]; then
               echo "$binary downloaded successfully."
@@ -140,11 +152,40 @@ jobs:
             fi
           done
 
-      - name: Build and Publish Gem for JRuby
+      - name: Build JRuby Gem
         run: |
           cd ruby-engine
           gem build yggdrasil-engine.gemspec
-          gem push *.gem
+          export GEM_FILE=$(ls yggdrasil-engine-*.gem)
+          echo "gem_file_name=$GEM_FILE" >> $GITHUB_ENV
         working-directory: ${{ github.workspace }}
         env:
           GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
+
+      - name: Upload JRuby Gem
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.gem_file_name }}
+          path: ruby-engine/${{ env.gem_file_name }}
+
+
+  publish_gems:
+    runs-on: ubuntu-latest
+    needs: [build_single_binary_gems, build_jruby_gems]
+    steps:
+      - uses: actions/download-artifact@v4
+        name: Download artifacts
+        with:
+          pattern: yggdrasil-engine-*
+          path: gems
+
+      - name: Publish Gems
+        run: |
+          cd gems
+          find . -name "*.gem" -type f | while read -r gem_file; do
+            echo "Pushing $gem_file..."
+            gem push "$gem_file"
+          done
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.GEMS_PUBLISH_KEY }}
+
