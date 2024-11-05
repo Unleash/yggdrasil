@@ -28,11 +28,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          binaries=("libyggdrasilffi_aarch64.so dotnet-engine/runtimes/linux-aarch64/native libyggdrasilffi.so"
+          binaries=("libyggdrasilffi_x86_64-musl.so dotnet-engine/runtimes/linux-musl-x64/native libyggdrasilffi.so"
+                    "libyggdrasilffi_arm64-musl.so dotnet-engine/runtimes/linux-musl-arm64/native libyggdrasilffi.so"
                     "libyggdrasilffi_arm64.so dotnet-engine/runtimes/linux-arm64/native libyggdrasilffi.so"
                     "libyggdrasilffi_x86_64.so dotnet-engine/runtimes/linux-x64/native libyggdrasilffi.so"
-                    "libyggdrasilffi_arm64.dll dotnet-engine/runtimes/win-arm64/native yggdrasilffi.dll"
-                    "libyggdrasilffi_x86_64.dll dotnet-engine/runtimes/win-x64/native yggdrasilffi.dll"
+                    "yggdrasilffi_arm64.dll dotnet-engine/runtimes/win-arm64/native yggdrasilffi.dll"
+                    "yggdrasilffi_x86_64.dll dotnet-engine/runtimes/win-x64/native yggdrasilffi.dll"
                     "libyggdrasilffi_arm64.dylib dotnet-engine/runtimes/osx-arm64/native libyggdrasilffi.dylib"
                     "libyggdrasilffi_x86_64.dylib dotnet-engine/runtimes/osx-x64/native libyggdrasilffi.dylib")
 
