@@ -58,7 +58,6 @@ jobs:
         rustup set auto-self-update disable
         rustup toolchain install stable --profile default
         cargo install cross
-        rustup target add aarch64-pc-windows-msvc
         rustup show
 
     - name: Rust cache
@@ -66,7 +65,8 @@ jobs:
 
     - name: Build Rust Library
       run: |
-        cross build -p yggdrasilffi --release --target ${{ matrix.target }};
+        rustup target add ${{ matrix.target }}
+        cross build -p yggdrasilffi --release --target ${{ matrix.target }}
 
     - name: Rename Output Binary
       run: |
