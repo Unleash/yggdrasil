@@ -1,8 +1,13 @@
+from dataclasses import asdict
 import json
-import pytest
-from unleash_engine import UnleashEngine
+from unleash_engine import UnleashEngine, Variant
 import json
 import os
+
+
+def variant_to_dict(variant) -> dict:
+    print(variant)
+    return {k: v for k, v in asdict(variant).items() if v is not None}
 
 
 def test_get_variant_does_not_crash():
@@ -36,7 +41,7 @@ def test_client_spec():
             toggle_name = test["toggleName"]
             expected_result = test["expectedResult"]
 
-            result = unleash_engine.is_enabled(toggle_name, context)
+            result = unleash_engine.is_enabled(toggle_name, context) or False
 
             assert (
                 result == expected_result
@@ -47,8 +52,15 @@ def test_client_spec():
             toggle_name = test["toggleName"]
             expected_result = test["expectedResult"]
 
-            result = unleash_engine.get_variant(toggle_name, context)
+            result = unleash_engine.get_variant(toggle_name, context) or Variant(
+                "disabled", None, False, False
+            )
+
+            ## We get away with this right now because the casing in the spec tests for feature_enabled
+            ## is snake_case. At some point this is going to change to camel case and this is going to break
+            expected_json = json.dumps(expected_result)
+            actual_json = json.dumps(variant_to_dict(result))
 
             assert (
-                result == expected_result
-            ), f"Failed test '{test['description']}': expected {expected_result}, got {result}"
+                expected_json == actual_json
+            ), f"Failed test '{test['description']}': expected {expected_json}, got {actual_json}"
