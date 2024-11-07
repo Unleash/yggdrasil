@@ -1078,9 +1078,12 @@ mod tests {
 
     #[cfg(feature = "hostname")]
     mod hostname_tests {
+        use serial_test::serial;
+
         use super::*;
 
         #[test]
+        #[serial]
         fn evaluates_host_name_constraint_correctly() {
             std::env::set_var("hostname", "DOS");
 
@@ -1092,6 +1095,7 @@ mod tests {
         }
 
         #[test]
+        #[serial]
         fn evaluates_host_name_to_false_when_missing_hostname_values() {
             std::env::set_var("hostname", "DOS");
 
@@ -1103,6 +1107,7 @@ mod tests {
         }
 
         #[test]
+        #[serial]
         fn hostname_constraint_ignores_casing() {
             std::env::set_var("hostname", "DaRWin");
 
