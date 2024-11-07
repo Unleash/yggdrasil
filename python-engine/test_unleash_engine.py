@@ -115,3 +115,50 @@ def test_custom_strategies_work_end_to_end():
     assert enabled_when_better == True
     assert disabled_when_not_better == False
     assert should_be_sour_dough.name == "sourDough"
+
+
+def test_increments_counts_for_yes_no_and_variants():
+    engine = UnleashEngine()
+
+    with open("../test-data/simple.json") as file:
+        state = json.load(file)
+
+    engine.take_state(json.dumps(state))
+
+    engine.count_toggle("testToggle", True)
+    engine.count_toggle("testToggle", True)
+    engine.count_toggle("testToggle", False)
+    engine.count_variant("testToggle", "disabled")
+
+    metrics = engine.get_metrics()
+
+    assert metrics["toggles"]["testToggle"]["yes"] == 2
+    assert metrics["toggles"]["testToggle"]["no"] == 1
+    assert metrics["toggles"]["testToggle"]["variants"]["disabled"] == 1
+
+
+
+def test_metrics_are_flushed_when_get_metrics_is_called():
+    engine = UnleashEngine()
+
+    with open("../test-data/simple.json") as file:
+        state = json.load(file)
+
+    engine.take_state(json.dumps(state))
+
+    engine.count_toggle("testToggle", True)
+
+    metrics = engine.get_metrics()
+    assert metrics["toggles"]["testToggle"]["yes"] == 1
+
+    metrics = engine.get_metrics()
+    assert metrics is None
+
+def test_metrics_are_still_incremented_when_toggle_does_not_exist():
+    engine = UnleashEngine()
+
+    engine.count_toggle("aToggleSoSecretItDoesNotExist", True)
+
+    metrics = engine.get_metrics()
+
+    assert metrics["toggles"]["aToggleSoSecretItDoesNotExist"]["yes"] == 1
