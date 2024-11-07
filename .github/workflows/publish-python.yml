@@ -1,0 +1,11 @@
+name: Publish Python
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: echo
+      - run: echo "Hello world"
