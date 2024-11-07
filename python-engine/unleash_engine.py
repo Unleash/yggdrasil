@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Any, Callable, ClassVar, Dict, List, Optional, Type, TypeVar, cast
+from custom_strategy import CustomStrategyHandler
 
 
 def _get_binary_path():
@@ -110,6 +111,7 @@ class UnleashEngine:
         self.lib.free_response.restype = None
 
         self.state = self.lib.new_engine()
+        self.custom_strategy_handler = CustomStrategyHandler()
 
     def __del__(self):
         if hasattr(self, "state") and self.state is not None:
@@ -125,6 +127,7 @@ class UnleashEngine:
 
     def take_state(self, state_json: str) -> Optional[List[Warning]]:
         response_ptr = self.lib.take_state(self.state, state_json.encode("utf-8"))
+        self.custom_strategy_handler.update_strategies(state_json)
         with self.materialize_pointer(response_ptr, List[Warning]) as result:
             if result.value:
                 warnings = "\n".join(
@@ -135,7 +138,11 @@ class UnleashEngine:
 
     def is_enabled(self, toggle_name: str, context: dict) -> Optional[bool]:
         serialized_context = json.dumps(context or {})
-        custom_strategy_results = json.dumps({})
+        custom_strategy_results = json.dumps(
+            self.custom_strategy_handler.evaluate_custom_strategies(
+                toggle_name, context
+            )
+        )
 
         response_ptr = self.lib.check_enabled(
             self.state,
@@ -150,7 +157,11 @@ class UnleashEngine:
 
     def get_variant(self, toggle_name: str, context: dict) -> Optional[Variant]:
         serialized_context = json.dumps(context or {})
-        custom_strategy_results = json.dumps({})
+        custom_strategy_results = json.dumps(
+            self.custom_strategy_handler.evaluate_custom_strategies(
+                toggle_name, context
+            )
+        )
 
         response_ptr = self.lib.check_variant(
             self.state,
@@ -162,3 +173,6 @@ class UnleashEngine:
             if response.status_code == StatusCode.ERROR:
                 raise YggdrasilError(response.error_message)
             return response.value
+
+    def register_custom_strategies(self, custom_strategies: dict):
+        self.custom_strategy_handler.register_custom_strategies(custom_strategies)
