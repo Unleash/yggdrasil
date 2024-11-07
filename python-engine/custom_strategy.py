@@ -1,0 +1,66 @@
+import json
+from typing import Dict
+
+_STANDARD_STRATEGIES = [
+    "default",
+    "userWithId",
+    "gradualRolloutUserId",
+    "gradualRolloutSessionId",
+    "gradualRolloutRandom",
+    "flexibleRollout",
+    "remoteAddress",
+]
+
+
+class CustomStrategyHandler:
+
+    def __init__(self):
+        self.strategy_definitions = {}
+        self.strategy_implementations = {}
+
+    def update_strategies(self, features_json: str):
+        custom_strategies = {}
+        parsed_toggles = json.loads(features_json)
+
+        for toggle in parsed_toggles["features"]:
+            toggle_name = toggle["name"]
+            for strategy in toggle["strategies"]:
+                if strategy["name"] not in _STANDARD_STRATEGIES:
+                    custom_strategies[toggle_name] = strategy["name"]
+
+            toggle_strategies = [
+                strategy
+                for strategy in toggle["strategies"]
+                if strategy["name"] not in _STANDARD_STRATEGIES
+            ]
+            if toggle_strategies:
+                custom_strategies[toggle_name] = toggle_strategies
+
+        self.strategy_definitions = custom_strategies
+
+    def register_custom_strategies(self, custom_strategies: Dict[str, any]):
+        for strategy_name, strategy in custom_strategies.items():
+            if hasattr(strategy, "apply"):
+                self.strategy_implementations[strategy_name] = strategy
+            else:
+                raise ValueError(
+                    f"Custom strategy {strategy_name} does not have an apply method"
+                )
+
+    def evaluate_custom_strategies(
+        self, toggle_name: str, context: dict
+    ) -> Dict[str, bool]:
+        results = {}
+        for index, strategy in enumerate(
+            self.strategy_definitions.get(toggle_name, [])
+        ):
+            key = f"customStrategy{index + 1}"
+            strategy_impl = self.strategy_implementations.get(strategy["name"])
+            result = (
+                strategy_impl.apply(strategy["parameters"], context)
+                if strategy_impl
+                else False
+            )
+            results[key] = result
+
+        return results

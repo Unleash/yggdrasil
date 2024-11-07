@@ -5,6 +5,31 @@ import json
 import os
 
 
+CUSTOM_STRATEGY_STATE = """
+{
+    "version": 1,
+    "features": [
+        {
+            "name": "Feature.A",
+            "enabled": true,
+            "strategies": [
+                {
+                    "name": "breadStrategy",
+                    "parameters": {}
+                }
+            ],
+            "variants": [
+                {
+                    "name": "sourDough",
+                    "weight": 100
+                }
+            ]
+        }
+    ]
+}
+"""
+
+
 def variant_to_dict(variant) -> dict:
     print(variant)
     return {k: v for k, v in asdict(variant).items() if v is not None}
@@ -64,3 +89,29 @@ def test_client_spec():
             assert (
                 expected_json == actual_json
             ), f"Failed test '{test['description']}': expected {expected_json}, got {actual_json}"
+
+
+def test_custom_strategies_work_end_to_end():
+    engine = UnleashEngine()
+
+    class BreadStrategy:
+        def apply(self, _parameters, context):
+            return context.get("betterThanSlicedBread") == True
+
+    engine.register_custom_strategies({"breadStrategy": BreadStrategy()})
+    engine.take_state(CUSTOM_STRATEGY_STATE)
+
+    enabled_when_better = engine.is_enabled(
+        "Feature.A", {"betterThanSlicedBread": True}
+    )
+    disabled_when_not_better = engine.is_enabled(
+        "Feature.A", {"betterThanSlicedBread": False}
+    )
+
+    should_be_sour_dough = engine.get_variant(
+        "Feature.A", {"betterThanSlicedBread": True}
+    )
+
+    assert enabled_when_better == True
+    assert disabled_when_not_better == False
+    assert should_be_sour_dough.name == "sourDough"
