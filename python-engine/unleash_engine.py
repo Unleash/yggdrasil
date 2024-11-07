@@ -110,6 +110,23 @@ class UnleashEngine:
         self.lib.free_response.argtypes = [ctypes.c_void_p]
         self.lib.free_response.restype = None
 
+        self.lib.get_metrics.argtypes = [ctypes.c_void_p]
+        self.lib.get_metrics.restype = ctypes.POINTER(ctypes.c_char)
+
+        self.lib.count_toggle.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_bool,
+        ]
+        self.lib.count_toggle.restype = None
+
+        self.lib.count_variant.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+        self.lib.count_variant.restype = None
+
         self.state = self.lib.new_engine()
         self.custom_strategy_handler = CustomStrategyHandler()
 
@@ -176,3 +193,22 @@ class UnleashEngine:
 
     def register_custom_strategies(self, custom_strategies: dict):
         self.custom_strategy_handler.register_custom_strategies(custom_strategies)
+
+    def count_toggle(self, toggle_name: str, enabled: bool):
+        response_ptr = self.lib.count_toggle(
+            self.state, toggle_name.encode("utf-8"), enabled
+        )
+        self.lib.free_response(response_ptr)
+
+    def count_variant(self, toggle_name: str, variant_name: str):
+        response_ptr = self.lib.count_variant(
+            self.state, toggle_name.encode("utf-8"), variant_name.encode("utf-8")
+        )
+        self.lib.free_response(response_ptr)
+
+    def get_metrics(self) -> Dict[str, Any]:
+        metrics_ptr = self.lib.get_metrics(self.state)
+        with self.materialize_pointer(metrics_ptr, Dict[str, Any]) as response:
+            if response.status_code == StatusCode.ERROR:
+                raise YggdrasilError(response.error_message)
+            return response.value
