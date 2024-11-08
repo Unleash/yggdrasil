@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Any, Callable, ClassVar, Dict, List, Optional, Type, TypeVar, cast
-from custom_strategy import CustomStrategyHandler
+from yggdrasil_engine.custom_strategy import CustomStrategyHandler
 
 
 def _get_binary_path():

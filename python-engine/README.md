@@ -1,38 +1,24 @@
 # Python Bindings to Yggdrasil
 
-## Build
+Provides high level bindings to the Unleash Yggdrasil engine.
 
-You'll need to setup a Python virtual environment:
+## Build and test
+This project uses [poetry](https://python-poetry.org/).
 
-``` bash
-python3 -m venv venv
-source venv/bin/activate
+Before you begin, you'll need to setup the native library. You'll need a Rust compiler. If you're on Windows, you'll need bash or just read the script and do the equivalent powershell steps.
+
+``` sh
+./build.sh
 ```
 
-and install the dependencies:
+To run tests:
 
-``` bash
-pip install -r requirements.txt
-```
+```poetry run pytest```
 
+For local development, it can be convenient to have a shell to work in:
 
-## Running the tests
+```poetry shell```
 
-First make sure that have built the native FFI code. That can be done with Cargo anywhere in this project:
+## Publish
 
-
-```bash
-cargo build --release
-```
-
-You'll also need to set the path to the Yggdrasil native library like so:
-
-```bash
-export YGGDRASIL_LIB_PATH=/home/{YOUR_NAME_HERE}/dev/yggdrasil/target/release
-```
-
-Then you can run the tests with:
-
-```bash
-pytest
-```
+Publishing is done through Github. Ensure you've bumped the version in `yggdrasil-engine/__init__.py`. Note that yggdrasilCoreVersion in the same will, will determine what version of the native libraries are resolved for the build; the build does not work against the Rust source code directly.

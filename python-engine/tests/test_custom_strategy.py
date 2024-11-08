@@ -1,4 +1,4 @@
-from custom_strategy import CustomStrategyHandler
+from yggdrasil_engine.custom_strategy import CustomStrategyHandler
 
 RAW_STATE = """
 {

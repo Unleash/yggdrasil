@@ -1,6 +1,6 @@
 cargo build --release
-mkdir -p lib
+mkdir -p yggdrasil-engine/lib
 
-[ -f ../target/release/yggdrasilffi.dll ] && cp ../target/release/yggdrasilffi.dll ./lib
-[ -f ../target/release/libyggdrasilffi.dylib ] && cp ../target/release/libyggdrasilffi.dylib ./lib
-[ -f ../target/release/libyggdrasilffi.so ] && cp ../target/release/libyggdrasilffi.so ./lib
+[ -f ../target/release/yggdrasilffi.dll ] && cp ../target/release/yggdrasilffi.dll ./yggdrasil-engine/lib
+[ -f ../target/release/libyggdrasilffi.dylib ] && cp ../target/release/libyggdrasilffi.dylib ./yggdrasil-engine/lib
+[ -f ../target/release/libyggdrasilffi.so ] && cp ../target/release/libyggdrasilffi.so ./yggdrasil-engine/lib
