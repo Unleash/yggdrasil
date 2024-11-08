@@ -21,7 +21,9 @@
 /php-engine/unleash_engine.h
 /php-engine/libyggdrasilffi.so
 /ruby-engine/lib/libyggdrasilffi*.*
-/python-engine/lib/
+/python-engine/yggdrasil-engine/lib/
+/python-engine/dist/
+/python-engine/poetry.lock
 
 # Devenv
 .devenv*
