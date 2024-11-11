@@ -127,6 +127,13 @@ class UnleashEngine:
         ]
         self.lib.count_variant.restype = None
 
+        self.lib.should_emit_impression_event.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+        ]
+
+        self.lib.should_emit_impression_event.restype = ctypes.POINTER(ctypes.c_char)
+
         self.state = self.lib.new_engine()
         self.custom_strategy_handler = CustomStrategyHandler()
 
@@ -209,6 +216,15 @@ class UnleashEngine:
     def get_metrics(self) -> Dict[str, Any]:
         metrics_ptr = self.lib.get_metrics(self.state)
         with self.materialize_pointer(metrics_ptr, Dict[str, Any]) as response:
+            if response.status_code == StatusCode.ERROR:
+                raise YggdrasilError(response.error_message)
+            return response.value
+
+    def should_emit_impression_event(self, toggle_name: str) -> bool:
+        response_ptr = self.lib.should_emit_impression_event(
+            self.state, toggle_name.encode("utf-8")
+        )
+        with self.materialize_pointer(response_ptr, bool) as response:
             if response.status_code == StatusCode.ERROR:
                 raise YggdrasilError(response.error_message)
             return response.value
