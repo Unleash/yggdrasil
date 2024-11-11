@@ -1,5 +1,6 @@
 import json
 from typing import Dict
+import inspect
 
 _STANDARD_STRATEGIES = [
     "default",
@@ -41,6 +42,14 @@ class CustomStrategyHandler:
     def register_custom_strategies(self, custom_strategies: Dict[str, any]):
         for strategy_name, strategy in custom_strategies.items():
             if hasattr(strategy, "apply"):
+                apply_method = strategy.apply
+                signature = inspect.signature(apply_method)
+                parameters = list(signature.parameters)
+                if len(parameters) != 2:
+                    raise ValueError(
+                        f"Custom strategy '{strategy_name}' does not have an apply method "
+                        f"with exactly two parameters. Found {len(parameters)}."
+                    )
                 self.strategy_implementations[strategy_name] = strategy
             else:
                 raise ValueError(
