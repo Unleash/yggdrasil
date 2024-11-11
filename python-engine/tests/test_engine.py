@@ -23,7 +23,8 @@ CUSTOM_STRATEGY_STATE = """
                     "name": "sourDough",
                     "weight": 100
                 }
-            ]
+            ],
+            "impressionData": true
         }
     ]
 }
@@ -162,3 +163,12 @@ def test_metrics_are_still_incremented_when_toggle_does_not_exist():
     metrics = engine.get_metrics()
 
     assert metrics["toggles"]["aToggleSoSecretItDoesNotExist"]["yes"] == 1
+
+def test_yields_impression_data():
+    engine = UnleashEngine()
+
+    engine.take_state(CUSTOM_STRATEGY_STATE)
+
+    assert engine.should_emit_impression_event("Feature.A")
+    assert not engine.should_emit_impression_event("Nonexisting")
+
