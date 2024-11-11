@@ -8,6 +8,9 @@ readme = "README.md"
 packages = [
     { include = "yggdrasil_engine" }
 ]
+include = [
+    "yggdrasil_engine/lib/*"
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
