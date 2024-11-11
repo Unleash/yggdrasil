@@ -54,14 +54,33 @@ class Variant:
 
 
 @dataclass
+class FeatureDefinition:
+    name: str
+    project: str
+    type: Optional[str]
+
+    @staticmethod
+    def from_dict(data: dict) -> "FeatureDefinition":
+        return FeatureDefinition(
+            name=data.get("name", ""),
+            project=data.get("project", ""),
+            type=data.get("type"),
+        )
+
+
+def load_feature_defs(raw_defs: List[dict]) -> List[FeatureDefinition]:
+    return [FeatureDefinition.from_dict(defn) for defn in raw_defs]
+
+
+@dataclass
 class Response:
     status_code: StatusCode
     value: Optional[any]
     error_message: Optional[str]
 
-    # this only exists to handle feature_enabled/featureEnabled
     deserializers: ClassVar[Dict[Type, Callable[[Any], Any]]] = {
         Variant: Variant.from_dict,
+        List[FeatureDefinition]: load_feature_defs,
     }
 
     @staticmethod
@@ -133,6 +152,9 @@ class UnleashEngine:
         ]
 
         self.lib.should_emit_impression_event.restype = ctypes.POINTER(ctypes.c_char)
+
+        self.lib.list_known_toggles.argtypes = [ctypes.c_void_p]
+        self.lib.list_known_toggles.restype = ctypes.POINTER(ctypes.c_char)
 
         self.state = self.lib.new_engine()
         self.custom_strategy_handler = CustomStrategyHandler()
@@ -225,6 +247,15 @@ class UnleashEngine:
             self.state, toggle_name.encode("utf-8")
         )
         with self.materialize_pointer(response_ptr, bool) as response:
+            if response.status_code == StatusCode.ERROR:
+                raise YggdrasilError(response.error_message)
+            return response.value
+
+    def list_known_toggles(self) -> List[FeatureDefinition]:
+        response_ptr = self.lib.list_known_toggles(self.state)
+        with self.materialize_pointer(
+            response_ptr, List[FeatureDefinition]
+        ) as response:
             if response.status_code == StatusCode.ERROR:
                 raise YggdrasilError(response.error_message)
             return response.value

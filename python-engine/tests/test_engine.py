@@ -1,6 +1,6 @@
 from dataclasses import asdict
 import json
-from yggdrasil_engine.engine import UnleashEngine, Variant
+from yggdrasil_engine.engine import UnleashEngine, Variant, FeatureDefinition
 import json
 import os
 
@@ -138,7 +138,6 @@ def test_increments_counts_for_yes_no_and_variants():
     assert metrics["toggles"]["testToggle"]["variants"]["disabled"] == 1
 
 
-
 def test_metrics_are_flushed_when_get_metrics_is_called():
     engine = UnleashEngine()
 
@@ -155,6 +154,7 @@ def test_metrics_are_flushed_when_get_metrics_is_called():
     metrics = engine.get_metrics()
     assert metrics is None
 
+
 def test_metrics_are_still_incremented_when_toggle_does_not_exist():
     engine = UnleashEngine()
 
@@ -164,6 +164,7 @@ def test_metrics_are_still_incremented_when_toggle_does_not_exist():
 
     assert metrics["toggles"]["aToggleSoSecretItDoesNotExist"]["yes"] == 1
 
+
 def test_yields_impression_data():
     engine = UnleashEngine()
 
@@ -172,3 +173,20 @@ def test_yields_impression_data():
     assert engine.should_emit_impression_event("Feature.A")
     assert not engine.should_emit_impression_event("Nonexisting")
 
+
+def test_list_known_toggles():
+    engine = UnleashEngine()
+
+    engine.take_state(CUSTOM_STRATEGY_STATE)
+    first_toggle = engine.list_known_toggles()[0]
+
+    assert len(engine.list_known_toggles()) == 1
+    assert first_toggle == FeatureDefinition(
+        name="Feature.A", project="default", type=None
+    )
+
+
+def test_list_empty_toggles_yields_empty_list():
+    engine = UnleashEngine()
+
+    assert engine.list_known_toggles() == []
