@@ -12,7 +12,7 @@ jobs:
           - binary: libyggdrasilffi_x86_64.so
             platform: x86_64-linux
           - binary: libyggdrasilffi_arm64.so
-            platform: arm-linux
+            platform: aarch64-linux
           - binary: libyggdrasilffi_x86_64-musl.so
             platform: x86_64-linux-musl
           - binary: libyggdrasilffi_arm64-musl.so
