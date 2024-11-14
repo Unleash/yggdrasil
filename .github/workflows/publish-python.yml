@@ -70,5 +70,6 @@ jobs:
 
       - name: Build wheels
         run: |
+          cd python-engine
           poetry install
           tox
