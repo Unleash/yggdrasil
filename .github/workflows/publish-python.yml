@@ -25,6 +25,7 @@ jobs:
 
       - name: Extract Yggdrasil Core Version
         run: |
+          cd python-engine
           CORE_VERSION=$(python3 -c "import yggdrasil_engine;print(yggdrasil_engine.__yggdrasil_core_version__)")
           echo "FFI Library Version: $CORE_VERSION"
           echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
