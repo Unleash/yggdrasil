@@ -6,10 +6,6 @@ on:
 jobs:
   publish_wheels:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - python-version: '3.11'
 
     steps:
       - name: Checkout code
