@@ -4,8 +4,54 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish-python:
+  publish_wheels:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - binary: libyggdrasilffi_x86_64.so
+            platform: x86_64-linux
+
     steps:
-      - name: echo
-      - run: echo "Hello world"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "::add-path::${HOME}/.local/bin"
+
+      - name: Extract Yggdrasil Core Version
+        run: |
+          CORE_VERSION=$(python3 -c "import yggdrasil_engine;print(yggdrasil_engine.__yggdrasil_core_version__)")
+          echo "FFI Library Version: $CORE_VERSION"
+          echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
+
+      - name: Download Binary
+        run: |
+
+          BINARY_URL="https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-v${CORE_VERSION}/${{ matrix.binary }}"
+          TARGET_DIR="python-engine/yggdrasil_engine/lib"
+
+          mkdir -p "$TARGET_DIR"
+          curl -L -o "$TARGET_DIR/${{ matrix.artifact_name }}" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            "$BINARY_URL"
+
+          if [ -f "$TARGET_DIR/${{ matrix.binary }}" ]; then
+            echo "${{ matrix.binary }} downloaded successfully to $TARGET_DIR."
+          else
+            echo "Error: ${{ matrix.binary }} could not be downloaded."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build wheel
+        run: |
+          poetry build
