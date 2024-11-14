@@ -9,29 +9,21 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: '3.11.0'
+          - python-version: '3.11'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # - name: Set up Python
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: ${{ matrix.python-version }}
-
-      - name: Setup Pyenv
-        run: |
-          curl https://pyenv.run | bash
-          export PATH="$HOME/.pyenv/bin:$PATH"
-          eval "$(pyenv init --path)"
-          eval "$(pyenv virtualenv-init -)"
-
-      - name: Install Python
-        run: |
-          pyenv install ${{ matrix.python-version }}
-          pyenv global ${{ matrix.python-version }}
-          python --version
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+            3.12
 
       - name: Install Tooling
         run: |
@@ -90,10 +82,10 @@ jobs:
           poetry install
           tox
 
-      - name: Publish wheels
-        run: |
-          cd python-engine
-          twine upload staging/*
-        env:
-          TWINE_USERNAME: '__token__'
-          TWINE_PASSWORD: ${{ secrets.PYPI_PUBLISH_KEY }}
+      # - name: Publish wheels
+      #   run: |
+      #     cd python-engine
+      #     twine upload staging/*
+      #   env:
+      #     TWINE_USERNAME: '__token__'
+      #     TWINE_PASSWORD: ${{ secrets.PYPI_PUBLISH_KEY }}
