@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: '3.10'
+          - python-version: '3.11'
 
     steps:
       - name: Checkout code
@@ -75,3 +75,11 @@ jobs:
           cd python-engine
           poetry install
           tox
+
+      - name: Publish wheels
+        run: |
+          cd python-engine
+          twine upload staging/*
+        env:
+          PYPI_USERNAME: '__token__'
+          PYPI_PASSWORD: ${{ secrets.PYPI_PUBLISH_KEY }}
