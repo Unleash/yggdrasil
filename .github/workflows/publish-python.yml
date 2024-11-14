@@ -82,5 +82,5 @@ jobs:
           cd python-engine
           twine upload staging/*
         env:
-          PYPI_USERNAME: '__token__'
-          PYPI_PASSWORD: ${{ secrets.PYPI_PUBLISH_KEY }}
+          TWINE_USERNAME: '__token__'
+          TWINE_PASSWORD: ${{ secrets.PYPI_PUBLISH_KEY }}
