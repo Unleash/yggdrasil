@@ -24,6 +24,7 @@ jobs:
         run: |
           pip install poetry
           pip install --user tox
+          pip install --user twine
 
       - name: Extract Yggdrasil Core Version
         run: |
