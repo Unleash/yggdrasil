@@ -134,13 +134,13 @@ jobs:
           }
         result-encoding: json
 
-    # - name: Upload Binary to Release
-    #   if: ${{ steps.get_release.outputs.upload_url }}
-    #   uses: actions/upload-release-asset@v1
-    #   with:
-    #     upload_url: ${{ steps.get_release.outputs.upload_url }}
-    #     asset_path: target/${{ matrix.target }}/release/${{ matrix.name }}
-    #     asset_name: "${{ matrix.name }}"
-    #     asset_content_type: application/octet-stream
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload Binary to Release
+      if: ${{ steps.get_release.outputs.upload_url }}
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
+        asset_path: target/${{ matrix.target }}/release/${{ matrix.name }}
+        asset_name: "${{ matrix.name }}"
+        asset_content_type: application/octet-stream
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
