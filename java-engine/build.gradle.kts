@@ -43,53 +43,67 @@ val sonatypeUsername: String? by project
 val sonatypePassword: String? by project
 val group: String? by project
 
+val platforms = listOf(
+    "x86_64-linux",
+    "arm-linux",
+    "x86_64-linux-musl",
+    "aarch64-linux-musl",
+    "x64-mingw32",
+    "arm64-mingw32",
+    "x86_64-darwin",
+    "arm64-darwin"
+)
+
 publishing {
     publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            groupId = project.group.toString()
-            artifactId = "yggdrasil-engine"
-            version = project.version.toString()
-            artifact(tasks.jar.get()) {
-                classifier = project.findProperty("platform")?.toString() ?: "unknown"
-            }
+        platforms.forEach { platform ->
+            create<MavenPublication>("mavenJava-$platform") {
+                from(components["java"])
+                groupId = project.group.toString()
+                artifactId = "yggdrasil-engine"
+                version = project.version.toString()
 
-            pom {
-                name.set("Unleash Yggdrasil Engine")
-                description.set("Yggdrasil engine for computing feature toggles")
-                url.set("https://docs.getunleash.io/yggdrasil-engine/index.html")
-                licenses {
-                    license {
-                        name.set("MIT")
-                        url.set("https://opensource.org/license/mit/")
-                    }
+                artifact(tasks.named<Jar>("jar").get()) {
+                    classifier = platform
                 }
-                developers {
-                    developer {
-                        id.set("chrkolst")
-                        name.set("Christopher Kolstad")
-                        email.set("chriswk@getunleash.io")
+
+                pom {
+                    name.set("Unleash Yggdrasil Engine")
+                    description.set("Yggdrasil engine for computing feature toggles")
+                    url.set("https://docs.getunleash.io/yggdrasil-engine/index.html")
+                    licenses {
+                        license {
+                            name.set("MIT")
+                            url.set("https://opensource.org/license/mit/")
+                        }
                     }
-                    developer {
-                        id.set("ivarconr")
-                        name.set("Ivar Conradi Østhus")
-                        email.set("ivarconr@getunleash.io")
+                    developers {
+                        developer {
+                            id.set("chrkolst")
+                            name.set("Christopher Kolstad")
+                            email.set("chriswk@getunleash.io")
+                        }
+                        developer {
+                            id.set("ivarconr")
+                            name.set("Ivar Conradi Østhus")
+                            email.set("ivarconr@getunleash.io")
+                        }
+                        developer {
+                            id.set("gastonfournier")
+                            name.set("Gaston Fournier")
+                            email.set("gaston@getunleash.io")
+                        }
+                        developer {
+                            id.set("sighphyre")
+                            name.set("Simon Hornby")
+                            email.set("simon@getunleash.io")
+                        }
                     }
-                    developer {
-                        id.set("gastonfournier")
-                        name.set("Gaston Fournier")
-                        email.set("gaston@getunleash.io")
+                    scm {
+                        connection.set("scm:git:https://github.com/Unleash/yggdrasil")
+                        developerConnection.set("scm:git:ssh://git@github.com:Unleash/yggdrasil")
+                        url.set("https://github.com/Unleash/yggdrasil")
                     }
-                    developer {
-                        id.set("sighphyre")
-                        name.set("Simon Hornby")
-                        email.set("simon@getunleash.io")
-                    }
-                }
-                scm {
-                    connection.set("scm:git:https://github.com/Unleash/yggdrasil")
-                    developerConnection.set("scm:git:ssh://git@github.com:Unleash/yggdrasil")
-                    url.set("https://github.com/Unleash/yggdrasil")
                 }
             }
         }
