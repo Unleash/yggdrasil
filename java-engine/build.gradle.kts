@@ -3,9 +3,8 @@ plugins {
     `maven-publish`
     signing
     id("com.diffplug.spotless") version "6.23.2"
-    id("com.github.johnrengelman.shadow") version "7.1.0"
     id("io.github.gradle-nexus.publish-plugin").version("2.0.0")
-    id("pl.allegro.tech.build.axion-release").version("1.16.0") // can be removed if not needed
+    id("pl.allegro.tech.build.axion-release").version("1.16.0")
     id("com.google.osdetector").version("1.7.3")
 }
 
@@ -49,8 +48,11 @@ publishing {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
             groupId = project.group.toString()
-            artifactId = "yggdrasil-engine-${project.findProperty("platform") ?: "unknown"}" // Fallback to "unknown" if not set
+            artifactId = "yggdrasil-engine"
             version = project.version.toString()
+            artifact(tasks.jar.get()) {
+                classifier = project.findProperty("platform")?.toString() ?: "unknown"
+            }
 
             pom {
                 name.set("Unleash Yggdrasil Engine")
@@ -94,16 +96,7 @@ publishing {
     }
 }
 
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            username.set(sonatypeUsername)
-            password.set(sonatypePassword)
-        }
-    }
-}
+
 
 java {
   withSourcesJar()

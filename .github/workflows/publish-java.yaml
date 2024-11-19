@@ -67,4 +67,4 @@ jobs:
           ORG_GRADLE_PROJECT_signingPassphrase: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           cd java-engine
-          ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+          ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository -Pplatform=${{ matrix.platform }}
