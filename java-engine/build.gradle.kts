@@ -41,7 +41,8 @@ tasks.named<Test>("test") {
 
 val sonatypeUsername: String? by project
 val sonatypePassword: String? by project
-val group: String? by project
+val signingKey: String? by project
+val signingPassphrase: String? by project
 
 val platforms = listOf(
     "x86_64-linux",
@@ -63,7 +64,7 @@ publishing {
                 artifactId = "yggdrasil-engine"
                 version = project.version.toString()
 
-                artifact(tasks.named<Jar>("jar").get()) {
+                artifact(tasks.jar.get()) {
                     classifier = platform
                 }
 
@@ -122,15 +123,15 @@ nexusPublishing {
 }
 
 java {
-  withSourcesJar()
-  withJavadocJar()
+    withSourcesJar()
+    withJavadocJar()
 }
 
-val signingKey: String? by project
-val signingPassphrase: String? by project
 signing {
     if (signingKey != null && signingPassphrase != null) {
         useInMemoryPgpKeys(signingKey, signingPassphrase)
-        sign(publishing.publications["mavenJava"])
+        publishing.publications.forEach { publication ->
+            sign(publication)
+        }
     }
 }
