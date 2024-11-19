@@ -127,6 +127,13 @@ java {
     withJavadocJar()
 }
 
+tasks.withType<Sign>().configureEach {
+    val publicationName = name.replace("sign", "").replace("Publication", "")
+    tasks.matching { it.name == "publish${publicationName}ToSonatypeRepository" }.configureEach {
+        dependsOn(this@configureEach)
+    }
+}
+
 signing {
     if (signingKey != null && signingPassphrase != null) {
         useInMemoryPgpKeys(signingKey, signingPassphrase)
