@@ -56,6 +56,12 @@ val platforms = listOf(
 )
 
 publishing {
+    repositories {
+        maven {
+            name = "localTestRepo"
+            url = uri("${buildDir}/repo") // Artifacts will be published here
+        }
+    }
     publications {
         platforms.forEach { platform ->
             create<MavenPublication>("mavenJava-$platform") {
@@ -111,27 +117,20 @@ publishing {
     }
 }
 
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            username.set(sonatypeUsername)
-            password.set(sonatypePassword)
-        }
-    }
-}
+// nexusPublishing {
+//     repositories {
+//         sonatype {
+//             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+//             snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+//             username.set(sonatypeUsername)
+//             password.set(sonatypePassword)
+//         }
+//     }
+// }
 
 java {
     withSourcesJar()
     withJavadocJar()
-}
-
-tasks.withType<Sign>().configureEach {
-    val publicationName = name.replace("sign", "").replace("Publication", "")
-    tasks.matching { it.name == "publish${publicationName}ToSonatypeRepository" }.configureEach {
-        dependsOn(this@configureEach)
-    }
 }
 
 signing {
