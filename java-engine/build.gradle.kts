@@ -56,23 +56,23 @@ val platforms = listOf(
 )
 
 publishing {
-    repositories {
-        maven {
-            name = "localTestRepo"
-            url = uri("${buildDir}/repo") // Artifacts will be published here
-        }
-    }
+    // repositories {
+    //     maven {
+    //         name = "localTestRepo"
+    //         url = uri("${buildDir}/repo") // Artifacts will be published here
+    //     }
+    // }
     publications {
         platforms.forEach { platform ->
             create<MavenPublication>("mavenJava-$platform") {
-                from(components["java"])
                 groupId = project.group.toString()
                 artifactId = "yggdrasil-engine"
                 version = project.version.toString()
 
-                artifact(tasks.jar.get()) {
-                    classifier = platform
-                }
+                artifact(tasks.register<Jar>("jar-$platform") {
+                    from(tasks.jar.get().outputs.files)
+                    archiveClassifier.set(platform)
+                })
 
                 pom {
                     name.set("Unleash Yggdrasil Engine")
@@ -117,16 +117,16 @@ publishing {
     }
 }
 
-// nexusPublishing {
-//     repositories {
-//         sonatype {
-//             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-//             snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-//             username.set(sonatypeUsername)
-//             password.set(sonatypePassword)
-//         }
-//     }
-// }
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username.set(sonatypeUsername)
+            password.set(sonatypePassword)
+        }
+    }
+}
 
 java {
     withSourcesJar()
@@ -137,6 +137,7 @@ signing {
     if (signingKey != null && signingPassphrase != null) {
         useInMemoryPgpKeys(signingKey, signingPassphrase)
         publishing.publications.forEach { publication ->
+            // Sign only artifacts in this publication
             sign(publication)
         }
     }
