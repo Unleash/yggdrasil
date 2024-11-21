@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.lang.System;
 
 interface UnleashFFI extends Library {
 
@@ -45,13 +46,41 @@ class YggdrasilFFI {
     private final Pointer enginePtr;
 
     static UnleashFFI loadLibrary() {
+        String os = System.getProperty("os.name").toLowerCase();
+        String arch = System.getProperty("os.arch").toLowerCase();
         String libName;
-        if (Platform.isMac()) {
-            libName = "libyggdrasilffi.dylib";
-        } else if (Platform.isWindows()) {
-            libName = "libyggdrasilffi.dll";
+
+        if (os.contains("mac")) {
+            // Catches a case where some legacy mac machines report arm64 over aarch64
+            if (arch.contains("aarch64") || arch.contains("arm64")) {
+                libName = "libyggdrasilffi_arm64.dylib";
+            } else {
+                libName = "libyggdrasilffi_x86_64.dylib";
+            }
+        } else if (os.contains("win")) {
+            if (arch.equals("x86_64")) {
+                libName = "yggdrasilffi_x86_64.dll";
+            } else if (arch.equals("x86") || arch.equals("i386") || arch.equals("i686")) {
+                libName = "yggdrasilffi_i686.dll";
+            } else if (arch.contains("arm64")) {
+                libName = "yggdrasilffi_arm64.dll";
+            } else {
+                throw new UnsupportedOperationException("Unsupported architecture on Windows: " + arch);
+            }
+        } else if (os.contains("linux")) {
+            if (arch.contains("musl")) {
+                if (arch.contains("aarch64")) {
+                    libName = "libyggdrasilffi_arm64-musl.so ";
+                } else {
+                    libName = "libyggdrasilffi_x86_64-musl.so";
+                }
+            } else if (arch.contains("aarch64") || arch.contains("arm64")) {
+                libName = "libyggdrasilffi_arm64.so";
+            } else {
+                libName = "libyggdrasilffi_x86_64.so";
+            }
         } else {
-            libName = "libyggdrasilffi.so";
+            throw new UnsupportedOperationException("Unsupported operating system: " + os + ", architecture: " + arch);
         }
 
         try {
@@ -65,7 +94,9 @@ class YggdrasilFFI {
     }
 
     private static Path extractLibraryFromJar(String libName) throws IOException {
+        libName = "libyggdrasilffi.so";
         Path tempFile = Files.createTempFile("lib", libName);
+        System.out.println("Writing" + libName + " to " + tempFile);
         try (InputStream in = UnleashFFI.class.getResourceAsStream("/" + libName);
                 OutputStream out = Files.newOutputStream(tempFile)) {
             if (in == null) {

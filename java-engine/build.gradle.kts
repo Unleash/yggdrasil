@@ -10,6 +10,14 @@ plugins {
 
 version = project.findProperty("version") as String
 
+val binariesDir = file("binaries")
+val resourcesBaseDir = file("src/main/resources")
+val platformResourcesBaseDir = file("build/platform-resources")
+val sonatypeUsername: String? by project
+val sonatypePassword: String? by project
+val signingKey: String? by project
+val signingPassphrase: String? by project
+
 repositories {
     mavenCentral()
 }
@@ -39,44 +47,83 @@ tasks.named<Test>("test") {
     useJUnitPlatform()
 }
 
-val sonatypeUsername: String? by project
-val sonatypePassword: String? by project
-val signingKey: String? by project
-val signingPassphrase: String? by project
-
-val platforms = listOf(
-    "x86_64-linux",
-    "arm-linux",
-    "x86_64-linux-musl",
-    "aarch64-linux-musl",
-    "x64-mingw32",
-    "arm64-mingw32",
-    "x86_64-darwin",
-    "arm64-darwin"
+val platformToBinaryMap = mapOf(
+    "x86_64-linux" to "libyggdrasilffi_x86_64.so",
+    "arm-linux" to "libyggdrasilffi_arm64.so",
+    "x86_64-linux-musl" to "libyggdrasilffi_x86_64-musl.so",
+    "aarch64-linux-musl" to "libyggdrasilffi_aarch64-musl.so",
+    "x64-mingw32" to "libyggdrasilffi_x64.dll",
+    "arm64-mingw32" to "libyggdrasilffi_arm64.dll",
+    "x86_64-darwin" to "libyggdrasilffi_x86_64.dylib",
+    "arm64-darwin" to "libyggdrasilffi_arm64.dylib"
 )
 
+
 publishing {
-    // repositories {
-    //     maven {
-    //         name = "localTestRepo"
-    //         url = uri("${buildDir}/repo") // Artifacts will be published here
-    //     }
-    // }
+    repositories {
+        maven {
+            name = "localTestRepo"
+            url = uri("${buildDir}/repo")
+        }
+    }
     publications {
-        platforms.forEach { platform ->
+        platformToBinaryMap.forEach { (platform, binaryName) ->
+            val copyBinaryTask = tasks.register<Copy>("copyBinary-$platform") {
+                val platformNativeDir = file("$platformResourcesBaseDir/native-$platform")
+                from(file("$binariesDir/$platform"))
+                include(binaryName)
+                into(platformNativeDir)
+
+                outputs.upToDateWhen { false }
+
+                doFirst {
+                    println("Starting to copy binary for platform: $platform")
+                    println("Source directory: ${file("$binariesDir/$platform")}")
+                    println("Target directory: $platformNativeDir")
+
+                    // Gotta wipe the current directory holding the binaries, otherwise each jar
+                    // ends up with the previous binaries
+                    if (platformNativeDir.exists()) {
+                        println("Cleaning target directory: $platformNativeDir")
+                        platformNativeDir.listFiles()?.forEach { file ->
+                            println("Deleting existing file: ${file.name}")
+                            file.delete()
+                        }
+                    }
+                }
+
+                doLast {
+                    val copiedFiles = platformNativeDir.listFiles()
+                    if (copiedFiles.isNullOrEmpty()) {
+                        println("No files were copied to $platformNativeDir for platform: $platform")
+                    } else {
+                        println("Files copied to $platformNativeDir for platform: $platform:")
+                        copiedFiles.forEach { file ->
+                            println("- ${file.name}")
+                        }
+                    }
+                }
+            }
+
+            val platformJarTask = tasks.register<Jar>("jar-$platform") {
+                dependsOn(copyBinaryTask)
+                dependsOn(tasks.named("compileJava"))
+                from(file("$platformResourcesBaseDir/native-$platform"))
+                from(file("build/classes/java/main"))
+                from(file("build/resources/main"))
+                archiveClassifier.set(platform)
+            }
+
             create<MavenPublication>("mavenJava-$platform") {
                 groupId = project.group.toString()
                 artifactId = "yggdrasil-engine"
                 version = project.version.toString()
 
-                artifact(tasks.register<Jar>("jar-$platform") {
-                    from(tasks.jar.get().outputs.files)
-                    archiveClassifier.set(platform)
-                })
+                artifact(platformJarTask)
 
                 pom {
-                    name.set("Unleash Yggdrasil Engine")
-                    description.set("Yggdrasil engine for computing feature toggles")
+                    name.set("Unleash Yggdrasil Engine ($platform)")
+                    description.set("Platform-specific Yggdrasil engine build for $platform")
                     url.set("https://docs.getunleash.io/yggdrasil-engine/index.html")
                     licenses {
                         license {
@@ -84,39 +131,11 @@ publishing {
                             url.set("https://opensource.org/license/mit/")
                         }
                     }
-                    developers {
-                        developer {
-                            id.set("chrkolst")
-                            name.set("Christopher Kolstad")
-                            email.set("chriswk@getunleash.io")
-                        }
-                        developer {
-                            id.set("ivarconr")
-                            name.set("Ivar Conradi Østhus")
-                            email.set("ivarconr@getunleash.io")
-                        }
-                        developer {
-                            id.set("gastonfournier")
-                            name.set("Gaston Fournier")
-                            email.set("gaston@getunleash.io")
-                        }
-                        developer {
-                            id.set("sighphyre")
-                            name.set("Simon Hornby")
-                            email.set("simon@getunleash.io")
-                        }
-                    }
-                    scm {
-                        connection.set("scm:git:https://github.com/Unleash/yggdrasil")
-                        developerConnection.set("scm:git:ssh://git@github.com:Unleash/yggdrasil")
-                        url.set("https://github.com/Unleash/yggdrasil")
-                    }
                 }
             }
         }
     }
 }
-
 nexusPublishing {
     repositories {
         sonatype {
@@ -137,7 +156,6 @@ signing {
     if (signingKey != null && signingPassphrase != null) {
         useInMemoryPgpKeys(signingKey, signingPassphrase)
         publishing.publications.forEach { publication ->
-            // Sign only artifacts in this publication
             sign(publication)
         }
     }
