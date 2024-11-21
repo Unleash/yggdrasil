@@ -43,7 +43,41 @@ tasks.jar {
     }
 }
 
+// This is a dirty cheat, it'll always name the binary as a x86_64 binary
+// But in practice this doesn't matter because this is purely for tests
+// and this will use the binary generated on the user's machine
+val copyTestBinary = tasks.register<Copy>("copyTestBinary") {
+    val platform = System.getProperty("os.arch").toLowerCase()
+    val os = System.getProperty("os.name").toLowerCase()
+
+    val sourceFileName = when {
+        os.contains("mac") -> "libyggdrasilffi.dylib"
+        os.contains("win") -> "yggdrasilffi.dll"
+        os.contains("linux") -> "libyggdrasilffi.so"
+        else -> throw UnsupportedOperationException("Unsupported OS/architecture combination")
+    }
+
+    val sourcePath = file("../target/release/$sourceFileName")
+    val targetPath = file("build/resources/test/native")
+
+    val binaryName = when {
+        os.contains("mac") && platform.contains("arm") -> "libyggdrasilffi_arm64.dylib"
+        os.contains("mac") -> "libyggdrasilffi_x86_64.dylib"
+        os.contains("win") -> "yggdrasilffi_x86_64.dll"
+        os.contains("linux") -> "libyggdrasilffi_x86_64.so"
+        else -> throw UnsupportedOperationException("Unsupported OS/architecture combination")
+    }
+
+    from(sourcePath) {
+        rename { binaryName }
+    }
+    into(targetPath)
+
+    outputs.upToDateWhen { false }
+}
+
 tasks.named<Test>("test") {
+    dependsOn(copyTestBinary)
     useJUnitPlatform()
 }
 
@@ -108,7 +142,9 @@ publishing {
             val platformJarTask = tasks.register<Jar>("jar-$platform") {
                 dependsOn(copyBinaryTask)
                 dependsOn(tasks.named("compileJava"))
-                from(file("$platformResourcesBaseDir/native-$platform"))
+                from(file("$platformResourcesBaseDir/native-$platform")) {
+                    into("native")
+                }
                 from(file("build/classes/java/main"))
                 from(file("build/resources/main"))
                 archiveClassifier.set(platform)
@@ -136,16 +172,16 @@ publishing {
         }
     }
 }
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            username.set(sonatypeUsername)
-            password.set(sonatypePassword)
-        }
-    }
-}
+// nexusPublishing {
+//     repositories {
+//         sonatype {
+//             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+//             snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+//             username.set(sonatypeUsername)
+//             password.set(sonatypePassword)
+//         }
+//     }
+// }
 
 java {
     withSourcesJar()

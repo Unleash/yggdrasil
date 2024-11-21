@@ -87,17 +87,15 @@ class YggdrasilFFI {
             // Extract and load the native library from the JAR
             Path tempLib = extractLibraryFromJar(libName);
             System.load(tempLib.toAbsolutePath().toString());
-            return Native.load(libName, UnleashFFI.class);
+            return Native.load(tempLib.toAbsolutePath().toString(), UnleashFFI.class);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load native library", e);
         }
     }
 
     private static Path extractLibraryFromJar(String libName) throws IOException {
-        libName = "libyggdrasilffi.so";
         Path tempFile = Files.createTempFile("lib", libName);
-        System.out.println("Writing" + libName + " to " + tempFile);
-        try (InputStream in = UnleashFFI.class.getResourceAsStream("/" + libName);
+        try (InputStream in = UnleashFFI.class.getResourceAsStream("/native/" + libName);
                 OutputStream out = Files.newOutputStream(tempFile)) {
             if (in == null) {
                 throw new FileNotFoundException("File " + libName + " was not found inside JAR.");
