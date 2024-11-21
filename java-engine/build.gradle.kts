@@ -158,14 +158,41 @@ publishing {
                 artifact(platformJarTask)
 
                 pom {
-                    name.set("Unleash Yggdrasil Engine ($platform)")
-                    description.set("Platform-specific Yggdrasil engine build for $platform")
+                    name.set("Unleash Yggdrasil Engine")
+                    description.set("Yggdrasil engine for computing feature toggles")
                     url.set("https://docs.getunleash.io/yggdrasil-engine/index.html")
                     licenses {
                         license {
                             name.set("MIT")
                             url.set("https://opensource.org/license/mit/")
                         }
+                    }
+                    developers {
+                        developer {
+                            id.set("chrkolst")
+                            name.set("Christopher Kolstad")
+                            email.set("chriswk@getunleash.io")
+                        }
+                        developer {
+                            id.set("ivarconr")
+                            name.set("Ivar Conradi Østhus")
+                            email.set("ivarconr@getunleash.io")
+                        }
+                        developer {
+                            id.set("gastonfournier")
+                            name.set("Gaston Fournier")
+                            email.set("gaston@getunleash.io")
+                        }
+                        developer {
+                            id.set("sighphyre")
+                            name.set("Simon Hornby")
+                            email.set("simon@getunleash.io")
+                        }
+                    }
+                    scm {
+                        connection.set("scm:git:https://github.com/Unleash/yggdrasil")
+                        developerConnection.set("scm:git:ssh://git@github.com:Unleash/yggdrasil")
+                        url.set("https://github.com/Unleash/yggdrasil")
                     }
                 }
             }
