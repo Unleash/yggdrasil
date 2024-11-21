@@ -94,17 +94,17 @@ val platformToBinaryMap = mapOf(
 
 
 publishing {
-    repositories {
-        maven {
-            name = "localTestRepo"
-            url = uri("${buildDir}/repo")
-        }
-    }
+    // repositories {
+    //     maven {
+    //         name = "localTestRepo"
+    //         url = uri("${buildDir}/repo")
+    //     }
+    // }
     publications {
         platformToBinaryMap.forEach { (platform, binaryName) ->
             val copyBinaryTask = tasks.register<Copy>("copyBinary-$platform") {
                 val platformNativeDir = file("$platformResourcesBaseDir/native-$platform")
-                from(file("$binariesDir/$platform"))
+                from(file("$binariesDir"))
                 include(binaryName)
                 into(platformNativeDir)
 
@@ -112,7 +112,7 @@ publishing {
 
                 doFirst {
                     println("Starting to copy binary for platform: $platform")
-                    println("Source directory: ${file("$binariesDir/$platform")}")
+                    println("Source directory: ${file("$binariesDir")}")
                     println("Target directory: $platformNativeDir")
 
                     // Gotta wipe the current directory holding the binaries, otherwise each jar
@@ -172,16 +172,17 @@ publishing {
         }
     }
 }
-// nexusPublishing {
-//     repositories {
-//         sonatype {
-//             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-//             snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-//             username.set(sonatypeUsername)
-//             password.set(sonatypePassword)
-//         }
-//     }
-// }
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username.set(sonatypeUsername)
+            password.set(sonatypePassword)
+        }
+    }
+}
 
 java {
     withSourcesJar()
