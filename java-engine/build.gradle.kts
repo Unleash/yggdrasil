@@ -194,6 +194,19 @@ publishing {
                         developerConnection.set("scm:git:ssh://git@github.com:Unleash/yggdrasil")
                         url.set("https://github.com/Unleash/yggdrasil")
                     }
+                    withXml {
+                        val dependenciesNode = asNode().appendNode("dependencies")
+                        configurations.runtimeClasspath.get().allDependencies.forEach { dep ->
+                            if (dep.group != null && dep.version != null) {
+                                dependenciesNode.appendNode("dependency").apply {
+                                    appendNode("groupId", dep.group)
+                                    appendNode("artifactId", dep.name)
+                                    appendNode("version", dep.version)
+                                    appendNode("scope", "runtime")
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
