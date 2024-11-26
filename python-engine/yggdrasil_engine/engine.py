@@ -18,7 +18,7 @@ def _get_binary_path():
     elif system == "Darwin":
         return os.path.join(lib_dir, "libyggdrasilffi.dylib")
     elif system == "Windows":
-        return os.path.join(lib_dir, "yggdrasilffi.so.dll")
+        return os.path.join(lib_dir, "yggdrasilffi.dll")
     else:
         raise RuntimeError(f"Unsupported operating system: {system}")
 
