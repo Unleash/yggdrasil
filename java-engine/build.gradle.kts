@@ -94,12 +94,12 @@ val platformToBinaryMap = mapOf(
 
 
 publishing {
-    repositories {
-        maven {
-            name = "localTestRepo"
-            url = uri("${buildDir}/repo")
-        }
-    }
+    // repositories {
+    //     maven {
+    //         name = "localTestRepo"
+    //         url = uri("${buildDir}/repo")
+    //     }
+    // }
     publications {
         platformToBinaryMap.forEach { (platform, binaryName) ->
             val copyBinaryTask = tasks.register<Copy>("copyBinary-$platform") {
@@ -213,16 +213,16 @@ publishing {
     }
 }
 
-// nexusPublishing {
-//     repositories {
-//         sonatype {
-//             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-//             snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-//             username.set(sonatypeUsername)
-//             password.set(sonatypePassword)
-//         }
-//     }
-// }
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+            username.set(sonatypeUsername)
+            password.set(sonatypePassword)
+        }
+    }
+}
 
 java {
     withSourcesJar()
