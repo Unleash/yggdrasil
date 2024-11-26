@@ -4,7 +4,7 @@ on:
 
 jobs:
 
-  release-linux:
+  publish_jars:
     runs-on: ubuntu-latest
 
     steps:
