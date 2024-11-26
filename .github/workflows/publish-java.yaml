@@ -6,25 +6,6 @@ jobs:
 
   release-linux:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          # - binary: libyggdrasilffi_x86_64.so
-          #   platform: x86_64-linux
-          - binary: libyggdrasilffi_arm64.so
-            platform: arm-linux
-          # - binary: libyggdrasilffi_x86_64-musl.so
-          #   platform: x86_64-linux-musl
-          # - binary: libyggdrasilffi_arm64-musl.so
-          #   platform: aarch64-linux-musl
-          # - binary: yggdrasilffi_x86_64.dll
-          #   platform: x64-mingw32
-          # - binary: yggdrasilffi_arm64.dll
-          #   platform: arm64-mingw32
-          # - binary: libyggdrasilffi_x86_64.dylib
-          #   platform: x86_64-darwin
-          # - binary: libyggdrasilffi_arm64.dylib
-          #   platform: arm64-darwin
 
     steps:
       - uses: actions/checkout@v4
