@@ -296,8 +296,13 @@ pub unsafe extern "C" fn free_response(response_ptr: *mut c_char) {
 pub unsafe extern "C" fn count_toggle(
     engine_ptr: *mut c_void,
     toggle_name_ptr: *const c_char,
-    enabled: bool,
+    enabled: u8,
 ) -> *const c_char {
+    // Java/C# may pass other set bits but Rust expects a boolean to only have a single bit set
+    // so we need to check exactly that the last bit it 1 or 0 and use the boolean value accordingly
+
+    let enabled = enabled & 1 == 1;
+
     let result: Result<Option<()>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
         let toggle_name = get_str(toggle_name_ptr)?;
