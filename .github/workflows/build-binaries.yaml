@@ -47,6 +47,11 @@ jobs:
             output: yggdrasilffi.dll
             name: yggdrasilffi_arm64.dll
             cross: true
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            output: yggdrasilffi.dll
+            name: yggdrasilffi_i686.dll
+            cross: true
           - os: macos-13
             target: x86_64-apple-darwin
             output: libyggdrasilffi.dylib

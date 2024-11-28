@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>Unleash.Yggdrasil</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.2</Version>
     <YggdrasilCoreVersion>0.14.0</YggdrasilCoreVersion>
     <Company>Bricks Software AS</Company>
     <Authors>Unleash</Authors>
@@ -54,6 +54,7 @@
   <ItemGroup>
     <None Include="../runtimes/win-x64/native/yggdrasilffi.dll" Pack="true" PackagePath="runtimes/win-x64/native/" Condition="Exists('../runtimes/win-x64/native/yggdrasilffi.dll')" />
     <None Include="../runtimes/win-arm64/native/yggdrasilffi.dll" Pack="true" PackagePath="runtimes/win-arm64/native/" Condition="Exists('../runtimes/win-arm64/native/yggdrasilffi.dll')" />
+    <None Include="../runtimes/win-x86/native/yggdrasilffi.dll" Pack="true" PackagePath="runtimes/win-x86/native/" Condition="Exists('../runtimes/win-x86/native/yggdrasilffi.dll')" />
     <None Include="../runtimes/linux-x64/native/libyggdrasilffi.so" Pack="true" PackagePath="runtimes/linux-x64/native/" Condition="Exists('../runtimes/linux-x64/native/libyggdrasilffi.so')" />
     <None Include="../runtimes/linux-arm64/native/libyggdrasilffi.so" Pack="true" PackagePath="runtimes/linux-arm64/native/" Condition="Exists('../runtimes/linux-arm64/native/libyggdrasilffi.so')" />
     <None Include="../runtimes/linux-musl-x64/native/libyggdrasilffi.so" Pack="true" PackagePath="runtimes/linux-musl-x64/native/" Condition="Exists('../runtimes/linux-musl-x64/native/libyggdrasilffi.so')" />
