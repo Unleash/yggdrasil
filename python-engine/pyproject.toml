@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yggdrasil-engine"
-version = "0.1.0"
+version = "0.1.4"
 description = "Engine for evaluating Unleash feature flags"
 authors = ["Simon Hornby <liquidwicked64@gmail.com>"]
 license = "MIT"
@@ -17,9 +17,13 @@ python = "^3.8"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.3"
+tox = "^4.0.0"
+
+[tool.poetry.build]
+generate-setup-file = false
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core", "setuptools"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]

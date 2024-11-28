@@ -4,8 +4,85 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish-python:
+  publish_wheels:
     runs-on: ubuntu-latest
+
     steps:
-      - name: echo
-      - run: echo "Hello world"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+            3.12
+            3.13
+
+      - name: Install Tooling
+        run: |
+          pip install poetry
+          pip install --user tox
+          pip install --user twine
+
+      - name: Extract Yggdrasil Core Version
+        run: |
+          cd python-engine
+          CORE_VERSION=$(python3 -c "import yggdrasil_engine;print(yggdrasil_engine.__yggdrasil_core_version__)")
+          echo "FFI Library Version: $CORE_VERSION"
+          echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
+
+      - name: Set up Binary List
+        run: |
+          # List of binaries we want to download
+          binaries=(
+            "libyggdrasilffi_x86_64.so"
+            "libyggdrasilffi_arm64.so"
+            "libyggdrasilffi_x86_64-musl.so"
+            "libyggdrasilffi_arm64-musl.so"
+            "yggdrasilffi_x86_64.dll"
+            "yggdrasilffi_arm64.dll"
+            "libyggdrasilffi_x86_64.dylib"
+            "libyggdrasilffi_arm64.dylib"
+          )
+          echo "binaries=${binaries[@]}" >> $GITHUB_ENV
+
+      - name: Download All Binaries
+        run: |
+
+          TARGET_DIR="python-engine/binaries"
+          mkdir -p "$TARGET_DIR"
+
+          for binary in ${binaries[@]}; do
+            echo "Downloading $binary..."
+            curl -L -o "$TARGET_DIR/$binary" \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              "https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-v${CORE_VERSION}/$binary"
+
+            if [ -f "$TARGET_DIR/$binary" ]; then
+              echo "$binary downloaded successfully."
+            else
+              echo "Error: $binary could not be downloaded."
+              exit 1
+            fi
+          done
+
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build wheels
+        run: |
+          cd python-engine
+          poetry install
+          tox
+
+      - name: Publish wheels
+        run: |
+          cd python-engine
+          twine upload staging/* --skip-existing
+        env:
+          TWINE_USERNAME: '__token__'
+          TWINE_PASSWORD: ${{ secrets.PYPI_PUBLISH_KEY }}

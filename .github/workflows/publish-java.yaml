@@ -1,109 +1,68 @@
----
-name: Publish Java Engine
+name: Publish Java
 on:
-  push:
-    tags:
-      - "java-engine-*"
   workflow_dispatch:
 
 jobs:
-  release-linux:
-    if: startsWith(github.ref, 'refs/tags/java-engine')
+
+  publish_jars:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Build Rust library for linux
-        run: |
-          cargo build --release
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: 21
-          cache: "gradle"
-          distribution: "temurin"
-      - name: Deploy release
-        uses: burrunan/gradle-cache-action@v1
-        env:
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingPassphrase: ${{ secrets.GPG_PASSPHRASE }}
-        with:
-          job-id: release-linux
-          arguments: publishToSonatype closeAndReleaseSonatypeStagingRepository
-          build-root-directory: java-engine
 
-  release-windows:
-    if: startsWith(github.ref, 'refs/tags/java-engine')
-    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
 
-      - name: Build Rust Library for Windows
+      - name: Extract Yggdrasil Core Version
         run: |
-          cd yggdrasilffi
-          cargo build --release --target x86_64-pc-windows-gnu
-        working-directory: ${{ github.workspace }}
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: 21
-          cache: "gradle"
-          distribution: "temurin"
+          cd java-engine
+          CORE_VERSION=$(grep -E '^yggdrasilCoreVersion=' gradle.properties | cut -d'=' -f2)
+          echo "FFI Library Version: $CORE_VERSION"
+          echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
 
-      - name: Deploy release
-        uses: burrunan/gradle-cache-action@v1
+      - name: Set Platform Property for Gradle
+        run: |
+          echo "platform=${{ matrix.platform }}" >> $GITHUB_ENV
+
+      - name: Set up Binary List
+        run: |
+          # List of binaries we want to download
+          binaries=(
+            "libyggdrasilffi_x86_64.so"
+            "libyggdrasilffi_arm64.so"
+            "libyggdrasilffi_x86_64-musl.so"
+            "libyggdrasilffi_arm64-musl.so"
+            "yggdrasilffi_x86_64.dll"
+            "yggdrasilffi_arm64.dll"
+            "libyggdrasilffi_x86_64.dylib"
+            "libyggdrasilffi_arm64.dylib"
+          )
+          echo "binaries=${binaries[@]}" >> $GITHUB_ENV
+
+      - name: Download All Binaries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TARGET_DIR="java-engine/binaries"
+          mkdir -p "$TARGET_DIR"
+
+          for binary in ${binaries[@]}; do
+            echo "Downloading $binary..."
+            curl -L -o "$TARGET_DIR/$binary" \
+              -H "Authorization: token $GITHUB_TOKEN" \
+              "https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-v${CORE_VERSION}/$binary"
+
+            if [ -f "$TARGET_DIR/$binary" ]; then
+              echo "$binary downloaded successfully."
+            else
+              echo "Error: $binary could not be downloaded."
+              exit 1
+            fi
+          done
+
+      - name: Publish to Sonatype
         env:
           ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingPassphrase: ${{ secrets.GPG_PASSPHRASE }}
-        with:
-          job-id: release-linux
-          arguments: publishToSonatype closeAndReleaseSonatypeStagingRepository
-          build-root-directory: java-engine
-
-  release-macos:
-    if: startsWith(github.ref, 'refs/tags/java-engine')
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-      - name: Build Rust Library for macOS
         run: |
-          cd yggdrasilffi
-          cargo build --release --target x86_64-apple-darwin
-        working-directory: ${{ github.workspace }}
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          java-version: 21
-          cache: "gradle"
-          distribution: "temurin"
-      - name: Deploy release
-        uses: burrunan/gradle-cache-action@v1
-        env:
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
-          ORG_GRADLE_PROJECT_signingPassphrase: ${{ secrets.GPG_PASSPHRASE }}
-        with:
-          job-id: release-linux
-          arguments: publishToSonatype closeAndReleaseSonatypeStagingRepository
-          build-root-directory: java-engine
+          cd java-engine
+          ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository

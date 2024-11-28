@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.14.1 (2024-11-27)
+
+### Bug Fixes
+
+ - <csr-id-ce88e4723dce2726fa92c0d4578ff0409cceae3e/> make those annoying hostname tests run in serial so they don't flake
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release over the course of 19 calendar days.
+ - 28 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#166](https://github.com/Unleash/yggdrasil/issues/166)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#166](https://github.com/Unleash/yggdrasil/issues/166)**
+    - Make those annoying hostname tests run in serial so they don't flake ([`ce88e47`](https://github.com/Unleash/yggdrasil/commit/ce88e4723dce2726fa92c0d4578ff0409cceae3e))
+</details>
+
 ## v0.14.0 (2024-10-29)
+
+<csr-id-10369a0bd4b6139709aeb144ea23a6a51fa56a54/>
 
 ### Chore
 
@@ -19,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 6 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#156](https://github.com/Unleash/yggdrasil/issues/156), [#157](https://github.com/Unleash/yggdrasil/issues/157)
@@ -34,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Add autoformatting config ([`10369a0`](https://github.com/Unleash/yggdrasil/commit/10369a0bd4b6139709aeb144ea23a6a51fa56a54))
  * **[#157](https://github.com/Unleash/yggdrasil/issues/157)**
     - List known features ([`443f662`](https://github.com/Unleash/yggdrasil/commit/443f662a614ef3c207d8c4974b374db5ae93b956))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.14.0 ([`30cd26e`](https://github.com/Unleash/yggdrasil/commit/30cd26e65fa756893154839045ea241ab1442f53))
 </details>
 
 ## v0.13.3 (2024-10-22)
