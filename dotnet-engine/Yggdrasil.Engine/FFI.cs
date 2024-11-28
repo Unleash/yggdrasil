@@ -20,9 +20,9 @@ internal static class FFI
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern void free_response(IntPtr ptr);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-    private static extern void count_toggle(IntPtr ptr, string toggle_name, bool enabled);
+    private static extern IntPtr count_toggle(IntPtr ptr, string toggle_name, bool enabled);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-    private static extern void count_variant(IntPtr ptr, string toggle_name, string variant_name);
+    private static extern IntPtr count_variant(IntPtr ptr, string toggle_name, string variant_name);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr should_emit_impression_event(IntPtr ptr, string toggle_name);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
@@ -75,14 +75,14 @@ internal static class FFI
         free_response(ptr);
     }
 
-    public static void CountToggle(IntPtr ptr, string toggle_name, bool enabled)
+    public static IntPtr CountToggle(IntPtr ptr, string toggle_name, bool enabled)
     {
-        count_toggle(ptr, toggle_name, enabled);
+        return count_toggle(ptr, toggle_name, enabled);
     }
 
-    public static void CountVariant(IntPtr ptr, string toggle_name, string variant_name)
+    public static IntPtr CountVariant(IntPtr ptr, string toggle_name, string variant_name)
     {
-        count_variant(ptr, toggle_name, variant_name);
+        return count_variant(ptr, toggle_name, variant_name);
     }
 
     public static IntPtr ShouldEmitImpressionEvent(IntPtr ptr, string toggle_name)
