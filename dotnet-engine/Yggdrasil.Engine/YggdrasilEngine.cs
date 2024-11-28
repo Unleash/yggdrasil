@@ -76,12 +76,14 @@ public class YggdrasilEngine
 
     public void CountFeature(string featureName, bool enabled)
     {
-        FFI.CountToggle(state, featureName, enabled);
+        var responsePtr = FFI.CountToggle(state, featureName, enabled);
+        FFIReader.CheckResponse(responsePtr);
     }
 
     public void CountVariant(string featureName, string variantName)
     {
-        FFI.CountVariant(state, featureName, variantName);
+        var responsePtr = FFI.CountVariant(state, featureName, variantName);
+        FFIReader.CheckResponse(responsePtr);
     }
 
     public ICollection<FeatureDefinition> ListKnownToggles()
