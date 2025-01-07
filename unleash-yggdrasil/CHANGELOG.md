@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.14.2 (2025-01-07)
+
+### Bug Fixes
+
+ - <csr-id-0aae4be995b8a49df0f75fe73a788cf546c93a8d/> support for utf-8 chars on win
+   * fix: support for utf-8 chars on win
+   
+   * chore: bump client spec
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 41 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#189](https://github.com/Unleash/yggdrasil/issues/189)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#189](https://github.com/Unleash/yggdrasil/issues/189)**
+    - Support for utf-8 chars on win ([`0aae4be`](https://github.com/Unleash/yggdrasil/commit/0aae4be995b8a49df0f75fe73a788cf546c93a8d))
+</details>
+
 ## v0.14.1 (2024-11-27)
 
 ### Bug Fixes
@@ -15,8 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release over the course of 19 calendar days.
- - 28 days passed between releases.
+ - 2 commits contributed to the release over the course of 19 calendar days.
+ - 29 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#166](https://github.com/Unleash/yggdrasil/issues/166)
 
@@ -28,6 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#166](https://github.com/Unleash/yggdrasil/issues/166)**
     - Make those annoying hostname tests run in serial so they don't flake ([`ce88e47`](https://github.com/Unleash/yggdrasil/commit/ce88e4723dce2726fa92c0d4578ff0409cceae3e))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.14.1 ([`6ddce2b`](https://github.com/Unleash/yggdrasil/commit/6ddce2b53457b60740a5a1e3803b52f1acb2082a))
 </details>
 
 ## v0.14.0 (2024-10-29)
