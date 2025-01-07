@@ -805,21 +805,19 @@ mod test {
         let delta = load_delta("delta_base.json");
         let patch = load_delta("delta_patch.json");
         let mut engine = EngineState::default();
-        let blank_context = Context::default();
-
-        let segment_context = Context {
-            user_id: Some("2".into()),
+        let context = Context {
+            user_id: Some("4".into()),
             ..Context::default()
         };
 
         engine.take_delta(&delta);
-        assert!(!engine.is_enabled("test-flag", &blank_context, &None));
+        assert!(!engine.is_enabled("test-flag", &context, &None));
         assert!(engine.get_toggle("removed-flag").is_some());
-        assert!(!engine.is_enabled("segment-flag", &blank_context, &None));
+        assert!(!engine.is_enabled("segment-flag", &context, &None));
         engine.take_delta(&patch);
-        assert!(engine.is_enabled("test-flag", &blank_context, &None));
+        assert!(engine.is_enabled("test-flag", &context, &None));
         assert!(!engine.get_toggle("removed-flag").is_some());
-        assert!(engine.is_enabled("segment-flag", &segment_context, &None));
+        assert!(engine.is_enabled("segment-flag", &context, &None));
     }
 
     #[test_case("01-simple-examples.json"; "Basic client spec")]
