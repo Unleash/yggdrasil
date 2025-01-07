@@ -476,6 +476,7 @@ mod tests {
             }],
             query: None,
             segments: None,
+            meta: None,
             version: 2,
         };
 
@@ -598,6 +599,7 @@ mod tests {
             }],
             query: None,
             segments: None,
+            meta: None,
             version: 2,
         };
 
@@ -654,6 +656,7 @@ mod tests {
             ],
             query: None,
             segments: None,
+            meta: None,
             version: 2,
         };
 
