@@ -5,21 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.14.2 (2025-01-07)
+## v0.14.3 (2025-01-07)
 
-### Bug Fixes
+### Chore
 
- - <csr-id-0aae4be995b8a49df0f75fe73a788cf546c93a8d/> support for utf-8 chars on win
-   * fix: support for utf-8 chars on win
-   
-   * chore: bump client spec
+ - <csr-id-21e0f7d2574e0032d65a13629bdcb666562891df/> update to most recent unleash-types
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
  - 1 commit contributed to the release.
- - 41 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#191](https://github.com/Unleash/yggdrasil/issues/191)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#191](https://github.com/Unleash/yggdrasil/issues/191)**
+    - Update to most recent unleash-types ([`21e0f7d`](https://github.com/Unleash/yggdrasil/commit/21e0f7d2574e0032d65a13629bdcb666562891df))
+</details>
+
+## v0.14.2 (2025-01-07)
+
+### Bug Fixes
+
+ - <csr-id-0aae4be995b8a49df0f75fe73a788cf546c93a8d/> support for utf-8 chars on win
+   * fix: support for utf-8 chars on win
+* chore: bump client spec
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 40 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#189](https://github.com/Unleash/yggdrasil/issues/189)
 
@@ -31,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#189](https://github.com/Unleash/yggdrasil/issues/189)**
     - Support for utf-8 chars on win ([`0aae4be`](https://github.com/Unleash/yggdrasil/commit/0aae4be995b8a49df0f75fe73a788cf546c93a8d))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.14.2 ([`040c250`](https://github.com/Unleash/yggdrasil/commit/040c2501663660844c16364d578c0d991fbc5db5))
 </details>
 
 ## v0.14.1 (2024-11-27)
