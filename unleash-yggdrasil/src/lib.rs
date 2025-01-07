@@ -245,8 +245,8 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    fn take_delta(mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
-        let mut current_state = self.compiled_state.unwrap_or_default();
+    fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
+        let mut current_state = self.compiled_state.take().unwrap_or_default();
         let segment_map = build_segment_map(&delta.segments);
         let mut warnings: Vec<EvalWarning> = vec![];
         for removed in delta.removed.clone() {
@@ -787,7 +787,7 @@ mod test {
     }
 
     fn load_delta(delta_name: &str) -> ClientFeaturesDelta {
-        let delta_path = format!("test-data/{delta_name}");
+        let delta_path = format!("../test-data/{delta_name}");
         let delta = fs::read_to_string(delta_path).expect("Should have been able to read the file");
         serde_json::from_str(&delta).expect("Failed to parse client spec")
     }
@@ -795,7 +795,7 @@ mod test {
     #[test]
     fn can_load_single() {
         let delta = load_delta("delta_single.json");
-        let engine = EngineState::default();
+        let mut engine = EngineState::default();
         engine.take_delta(&delta);
         assert!(engine.get_toggle("test-flag").is_some())
     }
