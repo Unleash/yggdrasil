@@ -1,0 +1,28 @@
+{
+  "revisionId": 1,
+  "updated": [
+    {
+      "name": "test-flag",
+      "type": "release",
+      "enabled": false,
+      "project": "default",
+      "stale": false,
+      "strategies": [
+        {
+          "name": "flexibleRollout",
+          "constraints": [],
+          "parameters": {
+            "groupId": "test-flag",
+            "rollout": "100",
+            "stickiness": "default"
+          },
+          "variants": []
+        }
+      ],
+      "variants": [],
+      "description": null,
+      "impressionData": false
+    }
+  ],
+  "removed": []
+}
