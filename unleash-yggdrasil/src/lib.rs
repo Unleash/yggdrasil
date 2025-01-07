@@ -794,10 +794,32 @@ mod test {
 
     #[test]
     fn can_load_single() {
-        let delta = load_delta("delta_single.json");
+        let delta = load_delta("delta_base.json");
         let mut engine = EngineState::default();
         engine.take_delta(&delta);
         assert!(engine.get_toggle("test-flag").is_some())
+    }
+
+    #[test]
+    fn can_update_existing_state() {
+        let delta = load_delta("delta_base.json");
+        let patch = load_delta("delta_patch.json");
+        let mut engine = EngineState::default();
+        let blank_context = Context::default();
+
+        let segment_context = Context {
+            user_id: Some("2".into()),
+            ..Context::default()
+        };
+
+        engine.take_delta(&delta);
+        assert!(!engine.is_enabled("test-flag", &blank_context, &None));
+        assert!(engine.get_toggle("removed-flag").is_some());
+        assert!(!engine.is_enabled("segment-flag", &blank_context, &None));
+        engine.take_delta(&patch);
+        assert!(engine.is_enabled("test-flag", &blank_context, &None));
+        assert!(!engine.get_toggle("removed-flag").is_some());
+        assert!(engine.is_enabled("segment-flag", &segment_context, &None));
     }
 
     #[test_case("01-simple-examples.json"; "Basic client spec")]

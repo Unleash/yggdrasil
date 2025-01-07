@@ -1,0 +1,72 @@
+{
+  "revisionId": 2,
+  "updated": [
+    {
+      "name": "test-flag",
+      "type": "release",
+      "enabled": true,
+      "project": "default",
+      "stale": false,
+      "strategies": [
+        {
+          "name": "flexibleRollout",
+          "constraints": [],
+          "parameters": {
+            "groupId": "test-flag",
+            "rollout": "100",
+            "stickiness": "default"
+          },
+          "variants": []
+        }
+      ],
+      "variants": [],
+      "description": null,
+      "impressionData": false
+    },
+    {
+      "name": "segment-flag",
+      "type": "release",
+      "enabled": true,
+      "project": "default",
+      "stale": false,
+      "strategies": [
+        {
+          "name": "flexibleRollout",
+          "constraints": [],
+          "parameters": {
+            "groupId": "test-flag",
+            "rollout": "100",
+            "stickiness": "default"
+          },
+          "variants": [],
+          "segments": [
+            1
+          ]
+        }
+      ],
+      "variants": [],
+      "description": null,
+      "impressionData": false
+    }
+  ],
+  "removed": ["removed-flag"],
+  "segments": [
+    {
+      "id": 1,
+      "name": "VIPUsers",
+      "constraints": [
+        {
+          "values": [
+            "1",
+            "2",
+            "3"
+          ],
+          "inverted": false,
+          "operator": "IN",
+          "contextName": "userId",
+          "caseInsensitive": false
+        }
+      ]
+    }
+  ]
+}
