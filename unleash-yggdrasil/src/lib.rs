@@ -28,7 +28,7 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "5.1.0";
+pub const SUPPORTED_SPEC_VERSION: &str = "5.1.9";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 
 pub struct CompiledToggle {

@@ -48,7 +48,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Unleash/client-specification
-          ref: v5.1.0
+          ref: v5.1.9
           path: client-specification
 
       - name: Run e2e tests
