@@ -22,7 +22,7 @@ def platform_specific_lib
   end
 
   arch_suffix = case cpu
-  when /x86_64/
+  when /x86_64|x64/
     'x86_64'
   when /arm|aarch64/
     'arm64'

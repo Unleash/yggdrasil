@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "unleash-yggdrasil"
-version = "0.14.1"
+version = "0.14.4"
 description = "This is the Unleash SDK domain logic extracted into a library to facilitate building your own Unleash SDKs in anything, anywhere."
 license = "MIT"
 
@@ -12,28 +12,28 @@ serde_json = "1.0.135"
 murmur3 = "0.5.2"
 ipnet = "2.10.1"
 rand = "0.8.5"
-pest = "2.0"
-pest_derive = "2.0"
-lazy_static = "1.4.0"
-semver = "1.0.17"
+pest = "2.7.15"
+pest_derive = "2.7.15"
+lazy_static = "1.5.0"
+semver = "1.0.24"
 convert_case = "0.6.0"
-unleash-types = "0.15.2"
-chrono = "0.4.38"
+unleash-types = "0.15.3"
+chrono = "0.4.39"
 dashmap = "6.1.0"
 hostname = { version = "0.4.0", optional = true }
-ipnetwork = "0.20.0"
+ipnetwork = "0.21.0"
 
 [dependencies.serde]
 features = ["derive"]
 version = "1.0"
 
 [dev-dependencies]
-test-case = "3.1.0"
-async-std = "1.0.1"
+test-case = "3.3.1"
+async-std = "1.13.0"
 async-std-test = "0.0.4"
 criterion = "0.5.1"
-proptest = "1.2.0"
-serial_test = "3.1.1"
+proptest = "1.6.0"
+serial_test = "3.2.0"
 
 [[bench]]
 name = "benchmark"
