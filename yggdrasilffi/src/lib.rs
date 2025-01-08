@@ -478,7 +478,6 @@ mod tests {
             segments: None,
             meta: None,
             version: 2,
-            meta: None,
         };
 
         unsafe {
