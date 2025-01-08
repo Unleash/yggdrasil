@@ -19,6 +19,8 @@ jobs:
             platform: aarch64-linux-musl
           - binary: yggdrasilffi_x86_64.dll
             platform: x64-mingw32
+          - binary: yggdrasilffi_x86_64.dll
+            platform: x64-mingw32-ucrt            
           - binary: yggdrasilffi_arm64.dll
             platform: arm64-mingw32
           - binary: libyggdrasilffi_x86_64.dylib
