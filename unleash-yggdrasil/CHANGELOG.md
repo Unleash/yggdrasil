@@ -5,7 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.14.5 (2025-01-08)
+
+### New Features
+
+ - <csr-id-49b3abbfc136ee44080eeaba50cb40fd5e3b4788/> delta processing implementation
+   * feat: start work on delta processing
+   
+   * First test running
+   
+   * chore: update unleash-types for ffi and wasm
+   
+   * Extended test coverage
+   
+   * Extended test coverage
+   
+   * Fix
+   
+   * Fix
+   
+   * Fix
+   
+   ---------
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#188](https://github.com/Unleash/yggdrasil/issues/188)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#188](https://github.com/Unleash/yggdrasil/issues/188)**
+    - Delta processing implementation ([`49b3abb`](https://github.com/Unleash/yggdrasil/commit/49b3abbfc136ee44080eeaba50cb40fd5e3b4788))
+</details>
+
 ## v0.14.4 (2025-01-08)
+
+<csr-id-bc7c0c3be8653e812e295922685c77ea7b3e684f/>
 
 ### Chore
 
@@ -15,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#194](https://github.com/Unleash/yggdrasil/issues/194)
 
@@ -27,6 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#194](https://github.com/Unleash/yggdrasil/issues/194)**
     - Bump unleash-types version ([`bc7c0c3`](https://github.com/Unleash/yggdrasil/commit/bc7c0c3be8653e812e295922685c77ea7b3e684f))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.14.4 ([`b4a165d`](https://github.com/Unleash/yggdrasil/commit/b4a165d21445f934c176eed3687648e66a0dc603))
 </details>
 
 ## v0.14.3 (2025-01-07)
