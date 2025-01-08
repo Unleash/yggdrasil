@@ -22,7 +22,8 @@ use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
 pub use unleash_types::client_features::Context;
 use unleash_types::client_features::{
-    ClientFeature, ClientFeatures, FeatureDependency, Override, Payload, Segment, Variant,
+    ClientFeature, ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
+    Segment, Variant,
 };
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
@@ -52,7 +53,7 @@ pub struct ToggleDefinition {
     pub project: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CompiledVariant {
     pub name: String,
     pub weight: i32,
@@ -150,32 +151,40 @@ pub fn compile_state(
     let mut warnings = vec![];
 
     for toggle in &state.features {
-        let rule = upgrade(&toggle.strategies.clone().unwrap_or_default(), &segment_map);
-        let variant_rule = compile_variant_rule(toggle, &segment_map);
         compiled_state.insert(
             toggle.name.clone(),
-            CompiledToggle {
-                name: toggle.name.clone(),
-                enabled: toggle.enabled,
-                feature_type: toggle.feature_type.clone(),
-                compiled_variant_strategy: variant_rule,
-                variants: compile_variants(&toggle.variants),
-                compiled_strategy: compile_rule(rule.as_str()).unwrap_or_else(|e| {
-                    warnings.push(EvalWarning {
-                        toggle_name: toggle.name.clone(),
-                        message: format!("Failed to compile toggle, this will always be off {e:?}"),
-                    });
-                    Box::new(|_| false)
-                }),
-
-                impression_data: toggle.impression_data.unwrap_or_default(),
-                project: toggle.project.clone().unwrap_or("default".to_string()),
-                dependencies: toggle.dependencies.clone().unwrap_or_default(),
-            },
+            compile(toggle, &segment_map, &mut warnings),
         );
     }
 
     (compiled_state, warnings)
+}
+
+pub fn compile(
+    toggle: &ClientFeature,
+    segment_map: &HashMap<i32, Segment>,
+    warnings: &mut Vec<EvalWarning>,
+) -> CompiledToggle {
+    let rule = upgrade(&toggle.strategies.clone().unwrap_or_default(), segment_map);
+    let variant_rule = compile_variant_rule(&toggle, segment_map);
+    CompiledToggle {
+        name: toggle.name.clone(),
+        enabled: toggle.enabled,
+        feature_type: toggle.feature_type.clone(),
+        compiled_variant_strategy: variant_rule,
+        variants: compile_variants(&toggle.variants),
+        compiled_strategy: compile_rule(rule.as_str()).unwrap_or_else(|e| {
+            warnings.push(EvalWarning {
+                toggle_name: toggle.name.clone(),
+                message: format!("Failed to compile toggle, this will always be off {e:?}"),
+            });
+            Box::new(|_| false)
+        }),
+
+        impression_data: toggle.impression_data.unwrap_or_default(),
+        project: toggle.project.clone().unwrap_or("default".to_string()),
+        dependencies: toggle.dependencies.clone().unwrap_or_default(),
+    }
 }
 
 fn compile_variants(variants: &Option<Vec<Variant>>) -> Vec<CompiledVariant> {
@@ -236,6 +245,24 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
+    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
+        let mut current_state = self.compiled_state.take().unwrap_or_default();
+        let segment_map = build_segment_map(&delta.segments);
+        let mut warnings: Vec<EvalWarning> = vec![];
+        for removed in delta.removed.clone() {
+            current_state.remove(&removed);
+        }
+        for update in delta.updated.clone() {
+            let updated_state = compile(&update, &segment_map, &mut warnings);
+            current_state.insert(update.name.clone(), updated_state);
+        }
+        self.compiled_state = Some(current_state);
+        if warnings.is_empty() {
+            None
+        } else {
+            Some(warnings)
+        }
+    }
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
         self.compiled_state
             .as_ref()
@@ -707,7 +734,9 @@ mod test {
     use serde::Deserialize;
     use std::{collections::HashMap, fs};
     use test_case::test_case;
-    use unleash_types::client_features::{ClientFeatures, FeatureDependency, Override, Payload};
+    use unleash_types::client_features::{
+        ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
+    };
 
     use crate::{
         check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
@@ -755,6 +784,40 @@ mod test {
         let spec_data =
             fs::read_to_string(spec_path).expect("Should have been able to read the file");
         serde_json::from_str(&spec_data).expect("Failed to parse client spec")
+    }
+
+    fn load_delta(delta_name: &str) -> ClientFeaturesDelta {
+        let delta_path = format!("../test-data/{delta_name}");
+        let delta = fs::read_to_string(delta_path).expect("Should have been able to read the file");
+        serde_json::from_str(&delta).expect("Failed to parse client spec")
+    }
+
+    #[test]
+    fn can_load_single() {
+        let delta = load_delta("delta_base.json");
+        let mut engine = EngineState::default();
+        engine.take_delta(&delta);
+        assert!(engine.get_toggle("test-flag").is_some())
+    }
+
+    #[test]
+    fn can_update_existing_state() {
+        let delta = load_delta("delta_base.json");
+        let patch = load_delta("delta_patch.json");
+        let mut engine = EngineState::default();
+        let context = Context {
+            user_id: Some("4".into()),
+            ..Context::default()
+        };
+
+        engine.take_delta(&delta);
+        assert!(!engine.is_enabled("test-flag", &context, &None));
+        assert!(engine.get_toggle("removed-flag").is_some());
+        assert!(!engine.is_enabled("segment-flag", &context, &None));
+        engine.take_delta(&patch);
+        assert!(engine.is_enabled("test-flag", &context, &None));
+        assert!(!engine.get_toggle("removed-flag").is_some());
+        assert!(engine.is_enabled("segment-flag", &context, &None));
     }
 
     #[test_case("01-simple-examples.json"; "Basic client spec")]
