@@ -245,7 +245,7 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
+    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
         let mut current_state = self.compiled_state.take().unwrap_or_default();
         let segment_map = build_segment_map(&delta.segments);
         let mut warnings: Vec<EvalWarning> = vec![];
