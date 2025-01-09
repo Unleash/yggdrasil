@@ -82,14 +82,14 @@ tasks.named<Test>("test") {
 }
 
 val platformToBinaryMap = mapOf(
-    "x86_64-linux" to "libyggdrasilffi_x86_64.so",
-    "arm-linux" to "libyggdrasilffi_arm64.so",
-    "x86_64-linux-musl" to "libyggdrasilffi_x86_64-musl.so",
-    "aarch64-linux-musl" to "libyggdrasilffi_arm64-musl.so",
-    "x64-mingw32" to "yggdrasilffi_x64.dll",
-    "arm64-mingw32" to "yggdrasilffi_arm64.dll",
-    "x86_64-darwin" to "libyggdrasilffi_x86_64.dylib",
-    "arm64-darwin" to "libyggdrasilffi_arm64.dylib"
+    "linux-x86_64" to "libyggdrasilffi_x86_64.so",
+    "linux-aarch_64" to "libyggdrasilffi_arm64.so",
+    "linux-x86_64-alpine" to "libyggdrasilffi_x86_64-musl.so",
+    "linux-aarch_64-alpine" to "libyggdrasilffi_arm64-musl.so",
+    "windows-x86_64" to "yggdrasilffi_x64.dll",
+    "windows-aarch_64" to "yggdrasilffi_arm64.dll",
+    "osx-x86_64" to "libyggdrasilffi_x86_64.dylib",
+    "osx-aarch_64" to "libyggdrasilffi_arm64.dylib"
 )
 
 
