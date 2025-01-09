@@ -58,7 +58,7 @@ class YggdrasilFFI {
                 libName = "libyggdrasilffi_x86_64.dylib";
             }
         } else if (os.contains("win")) {
-            if (arch.equals("x86_64")) {
+            if (arch.equals("x86_64") || arch.contains("amd64")) {
                 libName = "yggdrasilffi_x86_64.dll";
             } else if (arch.equals("x86") || arch.equals("i386") || arch.equals("i686")) {
                 libName = "yggdrasilffi_i686.dll";
