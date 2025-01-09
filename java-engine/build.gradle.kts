@@ -86,7 +86,7 @@ val platformToBinaryMap = mapOf(
     "linux-aarch_64" to "libyggdrasilffi_arm64.so",
     "linux-x86_64-alpine" to "libyggdrasilffi_x86_64-musl.so",
     "linux-aarch_64-alpine" to "libyggdrasilffi_arm64-musl.so",
-    "windows-x86_64" to "yggdrasilffi_x64.dll",
+    "windows-x86_64" to "yggdrasilffi_x86_64.dll",
     "windows-aarch_64" to "yggdrasilffi_arm64.dll",
     "osx-x86_64" to "libyggdrasilffi_x86_64.dylib",
     "osx-aarch_64" to "libyggdrasilffi_arm64.dylib"
