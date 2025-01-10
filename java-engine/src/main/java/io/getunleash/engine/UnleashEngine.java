@@ -133,6 +133,14 @@ public class UnleashEngine {
         return response.getValue();
     }
 
+    public List<FeatureDef> listKnownToggles() throws YggdrasilError {
+        YggResponse<List<FeatureDef>> response =
+                read(
+                        yggdrasil.listKnownToggles(),
+                        new TypeReference<YggResponse<List<FeatureDef>>>() {});
+        return response.getValue();
+    }
+
     /** Handle reading from a pointer into a String and mapping it to an object */
     private <T> T read(Pointer pointer, TypeReference<T> clazz) {
         try {

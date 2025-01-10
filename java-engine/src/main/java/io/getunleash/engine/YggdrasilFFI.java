@@ -2,7 +2,6 @@ package io.getunleash.engine;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;
-import com.sun.jna.Platform;
 import com.sun.jna.Pointer;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -37,6 +36,8 @@ interface UnleashFFI extends Library {
     Pointer built_in_strategies();
 
     void free_response(Pointer pointer);
+
+    Pointer list_known_toggles(Pointer ptr);
 }
 
 class YggdrasilFFI {
@@ -158,6 +159,10 @@ class YggdrasilFFI {
 
     Pointer shouldEmitImpressionEvent(String name) {
         return this.ffi.should_emit_impression_event(this.enginePtr, name);
+    }
+
+    Pointer listKnownToggles() {
+        return this.ffi.list_known_toggles(this.enginePtr);
     }
 
     private static final class YggdrasilNativeLibraryResourceCleaner implements Runnable {
