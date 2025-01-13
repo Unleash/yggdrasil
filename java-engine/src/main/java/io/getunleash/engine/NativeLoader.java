@@ -9,42 +9,45 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Collections;
 import java.lang.System;
 
 interface UnleashFFI extends Library {
 
-    Pointer new_engine();
+    Pointer newEngine();
 
-    void free_engine(Pointer ptr);
+    void freeEngine(Pointer ptr);
 
-    Pointer take_state(Pointer ptr, String toggles);
+    Pointer takeState(Pointer ptr, String toggles);
 
-    Pointer check_enabled(Pointer ptr, String name, String context, String customStrategyResults);
+    Pointer checkEnabled(Pointer ptr, String name, String context, String customStrategyResults);
 
-    Pointer check_variant(Pointer ptr, String name, String context, String customStrategyResults);
+    Pointer checkVariant(Pointer ptr, String name, String context, String customStrategyResults);
 
-    void count_toggle(Pointer ptr, String name, boolean enabled);
+    void countToggle(Pointer ptr, String name, boolean enabled);
 
-    void count_variant(Pointer ptr, String name, String variantName);
+    void countVariant(Pointer ptr, String name, String variantName);
 
-    Pointer get_metrics(Pointer ptr);
+    Pointer getMetrics(Pointer ptr);
 
-    Pointer should_emit_impression_event(Pointer ptr, String name);
+    Pointer shouldEmitImpressionEvent(Pointer ptr, String name);
 
-    Pointer built_in_strategies();
+    Pointer builtInStrategies();
 
-    void free_response(Pointer pointer);
+    void freeResponse(Pointer pointer);
 
-    Pointer list_known_toggles(Pointer ptr);
+    Pointer listKnownToggles(Pointer ptr);
+
+    static UnleashFFI getInstance() {
+        return NativeLoader.NATIVE_INTERFACE;
+    }
 }
 
-class YggdrasilFFI {
-    private static final Logger LOG = LoggerFactory.getLogger(YggdrasilFFI.class);
-
-    private final UnleashFFI ffi;
-    private final Pointer enginePtr;
+class NativeLoader {
+    static final UnleashFFI NATIVE_INTERFACE;
+    static {
+        NATIVE_INTERFACE = loadLibrary();
+    }
 
     static UnleashFFI loadLibrary() {
         String os = System.getProperty("os.name").toLowerCase();
@@ -88,7 +91,8 @@ class YggdrasilFFI {
             // Extract and load the native library from the JAR
             Path tempLib = extractLibraryFromJar(libName);
             System.load(tempLib.toAbsolutePath().toString());
-            return Native.load(tempLib.toAbsolutePath().toString(), UnleashFFI.class);
+            return Native.load(tempLib.toAbsolutePath().toString(), UnleashFFI.class,
+                    Collections.singletonMap(Library.OPTION_FUNCTION_MAPPER, new CamelToSnakeMapper()));
         } catch (IOException e) {
             throw new RuntimeException("Failed to load native library", e);
         }
@@ -109,75 +113,5 @@ class YggdrasilFFI {
             }
         }
         return tempFile;
-    }
-
-    YggdrasilFFI() {
-        this(loadLibrary());
-    }
-
-    YggdrasilFFI(UnleashFFI ffi) {
-        this.ffi = ffi;
-        this.enginePtr = this.ffi.new_engine();
-    }
-
-    @Override
-    protected void finalize() {
-        new YggdrasilNativeLibraryResourceCleaner(this.ffi, this.enginePtr).run();
-    }
-
-    Pointer takeState(String toggles) {
-        return this.ffi.take_state(this.enginePtr, toggles);
-    }
-
-    void freeResponse(Pointer response) {
-        this.ffi.free_response(response);
-    }
-
-    Pointer checkEnabled(String name, String context, String customStrategyResults) {
-        return this.ffi.check_enabled(this.enginePtr, name, context, customStrategyResults);
-    }
-
-    Pointer checkVariant(String name, String context, String customStrategyResults) {
-        return this.ffi.check_variant(this.enginePtr, name, context, customStrategyResults);
-    }
-
-    void countToggle(String flagName, boolean enabled) {
-        this.ffi.count_toggle(this.enginePtr, flagName, enabled);
-    }
-
-    void countVariant(String flagName, String variantName) {
-        this.ffi.count_variant(this.enginePtr, flagName, variantName);
-    }
-
-    Pointer getMetrics() {
-        return this.ffi.get_metrics(this.enginePtr);
-    }
-
-    Pointer builtInStrategies() {
-        return this.ffi.built_in_strategies();
-    }
-
-    Pointer shouldEmitImpressionEvent(String name) {
-        return this.ffi.should_emit_impression_event(this.enginePtr, name);
-    }
-
-    Pointer listKnownToggles() {
-        return this.ffi.list_known_toggles(this.enginePtr);
-    }
-
-    private static final class YggdrasilNativeLibraryResourceCleaner implements Runnable {
-        private final UnleashFFI ffi;
-        private final Pointer enginePtr;
-
-        private YggdrasilNativeLibraryResourceCleaner(UnleashFFI ffi, Pointer enginePtr) {
-            this.ffi = ffi;
-            this.enginePtr = enginePtr;
-        }
-
-        @Override
-        public void run() {
-            // All exceptions thrown by the cleaning action are ignored
-            this.ffi.free_engine(this.enginePtr);
-        }
     }
 }
