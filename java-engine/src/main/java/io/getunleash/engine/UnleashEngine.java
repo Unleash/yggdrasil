@@ -168,7 +168,6 @@ public class UnleashEngine {
     @Override
     protected void finalize() {
         if (cleanerIsSupported()) {
-            System.out.println("Finalize dodged");
             return;
         }
         try {
