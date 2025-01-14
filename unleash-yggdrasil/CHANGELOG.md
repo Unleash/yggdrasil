@@ -5,34 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.14.6 (2025-01-14)
+
+### Chore
+
+ - <csr-id-f870bfdf0be8554152ddebe7eb173ed3e7286816/> bump unleash types to 0.15.4
+
+### New Features
+
+ - <csr-id-9ef5c467ece7948e56a1cf6c1b544614ec8a387e/> expose list_known_features and core version in java layer
+   * feat(java): expose list_known_features
+   
+   * refactor(java):separate resposibilities on java engine so static methods can be exposed and do memory management that should work on Java 18 and above (#198)
+   
+   * refactor(java): rework java engine so that static methods can be exposed cleanly
+   
+   * feat(java): expose core version in java engine layer (#199)
+   
+   * fix(java): force native encoding to utf-8 so windows doesn't set it to something horrible (#200)
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 6 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#197](https://github.com/Unleash/yggdrasil/issues/197), [#201](https://github.com/Unleash/yggdrasil/issues/201)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#197](https://github.com/Unleash/yggdrasil/issues/197)**
+    - Expose list_known_features and core version in java layer ([`9ef5c46`](https://github.com/Unleash/yggdrasil/commit/9ef5c467ece7948e56a1cf6c1b544614ec8a387e))
+ * **[#201](https://github.com/Unleash/yggdrasil/issues/201)**
+    - Bump unleash types to 0.15.4 ([`f870bfd`](https://github.com/Unleash/yggdrasil/commit/f870bfdf0be8554152ddebe7eb173ed3e7286816))
+</details>
+
 ## v0.14.5 (2025-01-08)
 
 ### New Features
 
  - <csr-id-49b3abbfc136ee44080eeaba50cb40fd5e3b4788/> delta processing implementation
    * feat: start work on delta processing
-   
-   * First test running
-   
-   * chore: update unleash-types for ffi and wasm
-   
-   * Extended test coverage
-   
-   * Extended test coverage
-   
-   * Fix
-   
-   * Fix
-   
-   * Fix
-   
-   ---------
+* First test running
+* chore: update unleash-types for ffi and wasm
+* Extended test coverage
+* Extended test coverage
+* Fix
+* Fix
+* Fix
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#188](https://github.com/Unleash/yggdrasil/issues/188)
 
@@ -44,6 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#188](https://github.com/Unleash/yggdrasil/issues/188)**
     - Delta processing implementation ([`49b3abb`](https://github.com/Unleash/yggdrasil/commit/49b3abbfc136ee44080eeaba50cb40fd5e3b4788))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.14.5 ([`f699ee2`](https://github.com/Unleash/yggdrasil/commit/f699ee25230872980ccc1f1561440f699ecc8c9e))
 </details>
 
 ## v0.14.4 (2025-01-08)
