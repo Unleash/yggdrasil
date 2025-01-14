@@ -31,6 +31,7 @@ pub type CompiledState = HashMap<String, CompiledToggle>;
 
 pub const SUPPORTED_SPEC_VERSION: &str = "5.1.9";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
+pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub struct CompiledToggle {
     pub name: String,
