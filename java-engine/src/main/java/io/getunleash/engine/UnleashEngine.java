@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sun.jna.Pointer;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Stream;
@@ -15,66 +16,63 @@ import org.slf4j.LoggerFactory;
 
 public class UnleashEngine {
     private static final String EMPTY_STRATEGY_RESULTS = "{}";
-
     private static final Logger log = LoggerFactory.getLogger(UnleashEngine.class);
-    private final YggdrasilFFI yggdrasil;
-
+    private final UnleashFFI yggdrasil;
+    private final Pointer enginePtr;
     private final ObjectMapper mapper;
     private final CustomStrategiesEvaluator customStrategiesEvaluator;
+    private Object cleaner = setupCleaner();
 
     public UnleashEngine() {
-        this(new YggdrasilFFI());
+        this(UnleashFFI.getInstance(), null, null);
     }
 
     public UnleashEngine(List<IStrategy> customStrategies) {
-        this(new YggdrasilFFI(), customStrategies, null);
+        this(UnleashFFI.getInstance(), customStrategies, null);
     }
 
     public UnleashEngine(List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
-        this(new YggdrasilFFI(), customStrategies, fallbackStrategy);
-    }
-
-    UnleashEngine(YggdrasilFFI yggdrasil) {
-        this(yggdrasil, null, null);
-    }
-
-    UnleashEngine(YggdrasilFFI yggdrasil, List<IStrategy> customStrategies) {
-        this(yggdrasil, customStrategies, null);
+        this(UnleashFFI.getInstance(), customStrategies, fallbackStrategy);
     }
 
     UnleashEngine(
-            YggdrasilFFI yggdrasil, List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
-        this.yggdrasil = yggdrasil;
+            UnleashFFI ffi,
+            List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
+        yggdrasil = ffi;
+        this.enginePtr = yggdrasil.newEngine();
+        if (cleanerIsSupported()) {
+            registerWithCleaner(this, enginePtr);
+        }
         this.mapper = new ObjectMapper();
         this.mapper.registerModule(new JavaTimeModule());
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         if (customStrategies != null && !customStrategies.isEmpty()) {
-            List<String> builtInStrategies =
-                    read(yggdrasil.builtInStrategies(), new TypeReference<List<String>>() {});
-            this.customStrategiesEvaluator =
-                    new CustomStrategiesEvaluator(
-                            customStrategies.stream()
-                                    .filter(
-                                            strategy -> {
-                                                if (builtInStrategies.contains(
-                                                        strategy.getName())) {
-                                                    log.warn(
-                                                            "Custom strategy {} is already a built-in strategy. Skipping.",
-                                                            strategy.getName());
-                                                    return false;
-                                                }
-                                                return true;
-                                            }),
-                            fallbackStrategy);
+            List<String> builtInStrategies = read(yggdrasil.builtInStrategies(),
+                    new TypeReference<List<String>>() {
+                    });
+            this.customStrategiesEvaluator = new CustomStrategiesEvaluator(
+                    customStrategies.stream()
+                            .filter(
+                                    strategy -> {
+                                        if (builtInStrategies.contains(
+                                                strategy.getName())) {
+                                            log.warn(
+                                                    "Custom strategy {} is already a built-in strategy. Skipping.",
+                                                    strategy.getName());
+                                            return false;
+                                        }
+                                        return true;
+                                    }),
+                    fallbackStrategy);
         } else {
-            this.customStrategiesEvaluator =
-                    new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy);
+            this.customStrategiesEvaluator = new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy);
         }
     }
 
     public void takeState(String toggles) throws YggdrasilInvalidInputException {
-        YggResponse<Void> response =
-                read(yggdrasil.takeState(toggles), new TypeReference<YggResponse<Void>>() {});
+        YggResponse<Void> response = read(yggdrasil.takeState(this.enginePtr, toggles),
+                new TypeReference<YggResponse<Void>>() {
+                });
         if (!response.isValid()) {
             throw new YggdrasilInvalidInputException(toggles);
         }
@@ -87,10 +85,10 @@ public class UnleashEngine {
         try {
             String jsonContext = mapper.writeValueAsString(context);
             String strategyResults = customStrategiesEvaluator.eval(name, context);
-            YggResponse<Boolean> isEnabled =
-                    read(
-                            yggdrasil.checkEnabled(name, jsonContext, strategyResults),
-                            new TypeReference<YggResponse<Boolean>>() {});
+            YggResponse<Boolean> isEnabled = read(
+                    yggdrasil.checkEnabled(this.enginePtr, name, jsonContext, strategyResults),
+                    new TypeReference<YggResponse<Boolean>>() {
+                    });
             return isEnabled.getValue();
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
@@ -101,10 +99,11 @@ public class UnleashEngine {
             throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = mapper.writeValueAsString(context);
-            YggResponse<VariantDef> response =
-                    read(
-                            yggdrasil.checkVariant(name, jsonContext, EMPTY_STRATEGY_RESULTS),
-                            new TypeReference<YggResponse<VariantDef>>() {});
+            YggResponse<VariantDef> response = read(
+                    yggdrasil.checkVariant(this.enginePtr, name, jsonContext,
+                            EMPTY_STRATEGY_RESULTS),
+                    new TypeReference<YggResponse<VariantDef>>() {
+                    });
             return response.getValue();
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
@@ -112,25 +111,39 @@ public class UnleashEngine {
     }
 
     public void countToggle(String flagName, boolean enabled) {
-        this.yggdrasil.countToggle(flagName, enabled);
+        yggdrasil.countToggle(this.enginePtr, flagName, enabled);
     }
 
     public void countVariant(String flagName, String variantName) {
-        this.yggdrasil.countVariant(flagName, variantName);
+        yggdrasil.countVariant(this.enginePtr, flagName, variantName);
     }
 
     public MetricsBucket getMetrics() throws YggdrasilError {
-        YggResponse<MetricsBucket> response =
-                read(yggdrasil.getMetrics(), new TypeReference<YggResponse<MetricsBucket>>() {});
+        YggResponse<MetricsBucket> response = read(yggdrasil.getMetrics(this.enginePtr),
+                new TypeReference<YggResponse<MetricsBucket>>() {
+                });
         return response.getValue();
     }
 
     public boolean shouldEmitImpressionEvent(String name) throws YggdrasilError {
-        YggResponse<Boolean> response =
-                read(
-                        yggdrasil.shouldEmitImpressionEvent(name),
-                        new TypeReference<YggResponse<Boolean>>() {});
+        YggResponse<Boolean> response = read(
+                yggdrasil.shouldEmitImpressionEvent(this.enginePtr, name),
+                new TypeReference<YggResponse<Boolean>>() {
+                });
         return response.getValue();
+    }
+
+    public List<FeatureDef> listKnownToggles() throws YggdrasilError {
+        YggResponse<List<FeatureDef>> response = read(
+                yggdrasil.listKnownToggles(this.enginePtr),
+                new TypeReference<YggResponse<List<FeatureDef>>>() {
+                });
+        return response.getValue();
+    }
+
+    public static String getCoreVersion() {
+        Pointer versionPointer = UnleashFFI.getYggdrasilCoreVersion();
+        return versionPointer.getString(0);
     }
 
     /** Handle reading from a pointer into a String and mapping it to an object */
@@ -145,6 +158,61 @@ public class UnleashEngine {
             }
         } finally {
             yggdrasil.freeResponse(pointer);
+        }
+    }
+
+    static boolean cleanerIsSupported() {
+        String version = System.getProperty("java.version");
+        if (version.startsWith("1.")) {
+            int minorVersion = Integer.parseInt(version.substring(2, 3));
+            return minorVersion > 8;
+        }
+        return true;
+    }
+
+    @Override
+    protected void finalize() {
+        if (cleanerIsSupported()) {
+            return;
+        }
+        try {
+            if (enginePtr != null) {
+                yggdrasil.freeEngine(enginePtr);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to release native resource: " + e.getMessage());
+        }
+    }
+
+    private static Object setupCleaner() {
+        if (!cleanerIsSupported()) {
+            return null;
+        }
+
+        try {
+            Class<?> cleanerClass = Class.forName("java.lang.ref.Cleaner");
+
+            Method createMethod = cleanerClass.getMethod("create");
+            return createMethod.invoke(null);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to dynamically load Cleaner", e);
+        }
+    }
+
+    private void registerWithCleaner(UnleashEngine engine, Pointer enginePtr) {
+        try {
+            Class<?> cleanerClass = Class.forName("java.lang.ref.Cleaner");
+            Method registerMethod = cleanerClass.getMethod("register", Object.class, Runnable.class);
+
+            // Avoid capturing the engine itself in the lambda, otherwise this prevents GC!
+            UnleashFFI ffiInstance = engine.yggdrasil;
+            Runnable cleanupAction = () -> {
+                ffiInstance.freeEngine(enginePtr);
+            };
+
+            registerMethod.invoke(cleaner, engine, cleanupAction);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to dynamically load Cleaner", e);
         }
     }
 }

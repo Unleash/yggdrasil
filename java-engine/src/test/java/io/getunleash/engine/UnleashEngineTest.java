@@ -10,6 +10,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
+import java.lang.ref.PhantomReference;
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,6 +27,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 class TestSuite {
     public String name;
@@ -35,8 +39,8 @@ class TestSuite {
 class UnleashEngineTest {
 
     // Assume this is set up to be your feature JSON
-    private final String simpleFeatures =
-            loadFeaturesFromFile("../client-specification/specifications/01-simple-examples.json");
+    private final String simpleFeatures = loadFeaturesFromFile(
+            "../client-specification/specifications/01-simple-examples.json");
 
     public static String loadFeaturesFromFile(String filePath) {
         ObjectMapper mapper = new ObjectMapper();
@@ -89,12 +93,26 @@ class UnleashEngineTest {
         VariantDef variant = engine.getVariant("Feature.A", context);
 
         if (variant == null) {
-            variant =
-                    new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context));
+            variant = new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context));
         }
 
         assertEquals("disabled", variant.getName());
         assertFalse(variant.isEnabled());
+    }
+
+    @Test
+    void testListKnownTogglesReturnsAllFeatures() throws Exception {
+        engine.takeState(
+                "{\"version\":1,\"features\":[{\"name\":\"Feature.A\",\"type\":\"experiment\",\"description\":\"Enabled toggle\",\"project\":\"test\",\"enabled\":true,\"strategies\":[{\"name\":\"default\"}]}]}");
+        List<FeatureDef> features = engine.listKnownToggles();
+        assertEquals(1, features.size());
+
+        Optional<FeatureDef> featureA = features.stream().filter(f -> f.getName().equals("Feature.A")).findFirst();
+        assertTrue(featureA.isPresent());
+        assertEquals("Feature.A", featureA.get().getName());
+        assertEquals("test", featureA.get().getProject());
+        assertTrue(featureA.get().getType().isPresent());
+        assertEquals("experiment", featureA.get().getType().get());
     }
 
     @Test
@@ -103,13 +121,13 @@ class UnleashEngineTest {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         File basePath = Paths.get("../client-specification/specifications").toFile();
         File indexFile = new File(basePath, "index.json");
-        List<String> testSuites =
-                objectMapper.readValue(indexFile, new TypeReference<List<String>>() {});
+        List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<List<String>>() {
+        });
 
         for (String suite : testSuites) {
             File suiteFile = new File(basePath, suite);
-            TestSuite suiteData =
-                    objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {});
+            TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {
+            });
 
             engine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
@@ -146,17 +164,15 @@ class UnleashEngineTest {
                     Context context = objectMapper.readValue(contextJson, Context.class);
                     String toggleName = (String) test.get("toggleName");
 
-                    VariantDef expectedResult =
-                            objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
+                    VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
                     VariantDef result = engine.getVariant(toggleName, context);
                     if (result == null) {
                         // this behavior should be implemented in the SDK
-                        result =
-                                new VariantDef(
-                                        "disabled",
-                                        null,
-                                        false,
-                                        engine.isEnabled(toggleName, context));
+                        result = new VariantDef(
+                                "disabled",
+                                null,
+                                false,
+                                engine.isEnabled(toggleName, context));
                     }
 
                     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
@@ -194,13 +210,13 @@ class UnleashEngineTest {
         assertNotNull(stop);
         assertTrue(stop.isAfter(start)); // unlikely to be equal but could happen
         assertTrue(
-                start.until(Instant.now(), ChronoUnit.SECONDS)
-                        < 10); // should be within 10 seconds of now
+                start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10 seconds of now
 
         assertEquals(3, bucket.getToggles().size());
 
         assertEquals(1, bucket.getToggles().get("Feature.A").getVariants().get("A"));
-        // Validate: counting on enabled is up to the SDK or should we also count enabled when
+        // Validate: counting on enabled is up to the SDK or should we also count
+        // enabled when
         // getting a variant?
         assertEquals(0, bucket.getToggles().get("Feature.A").getYes());
         assertEquals(0, bucket.getToggles().get("Feature.A").getNo());
@@ -214,9 +230,9 @@ class UnleashEngineTest {
 
     @ParameterizedTest
     @CsvSource({
-        "with.impression.data, true",
-        "with.impression.data.false, false",
-        "with.impression.data.undefined, false"
+            "with.impression.data, true",
+            "with.impression.data.false, false",
+            "with.impression.data.undefined, false"
     })
     void impressionData_whenFeature_shouldReturn(String featureName, boolean expectedImpressionData)
             throws Exception {
@@ -237,11 +253,44 @@ class UnleashEngineTest {
             Context context,
             boolean expectedIsEnabled)
             throws Exception {
-        UnleashEngine customEngine = new UnleashEngine(new YggdrasilFFI(), customStrategies);
+        UnleashEngine customEngine = new UnleashEngine(customStrategies);
         takeFeaturesFromResource(customEngine, "custom-strategy-tests.json");
         Boolean result = customEngine.isEnabled(featureName, context);
         assertNotNull(result);
         assertEquals(expectedIsEnabled, result);
+    }
+
+    @Test
+    void testResourceCleanup() throws InterruptedException {
+        UnleashFFI ffiMock = Mockito.mock(UnleashFFI.class);
+        ReferenceQueue<UnleashEngine> queue = new ReferenceQueue<>();
+
+        UnleashEngine library = new UnleashEngine(ffiMock, null, null);
+        PhantomReference<UnleashEngine> reference = new PhantomReference<>(library, queue);
+
+        // Make the object eligible for garbage collection
+        library = null;
+        Reference<? extends UnleashEngine> polledReference = null;
+
+        for (int i = 0; i < 50; i++) {
+            System.gc();
+            polledReference = queue.poll();
+            if (polledReference != null) {
+                break;
+            }
+            Thread.sleep(10);
+        }
+
+        assertNotNull(polledReference, "Cleaner did not trigger");
+        Mockito.verify(ffiMock).freeEngine(Mockito.any());
+    }
+
+    @Test
+    void testCoreVersionIsRetrieved() {
+        String coreVersion = UnleashEngine.getCoreVersion();
+        assertNotNull(coreVersion);
+        // check that it contains two dots, close enough for a quick and dirty but stable semver check
+        assertTrue(coreVersion.split("\\.").length >= 3);
     }
 
     private static Stream<Arguments> customStrategiesInput() {
@@ -305,9 +354,9 @@ class UnleashEngineTest {
                 Files.readAllBytes(
                         Paths.get(
                                 Objects.requireNonNull(
-                                                UnleashEngineTest.class
-                                                        .getClassLoader()
-                                                        .getResource(resource))
+                                        UnleashEngineTest.class
+                                                .getClassLoader()
+                                                .getResource(resource))
                                         .toURI())),
                 StandardCharsets.UTF_8);
     }
