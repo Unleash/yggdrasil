@@ -285,6 +285,14 @@ class UnleashEngineTest {
         Mockito.verify(ffiMock).freeEngine(Mockito.any());
     }
 
+    @Test
+    void testCoreVersionIsRetrieved() {
+        String coreVersion = UnleashEngine.getCoreVersion();
+        assertNotNull(coreVersion);
+        // check that it contains two dots, close enough for a quick and dirty but stable semver check
+        assertTrue(coreVersion.split("\\.").length >= 3);
+    }
+
     private static Stream<Arguments> customStrategiesInput() {
         Context oneYesContext = new Context();
         oneYesContext.setProperties(mapOf("one", "yes"));

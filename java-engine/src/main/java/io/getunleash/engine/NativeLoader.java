@@ -38,8 +38,14 @@ interface UnleashFFI extends Library {
 
     Pointer listKnownToggles(Pointer ptr);
 
+    Pointer getCoreVersion();
+
     static UnleashFFI getInstance() {
         return NativeLoader.NATIVE_INTERFACE;
+    }
+
+    static Pointer getYggdrasilCoreVersion() {
+        return NativeLoader.NATIVE_INTERFACE.getCoreVersion();
     }
 }
 

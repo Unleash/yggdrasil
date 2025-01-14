@@ -141,6 +141,11 @@ public class UnleashEngine {
         return response.getValue();
     }
 
+    public static String getCoreVersion() {
+        Pointer versionPointer = UnleashFFI.getYggdrasilCoreVersion();
+        return versionPointer.getString(0);
+    }
+
     /** Handle reading from a pointer into a String and mapping it to an object */
     private <T> T read(Pointer pointer, TypeReference<T> clazz) {
         try {

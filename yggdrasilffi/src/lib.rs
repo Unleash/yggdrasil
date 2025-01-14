@@ -8,7 +8,12 @@ use std::{
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
-use unleash_yggdrasil::{Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition};
+use unleash_yggdrasil::{
+    Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition, CORE_VERSION,
+};
+
+static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
+    std::sync::LazyLock::new(|| CString::new(CORE_VERSION).expect("CString::new failed"));
 
 #[derive(Serialize, Deserialize)]
 struct Response<T> {
@@ -258,6 +263,15 @@ pub unsafe extern "C" fn check_variant(
 pub unsafe extern "C" fn built_in_strategies() -> *const c_char {
     let strategies = serde_json::to_string(&KNOWN_STRATEGIES).unwrap();
     CString::new(strategies).unwrap().into_raw()
+}
+
+/// Returns the version of the Yggdrasil library, in a semantic version format
+///
+/// # Safety
+/// This returns a constant string, you should not call free on the result of this
+#[no_mangle]
+pub unsafe extern "C" fn get_core_version() -> *const c_char {
+    CORE_VERSION_CSTRING.as_ptr() as *const c_char
 }
 
 /// Frees the memory allocated for a response message created by `check_enabled` or `check_variant`.
