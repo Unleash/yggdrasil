@@ -9,7 +9,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.lang.System;
 
 interface UnleashFFI extends Library {
@@ -93,12 +94,15 @@ class NativeLoader {
             throw new UnsupportedOperationException("Unsupported operating system: " + os + ", architecture: " + arch);
         }
 
+        Map<String, Object> options = new HashMap<>();
+        options.put(Library.OPTION_FUNCTION_MAPPER, new CamelToSnakeMapper());
+        options.put(Library.OPTION_STRING_ENCODING, "UTF-8");
+
         try {
             // Extract and load the native library from the JAR
             Path tempLib = extractLibraryFromJar(libName);
             System.load(tempLib.toAbsolutePath().toString());
-            return Native.load(tempLib.toAbsolutePath().toString(), UnleashFFI.class,
-                    Collections.singletonMap(Library.OPTION_FUNCTION_MAPPER, new CamelToSnakeMapper()));
+            return Native.load(tempLib.toAbsolutePath().toString(), UnleashFFI.class, options);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load native library", e);
         }
