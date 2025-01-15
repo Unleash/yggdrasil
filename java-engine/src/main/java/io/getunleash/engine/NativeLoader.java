@@ -19,19 +19,19 @@ interface UnleashFFI extends Library {
 
     void freeEngine(Pointer ptr);
 
-    Pointer takeState(Pointer ptr, String toggles);
+    Pointer takeState(Pointer ptr, Pointer toggles);
 
-    Pointer checkEnabled(Pointer ptr, String name, String context, String customStrategyResults);
+    Pointer checkEnabled(Pointer ptr, Pointer name, Pointer context, Pointer customStrategyResults);
 
-    Pointer checkVariant(Pointer ptr, String name, String context, String customStrategyResults);
+    Pointer checkVariant(Pointer ptr, Pointer name, Pointer context, Pointer customStrategyResults);
 
-    void countToggle(Pointer ptr, String name, boolean enabled);
+    void countToggle(Pointer ptr, Pointer name, boolean enabled);
 
-    void countVariant(Pointer ptr, String name, String variantName);
+    void countVariant(Pointer ptr, Pointer name, Pointer variantName);
 
     Pointer getMetrics(Pointer ptr);
 
-    Pointer shouldEmitImpressionEvent(Pointer ptr, String name);
+    Pointer shouldEmitImpressionEvent(Pointer ptr, Pointer name);
 
     Pointer builtInStrategies();
 

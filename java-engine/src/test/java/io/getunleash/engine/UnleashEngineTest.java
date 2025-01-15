@@ -62,7 +62,7 @@ class UnleashEngineTest {
     }
 
     @Test
-    void testTakeState() throws YggdrasilInvalidInputException {
+    void testTakeState() throws YggdrasilInvalidInputException, YggdrasilError {
         engine.takeState(simpleFeatures);
     }
 
