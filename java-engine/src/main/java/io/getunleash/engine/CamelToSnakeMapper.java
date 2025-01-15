@@ -8,10 +8,13 @@ import com.sun.jna.NativeLibrary;
 class CamelToSnakeMapper implements FunctionMapper {
     @Override
     public String getFunctionName(NativeLibrary library, Method method) {
-        String methodName = method.getName();
+        return convertToSnake(method.getName());
+    }
+
+    String convertToSnake(String inputName) {
         StringBuilder snakeCaseName = new StringBuilder();
 
-        for (char c : methodName.toCharArray()) {
+        for (char c : inputName.toCharArray()) {
             if (Character.isUpperCase(c)) {
                 snakeCaseName.append('_').append(Character.toLowerCase(c));
             } else {
