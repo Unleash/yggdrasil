@@ -19,7 +19,7 @@ class YggResponse<T> {
     }
 
     boolean isValid() {
-        return StatusCode.Ok.equals(this.statusCode);
+        return !StatusCode.Error.equals(this.statusCode);
     }
 
     public T getValue() throws YggdrasilError {
