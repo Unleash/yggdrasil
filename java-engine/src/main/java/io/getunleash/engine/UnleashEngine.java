@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -47,7 +48,7 @@ public class UnleashEngine {
         this.mapper.registerModule(new JavaTimeModule());
         this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         if (customStrategies != null && !customStrategies.isEmpty()) {
-            List<String> builtInStrategies = read(yggdrasil.builtInStrategies(),
+            List<String> builtInStrategies = readRaw(yggdrasil.builtInStrategies(),
                     new TypeReference<List<String>>() {
                     });
             this.customStrategiesEvaluator = new CustomStrategiesEvaluator(
@@ -69,14 +70,10 @@ public class UnleashEngine {
         }
     }
 
-    public void takeState(String toggles) throws YggdrasilInvalidInputException {
-        YggResponse<Void> response = read(yggdrasil.takeState(this.enginePtr, toggles),
+    public void takeState(String toggles) throws YggdrasilInvalidInputException, YggdrasilError {
+        read(yggdrasil.takeState(this.enginePtr, toUtf8Pointer(toggles)),
                 new TypeReference<YggResponse<Void>>() {
                 });
-        if (!response.isValid()) {
-            throw new YggdrasilInvalidInputException(toggles);
-        }
-
         customStrategiesEvaluator.loadStrategiesFor(toggles);
     }
 
@@ -85,11 +82,12 @@ public class UnleashEngine {
         try {
             String jsonContext = mapper.writeValueAsString(context);
             String strategyResults = customStrategiesEvaluator.eval(name, context);
-            YggResponse<Boolean> isEnabled = read(
-                    yggdrasil.checkEnabled(this.enginePtr, name, jsonContext, strategyResults),
+            Boolean isEnabled = read(
+                    yggdrasil.checkEnabled(this.enginePtr, toUtf8Pointer(name),
+                            toUtf8Pointer(jsonContext), toUtf8Pointer(strategyResults)),
                     new TypeReference<YggResponse<Boolean>>() {
                     });
-            return isEnabled.getValue();
+            return isEnabled;
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
         }
@@ -99,46 +97,48 @@ public class UnleashEngine {
             throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = mapper.writeValueAsString(context);
-            YggResponse<VariantDef> response = read(
-                    yggdrasil.checkVariant(this.enginePtr, name, jsonContext,
-                            EMPTY_STRATEGY_RESULTS),
+            VariantDef response = read(
+                    yggdrasil.checkVariant(this.enginePtr, toUtf8Pointer(name),
+                            toUtf8Pointer(jsonContext),
+                            toUtf8Pointer(EMPTY_STRATEGY_RESULTS)),
                     new TypeReference<YggResponse<VariantDef>>() {
                     });
-            return response.getValue();
+            return response;
         } catch (JsonProcessingException e) {
             throw new YggdrasilInvalidInputException(context);
         }
     }
 
     public void countToggle(String flagName, boolean enabled) {
-        yggdrasil.countToggle(this.enginePtr, flagName, enabled);
+        yggdrasil.countToggle(this.enginePtr, toUtf8Pointer(flagName), enabled);
     }
 
     public void countVariant(String flagName, String variantName) {
-        yggdrasil.countVariant(this.enginePtr, flagName, variantName);
+        yggdrasil.countVariant(this.enginePtr, toUtf8Pointer(flagName),
+                toUtf8Pointer(variantName));
     }
 
     public MetricsBucket getMetrics() throws YggdrasilError {
-        YggResponse<MetricsBucket> response = read(yggdrasil.getMetrics(this.enginePtr),
+        MetricsBucket response = read(yggdrasil.getMetrics(this.enginePtr),
                 new TypeReference<YggResponse<MetricsBucket>>() {
                 });
-        return response.getValue();
+        return response;
     }
 
     public boolean shouldEmitImpressionEvent(String name) throws YggdrasilError {
-        YggResponse<Boolean> response = read(
-                yggdrasil.shouldEmitImpressionEvent(this.enginePtr, name),
+        Boolean response = read(
+                yggdrasil.shouldEmitImpressionEvent(this.enginePtr, toUtf8Pointer(name)),
                 new TypeReference<YggResponse<Boolean>>() {
                 });
-        return response.getValue();
+        return response;
     }
 
     public List<FeatureDef> listKnownToggles() throws YggdrasilError {
-        YggResponse<List<FeatureDef>> response = read(
+        List<FeatureDef> response = read(
                 yggdrasil.listKnownToggles(this.enginePtr),
                 new TypeReference<YggResponse<List<FeatureDef>>>() {
                 });
-        return response.getValue();
+        return response;
     }
 
     public static String getCoreVersion() {
@@ -146,8 +146,21 @@ public class UnleashEngine {
         return versionPointer.getString(0);
     }
 
+    /**
+     * Handle reading from a pointer into an YggdrasilResponse and unwrapping that
+     * to an object
+     */
+    private <T> T read(Pointer pointer, TypeReference<YggResponse<T>> clazz) throws YggdrasilError {
+        YggResponse<T> wrappedResponse = readRaw(pointer, clazz);
+        if (wrappedResponse.isValid()) {
+            return wrappedResponse.getValue();
+        } else {
+            throw new YggdrasilError(wrappedResponse.errorMessage);
+        }
+    }
+
     /** Handle reading from a pointer into a String and mapping it to an object */
-    private <T> T read(Pointer pointer, TypeReference<T> clazz) {
+    private <T> T readRaw(Pointer pointer, TypeReference<T> clazz) {
         try {
             String str = pointer.getString(0, StandardCharsets.UTF_8.toString());
             try {
@@ -159,6 +172,14 @@ public class UnleashEngine {
         } finally {
             yggdrasil.freeResponse(pointer);
         }
+    }
+
+    static Pointer toUtf8Pointer(String str) {
+        byte[] utf8Bytes = str.getBytes(StandardCharsets.UTF_8);
+        Pointer pointer = new Memory(utf8Bytes.length + 1);
+        pointer.write(0, utf8Bytes, 0, utf8Bytes.length);
+        pointer.setByte(utf8Bytes.length, (byte) 0);
+        return pointer;
     }
 
     static boolean cleanerIsSupported() {
