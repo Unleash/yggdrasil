@@ -5,7 +5,7 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-class FeatureDef {
+public class FeatureDef {
     private final String name;
     private final Optional<String> type;
     private final String project;
