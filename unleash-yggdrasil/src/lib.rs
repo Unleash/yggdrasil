@@ -246,7 +246,7 @@ impl EngineState {
     pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
         let mut current_state = self.compiled_state.take().unwrap_or_default();
 
-        let segments: Vec<Segment> = delta
+        let mut segments: Vec<Segment> = delta
             .events
             .iter()
             .filter_map(|event| {
@@ -258,6 +258,19 @@ impl EngineState {
             })
             .collect();
 
+        let removed_segment_ids: Vec<i32> = delta
+            .events
+            .iter()
+            .filter_map(|event| {
+                if let DeltaEvent::SegmentRemoved { segment_id, .. } = event {
+                    Some(*segment_id) // Extract the segment ID
+                } else {
+                    None
+                }
+            })
+            .collect();
+        segments.retain(|segment| !removed_segment_ids.contains(&segment.id));
+
         let segment_option = if segments.is_empty() { None } else { Some(segments) };
         let segment_map = build_segment_map(&segment_option);
         let mut warnings: Vec<EvalWarning> = vec![];
@@ -267,6 +280,7 @@ impl EngineState {
                 current_state.remove(feature_name);
             }
         }
+
         for event in &delta.events {
             if let DeltaEvent::FeatureUpdated { feature, .. } = event {
                 let updated_state = compile(feature, &segment_map, &mut warnings);
@@ -282,6 +296,7 @@ impl EngineState {
             Some(warnings)
         }
     }
+
 
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
         self.compiled_state
