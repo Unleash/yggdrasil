@@ -220,6 +220,7 @@ struct Metric {
 
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
+    segment_map: HashMap<i32, Segment>,
     toggle_metrics: DashMap<String, Metric>,
     pub started: DateTime<Utc>,
 }
@@ -228,6 +229,7 @@ impl Default for EngineState {
     fn default() -> Self {
         Self {
             compiled_state: Default::default(),
+            segment_map: Default::default(),
             toggle_metrics: Default::default(),
             started: Utc::now(),
         }
@@ -245,50 +247,45 @@ pub struct ResolvedToggle {
 impl EngineState {
     pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
         let mut current_state = self.compiled_state.take().unwrap_or_default();
+        let mut current_segments = self.segment_map.clone();
 
-        let mut segments: Vec<Segment> = delta
-            .events
-            .iter()
-            .filter_map(|event| {
-                if let DeltaEvent::SegmentUpdated { segment, .. } = event {
-                    Some(segment.clone())
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        let removed_segment_ids: Vec<i32> = delta
-            .events
-            .iter()
-            .filter_map(|event| {
-                if let DeltaEvent::SegmentRemoved { segment_id, .. } = event {
-                    Some(*segment_id) // Extract the segment ID
-                } else {
-                    None
-                }
-            })
-            .collect();
-        segments.retain(|segment| !removed_segment_ids.contains(&segment.id));
-
-        let segment_option = if segments.is_empty() { None } else { Some(segments) };
-        let segment_map = build_segment_map(&segment_option);
         let mut warnings: Vec<EvalWarning> = vec![];
 
         for event in &delta.events {
-            if let DeltaEvent::FeatureRemoved { feature_name, .. } = event {
-                current_state.remove(feature_name);
-            }
-        }
+            match event {
+                DeltaEvent::FeatureRemoved { feature_name, .. } => {
+                    current_state.remove(feature_name);
+                }
+                DeltaEvent::FeatureUpdated { feature, .. } => {
+                    let updated_state = compile(feature, &current_segments, &mut warnings);
+                    current_state.insert(feature.name.clone(), updated_state);
+                }
+                DeltaEvent::SegmentRemoved { segment_id, .. } => {
+                    // TODO: this might be fine, since you can only remove segment, when feature is not using it?
+                    current_segments.remove(segment_id);
+                }
+                DeltaEvent::SegmentUpdated { segment, .. } => {
+                    // TODO: updated all features that use this segment
+                    current_segments.insert(segment.id, segment.clone());
+                }
+                DeltaEvent::Hydration { features, segments, .. } => {
+                    current_state.clear();
+                    current_segments.clear();
 
-        for event in &delta.events {
-            if let DeltaEvent::FeatureUpdated { feature, .. } = event {
-                let updated_state = compile(feature, &segment_map, &mut warnings);
-                current_state.insert(feature.name.clone(), updated_state);
+                    for segment in segments {
+                        current_segments.insert(segment.id, segment.clone());
+                    }
+
+                    for feature in features {
+                        let compiled = compile(feature, &current_segments, &mut warnings);
+                        current_state.insert(feature.name.clone(), compiled);
+                    }
+                }
             }
         }
 
         self.compiled_state = Some(current_state);
+        self.segment_map = current_segments;
 
         if warnings.is_empty() {
             None
@@ -296,6 +293,7 @@ impl EngineState {
             Some(warnings)
         }
     }
+
 
 
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
