@@ -1,94 +1,100 @@
 {
-  "revisionId": 1,
-  "updated": [
+  "events": [
     {
-      "name": "test-flag",
-      "type": "release",
-      "enabled": false,
-      "project": "default",
-      "stale": false,
-      "strategies": [
-        {
-          "name": "flexibleRollout",
-          "constraints": [],
-          "parameters": {
-            "groupId": "test-flag",
-            "rollout": "100",
-            "stickiness": "default"
-          },
-          "variants": []
-        }
-      ],
-      "variants": [],
-      "description": null,
-      "impressionData": false
+      "type": "feature-updated",
+      "eventId": 1,
+      "feature": {
+        "name": "test-flag",
+        "type": "release",
+        "enabled": false,
+        "project": "default",
+        "stale": false,
+        "strategies": [
+          {
+            "name": "flexibleRollout",
+            "constraints": [],
+            "parameters": {
+              "groupId": "test-flag",
+              "rollout": "100",
+              "stickiness": "default"
+            },
+            "variants": []
+          }
+        ],
+        "variants": [],
+        "description": null,
+        "impressionData": false
+      }
     },
     {
-      "name": "segment-flag",
-      "type": "release",
-      "enabled": true,
-      "project": "default",
-      "stale": false,
-      "strategies": [
-        {
-          "name": "flexibleRollout",
-          "constraints": [],
-          "parameters": {
-            "groupId": "test-flag",
-            "rollout": "100",
-            "stickiness": "default"
-          },
-          "variants": [],
-          "segments": [
-            1
-          ]
-        }
-      ],
-      "variants": [],
-      "description": null,
-      "impressionData": false
+      "type": "feature-updated",
+      "eventId": 1,
+      "feature": {
+        "name": "segment-flag",
+        "type": "release",
+        "enabled": true,
+        "project": "default",
+        "stale": false,
+        "strategies": [
+          {
+            "name": "flexibleRollout",
+            "constraints": [],
+            "parameters": {
+              "groupId": "test-flag",
+              "rollout": "100",
+              "stickiness": "default"
+            },
+            "variants": [],
+            "segments": [1]
+          }
+        ],
+        "variants": [],
+        "description": null,
+        "impressionData": false
+      }
     },
     {
-      "name": "removed-flag",
-      "type": "release",
-      "enabled": true,
-      "project": "default",
-      "stale": false,
-      "strategies": [
-        {
-          "name": "flexibleRollout",
-          "constraints": [],
-          "parameters": {
-            "groupId": "test-flag",
-            "rollout": "100",
-            "stickiness": "default"
-          },
-          "variants": []
-        }
-      ],
-      "variants": [],
-      "description": null,
-      "impressionData": false
-    }
-  ],
-  "removed": [],
-  "segments": [
+      "type": "feature-updated",
+      "eventId": 1,
+      "feature": {
+        "name": "removed-flag",
+        "type": "release",
+        "enabled": true,
+        "project": "default",
+        "stale": false,
+        "strategies": [
+          {
+            "name": "flexibleRollout",
+            "constraints": [],
+            "parameters": {
+              "groupId": "test-flag",
+              "rollout": "100",
+              "stickiness": "default"
+            },
+            "variants": []
+          }
+        ],
+        "variants": [],
+        "description": null,
+        "impressionData": false
+      }
+    },
     {
-      "id": 1,
-      "name": "VIPUsers",
-      "constraints": [
-        {
-          "values": [
-            "1",
-            "2",
-            "3"
-          ],
-          "inverted": false,
-          "operator": "IN",
-          "contextName": "userId",
-          "caseInsensitive": false
-        }
-      ]
+      "type": "segment-updated",
+      "eventId": 1,
+      "segment": {
+        "id": 1,
+        "name": "VIPUsers",
+        "constraints": [
+          {
+            "values": ["1", "2", "3"],
+            "inverted": false,
+            "operator": "IN",
+            "contextName": "userId",
+            "caseInsensitive": false
+          }
+        ]
+      }
     }
   ]
 }

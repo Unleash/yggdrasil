@@ -22,8 +22,8 @@ use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
 pub use unleash_types::client_features::Context;
 use unleash_types::client_features::{
-    ClientFeature, ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
-    Segment, Variant,
+    ClientFeature, ClientFeatures, ClientFeaturesDelta, DeltaEvent, FeatureDependency, Override,
+    Payload, Segment, Variant,
 };
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
@@ -223,6 +223,7 @@ struct Metric {
 
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
+    previous_state: ClientFeatures,
     toggle_metrics: DashMap<String, Metric>,
     pub started: DateTime<Utc>,
 }
@@ -232,6 +233,7 @@ impl Default for EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
+            previous_state: Default::default(),
             started: Utc::now(),
         }
     }
@@ -246,24 +248,13 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
-        let mut current_state = self.compiled_state.take().unwrap_or_default();
-        let segment_map = build_segment_map(&delta.segments);
-        let mut warnings: Vec<EvalWarning> = vec![];
-        for removed in delta.removed.clone() {
-            current_state.remove(&removed);
-        }
-        for update in delta.updated.clone() {
-            let updated_state = compile(&update, &segment_map, &mut warnings);
-            current_state.insert(update.name.clone(), updated_state);
-        }
-        self.compiled_state = Some(current_state);
-        if warnings.is_empty() {
-            None
-        } else {
-            Some(warnings)
-        }
+    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> () {
+        let current_state = self.previous_state.clone();
+        let new_state = current_state.modify_and_copy(delta);
+
+        self.take_state(new_state);
     }
+
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
         self.compiled_state
             .as_ref()
@@ -624,6 +615,7 @@ impl EngineState {
 
     pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
+        self.previous_state = toggles;
         self.compiled_state = Some(compiled_state);
         if !warnings.is_empty() {
             Some(warnings)
