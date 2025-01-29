@@ -21,7 +21,10 @@ use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
 pub use unleash_types::client_features::Context;
-use unleash_types::client_features::{ClientFeature, ClientFeatures, ClientFeaturesDelta, DeltaEvent, FeatureDependency, Override, Payload, Segment, Variant};
+use unleash_types::client_features::{
+    ClientFeature, ClientFeatures, ClientFeaturesDelta, DeltaEvent, FeatureDependency, Override,
+    Payload, Segment, Variant,
+};
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
