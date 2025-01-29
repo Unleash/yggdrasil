@@ -614,9 +614,6 @@ impl EngineState {
         variant.to_enriched_response(enabled)
     }
 
-    // new method
-    // get state, apply delta, hand to take state
-    // modify in place /copy
 
     pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
