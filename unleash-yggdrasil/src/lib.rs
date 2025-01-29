@@ -613,7 +613,6 @@ impl EngineState {
         variant.to_enriched_response(enabled)
     }
 
-
     pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
         self.previous_state = toggles;
