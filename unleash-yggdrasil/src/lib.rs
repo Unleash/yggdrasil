@@ -220,7 +220,6 @@ struct Metric {
 
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
-    segment_map: HashMap<i32, Segment>,
     previous_state: ClientFeatures,
     toggle_metrics: DashMap<String, Metric>,
     pub started: DateTime<Utc>,
@@ -230,8 +229,8 @@ impl Default for EngineState {
     fn default() -> Self {
         Self {
             compiled_state: Default::default(),
-            segment_map: Default::default(),
             toggle_metrics: Default::default(),
+            previous_state: Default::default(),
             started: Utc::now(),
         }
     }
@@ -246,56 +245,13 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
-        let mut current_state = self.compiled_state.take().unwrap_or_default();
-        let mut current_segments = self.segment_map.clone();
+    pub fn update_state(&mut self, delta: &ClientFeaturesDelta) -> () {
+        let current_state = self.previous_state.clone();
+        let new_state = current_state.modify_and_copy(delta);
 
-        let mut warnings: Vec<EvalWarning> = vec![];
-
-        for event in &delta.events {
-            match event {
-                DeltaEvent::FeatureRemoved { feature_name, .. } => {
-                    current_state.remove(feature_name);
-                }
-                DeltaEvent::FeatureUpdated { feature, .. } => {
-                    let updated_state = compile(feature, &current_segments, &mut warnings);
-                    current_state.insert(feature.name.clone(), updated_state);
-                }
-                DeltaEvent::SegmentRemoved { segment_id, .. } => {
-                    // TODO: this might be fine, since you can only remove segment, when feature is not using it?
-                    current_segments.remove(segment_id);
-                }
-                DeltaEvent::SegmentUpdated { segment, .. } => {
-                    // TODO: updated all features that use this segment
-                    current_segments.insert(segment.id, segment.clone());
-                }
-                DeltaEvent::Hydration { features, segments, .. } => {
-                    current_state.clear();
-                    current_segments.clear();
-
-                    for segment in segments {
-                        current_segments.insert(segment.id, segment.clone());
-                    }
-
-                    for feature in features {
-                        let compiled = compile(feature, &current_segments, &mut warnings);
-                        current_state.insert(feature.name.clone(), compiled);
-                    }
-                }
-            }
-        }
-
-        self.compiled_state = Some(current_state);
-        self.segment_map = current_segments;
-
-        if warnings.is_empty() {
-            None
-        } else {
-            Some(warnings)
-        }
+        self.previous_state = new_state.clone();
+        self.take_state(new_state);
     }
-
-
 
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
         self.compiled_state
@@ -835,7 +791,7 @@ mod test {
     fn can_load_single() {
         let delta = load_delta("delta_base.json");
         let mut engine = EngineState::default();
-        engine.take_delta(&delta);
+        engine.update_state(&delta);
         assert!(engine.get_toggle("test-flag").is_some())
     }
 
@@ -849,11 +805,11 @@ mod test {
             ..Context::default()
         };
 
-        engine.take_delta(&delta);
+        engine.update_state(&delta);
         assert!(!engine.is_enabled("test-flag", &context, &None));
         assert!(engine.get_toggle("removed-flag").is_some());
         assert!(!engine.is_enabled("segment-flag", &context, &None));
-        engine.take_delta(&patch);
+        engine.update_state(&patch);
         assert!(engine.is_enabled("test-flag", &context, &None));
         assert!(!engine.get_toggle("removed-flag").is_some());
         assert!(engine.is_enabled("segment-flag", &context, &None));
