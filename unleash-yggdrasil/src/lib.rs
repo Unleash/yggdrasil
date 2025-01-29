@@ -248,10 +248,10 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) {
+    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
         let mut new_state = self.previous_state.clone();
         new_state.modify_in_place(delta);
-        self.take_state(new_state);
+        self.take_state(new_state)
     }
 
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
