@@ -252,7 +252,6 @@ impl EngineState {
         let current_state = self.previous_state.clone();
         let new_state = current_state.modify_and_copy(delta);
 
-        self.previous_state = new_state.clone();
         self.take_state(new_state);
     }
 
