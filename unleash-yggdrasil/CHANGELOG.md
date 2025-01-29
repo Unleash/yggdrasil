@@ -5,7 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.16.0 (2025-01-29)
+
+### New Features
+
+ - <csr-id-d73a4fa0581b32e14d4efe3d763eb623e1ff3e65/> add hydration method to ruby to receive delta updates
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#206](https://github.com/Unleash/yggdrasil/issues/206)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#206](https://github.com/Unleash/yggdrasil/issues/206)**
+    - Add hydration method to ruby to receive delta updates ([`d73a4fa`](https://github.com/Unleash/yggdrasil/commit/d73a4fa0581b32e14d4efe3d763eb623e1ff3e65))
+</details>
+
 ## v0.15.0 (2025-01-29)
+
+<csr-id-c685343d91c9f3ed64422d19915a74c4d52e823b/>
 
 ### Chore
 
@@ -15,32 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-12350311c13a5f606bd8cde354b8a17f16586483/> implement new delta api format
    * feat: implement new delta api format
-   
-   * feat: implement new delta api format
-   
-   * feat: implement new delta api format
-   
-   * feat: implement new delta api format
-   
-   * feat: internal ygg feature toggle cache
-   
-   * feat: rename to take_delta
-   
-   * fix: fmt
-   
-   * fix: rm comments
-   
-   * fix: remove uneccesary setter
-   
-   * fix: fmt
-   
-   ---------
+* feat: implement new delta api format
+* feat: implement new delta api format
+* feat: implement new delta api format
+* feat: internal ygg feature toggle cache
+* feat: rename to take_delta
+* fix: fmt
+* fix: rm comments
+* fix: remove uneccesary setter
+* fix: fmt
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 14 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#204](https://github.com/Unleash/yggdrasil/issues/204), [#205](https://github.com/Unleash/yggdrasil/issues/205)
@@ -55,6 +70,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Implement new delta api format ([`1235031`](https://github.com/Unleash/yggdrasil/commit/12350311c13a5f606bd8cde354b8a17f16586483))
  * **[#205](https://github.com/Unleash/yggdrasil/issues/205)**
     - Clean up some clippy warnings, remove an unnessary clone ([`c685343`](https://github.com/Unleash/yggdrasil/commit/c685343d91c9f3ed64422d19915a74c4d52e823b))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.15.0 ([`2da9cac`](https://github.com/Unleash/yggdrasil/commit/2da9cac60f7f82eeb43a9cc985aa6254d8822b73))
 </details>
 
 ## v0.14.6 (2025-01-14)
