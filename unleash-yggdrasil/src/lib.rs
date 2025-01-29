@@ -21,10 +21,7 @@ use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
 pub use unleash_types::client_features::Context;
-use unleash_types::client_features::{
-    ClientFeature, ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
-    Segment, Variant,
-};
+use unleash_types::client_features::{ClientFeature, ClientFeatures, ClientFeaturesDelta, DeltaEvent, FeatureDependency, Override, Payload, Segment, Variant};
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = HashMap<String, CompiledToggle>;
@@ -248,22 +245,44 @@ pub struct ResolvedToggle {
 impl EngineState {
     pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
         let mut current_state = self.compiled_state.take().unwrap_or_default();
-        let segment_map = build_segment_map(&delta.segments);
+
+        let segments: Vec<Segment> = delta
+            .events
+            .iter()
+            .filter_map(|event| {
+                if let DeltaEvent::SegmentUpdated { segment, .. } = event {
+                    Some(segment.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let segment_option = if segments.is_empty() { None } else { Some(segments) };
+        let segment_map = build_segment_map(&segment_option);
         let mut warnings: Vec<EvalWarning> = vec![];
-        for removed in delta.removed.clone() {
-            current_state.remove(&removed);
+
+        for event in &delta.events {
+            if let DeltaEvent::FeatureRemoved { feature_name, .. } = event {
+                current_state.remove(feature_name);
+            }
         }
-        for update in delta.updated.clone() {
-            let updated_state = compile(&update, &segment_map, &mut warnings);
-            current_state.insert(update.name.clone(), updated_state);
+        for event in &delta.events {
+            if let DeltaEvent::FeatureUpdated { feature, .. } = event {
+                let updated_state = compile(feature, &segment_map, &mut warnings);
+                current_state.insert(feature.name.clone(), updated_state);
+            }
         }
+
         self.compiled_state = Some(current_state);
+
         if warnings.is_empty() {
             None
         } else {
             Some(warnings)
         }
     }
+
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
         self.compiled_state
             .as_ref()

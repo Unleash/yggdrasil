@@ -1,73 +1,79 @@
 {
-  "revisionId": 2,
-  "updated": [
+  "events": [
     {
-      "name": "test-flag",
-      "type": "release",
-      "enabled": true,
-      "project": "default",
-      "stale": false,
-      "strategies": [
-        {
-          "name": "flexibleRollout",
-          "constraints": [],
-          "parameters": {
-            "groupId": "test-flag",
-            "rollout": "100",
-            "stickiness": "default"
-          },
-          "variants": []
-        }
-      ],
-      "variants": [],
-      "description": null,
-      "impressionData": false
+      "type": "feature-updated",
+      "eventId": 2,
+      "feature": {
+        "name": "test-flag",
+        "type": "release",
+        "enabled": true,
+        "project": "default",
+        "stale": false,
+        "strategies": [
+          {
+            "name": "flexibleRollout",
+            "constraints": [],
+            "parameters": {
+              "groupId": "test-flag",
+              "rollout": "100",
+              "stickiness": "default"
+            },
+            "variants": []
+          }
+        ],
+        "variants": [],
+        "description": null,
+        "impressionData": false
+      }
     },
     {
-      "name": "segment-flag",
-      "type": "release",
-      "enabled": true,
-      "project": "default",
-      "stale": false,
-      "strategies": [
-        {
-          "name": "flexibleRollout",
-          "constraints": [],
-          "parameters": {
-            "groupId": "test-flag",
-            "rollout": "100",
-            "stickiness": "default"
-          },
-          "variants": [],
-          "segments": [
-            1
-          ]
-        }
-      ],
-      "variants": [],
-      "description": null,
-      "impressionData": false
-    }
-  ],
-  "removed": ["removed-flag"],
-  "segments": [
+      "type": "feature-updated",
+      "eventId": 2,
+      "feature": {
+        "name": "segment-flag",
+        "type": "release",
+        "enabled": true,
+        "project": "default",
+        "stale": false,
+        "strategies": [
+          {
+            "name": "flexibleRollout",
+            "constraints": [],
+            "parameters": {
+              "groupId": "test-flag",
+              "rollout": "100",
+              "stickiness": "default"
+            },
+            "variants": [],
+            "segments": [1]
+          }
+        ],
+        "variants": [],
+        "description": null,
+        "impressionData": false
+      }
+    },
     {
-      "id": 1,
-      "name": "VIPUsers",
-      "constraints": [
-        {
-          "values": [
-            "1",
-            "2",
-            "3",
-            "4"
-          ],
-          "inverted": false,
-          "operator": "IN",
-          "contextName": "userId",
-          "caseInsensitive": false
-        }
-      ]
+      "type": "feature-removed",
+      "eventId": 2,
+      "featureName": "removed-flag"
+    },
+    {
+      "type": "segment-updated",
+      "eventId": 2,
+      "segment": {
+        "id": 1,
+        "name": "VIPUsers",
+        "constraints": [
+          {
+            "values": ["1", "2", "3", "4"],
+            "inverted": false,
+            "operator": "IN",
+            "contextName": "userId",
+            "caseInsensitive": false
+          }
+        ]
+      }
     }
   ]
 }
