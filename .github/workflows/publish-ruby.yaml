@@ -87,8 +87,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - java: 8
-            ruby: jruby-9.2
           - java: 11
             ruby: jruby-9.3
           - java: 17
