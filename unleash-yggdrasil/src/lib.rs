@@ -221,6 +221,7 @@ struct Metric {
 pub struct EngineState {
     compiled_state: Option<CompiledState>,
     segment_map: HashMap<i32, Segment>,
+    previous_state: ClientFeatures,
     toggle_metrics: DashMap<String, Metric>,
     pub started: DateTime<Utc>,
 }
@@ -654,8 +655,13 @@ impl EngineState {
         variant.to_enriched_response(enabled)
     }
 
+    // new method
+    // get state, apply delta, hand to take state
+    // modify in place /copy
+
     pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
+        self.previous_state = toggles;
         self.compiled_state = Some(compiled_state);
         if !warnings.is_empty() {
             Some(warnings)
