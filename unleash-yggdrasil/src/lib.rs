@@ -245,7 +245,7 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    pub fn update_state(&mut self, delta: &ClientFeaturesDelta) -> () {
+    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> () {
         let current_state = self.previous_state.clone();
         let new_state = current_state.modify_and_copy(delta);
 
@@ -791,7 +791,7 @@ mod test {
     fn can_load_single() {
         let delta = load_delta("delta_base.json");
         let mut engine = EngineState::default();
-        engine.update_state(&delta);
+        engine.take_delta(&delta);
         assert!(engine.get_toggle("test-flag").is_some())
     }
 
@@ -805,11 +805,11 @@ mod test {
             ..Context::default()
         };
 
-        engine.update_state(&delta);
+        engine.take_delta(&delta);
         assert!(!engine.is_enabled("test-flag", &context, &None));
         assert!(engine.get_toggle("removed-flag").is_some());
         assert!(!engine.is_enabled("segment-flag", &context, &None));
-        engine.update_state(&patch);
+        engine.take_delta(&patch);
         assert!(engine.is_enabled("test-flag", &context, &None));
         assert!(!engine.get_toggle("removed-flag").is_some());
         assert!(engine.is_enabled("segment-flag", &context, &None));
