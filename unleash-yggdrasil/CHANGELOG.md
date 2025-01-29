@@ -5,7 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.15.0 (2025-01-29)
+
+### Chore
+
+ - <csr-id-c685343d91c9f3ed64422d19915a74c4d52e823b/> clean up some clippy warnings, remove an unnessary clone
+
+### New Features
+
+ - <csr-id-12350311c13a5f606bd8cde354b8a17f16586483/> implement new delta api format
+   * feat: implement new delta api format
+   
+   * feat: implement new delta api format
+   
+   * feat: implement new delta api format
+   
+   * feat: implement new delta api format
+   
+   * feat: internal ygg feature toggle cache
+   
+   * feat: rename to take_delta
+   
+   * fix: fmt
+   
+   * fix: rm comments
+   
+   * fix: remove uneccesary setter
+   
+   * fix: fmt
+   
+   ---------
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 14 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#204](https://github.com/Unleash/yggdrasil/issues/204), [#205](https://github.com/Unleash/yggdrasil/issues/205)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#204](https://github.com/Unleash/yggdrasil/issues/204)**
+    - Implement new delta api format ([`1235031`](https://github.com/Unleash/yggdrasil/commit/12350311c13a5f606bd8cde354b8a17f16586483))
+ * **[#205](https://github.com/Unleash/yggdrasil/issues/205)**
+    - Clean up some clippy warnings, remove an unnessary clone ([`c685343`](https://github.com/Unleash/yggdrasil/commit/c685343d91c9f3ed64422d19915a74c4d52e823b))
+</details>
+
 ## v0.14.6 (2025-01-14)
+
+<csr-id-f870bfdf0be8554152ddebe7eb173ed3e7286816/>
 
 ### Chore
 
@@ -15,20 +69,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - <csr-id-9ef5c467ece7948e56a1cf6c1b544614ec8a387e/> expose list_known_features and core version in java layer
    * feat(java): expose list_known_features
-   
-   * refactor(java):separate resposibilities on java engine so static methods can be exposed and do memory management that should work on Java 18 and above (#198)
-   
-   * refactor(java): rework java engine so that static methods can be exposed cleanly
-   
-   * feat(java): expose core version in java engine layer (#199)
-   
-   * fix(java): force native encoding to utf-8 so windows doesn't set it to something horrible (#200)
+* refactor(java):separate resposibilities on java engine so static methods can be exposed and do memory management that should work on Java 18 and above (#198)
+* refactor(java): rework java engine so that static methods can be exposed cleanly
+* feat(java): expose core version in java engine layer (#199)
+* fix(java): force native encoding to utf-8 so windows doesn't set it to something horrible (#200)
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 6 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#197](https://github.com/Unleash/yggdrasil/issues/197), [#201](https://github.com/Unleash/yggdrasil/issues/201)
@@ -43,6 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Expose list_known_features and core version in java layer ([`9ef5c46`](https://github.com/Unleash/yggdrasil/commit/9ef5c467ece7948e56a1cf6c1b544614ec8a387e))
  * **[#201](https://github.com/Unleash/yggdrasil/issues/201)**
     - Bump unleash types to 0.15.4 ([`f870bfd`](https://github.com/Unleash/yggdrasil/commit/f870bfdf0be8554152ddebe7eb173ed3e7286816))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.14.6 ([`fc48343`](https://github.com/Unleash/yggdrasil/commit/fc48343b87ce7471eb124b2277ce7c5f48227771))
 </details>
 
 ## v0.14.5 (2025-01-08)
