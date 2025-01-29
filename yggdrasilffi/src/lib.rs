@@ -7,7 +7,10 @@ use std::{
 
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use unleash_types::{client_features::ClientFeatures, client_metrics::MetricBucket};
+use unleash_types::{
+    client_features::{ClientFeatures, ClientFeaturesDelta},
+    client_metrics::MetricBucket,
+};
 use unleash_yggdrasil::{
     Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition, CORE_VERSION,
 };
@@ -29,6 +32,13 @@ enum ResponseCode {
     Error = -2,
     NotFound = -1,
     Ok = 1,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+enum UpdateMessage {
+    FullResponse(ClientFeatures),
+    PartialUpdate(ClientFeaturesDelta),
 }
 
 impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
@@ -178,6 +188,36 @@ pub unsafe extern "C" fn take_state(
             Err(FFIError::PartialUpdate(warnings))
         } else {
             Ok(Some(()))
+        }
+    })();
+
+    result_to_json_ptr(result)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn take_delta_update(
+    engine_ptr: *mut c_void,
+    json_ptr: *const c_char,
+) -> *const c_char {
+    let result: Result<Option<()>, FFIError> = (|| {
+        let engine = get_engine(engine_ptr)?;
+        let update_message: UpdateMessage = get_json(json_ptr)?;
+
+        match update_message {
+            UpdateMessage::FullResponse(features_message) => {
+                if let Some(warnings) = engine.take_state(features_message) {
+                    Err(FFIError::PartialUpdate(warnings))
+                } else {
+                    Ok(Some(()))
+                }
+            }
+            UpdateMessage::PartialUpdate(delta_message) => {
+                if let Some(warnings) = engine.take_delta(&delta_message) {
+                    Err(FFIError::PartialUpdate(warnings))
+                } else {
+                    Ok(Some(()))
+                }
+            }
         }
     })();
 
