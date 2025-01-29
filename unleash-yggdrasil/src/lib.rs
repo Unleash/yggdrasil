@@ -22,7 +22,7 @@ use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
 pub use unleash_types::client_features::Context;
 use unleash_types::client_features::{
-    ClientFeature, ClientFeatures, ClientFeaturesDelta, DeltaEvent, FeatureDependency, Override,
+    ClientFeature, ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override,
     Payload, Segment, Variant,
 };
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
@@ -167,7 +167,7 @@ pub fn compile(
     warnings: &mut Vec<EvalWarning>,
 ) -> CompiledToggle {
     let rule = upgrade(&toggle.strategies.clone().unwrap_or_default(), segment_map);
-    let variant_rule = compile_variant_rule(&toggle, segment_map);
+    let variant_rule = compile_variant_rule(toggle, segment_map);
     CompiledToggle {
         name: toggle.name.clone(),
         enabled: toggle.enabled,
@@ -248,10 +248,9 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) -> () {
-        let current_state = self.previous_state.clone();
-        let new_state = current_state.modify_and_copy(delta);
-
+    pub fn take_delta(&mut self, delta: &ClientFeaturesDelta) {
+        let mut new_state = self.previous_state.clone();
+        new_state.modify_in_place(delta);
         self.take_state(new_state);
     }
 
