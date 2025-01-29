@@ -194,8 +194,18 @@ pub unsafe extern "C" fn take_state(
     result_to_json_ptr(result)
 }
 
+/// Takes a JSON string representing either a set of toggles or a series of events representing updates to client features
+/// Returns a JSON encoded response object specifying whether the update was successful or not. The caller is responsible
+/// for freeing this response object.
+///
+/// # Safety
+///
+/// The caller is responsible for ensuring all arguments are valid pointers.
+/// Null pointers will result in an error message being returned to the caller,
+/// but any invalid pointers will result in undefined behavior.
+/// These pointers should not be dropped for the lifetime of this function call.
 #[no_mangle]
-pub unsafe extern "C" fn take_delta_update(
+pub unsafe extern "C" fn hydrate_data(
     engine_ptr: *mut c_void,
     json_ptr: *const c_char,
 ) -> *const c_char {
