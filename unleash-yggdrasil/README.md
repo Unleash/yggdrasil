@@ -36,4 +36,11 @@ let enabled = engine.is_enabled("my-toggle-name", &context);
 
 # Releasing
 
-`cargo smart-release -u -b patch unleash-yggdrasil`
+Template
+```
+cargo smart-release -u -b {{patch/minor/major}} unleash-yggdrasil --execute
+```
+Example
+```
+cargo smart-release -u -b patch unleash-yggdrasil --execute
+```
