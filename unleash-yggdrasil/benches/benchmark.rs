@@ -10,18 +10,17 @@ fn is_enabled(engine: &EngineState, toggle_name: &str, context: &Context) {
 
 fn benchmark_with_no_strategy(c: &mut Criterion) {
     let mut engine = EngineState::default();
-    engine
-        .take_state(ClientFeatures {
-            version: 2,
-            features: vec![ClientFeature {
-                name: "test".into(),
-                enabled: true,
-                ..ClientFeature::default()
-            }],
-            segments: None,
-            query: None,
-        })
-        .unwrap();
+    engine.take_state(ClientFeatures {
+        version: 2,
+        features: vec![ClientFeature {
+            name: "test".into(),
+            enabled: true,
+            ..ClientFeature::default()
+        }],
+        segments: None,
+        query: None,
+        meta: None,
+    });
     let context = Context {
         user_id: None,
         session_id: None,
@@ -63,8 +62,8 @@ fn benchmark_with_single_constraint(c: &mut Criterion) {
             }],
             segments: None,
             query: None,
-        })
-        .unwrap();
+            meta: None,
+        });
     let context = Context {
         user_id: Some("7".into()),
         session_id: None,
@@ -116,8 +115,8 @@ fn benchmark_with_two_constraints(c: &mut Criterion) {
             }],
             segments: None,
             query: None,
-        })
-        .unwrap();
+            meta: None,
+        });
     let context = Context {
         user_id: Some("7".into()),
         session_id: None,
@@ -168,6 +167,7 @@ fn benchmark_engine_ingestion(c: &mut Criterion) {
         }],
         segments: None,
         query: None,
+        meta: None,
     };
     c.bench_function("engine ingestion", |b| {
         b.iter(|| engine.take_state(black_box(state.clone())))
