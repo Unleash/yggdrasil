@@ -24,10 +24,7 @@ impl EnrichedContext {
             session_id: context.session_id.clone(),
             environment: context.environment.clone(),
             app_name: context.app_name.clone(),
-            current_time: context
-                .current_time
-                .clone()
-                .or_else(|| Some(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string())),
+            current_time: context.current_time.clone(),
             remote_address: context.remote_address.clone(),
             properties: context.properties,
             external_results,
@@ -40,50 +37,4 @@ impl EnrichedContext {
 pub enum SdkError {
     StrategyEvaluationError,
     StrategyParseError(String),
-}
-
-#[cfg(test)]
-mod test {
-    use crate::strategy_parsing::compile_rule;
-
-    use super::*;
-    use unleash_types::client_features::Context;
-
-    #[test]
-    fn converting_a_context_to_enriched_context_assumes_now_for_time_if_not_set() {
-        let context = Context::default();
-        let enriched_context = EnrichedContext::from(context, "test".into(), None);
-        chrono::DateTime::parse_from_rfc3339(
-            &enriched_context
-                .current_time
-                .clone()
-                .expect("current_time should be set"),
-        )
-        .expect("cannot parse retrieved dates");
-    }
-
-    #[test]
-    fn converting_a_context_to_enriched_context_leaves_current_time_alone_if_set() {
-        let context = Context {
-            current_time: Some("2020-01-01T00:00:00Z".into()),
-            ..Context::default()
-        };
-        let enriched_context = EnrichedContext::from(context, "test".into(), None);
-        assert_eq!(
-            enriched_context
-                .current_time
-                .expect("current_time should be set"),
-            "2020-01-01T00:00:00Z"
-        );
-    }
-
-    #[test]
-    fn assumed_current_time_works_correctly_in_a_constraint() {
-        let rule_text = "current_time > 2023-10-13T10:19:22Z";
-        let rule = compile_rule(rule_text).unwrap();
-        let context = Context::default();
-        let enriched_context = EnrichedContext::from(context, "test".into(), None);
-
-        assert!(rule(&enriched_context));
-    }
 }
