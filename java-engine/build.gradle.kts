@@ -5,14 +5,11 @@ plugins {
     id("com.diffplug.spotless") version "6.23.2"
     id("io.github.gradle-nexus.publish-plugin").version("2.0.0")
     id("pl.allegro.tech.build.axion-release").version("1.16.0")
-    id("com.google.osdetector").version("1.7.3")
 }
 
 version = project.findProperty("version") as String
 
 val binariesDir = file("binaries")
-val resourcesBaseDir = file("src/main/resources")
-val platformResourcesBaseDir = file("build/platform-resources")
 val sonatypeUsername: String? by project
 val sonatypePassword: String? by project
 val signingKey: String? by project
@@ -37,9 +34,11 @@ tasks.jar {
     manifest {
         attributes(
             "Implementation-Title" to project.name,
-            "Implementation-Version" to project.version,
-            "Implementation-Platform" to osdetector.classifier
+            "Implementation-Version" to project.version
         )
+    }
+    from(binariesDir) {
+        into("native")
     }
 }
 
@@ -47,8 +46,8 @@ tasks.jar {
 // But in practice this doesn't matter because this is purely for tests
 // and this will use the binary generated on the user's machine
 val copyTestBinary = tasks.register<Copy>("copyTestBinary") {
-    val platform = System.getProperty("os.arch").toLowerCase()
-    val os = System.getProperty("os.name").toLowerCase()
+    val platform = System.getProperty("os.arch").lowercase()
+    val os = System.getProperty("os.name").lowercase()
 
     val sourceFileName = when {
         os.contains("mac") -> "libyggdrasilffi.dylib"
@@ -81,132 +80,47 @@ tasks.named<Test>("test") {
     useJUnitPlatform()
 }
 
-val platformToBinaryMap = mapOf(
-    "linux-x86_64" to "libyggdrasilffi_x86_64.so",
-    "linux-aarch_64" to "libyggdrasilffi_arm64.so",
-    "linux-x86_64-alpine" to "libyggdrasilffi_x86_64-musl.so",
-    "linux-aarch_64-alpine" to "libyggdrasilffi_arm64-musl.so",
-    "windows-x86_64" to "yggdrasilffi_x86_64.dll",
-    "windows-aarch_64" to "yggdrasilffi_arm64.dll",
-    "osx-x86_64" to "libyggdrasilffi_x86_64.dylib",
-    "osx-aarch_64" to "libyggdrasilffi_arm64.dylib"
-)
-
-
 publishing {
-    // repositories {
-    //     maven {
-    //         name = "localTestRepo"
-    //         url = uri("${buildDir}/repo")
-    //     }
-    // }
     publications {
-        platformToBinaryMap.forEach { (platform, binaryName) ->
-            val copyBinaryTask = tasks.register<Copy>("copyBinary-$platform") {
-                val platformNativeDir = file("$platformResourcesBaseDir/native-$platform")
-                from(file("$binariesDir"))
-                include(binaryName)
-                into(platformNativeDir)
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
 
-                outputs.upToDateWhen { false }
-
-                doFirst {
-                    println("Starting to copy binary for platform: $platform")
-                    println("Source directory: ${file("$binariesDir")}")
-                    println("Target directory: $platformNativeDir")
-
-                    // Gotta wipe the current directory holding the binaries, otherwise each jar
-                    // ends up with the previous binaries
-                    if (platformNativeDir.exists()) {
-                        println("Cleaning target directory: $platformNativeDir")
-                        platformNativeDir.listFiles()?.forEach { file ->
-                            println("Deleting existing file: ${file.name}")
-                            file.delete()
-                        }
+            pom {
+                name.set("Unleash Yggdrasil Engine")
+                description.set("Yggdrasil engine for computing feature toggles")
+                url.set("https://docs.getunleash.io/yggdrasil-engine/index.html")
+                licenses {
+                    license {
+                        name.set("MIT")
+                        url.set("https://opensource.org/license/mit/")
                     }
                 }
-
-                doLast {
-                    val copiedFiles = platformNativeDir.listFiles()
-                    if (copiedFiles.isNullOrEmpty()) {
-                        println("No files were copied to $platformNativeDir for platform: $platform")
-                    } else {
-                        println("Files copied to $platformNativeDir for platform: $platform:")
-                        copiedFiles.forEach { file ->
-                            println("- ${file.name}")
-                        }
+                developers {
+                    developer {
+                        id.set("chrkolst")
+                        name.set("Christopher Kolstad")
+                        email.set("chriswk@getunleash.io")
+                    }
+                    developer {
+                        id.set("ivarconr")
+                        name.set("Ivar Conradi Østhus")
+                        email.set("ivarconr@getunleash.io")
+                    }
+                    developer {
+                        id.set("gastonfournier")
+                        name.set("Gaston Fournier")
+                        email.set("gaston@getunleash.io")
+                    }
+                    developer {
+                        id.set("sighphyre")
+                        name.set("Simon Hornby")
+                        email.set("simon@getunleash.io")
                     }
                 }
-            }
-
-            val platformJarTask = tasks.register<Jar>("jar-$platform") {
-                dependsOn(copyBinaryTask)
-                dependsOn(tasks.named("compileJava"))
-                from(file("$platformResourcesBaseDir/native-$platform")) {
-                    into("native")
-                }
-                from(file("build/classes/java/main"))
-                from(file("build/resources/main"))
-                archiveClassifier.set(platform)
-            }
-
-            create<MavenPublication>("mavenJava-$platform") {
-                groupId = project.group.toString()
-                artifactId = "yggdrasil-engine"
-                version = project.version.toString()
-
-                artifact(platformJarTask)
-
-                pom {
-                    name.set("Unleash Yggdrasil Engine")
-                    description.set("Yggdrasil engine for computing feature toggles")
-                    url.set("https://docs.getunleash.io/yggdrasil-engine/index.html")
-                    licenses {
-                        license {
-                            name.set("MIT")
-                            url.set("https://opensource.org/license/mit/")
-                        }
-                    }
-                    developers {
-                        developer {
-                            id.set("chrkolst")
-                            name.set("Christopher Kolstad")
-                            email.set("chriswk@getunleash.io")
-                        }
-                        developer {
-                            id.set("ivarconr")
-                            name.set("Ivar Conradi Østhus")
-                            email.set("ivarconr@getunleash.io")
-                        }
-                        developer {
-                            id.set("gastonfournier")
-                            name.set("Gaston Fournier")
-                            email.set("gaston@getunleash.io")
-                        }
-                        developer {
-                            id.set("sighphyre")
-                            name.set("Simon Hornby")
-                            email.set("simon@getunleash.io")
-                        }
-                    }
-                    scm {
-                        connection.set("scm:git:https://github.com/Unleash/yggdrasil")
-                        developerConnection.set("scm:git:ssh://git@github.com:Unleash/yggdrasil")
-                        url.set("https://github.com/Unleash/yggdrasil")
-                    }
-                    withXml {
-                        val dependenciesNode = asNode().appendNode("dependencies")
-                        configurations.runtimeClasspath.get().allDependencies.forEach { dep ->
-                            if (dep.group != null && dep.version != null) {
-                                dependenciesNode.appendNode("dependency").apply {
-                                    appendNode("groupId", dep.group)
-                                    appendNode("artifactId", dep.name)
-                                    appendNode("version", dep.version)
-                                    appendNode("scope", "runtime")
-                                }
-                            }
-                        }
-                    }
+                scm {
+                    connection.set("scm:git:https://github.com/Unleash/yggdrasil")
+                    developerConnection.set("scm:git:ssh://git@github.com:Unleash/yggdrasil")
+                    url.set("https://github.com/Unleash/yggdrasil")
                 }
             }
         }
@@ -234,8 +148,6 @@ java {
 signing {
     if (signingKey != null && signingPassphrase != null) {
         useInMemoryPgpKeys(signingKey, signingPassphrase)
-        publishing.publications.forEach { publication ->
-            sign(publication)
-        }
+        sign(publishing.publications)
     }
 }
