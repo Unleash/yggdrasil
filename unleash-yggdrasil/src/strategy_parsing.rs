@@ -130,7 +130,12 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
         Rule::environment => Box::new(|context: &Context| context.environment.clone()),
         Rule::session_id => Box::new(|context: &Context| context.session_id.clone()),
         Rule::remote_address => Box::new(|context: &Context| context.remote_address.clone()),
-        Rule::current_time => Box::new(|context: &Context| context.current_time.clone()),
+        Rule::current_time => Box::new(|context: &Context| {
+            context
+                .current_time
+                .clone()
+                .or_else(|| Some(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()))
+        }),
         Rule::random => {
             let value = child
                 .into_inner()
@@ -954,7 +959,7 @@ mod tests {
 
     #[test]
     fn handles_dates_with_truncated_milliseconds() {
-        let rule = "current_time > 2022-01-29T13:00:00Z";
+        let rule = "context[\"cutoff\"] > 2022-01-29T13:00:00Z";
 
         let rule = compile_rule(rule).expect("");
         let mut context = Context::default();
@@ -963,6 +968,14 @@ mod tests {
         context.properties = Some(props);
 
         assert!(!rule(&context));
+    }
+
+    #[test]
+    fn converting_a_context_to_enriched_context_assumes_now_for_time_if_not_set() {
+        let rule = compile_rule("current_time < 3000-01-29T13:00:00Z").unwrap();
+        let context = Context::default();
+
+        assert!(rule(&context));
     }
 
     #[test_case("!user_id > 8", false)]

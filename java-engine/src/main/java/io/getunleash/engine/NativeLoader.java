@@ -3,7 +3,10 @@ package io.getunleash.engine;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -79,7 +82,7 @@ class NativeLoader {
                 throw new UnsupportedOperationException("Unsupported architecture on Windows: " + arch);
             }
         } else if (os.contains("linux")) {
-            if (arch.contains("musl")) {
+            if (isMusl()) {
                 if (arch.contains("aarch64")) {
                     libName = "libyggdrasilffi_arm64-musl.so ";
                 } else {
@@ -106,6 +109,27 @@ class NativeLoader {
         } catch (IOException e) {
             throw new RuntimeException("Failed to load native library", e);
         }
+    }
+
+    // There's no reliable way ask the JVM if this is running on alpine/musl
+    // Since System.getProperty("os.name") just lists 'linux'
+    // But! Because the JVM itself is dynamically linked against either libc or
+    // musl, and we know the JVM is currently running, it must have loaded ld-musl
+    // into memory in order to run on a musl system, so we can just query the list
+    // of loaded libraries and check if ld-musl is in there
+    private static boolean isMusl() {
+        try (BufferedReader reader = new BufferedReader(new FileReader("/proc/self/maps"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("musl")) {
+                    return true;
+                }
+            }
+        } catch (IOException e) {
+            System.err.println(
+                    "Warning: Failed to read /proc/self/maps, assuming this is not a musl system: " + e.getMessage());
+        }
+        return false;
     }
 
     private static Path extractLibraryFromJar(String libName) throws IOException {

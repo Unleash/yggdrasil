@@ -222,7 +222,7 @@ pub unsafe extern "C" fn hydrate_data(
                 }
             }
             UpdateMessage::PartialUpdate(delta_message) => {
-                if let Some(warnings) = engine.take_delta(&delta_message) {
+                if let Some(warnings) = engine.apply_delta(&delta_message) {
                     Err(FFIError::PartialUpdate(warnings))
                 } else {
                     Ok(Some(()))
