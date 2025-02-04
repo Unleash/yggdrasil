@@ -471,7 +471,8 @@ mod tests {
     use std::ffi::{CStr, CString};
 
     use unleash_types::client_features::{
-        ClientFeature, ClientFeatures, Strategy, Variant, WeightType,
+        ClientFeature, ClientFeatures, ClientFeaturesDelta, Constraint, DeltaEvent, Operator,
+        Segment, Strategy, Variant, WeightType,
     };
     use unleash_yggdrasil::{EngineState, ExtendedVariantDef, UpdateMessage};
 

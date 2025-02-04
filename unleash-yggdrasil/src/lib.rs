@@ -844,6 +844,8 @@ mod test {
     #[test_case("16-strategy-variants.json"; "Strategy variants")]
     #[test_case("17-dependent-features.json"; "Dependent features")]
     #[test_case("18-utf8-flag-names.json"; "UTF-8 tests")]
+    #[test_case("19-delta-api-hydration.json"; "Delta hydration tests")]
+    #[test_case("20-delta-api-events.json"; "Delta events tests")]
 
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
