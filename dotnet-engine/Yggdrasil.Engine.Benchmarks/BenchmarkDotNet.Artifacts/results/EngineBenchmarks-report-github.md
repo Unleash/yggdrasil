@@ -8,6 +8,9 @@ BenchmarkDotNet v0.14.0, Ubuntu 22.04.5 LTS (Jammy Jellyfish)
 
 
 ```
-| Method         | Mean     | Error   | StdDev  |
-|--------------- |---------:|--------:|--------:|
-| EmptyIsEnabled | 900.7 ns | 8.37 ns | 7.83 ns |
+| Method         | Mean | Error |
+|--------------- |-----:|------:|
+| EmptyIsEnabled |   NA |    NA |
+
+Benchmarks with issues:
+  EngineBenchmarks.EmptyIsEnabled: DefaultJob
