@@ -41,6 +41,28 @@ enum UpdateMessage {
     PartialUpdate(ClientFeaturesDelta),
 }
 
+#[repr(C, packed)]
+#[derive(Debug)]
+pub struct ContextHeader {
+    user_id_offset: u32,
+    session_id_offset: u32,
+    remote_address_offset: u32,
+    environment_offset: u32,
+    app_name_offset: u32,
+}
+
+#[repr(C)]
+pub struct PropertyEntry {
+    key_offset: u32,
+    value_offset: u32,
+}
+
+#[repr(C)]
+pub struct BoolEntry {
+    key_offset: u32,
+    value: bool,
+}
+
 impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
     fn from(value: Result<Option<T>, FFIError>) -> Self {
         match value {
@@ -263,6 +285,55 @@ pub unsafe extern "C" fn check_enabled(
     })();
 
     result_to_json_ptr(result)
+}
+
+pub unsafe fn unpack_context(buffer: &[u8]) -> Context {
+    assert!(buffer.len() >= std::mem::size_of::<ContextHeader>());
+
+    let header: &ContextHeader = &*(buffer.as_ptr() as *const ContextHeader);
+    let string_data = &buffer[std::mem::size_of::<ContextHeader>()..];
+
+    // Extract string from offset, converting it to owned String
+    fn get_string(offset: u32, data: &[u8]) -> Option<String> {
+        if offset == 0 {
+            return None;
+        }
+        let start = offset as usize;
+        let end = data[start..].iter().position(|&b| b == 0).unwrap() + start;
+        Some(String::from_utf8_lossy(&data[start..end]).to_string()) // Allocates once
+    }
+
+    Context {
+        user_id: get_string(header.user_id_offset, string_data),
+        session_id: get_string(header.session_id_offset, string_data),
+        remote_address: get_string(header.remote_address_offset, string_data),
+        environment: get_string(header.environment_offset, string_data),
+        app_name: get_string(header.app_name_offset, string_data),
+        current_time: None,
+        properties: None,
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn quick_check(
+    engine_ptr: *mut c_void,
+    message_ptr: *const u8,
+    message_len: usize,
+) -> bool {
+    let result: Result<Option<bool>, FFIError> = (|| {
+        let engine = get_engine(engine_ptr)?;
+
+        if message_ptr.is_null() || message_len == 0 {
+            return Err(FFIError::Utf8Error); //wrong error for now
+        }
+        let message = std::slice::from_raw_parts(message_ptr, message_len);
+        let context = unpack_context(message);
+
+        Ok(engine.check_enabled(&"missing", &context, &None))
+    })();
+
+    true
+    // return CString::new("").unwrap().into_raw();
 }
 
 /// Checks the toggle variant for a given context. Returns a JSON encoded response of type `VariantResponse`.

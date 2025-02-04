@@ -57,19 +57,23 @@ internal class CustomStrategies
         this.strategies = strategies.ToDictionary(strategy => strategy.Name);
     }
 
-    internal string GetCustomStrategyPayload(string toggleName, Context context)
+    internal Dictionary<string, bool>? GetCustomStrategies(string toggleName, Context context)
     {
         MappedFeature? feature = null;
         mappedFeatures?.TryGetValue(toggleName, out feature);
         if (feature == null)
         {
-            return "{}";
+            return null;
         }
 
         var strategies = feature.Strategies
             .ToDictionary(strategy => strategy.ResultName,
                 strategy => strategy.IsEnabled(context));
+        return strategies;
+    }
 
-        return JsonSerializer.Serialize(strategies, options);
+    internal string GetCustomStrategyPayload(string toggleName, Context context)
+    {
+        return JsonSerializer.Serialize(GetCustomStrategies(toggleName, context), options);
     }
 }

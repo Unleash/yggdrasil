@@ -1,4 +1,6 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Yggdrasil;
 
@@ -29,6 +31,9 @@ internal static class FFI
     private static extern IntPtr built_in_strategies(IntPtr ptr);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr list_known_toggles(IntPtr ptr);
+    [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    private static extern bool quick_check(IntPtr ptr, byte[] message, int messageLength);
+
 
     public static IntPtr NewEngine()
     {
@@ -48,6 +53,16 @@ internal static class FFI
     public static IntPtr TakeState(IntPtr ptr, string json)
     {
         return take_state(ptr, ToUtf8Bytes(json));
+    }
+
+    public static bool QuickCheck(IntPtr ptr,
+        string toggleName,
+        Context context,
+        Dictionary<string, bool>? customStrategyResults)
+    {
+        byte[] message = PackMessage(context, customStrategyResults);
+
+        return quick_check(ptr, message, message.Length);
     }
 
     public static IntPtr CheckEnabled(
@@ -110,5 +125,55 @@ internal static class FFI
         byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(input);
         Array.Resize(ref utf8Bytes, utf8Bytes.Length + 1);
         return utf8Bytes;
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct ContextHeader
+    {
+        public uint user_id_offset;
+        public uint session_id_offset;
+        public uint remote_address_offset;
+        public uint environment_offset;
+        public uint app_name_offset;
+    }
+
+    public static byte[] PackMessage(Context ctx, Dictionary<string, bool>? customStrategies)
+    {
+        // Precompute the required buffer size
+        int headerSize = Marshal.SizeOf<ContextHeader>();
+        int stringDataSize = (
+            (ctx.UserId?.Length ?? 0) +
+            (ctx.SessionId?.Length ?? 0) +
+            (ctx.RemoteAddress?.Length ?? 0) +
+            (ctx.Environment?.Length ?? 0) +
+            (ctx.AppName?.Length ?? 0)
+        );
+
+        // Allocate buffer **once**
+        byte[] buffer = new byte[headerSize + stringDataSize];
+
+        // Unsafe write of the header directly into the buffer
+        ref ContextHeader header = ref Unsafe.As<byte, ContextHeader>(ref buffer[0]);
+
+        // Track string offsets
+        int currentOffset = headerSize;
+
+        int WriteString(string? s)
+        {
+            if (string.IsNullOrEmpty(s)) return 0;
+            int offset = currentOffset;
+            Encoding.UTF8.GetBytes(s, 0, s!.Length, buffer, offset);
+            currentOffset += s.Length;
+            return offset;
+        }
+
+        // Write offsets into the header
+        header.user_id_offset = (uint)WriteString(ctx.UserId);
+        header.session_id_offset = (uint)WriteString(ctx.SessionId);
+        header.remote_address_offset = (uint)WriteString(ctx.RemoteAddress);
+        header.environment_offset = (uint)WriteString(ctx.Environment);
+        header.app_name_offset = (uint)WriteString(ctx.AppName);
+
+        return buffer;
     }
 }

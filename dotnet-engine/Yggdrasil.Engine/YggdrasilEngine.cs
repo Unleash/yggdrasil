@@ -52,11 +52,16 @@ public class YggdrasilEngine
 
     public bool? IsEnabled(string toggleName, Context context)
     {
-        var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
-        string contextJson = JsonSerializer.Serialize(context, options);
-        var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, customStrategyPayload);
+        FFI.QuickCheck(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
 
-        return FFIReader.ReadPrimitive<bool>(isEnabledPtr);
+        return true;
+        // return true;
+        // var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
+        // string contextJson = JsonSerializer.Serialize(context, options);
+        // var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, customStrategyPayload);
+
+        // return true;
+        // return FFIReader.ReadPrimitive<bool>(isEnabledPtr);
     }
 
     public Variant? GetVariant(string toggleName, Context context)
