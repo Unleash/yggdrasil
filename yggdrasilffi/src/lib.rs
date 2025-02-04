@@ -185,46 +185,6 @@ pub unsafe extern "C" fn take_state(
     result_to_json_ptr(result)
 }
 
-/// Takes a JSON string representing either a set of toggles or a series of events representing updates to client features
-/// Returns a JSON encoded response object specifying whether the update was successful or not. The caller is responsible
-/// for freeing this response object.
-///
-/// # Safety
-///
-/// The caller is responsible for ensuring all arguments are valid pointers.
-/// Null pointers will result in an error message being returned to the caller,
-/// but any invalid pointers will result in undefined behavior.
-/// These pointers should not be dropped for the lifetime of this function call.
-#[no_mangle]
-pub unsafe extern "C" fn hydrate_data(
-    engine_ptr: *mut c_void,
-    json_ptr: *const c_char,
-) -> *const c_char {
-    let result: Result<Option<()>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
-        let update_message: UpdateMessage = get_json(json_ptr)?;
-
-        match update_message {
-            UpdateMessage::FullResponse(features_message) => {
-                if let Some(warnings) = engine.apply_client_features(features_message) {
-                    Err(FFIError::PartialUpdate(warnings))
-                } else {
-                    Ok(Some(()))
-                }
-            }
-            UpdateMessage::PartialUpdate(delta_message) => {
-                if let Some(warnings) = engine.apply_delta(&delta_message) {
-                    Err(FFIError::PartialUpdate(warnings))
-                } else {
-                    Ok(Some(()))
-                }
-            }
-        }
-    })();
-
-    result_to_json_ptr(result)
-}
-
 /// Checks if a toggle is enabled for a given context. Returns a JSON encoded response of type `EnabledResponse`.
 ///
 /// # Safety
@@ -471,8 +431,7 @@ mod tests {
     use std::ffi::{CStr, CString};
 
     use unleash_types::client_features::{
-        ClientFeature, ClientFeatures, ClientFeaturesDelta, Constraint, DeltaEvent, Operator,
-        Segment, Strategy, Variant, WeightType,
+        ClientFeature, ClientFeatures, Strategy, Variant, WeightType,
     };
     use unleash_yggdrasil::{EngineState, ExtendedVariantDef, UpdateMessage};
 
