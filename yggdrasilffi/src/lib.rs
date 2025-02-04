@@ -43,7 +43,8 @@ enum UpdateMessage {
 
 #[repr(C, packed)]
 #[derive(Debug)]
-pub struct ContextHeader {
+pub struct MessageHeader {
+    toggle_name_offset: u32,
     user_id_offset: u32,
     session_id_offset: u32,
     remote_address_offset: u32,
@@ -287,11 +288,11 @@ pub unsafe extern "C" fn check_enabled(
     result_to_json_ptr(result)
 }
 
-pub unsafe fn unpack_context(buffer: &[u8]) -> Context {
-    assert!(buffer.len() >= std::mem::size_of::<ContextHeader>());
+pub unsafe fn unpack_message(buffer: &[u8]) -> (String, Context) {
+    assert!(buffer.len() >= std::mem::size_of::<MessageHeader>());
 
-    let header: &ContextHeader = &*(buffer.as_ptr() as *const ContextHeader);
-    let string_data = &buffer[std::mem::size_of::<ContextHeader>()..];
+    let header: &MessageHeader = &*(buffer.as_ptr() as *const MessageHeader);
+    let string_data = &buffer[std::mem::size_of::<MessageHeader>()..];
 
     // Extract string from offset, converting it to owned String
     fn get_string(offset: u32, data: &[u8]) -> Option<String> {
@@ -303,7 +304,9 @@ pub unsafe fn unpack_context(buffer: &[u8]) -> Context {
         Some(String::from_utf8_lossy(&data[start..end]).to_string()) // Allocates once
     }
 
-    Context {
+    let toggle_name = get_string(header.toggle_name_offset, string_data).unwrap();
+
+    let context = Context {
         user_id: get_string(header.user_id_offset, string_data),
         session_id: get_string(header.session_id_offset, string_data),
         remote_address: get_string(header.remote_address_offset, string_data),
@@ -311,7 +314,9 @@ pub unsafe fn unpack_context(buffer: &[u8]) -> Context {
         app_name: get_string(header.app_name_offset, string_data),
         current_time: None,
         properties: None,
-    }
+    };
+
+    (toggle_name, context)
 }
 
 #[no_mangle]
@@ -327,9 +332,9 @@ pub unsafe extern "C" fn quick_check(
             return Err(FFIError::Utf8Error); //wrong error for now
         }
         let message = std::slice::from_raw_parts(message_ptr, message_len);
-        let context = unpack_context(message);
+        let (toggle_name, context) = unpack_message(message);
 
-        Ok(engine.check_enabled(&"missing", &context, &None))
+        Ok(engine.check_enabled(&toggle_name, &context, &None))
     })();
 
     true

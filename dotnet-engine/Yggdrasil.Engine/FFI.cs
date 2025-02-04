@@ -60,8 +60,9 @@ internal static class FFI
         Context context,
         Dictionary<string, bool>? customStrategyResults)
     {
-        byte[] message = PackMessage(context, customStrategyResults);
+        byte[] message = PackMessage(toggleName, context, customStrategyResults);
 
+        // return false;
         return quick_check(ptr, message, message.Length);
     }
 
@@ -128,8 +129,9 @@ internal static class FFI
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct ContextHeader
+    public struct MessageHeader
     {
+        public uint toggle_name_offset;
         public uint user_id_offset;
         public uint session_id_offset;
         public uint remote_address_offset;
@@ -137,25 +139,27 @@ internal static class FFI
         public uint app_name_offset;
     }
 
-    public static byte[] PackMessage(Context ctx, Dictionary<string, bool>? customStrategies)
+    private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies)
     {
-        // Precompute the required buffer size
-        int headerSize = Marshal.SizeOf<ContextHeader>();
+        // Precompute the required buffer size, the +1 is space for the null terminators
+        int headerSize = Marshal.SizeOf<MessageHeader>();
         int stringDataSize = (
-            (ctx.UserId?.Length ?? 0) +
-            (ctx.SessionId?.Length ?? 0) +
-            (ctx.RemoteAddress?.Length ?? 0) +
-            (ctx.Environment?.Length ?? 0) +
-            (ctx.AppName?.Length ?? 0)
+            toggleName.Length + 1 +
+            (ctx.UserId?.Length ?? 0) + 1 +
+            (ctx.SessionId?.Length ?? 0) + 1 +
+            (ctx.RemoteAddress?.Length ?? 0) + 1 +
+            (ctx.Environment?.Length ?? 0) + 1 +
+            (ctx.AppName?.Length ?? 0) + 1
         );
 
-        // Allocate buffer **once**
+        // Now we allocate that buffer **once**, this is surprisingly expensive because everything else here is so cheap
         byte[] buffer = new byte[headerSize + stringDataSize];
+        Console.WriteLine("AYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY" + buffer.Length);
+        Console.WriteLine("Name is" + toggleName.Length);
 
         // Unsafe write of the header directly into the buffer
-        ref ContextHeader header = ref Unsafe.As<byte, ContextHeader>(ref buffer[0]);
+        ref MessageHeader header = ref Unsafe.As<byte, MessageHeader>(ref buffer[0]);
 
-        // Track string offsets
         int currentOffset = headerSize;
 
         int WriteString(string? s)
@@ -163,11 +167,14 @@ internal static class FFI
             if (string.IsNullOrEmpty(s)) return 0;
             int offset = currentOffset;
             Encoding.UTF8.GetBytes(s, 0, s!.Length, buffer, offset);
-            currentOffset += s.Length;
+            buffer[currentOffset + s.Length] = 0;  // Add null terminator
+            currentOffset += s.Length + 1;  // Move past the null terminator
+            Console.WriteLine("Writing string '" + s + "' with offset" + offset + " and length " + s.Length);
             return offset;
         }
 
         // Write offsets into the header
+        header.toggle_name_offset = (uint)WriteString(toggleName);
         header.user_id_offset = (uint)WriteString(ctx.UserId);
         header.session_id_offset = (uint)WriteString(ctx.SessionId);
         header.remote_address_offset = (uint)WriteString(ctx.RemoteAddress);
