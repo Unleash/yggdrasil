@@ -7,12 +7,10 @@ use std::{
 
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use unleash_types::{
-    client_features::{ClientFeatures, ClientFeaturesDelta},
-    client_metrics::MetricBucket,
-};
+use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{
-    Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition, CORE_VERSION,
+    Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition, UpdateMessage,
+    CORE_VERSION,
 };
 
 static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
@@ -32,13 +30,6 @@ enum ResponseCode {
     Error = -2,
     NotFound = -1,
     Ok = 1,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-enum UpdateMessage {
-    FullResponse(ClientFeatures),
-    PartialUpdate(ClientFeaturesDelta),
 }
 
 impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
@@ -182,7 +173,7 @@ pub unsafe extern "C" fn take_state(
 ) -> *const c_char {
     let result: Result<Option<()>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
-        let toggles: ClientFeatures = get_json(json_ptr)?;
+        let toggles: UpdateMessage = get_json(json_ptr)?;
 
         if let Some(warnings) = engine.take_state(toggles) {
             Err(FFIError::PartialUpdate(warnings))
@@ -215,7 +206,7 @@ pub unsafe extern "C" fn hydrate_data(
 
         match update_message {
             UpdateMessage::FullResponse(features_message) => {
-                if let Some(warnings) = engine.take_state(features_message) {
+                if let Some(warnings) = engine.apply_client_features(features_message) {
                     Err(FFIError::PartialUpdate(warnings))
                 } else {
                     Ok(Some(()))
@@ -482,7 +473,7 @@ mod tests {
     use unleash_types::client_features::{
         ClientFeature, ClientFeatures, Strategy, Variant, WeightType,
     };
-    use unleash_yggdrasil::{EngineState, ExtendedVariantDef};
+    use unleash_yggdrasil::{EngineState, ExtendedVariantDef, UpdateMessage};
 
     use crate::{check_enabled, check_variant, new_engine, Response, ResponseCode};
 
@@ -546,7 +537,7 @@ mod tests {
 
         unsafe {
             let engine = &mut *(engine_ptr as *mut EngineState);
-            let warnings = engine.take_state(client_features);
+            let warnings = engine.take_state(UpdateMessage::FullResponse(client_features));
 
             let string_response =
                 check_enabled(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
@@ -669,7 +660,7 @@ mod tests {
 
         unsafe {
             let engine = &mut *(engine_ptr as *mut EngineState);
-            let warnings = engine.take_state(client_features);
+            let warnings = engine.take_state(UpdateMessage::FullResponse(client_features));
 
             let string_response =
                 check_variant(engine_ptr, toggle_name_ptr, context_ptr, results_ptr);
@@ -726,7 +717,7 @@ mod tests {
 
         unsafe {
             let engine = &mut *(engine_ptr as *mut EngineState);
-            engine.take_state(client_features);
+            engine.take_state(UpdateMessage::FullResponse(client_features));
 
             let string_response = super::list_known_toggles(engine_ptr);
             let response = CStr::from_ptr(string_response).to_str().unwrap();

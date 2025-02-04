@@ -10,7 +10,7 @@ fn is_enabled(engine: &EngineState, toggle_name: &str, context: &Context) {
 
 fn benchmark_with_no_strategy(c: &mut Criterion) {
     let mut engine = EngineState::default();
-    engine.take_state(ClientFeatures {
+    engine.apply_client_features(ClientFeatures {
         version: 2,
         features: vec![ClientFeature {
             name: "test".into(),
@@ -37,7 +37,7 @@ fn benchmark_with_no_strategy(c: &mut Criterion) {
 
 fn benchmark_with_single_constraint(c: &mut Criterion) {
     let mut engine = EngineState::default();
-    engine.take_state(ClientFeatures {
+    engine.apply_client_features(ClientFeatures {
         version: 2,
         features: vec![ClientFeature {
             name: "test".into(),
@@ -79,7 +79,7 @@ fn benchmark_with_single_constraint(c: &mut Criterion) {
 
 fn benchmark_with_two_constraints(c: &mut Criterion) {
     let mut engine = EngineState::default();
-    engine.take_state(ClientFeatures {
+    engine.apply_client_features(ClientFeatures {
         version: 2,
         features: vec![ClientFeature {
             name: "test".into(),
@@ -168,7 +168,7 @@ fn benchmark_engine_ingestion(c: &mut Criterion) {
         meta: None,
     };
     c.bench_function("engine ingestion", |b| {
-        b.iter(|| engine.take_state(black_box(state.clone())))
+        b.iter(|| engine.apply_client_features(black_box(state.clone())))
     });
 }
 

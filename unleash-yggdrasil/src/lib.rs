@@ -239,6 +239,13 @@ impl Default for EngineState {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum UpdateMessage {
+    FullResponse(ClientFeatures),
+    PartialUpdate(ClientFeaturesDelta),
+}
+
 #[derive(Clone, Debug)]
 pub struct ResolvedToggle {
     pub enabled: bool,
@@ -251,7 +258,7 @@ impl EngineState {
     pub fn apply_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
         let mut new_state = self.previous_state.clone();
         new_state.apply_delta(delta);
-        self.take_state(new_state)
+        self.apply_client_features(new_state)
     }
 
     fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
@@ -612,7 +619,14 @@ impl EngineState {
         variant.to_enriched_response(enabled)
     }
 
-    pub fn take_state(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
+    pub fn take_state(&mut self, message: UpdateMessage) -> Option<Vec<EvalWarning>> {
+        match message {
+            UpdateMessage::PartialUpdate(delta) => self.apply_delta(&delta),
+            UpdateMessage::FullResponse(state) => self.apply_client_features(state),
+        }
+    }
+
+    pub fn apply_client_features(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
         self.previous_state = toggles;
         self.compiled_state = Some(compiled_state);
@@ -727,12 +741,12 @@ mod test {
     use std::{collections::HashMap, fs};
     use test_case::test_case;
     use unleash_types::client_features::{
-        ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
+        ClientFeaturesDelta, FeatureDependency, Override, Payload,
     };
 
     use crate::{
         check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
-        EngineState, VariantDef,
+        EngineState, UpdateMessage, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -740,7 +754,7 @@ mod test {
     #[derive(Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
     pub(crate) struct TestSuite {
-        pub(crate) state: ClientFeatures,
+        pub(crate) state: UpdateMessage,
         pub(crate) tests: Option<Vec<TestCase>>,
         pub(crate) variant_tests: Option<Vec<VariantTestCase>>,
     }
@@ -829,6 +843,8 @@ mod test {
     #[test_case("15-global-constraints.json"; "Segments")]
     #[test_case("16-strategy-variants.json"; "Strategy variants")]
     #[test_case("17-dependent-features.json"; "Dependent features")]
+    #[test_case("18-utf8-flag-names.json"; "UTF-8 tests")]
+
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::default();
@@ -1555,7 +1571,8 @@ mod test {
         }
         "#;
 
-        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let feature_set: UpdateMessage =
+            UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
         let mut engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
@@ -1631,7 +1648,8 @@ mod test {
         }
         "#;
 
-        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let feature_set: UpdateMessage =
+            UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
         let mut engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
@@ -1702,7 +1720,8 @@ mod test {
         }
         "#;
 
-        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let feature_set: UpdateMessage =
+            UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
         let mut engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
@@ -1945,7 +1964,8 @@ mod test {
       }
       "#;
 
-        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let feature_set: UpdateMessage =
+            UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
         let mut engine = EngineState::default();
         let context = Context {
             ..Context::default()
@@ -1995,7 +2015,8 @@ mod test {
           }
         "#;
 
-        let feature_set: ClientFeatures = serde_json::from_str(raw_state).unwrap();
+        let feature_set: UpdateMessage =
+            UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
         let mut engine = EngineState::default();
 
         let warnings = engine.take_state(feature_set);
