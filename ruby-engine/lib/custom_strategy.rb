@@ -18,7 +18,9 @@ class CustomStrategyHandler
     custom_strategies = {}
     parsed_json = JSON.parse(json_str)
 
-    parsed_json["features"].each do |feature|
+    features = extract_features parsed_json
+
+    features.each do |feature|
       toggle_name = feature["name"]
       strategies = feature["strategies"]
 
@@ -56,5 +58,25 @@ class CustomStrategyHandler
     end
 
     results
+  end
+
+  private
+
+  def extract_features(data)
+    return data["features"] if data.is_a?(Hash) && data.key?("features")
+
+    if data.is_a?(Hash) && data.key?("events")
+      features = []
+
+      hydration_events = data["events"].select { |e| e["type"] == "hydration" }
+      features.concat(hydration_events.flat_map { |e| e["features"] || [] })
+
+      feature_updated_events = data["events"].select { |e| e["type"] == "feature-updated" }
+      features.concat(feature_updated_events.map { |e| e["feature"] })
+
+      return features
+    end
+
+    []
   end
 end
