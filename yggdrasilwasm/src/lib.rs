@@ -3,8 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
 use std::collections::HashMap;
-use unleash_types::client_features::ClientFeatures;
-use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef};
+use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef, UpdateMessage};
 use wasm_bindgen::prelude::*;
 
 type CustomStrategyResults = HashMap<String, bool>;
@@ -38,7 +37,7 @@ impl Engine {
 
     #[wasm_bindgen(js_name = takeState)]
     pub fn take_state(&mut self, state: JsValue) -> JsValue {
-        let state: ClientFeatures = match from_value(state) {
+        let state: UpdateMessage = match from_value(state) {
             Ok(state) => state,
             Err(e) => {
                 let response = Response::<()> {

@@ -58,7 +58,6 @@ class YggdrasilEngine
   attach_function :free_engine, [:pointer], :void
 
   attach_function :take_state, %i[pointer string], :pointer
-  attach_function :hydrate_data, %i[pointer string], :pointer 
   attach_function :check_enabled, %i[pointer string string string], :pointer
   attach_function :check_variant, %i[pointer string string string], :pointer
   attach_function :get_metrics, [:pointer], :pointer
@@ -81,7 +80,7 @@ class YggdrasilEngine
 
   def take_state(toggles)
     @custom_strategy_handler.update_strategies(toggles)
-    response_ptr = YggdrasilEngine.hydrate_data(@engine, toggles)
+    response_ptr = YggdrasilEngine.take_state(@engine, toggles)
     take_toggles_response = JSON.parse(response_ptr.read_string, symbolize_names: true)
     YggdrasilEngine.free_response(response_ptr)
   end
