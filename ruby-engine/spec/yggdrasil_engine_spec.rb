@@ -103,6 +103,15 @@ RSpec.describe YggdrasilEngine do
       toggles = yggdrasil_engine.list_known_toggles()
       expect(toggles.length).to eq(3)
     end
+
+    it 'should load delta format correctly' do
+      suite_path = File.join('../client-specification/specifications', '19-delta-api-hydration.json')
+      suite_data = JSON.parse(File.read(suite_path))
+
+      yggdrasil_engine.take_state(suite_data['state'].to_json)
+
+      # toggles = yggdrasil_engine.list_known_toggles()
+    end
   end
 end
 
