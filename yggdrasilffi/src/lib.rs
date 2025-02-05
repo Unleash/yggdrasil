@@ -41,6 +41,7 @@ pub struct MessageHeader {
     remote_address_offset: u32,
     environment_offset: u32,
     app_name_offset: u32,
+    message_length: u32,
 }
 
 #[repr(C)]
@@ -243,26 +244,32 @@ pub unsafe fn unpack_message(buffer: &[u8]) -> (String, Context) {
     assert!(buffer.len() >= std::mem::size_of::<MessageHeader>());
 
     let header: &MessageHeader = &*(buffer.as_ptr() as *const MessageHeader);
-    let string_data = &buffer[std::mem::size_of::<MessageHeader>()..];
 
-    // Extract string from offset, converting it to owned String
+    assert!(
+        buffer.len() >= std::mem::size_of::<MessageHeader>() + header.message_length as usize,
+        "Invalid message length, message size does not match size in header."
+    );
+
+    // Tear out a chunk of the buffer and convert it to an owned string
+    // we could probably optimize this by returning a &str but that means
+    // making the context lifetime be bounded by this buffer's lifetime
     fn get_string(offset: u32, data: &[u8]) -> Option<String> {
         if offset == 0 {
             return None;
         }
         let start = offset as usize;
         let end = data[start..].iter().position(|&b| b == 0).unwrap() + start;
-        Some(String::from_utf8_lossy(&data[start..end]).to_string()) // Allocates once
+        Some(String::from_utf8_lossy(&data[start..end]).to_string())
     }
 
-    let toggle_name = get_string(header.toggle_name_offset, string_data).unwrap();
+    let toggle_name = get_string(header.toggle_name_offset, buffer).unwrap();
 
     let context = Context {
-        user_id: get_string(header.user_id_offset, string_data),
-        session_id: get_string(header.session_id_offset, string_data),
-        remote_address: get_string(header.remote_address_offset, string_data),
-        environment: get_string(header.environment_offset, string_data),
-        app_name: get_string(header.app_name_offset, string_data),
+        user_id: get_string(header.user_id_offset, buffer),
+        session_id: get_string(header.session_id_offset, buffer),
+        remote_address: get_string(header.remote_address_offset, buffer),
+        environment: get_string(header.environment_offset, buffer),
+        app_name: get_string(header.app_name_offset, buffer),
         current_time: None,
         properties: None,
     };

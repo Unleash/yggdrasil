@@ -137,27 +137,27 @@ internal static class FFI
         public uint remote_address_offset;
         public uint environment_offset;
         public uint app_name_offset;
+        public uint message_length;
     }
 
     private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies)
     {
-        // Precompute the required buffer size, the +1 is space for the null terminators
+        int GetUtf8ByteCount(string? s) => string.IsNullOrEmpty(s) ? 0 : Encoding.UTF8.GetByteCount(s) + 1; // +1 for null terminators
+        // We can calculate the byte count of the buffer we need ahead of time
         int headerSize = Marshal.SizeOf<MessageHeader>();
         int stringDataSize = (
-            toggleName.Length + 1 +
-            (ctx.UserId?.Length ?? 0) + 1 +
-            (ctx.SessionId?.Length ?? 0) + 1 +
-            (ctx.RemoteAddress?.Length ?? 0) + 1 +
-            (ctx.Environment?.Length ?? 0) + 1 +
-            (ctx.AppName?.Length ?? 0) + 1
+            GetUtf8ByteCount(toggleName) +
+            GetUtf8ByteCount(ctx.UserId) +
+            GetUtf8ByteCount(ctx.SessionId) +
+            GetUtf8ByteCount(ctx.RemoteAddress) +
+            GetUtf8ByteCount(ctx.Environment) +
+            GetUtf8ByteCount(ctx.AppName)
         );
 
         // Now we allocate that buffer **once**, this is surprisingly expensive because everything else here is so cheap
         byte[] buffer = new byte[headerSize + stringDataSize];
-        Console.WriteLine("AYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY" + buffer.Length);
-        Console.WriteLine("Name is" + toggleName.Length);
 
-        // Unsafe write of the header directly into the buffer
+        // Unsafe write of the header directly into the buffer, this means changing properties on the header object will change the buffer
         ref MessageHeader header = ref Unsafe.As<byte, MessageHeader>(ref buffer[0]);
 
         int currentOffset = headerSize;
@@ -169,17 +169,16 @@ internal static class FFI
             Encoding.UTF8.GetBytes(s, 0, s!.Length, buffer, offset);
             buffer[currentOffset + s.Length] = 0;  // Add null terminator
             currentOffset += s.Length + 1;  // Move past the null terminator
-            Console.WriteLine("Writing string '" + s + "' with offset" + offset + " and length " + s.Length);
             return offset;
         }
 
-        // Write offsets into the header
         header.toggle_name_offset = (uint)WriteString(toggleName);
         header.user_id_offset = (uint)WriteString(ctx.UserId);
         header.session_id_offset = (uint)WriteString(ctx.SessionId);
         header.remote_address_offset = (uint)WriteString(ctx.RemoteAddress);
         header.environment_offset = (uint)WriteString(ctx.Environment);
         header.app_name_offset = (uint)WriteString(ctx.AppName);
+        header.message_length = (uint)stringDataSize;
 
         return buffer;
     }
