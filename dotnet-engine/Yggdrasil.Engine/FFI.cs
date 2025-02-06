@@ -32,7 +32,7 @@ internal static class FFI
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr list_known_toggles(IntPtr ptr);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-    private static extern bool quick_check(IntPtr ptr, byte[] message, int messageLength);
+    private static extern BooleanResponse quick_check(IntPtr ptr, byte[] message, int messageLength);
 
 
     public static IntPtr NewEngine()
@@ -55,15 +55,40 @@ internal static class FFI
         return take_state(ptr, ToUtf8Bytes(json));
     }
 
-    public static bool QuickCheck(IntPtr ptr,
+    internal unsafe static bool? QuickCheck(IntPtr ptr,
         string toggleName,
         Context context,
         Dictionary<string, bool>? customStrategyResults)
     {
         byte[] message = PackMessage(toggleName, context, customStrategyResults);
 
-        // return false;
-        return quick_check(ptr, message, message.Length);
+        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults);
+
+        fixed (byte* requestPtr = requestBuffer)
+        {
+            BooleanResponse response = quick_check(ptr, message, message.Length);
+
+            try
+            {
+                if (response.error != IntPtr.Zero)
+                {
+                    string errorMsg = Marshal.PtrToStringAnsi(response.error);
+                    throw new Exception($"Rust error: {errorMsg}");
+                }
+
+                return response.value switch
+                {
+                    0 => false,
+                    1 => true,
+                    2 => (bool?)null,
+                    _ => throw new Exception("Invalid Rust response")
+                };
+            }
+            finally
+            {
+                // free_boolean_response(response); // Ensure memory is freed no matter what
+            }
+        }
     }
 
     public static IntPtr CheckEnabled(
@@ -141,6 +166,13 @@ internal static class FFI
         public uint properties_count;
         public uint custom_strategies_offset;
         public uint custom_strategies_count;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct BooleanResponse
+    {
+        public byte value;
+        public IntPtr error;
     }
 
     private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies)

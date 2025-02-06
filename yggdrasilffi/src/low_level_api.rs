@@ -1,4 +1,7 @@
-use std::{collections::HashMap, ffi::c_void};
+use std::{
+    collections::HashMap,
+    ffi::{c_char, c_void},
+};
 
 use unleash_yggdrasil::Context;
 
@@ -20,15 +23,9 @@ pub struct MessageHeader {
 }
 
 #[repr(C)]
-pub struct PropertyEntry {
-    key_offset: u32,
-    value_offset: u32,
-}
-
-#[repr(C)]
-pub struct BoolEntry {
-    key_offset: u32,
-    value: bool,
+pub struct EnabledResponse {
+    pub value: u8,
+    pub error: *mut c_char,
 }
 
 unsafe fn get_header(buffer: &[u8]) -> &MessageHeader {
@@ -131,7 +128,7 @@ pub unsafe extern "C" fn quick_check(
     engine_ptr: *mut c_void,
     message_ptr: *const u8,
     message_len: usize,
-) -> bool {
+) -> EnabledResponse {
     let result: Result<Option<bool>, FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
 
@@ -144,6 +141,18 @@ pub unsafe extern "C" fn quick_check(
         Ok(engine.check_enabled(&toggle_name, &context, &custom_strategy_results))
     })();
 
-    true
-    // return CString::new("").unwrap().into_raw();
+    match result {
+        Ok(Some(value)) => EnabledResponse {
+            value: value as u8,
+            error: std::ptr::null_mut(),
+        },
+        Ok(None) => EnabledResponse {
+            value: 2,
+            error: std::ptr::null_mut(),
+        },
+        Err(e) => EnabledResponse {
+            value: 3,
+            error: std::ffi::CString::new(e.to_string()).unwrap().into_raw(),
+        },
+    }
 }

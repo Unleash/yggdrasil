@@ -52,9 +52,7 @@ public class YggdrasilEngine
 
     public bool? IsEnabled(string toggleName, Context context)
     {
-        FFI.QuickCheck(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
-
-        return true;
+        return FFI.QuickCheck(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
         // return true;
         // var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
         // string contextJson = JsonSerializer.Serialize(context, options);
