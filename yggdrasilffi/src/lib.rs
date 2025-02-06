@@ -59,6 +59,7 @@ impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
 enum FFIError {
     Utf8Error,
     NullError,
+    InvalidMessageFormat,
     InvalidJson(String),
     PartialUpdate(Vec<EvalWarning>),
 }
@@ -74,6 +75,7 @@ impl Display for FFIError {
                 "Engine state was updated but warnings were reported, this may result in some flags evaluating in unexpected ways, please report this: {:?}",
                 messages
             ),
+            FFIError::InvalidMessageFormat => write!(f, "Invalid message format detected, this is a serious issue and you should report this as a bug."),
         }
     }
 }

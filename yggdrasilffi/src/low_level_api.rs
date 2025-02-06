@@ -57,10 +57,14 @@ unsafe fn get_strategies_table(
     )
 }
 
-unsafe fn unpack_message(buffer: &[u8]) -> (String, Context, Option<HashMap<String, bool>>) {
-    assert!(buffer.len() >= std::mem::size_of::<MessageHeader>());
+fn unpack_message(
+    buffer: &[u8],
+) -> Result<(String, Context, Option<HashMap<String, bool>>), FFIError> {
+    if buffer.len() < std::mem::size_of::<MessageHeader>() {
+        return Err(FFIError::InvalidMessageFormat);
+    }
 
-    let header: &MessageHeader = get_header(buffer);
+    let header: &MessageHeader = unsafe { get_header(buffer) };
 
     // Tear out a chunk of the buffer and convert it to an owned string
     // we could probably optimize this by returning a &str but that means
@@ -80,7 +84,7 @@ unsafe fn unpack_message(buffer: &[u8]) -> (String, Context, Option<HashMap<Stri
         let mut properties = std::collections::HashMap::new();
         let properties_offset = header.properties_offset as usize;
         let properties_table =
-            get_properties_table(buffer, properties_offset, header.properties_count);
+            unsafe { get_properties_table(buffer, properties_offset, header.properties_count) };
 
         for i in (0..properties_table.len()).step_by(2) {
             let key = get_string(properties_table[i], buffer).unwrap();
@@ -95,8 +99,9 @@ unsafe fn unpack_message(buffer: &[u8]) -> (String, Context, Option<HashMap<Stri
     let custom_strategy_results = if header.custom_strategies_count > 0 {
         let mut custom_strategies = std::collections::HashMap::new();
         let strategies_offset = header.custom_strategies_offset as usize;
-        let strategies_table =
-            get_strategies_table(buffer, strategies_offset, header.custom_strategies_count);
+        let strategies_table = unsafe {
+            get_strategies_table(buffer, strategies_offset, header.custom_strategies_count)
+        };
 
         for i in (0..header.custom_strategies_count as usize).step_by(2) {
             let key = get_string(strategies_table[i], buffer).unwrap();
@@ -118,7 +123,7 @@ unsafe fn unpack_message(buffer: &[u8]) -> (String, Context, Option<HashMap<Stri
         properties: properties,
     };
 
-    (toggle_name, context, custom_strategy_results)
+    Ok((toggle_name, context, custom_strategy_results))
 }
 
 #[no_mangle]
@@ -134,7 +139,7 @@ pub unsafe extern "C" fn quick_check(
             return Err(FFIError::Utf8Error); //wrong error for now
         }
         let message = std::slice::from_raw_parts(message_ptr, message_len);
-        let (toggle_name, context, custom_strategy_results) = unpack_message(message);
+        let (toggle_name, context, custom_strategy_results) = unpack_message(message)?;
 
         Ok(engine.check_enabled(&toggle_name, &context, &custom_strategy_results))
     })();
