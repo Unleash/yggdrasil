@@ -142,10 +142,11 @@ pub unsafe extern "C" fn quick_check(
     })();
 
     match result {
-        Ok(Some(value)) => EnabledResponse {
+        Ok(Some(value)) => {
+            EnabledResponse {
             value: value as u8,
             error: std::ptr::null_mut(),
-        },
+        }},
         Ok(None) => EnabledResponse {
             value: 2,
             error: std::ptr::null_mut(),

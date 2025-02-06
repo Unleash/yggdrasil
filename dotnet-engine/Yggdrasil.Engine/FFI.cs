@@ -32,7 +32,7 @@ internal static class FFI
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern IntPtr list_known_toggles(IntPtr ptr);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
-    private static extern BooleanResponse quick_check(IntPtr ptr, byte[] message, int messageLength);
+    private static extern EnabledMessage quick_check(IntPtr ptr, byte[] message, int messageLength);
 
 
     public static IntPtr NewEngine()
@@ -66,7 +66,7 @@ internal static class FFI
 
         fixed (byte* requestPtr = requestBuffer)
         {
-            BooleanResponse response = quick_check(ptr, message, message.Length);
+            EnabledMessage response = quick_check(ptr, message, message.Length);
 
             try
             {
@@ -169,7 +169,7 @@ internal static class FFI
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct BooleanResponse
+    public struct EnabledMessage
     {
         public byte value;
         public IntPtr error;

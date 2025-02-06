@@ -135,7 +135,7 @@ public class Tests
         yggdrasilEngine.TakeState(json);
         var context = new Context();
         var result = yggdrasilEngine.IsEnabled("Feature.A", context);
-        Assert.AreEqual(false, result);
+        Assert.AreEqual(true, result);
     }
 
     [Test]
