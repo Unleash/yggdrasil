@@ -13,6 +13,8 @@ use unleash_yggdrasil::{
     CORE_VERSION,
 };
 
+pub mod low_level_api;
+
 static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
     std::sync::LazyLock::new(|| CString::new(CORE_VERSION).expect("CString::new failed"));
 
@@ -30,30 +32,6 @@ enum ResponseCode {
     Error = -2,
     NotFound = -1,
     Ok = 1,
-}
-
-#[repr(C, packed)]
-#[derive(Debug)]
-pub struct MessageHeader {
-    toggle_name_offset: u32,
-    user_id_offset: u32,
-    session_id_offset: u32,
-    remote_address_offset: u32,
-    environment_offset: u32,
-    app_name_offset: u32,
-    message_length: u32,
-}
-
-#[repr(C)]
-pub struct PropertyEntry {
-    key_offset: u32,
-    value_offset: u32,
-}
-
-#[repr(C)]
-pub struct BoolEntry {
-    key_offset: u32,
-    value: bool,
 }
 
 impl<T> From<Result<Option<T>, FFIError>> for Response<T> {
@@ -238,65 +216,6 @@ pub unsafe extern "C" fn check_enabled(
     })();
 
     result_to_json_ptr(result)
-}
-
-pub unsafe fn unpack_message(buffer: &[u8]) -> (String, Context) {
-    assert!(buffer.len() >= std::mem::size_of::<MessageHeader>());
-
-    let header: &MessageHeader = &*(buffer.as_ptr() as *const MessageHeader);
-
-    assert!(
-        buffer.len() >= std::mem::size_of::<MessageHeader>() + header.message_length as usize,
-        "Invalid message length, message size does not match size in header."
-    );
-
-    // Tear out a chunk of the buffer and convert it to an owned string
-    // we could probably optimize this by returning a &str but that means
-    // making the context lifetime be bounded by this buffer's lifetime
-    fn get_string(offset: u32, data: &[u8]) -> Option<String> {
-        if offset == 0 {
-            return None;
-        }
-        let start = offset as usize;
-        let end = data[start..].iter().position(|&b| b == 0).unwrap() + start;
-        Some(String::from_utf8_lossy(&data[start..end]).to_string())
-    }
-
-    let toggle_name = get_string(header.toggle_name_offset, buffer).unwrap();
-
-    let context = Context {
-        user_id: get_string(header.user_id_offset, buffer),
-        session_id: get_string(header.session_id_offset, buffer),
-        remote_address: get_string(header.remote_address_offset, buffer),
-        environment: get_string(header.environment_offset, buffer),
-        app_name: get_string(header.app_name_offset, buffer),
-        current_time: None,
-        properties: None,
-    };
-
-    (toggle_name, context)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn quick_check(
-    engine_ptr: *mut c_void,
-    message_ptr: *const u8,
-    message_len: usize,
-) -> bool {
-    let result: Result<Option<bool>, FFIError> = (|| {
-        let engine = get_engine(engine_ptr)?;
-
-        if message_ptr.is_null() || message_len == 0 {
-            return Err(FFIError::Utf8Error); //wrong error for now
-        }
-        let message = std::slice::from_raw_parts(message_ptr, message_len);
-        let (toggle_name, context) = unpack_message(message);
-
-        Ok(engine.check_enabled(&toggle_name, &context, &None))
-    })();
-
-    true
-    // return CString::new("").unwrap().into_raw();
 }
 
 /// Checks the toggle variant for a given context. Returns a JSON encoded response of type `VariantResponse`.

@@ -137,15 +137,24 @@ internal static class FFI
         public uint remote_address_offset;
         public uint environment_offset;
         public uint app_name_offset;
-        public uint message_length;
+        public uint properties_offset;
+        public uint properties_count;
+        public uint custom_strategies_offset;
+        public uint custom_strategies_count;
     }
 
     private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies)
     {
         int GetUtf8ByteCount(string? s) => string.IsNullOrEmpty(s) ? 0 : Encoding.UTF8.GetByteCount(s) + 1; // +1 for null terminators
+
         // We can calculate the byte count of the buffer we need ahead of time
         int headerSize = Marshal.SizeOf<MessageHeader>();
-        int stringDataSize = (
+        int propertiesCount = ctx.Properties?.Count ?? 0;
+        int propertiesTableSize = propertiesCount * sizeof(uint) * 2;
+        int customStrategiesCount = customStrategies?.Count ?? 0;
+        int customStrategiesTableSize = customStrategiesCount * (sizeof(uint) + sizeof(byte));
+
+        int fixedStringDataSize = (
             GetUtf8ByteCount(toggleName) +
             GetUtf8ByteCount(ctx.UserId) +
             GetUtf8ByteCount(ctx.SessionId) +
@@ -155,7 +164,7 @@ internal static class FFI
         );
 
         // Now we allocate that buffer **once**, this is surprisingly expensive because everything else here is so cheap
-        byte[] buffer = new byte[headerSize + stringDataSize];
+        byte[] buffer = new byte[headerSize + fixedStringDataSize + propertiesTableSize + customStrategiesTableSize];
 
         // Unsafe write of the header directly into the buffer, this means changing properties on the header object will change the buffer
         ref MessageHeader header = ref Unsafe.As<byte, MessageHeader>(ref buffer[0]);
@@ -178,7 +187,37 @@ internal static class FFI
         header.remote_address_offset = (uint)WriteString(ctx.RemoteAddress);
         header.environment_offset = (uint)WriteString(ctx.Environment);
         header.app_name_offset = (uint)WriteString(ctx.AppName);
-        header.message_length = (uint)stringDataSize;
+
+        int propertiesOffset = currentOffset;
+        if (ctx.Properties != null && ctx.Properties.Count > 0)
+        {
+            foreach (var kvp in ctx.Properties)
+            {
+                BitConverter.GetBytes((uint)WriteString(kvp.Key)).CopyTo(buffer, currentOffset);
+                BitConverter.GetBytes((uint)WriteString(kvp.Value)).CopyTo(buffer, currentOffset + sizeof(uint));
+                currentOffset += sizeof(uint) * 2;
+            }
+        }
+
+        header.properties_offset = (uint)propertiesOffset;
+        header.properties_count = (uint)propertiesCount;
+
+        int customStrategiesOffset = currentOffset;
+        if (customStrategies != null && customStrategies.Count > 0)
+        {
+            foreach (var kvp in customStrategies)
+            {
+                BitConverter.GetBytes((uint)WriteString(kvp.Key)).CopyTo(buffer, currentOffset);
+                // We're going to store the booleans as bytes for the simple reason that
+                // dereferencing a byte in Rust that has anything but the significant bit set is UB
+                // and I don't trust the CLR not to play silly buggers here
+                buffer[currentOffset + sizeof(uint)] = kvp.Value ? (byte)1 : (byte)0;
+                currentOffset += sizeof(uint) + sizeof(byte);
+            }
+        }
+
+        header.custom_strategies_offset = (uint)customStrategiesOffset;
+        header.custom_strategies_count = (uint)customStrategiesCount;
 
         return buffer;
     }
