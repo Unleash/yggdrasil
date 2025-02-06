@@ -60,13 +60,11 @@ internal static class FFI
         Context context,
         Dictionary<string, bool>? customStrategyResults)
     {
-        byte[] message = PackMessage(toggleName, context, customStrategyResults);
-
         byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults);
 
         fixed (byte* requestPtr = requestBuffer)
         {
-            EnabledMessage response = quick_check(ptr, message, message.Length);
+            EnabledMessage response = quick_check(ptr, requestBuffer, requestBuffer.Length);
 
             try
             {
