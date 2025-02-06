@@ -28,7 +28,7 @@
 /python-engine/binaries
 /python-engine/staging
 /python-engine/.python-version
-/dotnet-engine/Yggdrasil.Engine.Benchmarks/BenchmarkDotNet.Artifacts/*
+/dotnet-engine/Yggdrasil.Engine.Benchmarks/BenchmarkDotNet.Artifacts
 
 
 # Devenv
