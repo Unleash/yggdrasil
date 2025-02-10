@@ -78,17 +78,18 @@ fn unpack_message(
     let toggle_name = get_string(header.toggle_name_offset, buffer).unwrap();
 
     let properties = if header.properties_count > 0 {
-        let mut properties = std::collections::HashMap::new();
-        let properties_offset = header.properties_offset as usize;
-        let properties_table =
-            unsafe { get_properties_table(buffer, properties_offset, header.properties_count) };
+        // let mut properties = std::collections::HashMap::new();
+        // let properties_offset = header.properties_offset as usize;
+        // let properties_table =
+        //     unsafe { get_properties_table(buffer, properties_offset, header.properties_count) };
 
-        for i in (0..properties_table.len()).step_by(2) {
-            let key = get_string(properties_table[i], buffer).unwrap();
-            let value = get_string(properties_table[i + 1], buffer).unwrap();
-            properties.insert(key, value);
-        }
-        Some(properties)
+        // for i in (0..properties_table.len()).step_by(2) {
+        //     let key = get_string(properties_table[i], buffer).unwrap();
+        //     let value = get_string(properties_table[i + 1], buffer).unwrap();
+        //     properties.insert(key, value);
+        // }
+        // Some(properties)
+        None
     } else {
         None
     };

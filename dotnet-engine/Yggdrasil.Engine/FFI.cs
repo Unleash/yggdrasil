@@ -179,10 +179,14 @@ internal static class FFI
 
         // We can calculate the byte count of the buffer we need ahead of time
         int headerSize = Marshal.SizeOf<MessageHeader>();
+
         int propertiesCount = ctx.Properties?.Count ?? 0;
         int propertiesTableSize = propertiesCount * sizeof(uint) * 2;
+        int propertiesStringSize = ctx.Properties?.Sum(kvp => GetUtf8ByteCount(kvp.Key) + GetUtf8ByteCount(kvp.Value)) ?? 0;
+
         int customStrategiesCount = customStrategies?.Count ?? 0;
         int customStrategiesTableSize = customStrategiesCount * (sizeof(uint) + sizeof(byte));
+        int customStrategiesStringSize = customStrategies?.Sum(kvp => GetUtf8ByteCount(kvp.Key)) ?? 0;
 
         int fixedStringDataSize = (
             GetUtf8ByteCount(toggleName) +
@@ -193,61 +197,72 @@ internal static class FFI
             GetUtf8ByteCount(ctx.AppName)
         );
 
-        // Now we allocate that buffer **once**, this is surprisingly expensive because everything else here is so cheap
-        byte[] buffer = new byte[headerSize + fixedStringDataSize + propertiesTableSize + customStrategiesTableSize];
+        // Now we allocate that buffer **once**, this is quite expensive so we want to avoid doing it multiple times
+        byte[] buffer = new byte[headerSize
+            + fixedStringDataSize
+            + propertiesTableSize
+            + propertiesStringSize
+            + customStrategiesTableSize
+            + customStrategiesStringSize];
 
         // Unsafe write of the header directly into the buffer, this means changing properties on the header object will change the buffer
         ref MessageHeader header = ref Unsafe.As<byte, MessageHeader>(ref buffer[0]);
 
         int currentOffset = headerSize;
 
-        int WriteString(string? s)
+        uint WriteString(string? s)
         {
             if (string.IsNullOrEmpty(s)) return 0;
             int offset = currentOffset;
             Encoding.UTF8.GetBytes(s, 0, s!.Length, buffer, offset);
             buffer[currentOffset + s.Length] = 0;  // Add null terminator
             currentOffset += s.Length + 1;  // Move past the null terminator
-            return offset;
+            return (uint)offset;
         }
 
-        header.toggle_name_offset = (uint)WriteString(toggleName);
-        header.user_id_offset = (uint)WriteString(ctx.UserId);
-        header.session_id_offset = (uint)WriteString(ctx.SessionId);
-        header.remote_address_offset = (uint)WriteString(ctx.RemoteAddress);
-        header.environment_offset = (uint)WriteString(ctx.Environment);
-        header.app_name_offset = (uint)WriteString(ctx.AppName);
+        header.toggle_name_offset = WriteString(toggleName);
+        header.user_id_offset = WriteString(ctx.UserId);
+        header.session_id_offset = WriteString(ctx.SessionId);
+        header.remote_address_offset = WriteString(ctx.RemoteAddress);
+        header.environment_offset = WriteString(ctx.Environment);
+        header.app_name_offset = WriteString(ctx.AppName);
+        header.properties_count = (uint)propertiesCount;
+        header.custom_strategies_count = (uint)customStrategiesCount;
 
         int propertiesOffset = currentOffset;
+        header.properties_offset = (uint)propertiesOffset;
+        // skip ahead by the size of the properties table, we'll write
+        // the bytes in later as we get the offsets from WriteString
+        currentOffset += propertiesTableSize;
+
         if (ctx.Properties != null && ctx.Properties.Count > 0)
         {
-            foreach (var kvp in ctx.Properties)
+            // now we can write the properties table pair by pair
+            // as we write the bytes with WriteString we can back fill
+            // the table offsets
+            for (var i = 0; i < propertiesCount; i++)
             {
-                BitConverter.GetBytes((uint)WriteString(kvp.Key)).CopyTo(buffer, currentOffset);
-                BitConverter.GetBytes((uint)WriteString(kvp.Value)).CopyTo(buffer, currentOffset + sizeof(uint));
-                currentOffset += sizeof(uint) * 2;
+                var kvp = ctx.Properties.ElementAt(i);
+                uint keyPos = WriteString(kvp.Key);
+                uint valuePos = WriteString(kvp.Value);
+                BitConverter.GetBytes(keyPos).CopyTo(buffer, propertiesOffset + i * sizeof(uint) * 2);
+                BitConverter.GetBytes(valuePos).CopyTo(buffer, propertiesOffset + i * sizeof(uint) * 2 + sizeof(uint));
             }
         }
-
-        header.properties_offset = (uint)propertiesOffset;
-        header.properties_count = (uint)propertiesCount;
 
         int customStrategiesOffset = currentOffset;
         if (customStrategies != null && customStrategies.Count > 0)
         {
-            foreach (var kvp in customStrategies)
+            for (var i = 0; i < customStrategies.Count; i++)
             {
-                BitConverter.GetBytes((uint)WriteString(kvp.Key)).CopyTo(buffer, currentOffset);
-                // We're going to store the booleans as bytes for the simple reason that
-                // dereferencing a byte in Rust that has anything but the significant bit set is UB
-                // and I don't trust the CLR not to play silly buggers here
-                buffer[currentOffset + sizeof(uint)] = kvp.Value ? (byte)1 : (byte)0;
-                currentOffset += sizeof(uint) + sizeof(byte);
+                var kvp = customStrategies.ElementAt(i);
+                var keyOffset = WriteString(kvp.Key);
+                BitConverter.GetBytes(keyOffset).CopyTo(buffer, customStrategiesOffset + i * (sizeof(uint) + sizeof(byte)));
+                buffer[customStrategiesOffset + i * (sizeof(uint) + sizeof(byte)) + sizeof(byte)] = kvp.Value ? (byte)1 : (byte)0;
             }
         }
 
         header.custom_strategies_offset = (uint)customStrategiesOffset;
-        header.custom_strategies_count = (uint)customStrategiesCount;
 
         return buffer;
     }
