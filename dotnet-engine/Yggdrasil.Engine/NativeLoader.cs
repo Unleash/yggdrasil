@@ -29,16 +29,75 @@ internal static class NativeLibLoader
 
     private static string GetLibraryName()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            return "yggdrasilffi.dll";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            return "libyggdrasilffi.so";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return "libyggdrasilffi.dylib";
+        string os, arch, libc = "";
 
-        throw new PlatformNotSupportedException("Unsupported OS");
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            os = "win";
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            os = "linux";
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            os = "osx";
+        else
+            throw new PlatformNotSupportedException("Unsupported OS");
+
+        if (RuntimeInformation.ProcessArchitecture == Architecture.X64)
+            arch = "x86_64";
+        else if (RuntimeInformation.ProcessArchitecture == Architecture.Arm64)
+            arch = "arm64";
+        else if (RuntimeInformation.ProcessArchitecture == Architecture.X86)
+            arch = IntPtr.Size == 4 ? "i686" : "x86_64";
+        else
+            throw new PlatformNotSupportedException("Unsupported CPU architecture");
+
+        if (os == "linux" && IsMusl())
+            libc = "-musl";
+
+        string filename = os == "win"
+            ? $"yggdrasilffi_{arch}.dll"
+            : $"libyggdrasilffi_{arch}{libc}.{(os == "osx" ? "dylib" : "so")}";
+
+        Console.WriteLine($"[NativeLibLoader] Detected OS: {os}, Arch: {arch}, libc: {libc}");
+        Console.WriteLine($"[NativeLibLoader] Selected binary: {filename}");
+
+        return filename;
     }
 
+    private static bool IsMusl()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            return false;
+
+        try
+        {
+            string output = File.ReadAllText("/proc/self/maps");
+            return output.Contains("musl");
+        }
+        catch
+        {
+            try
+            {
+                using (var process = new System.Diagnostics.Process())
+                {
+                    process.StartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "ldd",
+                        Arguments = "--version",
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false
+                    };
+                    process.Start();
+                    string lddOutput = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    return lddOutput.Contains("musl");
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
 
     internal static IntPtr LoadFunctionPointer(IntPtr libHandle, string functionName)
     {

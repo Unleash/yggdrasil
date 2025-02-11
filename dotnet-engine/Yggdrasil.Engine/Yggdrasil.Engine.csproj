@@ -37,9 +37,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="../../target/release/libyggdrasilffi.so" Condition="Exists('../../target/release/libyggdrasilffi.so')" />
-    <EmbeddedResource Include="../../target/release/yggdrasilffi.dll" Condition="Exists('../../target/release/yggdrasilffi.dll')" />
-    <EmbeddedResource Include="../../target/release/libyggdrasilffi.dylib" Condition="Exists('../../target/release/libyggdrasilffi.dylib')" />
+    <EmbeddedResource Include="../../target/release/libyggdrasilffi.so" Condition="Exists('../../target/release/libyggdrasilffi.so')">
+      <LogicalName>Yggdrasil.Engine.libyggdrasilffi_x86_64.so</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../../target/release/yggdrasilffi.dll" Condition="Exists('../../target/release/yggdrasilffi.dll')">
+      <LogicalName>Yggdrasil.Engine.yggdrasilffi_x86_64.dll</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="../../target/release/libyggdrasilffi.dylib" Condition="Exists('../../target/release/libyggdrasilffi.dylib')">
+      <LogicalName>Yggdrasil.Engine.libyggdrasilffi_arm64.dylib</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
