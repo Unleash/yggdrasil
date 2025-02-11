@@ -5,7 +5,7 @@ internal static class NativeLibLoader
 {
     internal static IntPtr LoadNativeLibrary()
     {
-        var libName = GetLibraryName();
+        var libName = GetBinaryName();
         var tempPath = Path.Combine(Path.GetTempPath(), libName);
         var assembly = Assembly.GetExecutingAssembly();
         var assemblyName = assembly.GetName().Name;
@@ -27,7 +27,7 @@ internal static class NativeLibLoader
         return LoadBinary(tempPath);
     }
 
-    private static string GetLibraryName()
+    private static string GetBinaryName()
     {
         string os, arch, libc = "";
 
