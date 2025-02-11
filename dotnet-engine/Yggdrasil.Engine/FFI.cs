@@ -37,8 +37,6 @@ internal static class FFI
     private delegate IntPtr ShouldEmitImpressionEventDelegate(IntPtr ptr, byte[] toggle_name);
     private delegate IntPtr BuiltInStrategiesDelegate(IntPtr ptr);
     private delegate IntPtr ListKnownTogglesDelegate(IntPtr ptr);
-
-
     private static readonly NewEngineDelegate new_engine;
     private static readonly FreeEngineDelegate free_engine;
     private static readonly GetMetricsDelegate get_metrics;
