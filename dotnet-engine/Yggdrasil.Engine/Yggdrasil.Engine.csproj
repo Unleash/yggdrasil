@@ -37,21 +37,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="../../target/release/libyggdrasilffi.so" Condition="Exists('../../target/release/libyggdrasilffi.so')">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-    </Content>
-    <Content Include="../../target/release/libyggdrasilffi.dylib" Condition="Exists('../../target/release/libyggdrasilffi.dylib')">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-    </Content>
-    <Content Include="../../target/release/yggdrasilffi.dll" Condition="Exists('../../target/release/yggdrasilffi.dll')">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <PackageCopyToOutput>true</PackageCopyToOutput>
-    </Content>
+    <EmbeddedResource Include="../../target/release/libyggdrasilffi.so" />
+    <!-- <EmbeddedResource Include="../../target/release/yggdrasilffi.dll" Condition="Exists('../../target/release/yggdrasilffi.dll')" /> -->
+    <!-- <EmbeddedResource Include="../../target/release/libyggdrasilffi.dylib" Condition="Exists('../../target/release/libyggdrasilffi.dylib')" /> -->
   </ItemGroup>
 
-  <ItemGroup>
+  <!-- <ItemGroup>
     <None Include="../runtimes/win-x64/native/yggdrasilffi.dll" Pack="true" PackagePath="runtimes/win-x64/native/" Condition="Exists('../runtimes/win-x64/native/yggdrasilffi.dll')" />
     <None Include="../runtimes/win-arm64/native/yggdrasilffi.dll" Pack="true" PackagePath="runtimes/win-arm64/native/" Condition="Exists('../runtimes/win-arm64/native/yggdrasilffi.dll')" />
     <None Include="../runtimes/win-x86/native/yggdrasilffi.dll" Pack="true" PackagePath="runtimes/win-x86/native/" Condition="Exists('../runtimes/win-x86/native/yggdrasilffi.dll')" />
@@ -61,5 +52,5 @@
     <None Include="../runtimes/linux-musl-arm64/native/libyggdrasilffi.so" Pack="true" PackagePath="runtimes/linux-musl-arm64/native/" Condition="Exists('../runtimes/linux-musl-arm64/native/libyggdrasilffi.so')" />
     <None Include="../runtimes/osx-x64/native/libyggdrasilffi.dylib" Pack="true" PackagePath="runtimes/osx-x64/native/" Condition="Exists('../runtimes/osx-x64/native/libyggdrasilffi.dylib')" />
     <None Include="../runtimes/osx-arm64/native/libyggdrasilffi.dylib" Pack="true" PackagePath="runtimes/osx-arm64/native/" Condition="Exists('../runtimes/osx-arm64/native/libyggdrasilffi.dylib')" />
-  </ItemGroup>
+  </ItemGroup> -->
 </Project>
