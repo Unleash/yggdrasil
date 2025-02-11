@@ -112,31 +112,22 @@ internal static class NativeLibLoader
         }
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
             return GetProcAddress(libHandle, functionName);
-        }
         else
-        {
             return dlsym(libHandle, functionName);
-        }
     }
 
     private static IntPtr LoadBinary(string libPath)
     {
-        var handle = IntPtr.Zero;
+        IntPtr handle;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
             handle = LoadWindowsLibrary(libPath);
-        }
         else
-        {
             handle = LoadUnixLibrary(libPath);
-        }
 
         if (handle == IntPtr.Zero)
-        {
             throw new DllNotFoundException($"Failed to load library from {libPath}");
-        }
+
         return handle;
     }
 
@@ -148,9 +139,7 @@ internal static class NativeLibLoader
         {
             var loadMethod = nativeLibraryType.GetMethod("Load", new[] { typeof(string) });
             if (loadMethod != null)
-            {
                 return (IntPtr)loadMethod.Invoke(null, new object[] { libPath });
-            }
         }
         return dlopen(libPath, RTLD_NOW);
     }
@@ -163,9 +152,7 @@ internal static class NativeLibLoader
         {
             var loadMethod = nativeLibraryType.GetMethod("Load", new[] { typeof(string) });
             if (loadMethod != null)
-            {
                 return (IntPtr)loadMethod.Invoke(null, new object[] { libPath });
-            }
         }
 
         return LoadLibrary(libPath);
