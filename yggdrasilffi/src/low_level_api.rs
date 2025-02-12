@@ -183,7 +183,7 @@ pub unsafe extern "C" fn quick_get_variant(
         let engine = get_engine(engine_ptr)?;
 
         if message_ptr.is_null() || message_len == 0 {
-            return Err(FFIError::Utf8Error); //wrong error for now
+            return Err(FFIError::NullError);
         }
         let message = std::slice::from_raw_parts(message_ptr, message_len);
         let (toggle_name, context, custom_strategy_results, metrics_request, default_variant_name) =
@@ -224,20 +224,18 @@ pub unsafe extern "C" fn quick_get_variant(
     })();
 
     match result {
-        Ok((enabled, Some(variant))) => {
-            VariantResponse {
+        Ok((enabled, Some(variant))) => VariantResponse {
             error: std::ptr::null_mut(),
             feature_enabled: enabled as u8,
             is_enabled: variant.enabled as u8,
             variant_name: std::ffi::CString::new(variant.name).unwrap().into_raw(),
-        }},
-        Ok((enabled, None)) => {
-            VariantResponse {
+        },
+        Ok((enabled, None)) => VariantResponse {
             error: std::ptr::null_mut(),
             feature_enabled: enabled as u8,
             is_enabled: false as u8,
             variant_name: std::ptr::null_mut(),
-        }},
+        },
         Err(e) => VariantResponse {
             error: std::ffi::CString::new(e.to_string()).unwrap().into_raw(),
             feature_enabled: false as u8,
@@ -257,7 +255,7 @@ pub unsafe extern "C" fn quick_check(
         let engine = get_engine(engine_ptr)?;
 
         if message_ptr.is_null() || message_len == 0 {
-            return Err(FFIError::Utf8Error); //wrong error for now
+            return Err(FFIError::NullError);
         }
         let message = std::slice::from_raw_parts(message_ptr, message_len);
         let (toggle_name, context, custom_strategy_results, metrics_request, _) =
