@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 
 namespace Yggdrasil;
 
@@ -116,11 +117,14 @@ internal static class FFI
                 var is_enabled = response.is_enabled;
                 var feature_enabled = response.feature_enabled;
                 var variant_name = Marshal.PtrToStringAnsi(response.variant_name);
+                var payload_type = Marshal.PtrToStringAnsi(response.payload_type);
+                var payload_value = Marshal.PtrToStringAnsi(response.payload_value);
 
                 if (!string.IsNullOrEmpty(variant_name))
                 {
                     return new Variant(
-                           variant_name, null,
+                           variant_name,
+                           new Payload(payload_type, payload_value),
                            is_enabled == 1,
                            feature_enabled == 1
                        );
@@ -238,6 +242,8 @@ internal static class FFI
         public byte feature_enabled;
         public byte is_enabled;
         public IntPtr variant_name;
+        public IntPtr payload_type;
+        public IntPtr payload_value;
         public IntPtr error;
     }
 

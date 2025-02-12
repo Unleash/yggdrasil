@@ -47,6 +47,8 @@ pub struct VariantResponse {
     pub feature_enabled: u8,
     pub is_enabled: u8,
     pub variant_name: *mut c_char,
+    pub payload_type: *mut c_char,
+    pub payload_value: *mut c_char,
     pub error: *mut c_char,
 }
 
@@ -224,23 +226,43 @@ pub unsafe extern "C" fn quick_get_variant(
     })();
 
     match result {
-        Ok((enabled, Some(variant))) => VariantResponse {
-            error: std::ptr::null_mut(),
-            feature_enabled: enabled as u8,
-            is_enabled: variant.enabled as u8,
-            variant_name: std::ffi::CString::new(variant.name).unwrap().into_raw(),
-        },
+        Ok((enabled, Some(variant))) => {
+            let (payload_type, payload_value) = if let Some(payload) = &variant.payload {
+                let payload_type = std::ffi::CString::new(payload.payload_type.clone())
+                    .unwrap()
+                    .into_raw();
+                let payload_value = std::ffi::CString::new(payload.value.clone())
+                    .unwrap()
+                    .into_raw();
+                (payload_type, payload_value)
+            } else {
+                (std::ptr::null_mut(), std::ptr::null_mut())
+            };
+
+            VariantResponse {
+                error: std::ptr::null_mut(),
+                feature_enabled: enabled as u8,
+                is_enabled: variant.enabled as u8,
+                variant_name: std::ffi::CString::new(variant.name).unwrap().into_raw(),
+                payload_type,
+                payload_value,
+            }
+        }
         Ok((enabled, None)) => VariantResponse {
             error: std::ptr::null_mut(),
             feature_enabled: enabled as u8,
             is_enabled: false as u8,
             variant_name: std::ptr::null_mut(),
+            payload_type: std::ptr::null_mut(),
+            payload_value: std::ptr::null_mut(),
         },
         Err(e) => VariantResponse {
             error: std::ffi::CString::new(e.to_string()).unwrap().into_raw(),
             feature_enabled: false as u8,
             is_enabled: false as u8,
             variant_name: std::ptr::null_mut(),
+            payload_type: std::ptr::null_mut(),
+            payload_value: std::ptr::null_mut(),
         },
     }
 }
@@ -327,5 +349,15 @@ pub unsafe extern "C" fn free_variant_response(response: *mut VariantResponse) {
     if !response.variant_name.is_null() {
         drop(std::ffi::CString::from_raw(response.variant_name));
         response.variant_name = std::ptr::null_mut();
+    }
+
+    if !response.payload_type.is_null() {
+        drop(std::ffi::CString::from_raw(response.payload_type));
+        response.payload_type = std::ptr::null_mut();
+    }
+
+    if !response.payload_value.is_null() {
+        drop(std::ffi::CString::from_raw(response.payload_value));
+        response.payload_value = std::ptr::null_mut();
     }
 }
