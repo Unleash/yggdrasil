@@ -173,6 +173,9 @@ internal static class FFI
         public IntPtr error;
     }
 
+    const int CUSTOM_STRATEGY_ENTRY_SIZE = sizeof(uint) + sizeof(byte);
+    const int PROPERTY_ENTRY_SIZE = sizeof(uint) * 2;
+
     private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies)
     {
         int GetUtf8ByteCount(string? s) => string.IsNullOrEmpty(s) ? 0 : Encoding.UTF8.GetByteCount(s) + 1; // +1 for null terminators
@@ -231,7 +234,7 @@ internal static class FFI
 
         int propertiesOffset = currentOffset;
         header.properties_offset = (uint)propertiesOffset;
-        // skip ahead by the size of the properties table, we'll write
+        // skip ahead by the size of the table, we'll write
         // the bytes in later as we get the offsets from WriteString
         currentOffset += propertiesTableSize;
 
@@ -245,24 +248,27 @@ internal static class FFI
                 var kvp = ctx.Properties.ElementAt(i);
                 uint keyPos = WriteString(kvp.Key);
                 uint valuePos = WriteString(kvp.Value);
-                BitConverter.GetBytes(keyPos).CopyTo(buffer, propertiesOffset + i * sizeof(uint) * 2);
-                BitConverter.GetBytes(valuePos).CopyTo(buffer, propertiesOffset + i * sizeof(uint) * 2 + sizeof(uint));
+                BitConverter.GetBytes(keyPos).CopyTo(buffer, propertiesOffset + i * PROPERTY_ENTRY_SIZE);
+                BitConverter.GetBytes(valuePos).CopyTo(buffer, propertiesOffset + i * PROPERTY_ENTRY_SIZE + sizeof(uint));
             }
         }
 
         int customStrategiesOffset = currentOffset;
+        header.custom_strategies_offset = (uint)customStrategiesOffset;
+        // skip ahead by the size of the table, we'll write
+        // the bytes in later as we get the offsets from WriteString
+        currentOffset += customStrategiesTableSize;
         if (customStrategies != null && customStrategies.Count > 0)
         {
             for (var i = 0; i < customStrategies.Count; i++)
             {
                 var kvp = customStrategies.ElementAt(i);
                 var keyOffset = WriteString(kvp.Key);
-                BitConverter.GetBytes(keyOffset).CopyTo(buffer, customStrategiesOffset + i * (sizeof(uint) + sizeof(byte)));
-                buffer[customStrategiesOffset + i * (sizeof(uint) + sizeof(byte)) + sizeof(byte)] = kvp.Value ? (byte)1 : (byte)0;
+
+                BitConverter.GetBytes(keyOffset).CopyTo(buffer, customStrategiesOffset + (i * CUSTOM_STRATEGY_ENTRY_SIZE));
+                buffer[customStrategiesOffset + (i * CUSTOM_STRATEGY_ENTRY_SIZE) + sizeof(uint)] = kvp.Value ? (byte)1 : (byte)0;
             }
         }
-
-        header.custom_strategies_offset = (uint)customStrategiesOffset;
 
         return buffer;
     }

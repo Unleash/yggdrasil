@@ -7,6 +7,9 @@ use unleash_yggdrasil::Context;
 
 use crate::{get_engine, FFIError};
 
+const STRATEGIES_ENTRY_SIZE: usize = 5;
+const PROPERTIES_ENTRY_SIZE: usize = 8;
+
 #[repr(C, packed)]
 #[derive(Debug)]
 pub struct MessageHeader {
@@ -30,28 +33,6 @@ pub struct EnabledResponse {
 
 unsafe fn get_header(buffer: &[u8]) -> &MessageHeader {
     &*(buffer.as_ptr() as *const MessageHeader)
-}
-
-unsafe fn get_properties_table(
-    buffer: &[u8],
-    properties_offset: usize,
-    properties_count: u32,
-) -> &[u32] {
-    std::slice::from_raw_parts(
-        buffer.as_ptr().add(properties_offset) as *const u32,
-        (properties_count * 2) as usize,
-    )
-}
-
-unsafe fn get_strategies_table(
-    buffer: &[u8],
-    custom_strategies_offset: usize,
-    custom_strategies_count: u32,
-) -> &[u32] {
-    std::slice::from_raw_parts(
-        buffer.as_ptr().add(custom_strategies_offset) as *const u32,
-        custom_strategies_count as usize,
-    )
 }
 
 fn unpack_message(
@@ -78,34 +59,56 @@ fn unpack_message(
     let toggle_name = get_string(header.toggle_name_offset, buffer).unwrap();
 
     let properties = if header.properties_count > 0 {
-        // let mut properties = std::collections::HashMap::new();
-        // let properties_offset = header.properties_offset as usize;
-        // let properties_table =
-        //     unsafe { get_properties_table(buffer, properties_offset, header.properties_count) };
+        let mut properties = std::collections::HashMap::new();
 
-        // for i in (0..properties_table.len()).step_by(2) {
-        //     let key = get_string(properties_table[i], buffer).unwrap();
-        //     let value = get_string(properties_table[i + 1], buffer).unwrap();
-        //     properties.insert(key, value);
-        // }
-        // Some(properties)
-        None
+        let properties_table = &buffer[header.properties_offset as usize..];
+        for i in 0..header.properties_count as usize {
+            let entry_offset = i * PROPERTIES_ENTRY_SIZE;
+
+            let key_offset = u32::from_le_bytes([
+                properties_table[entry_offset],
+                properties_table[entry_offset + 1],
+                properties_table[entry_offset + 2],
+                properties_table[entry_offset + 3],
+            ]) as usize;
+
+            let value_offset = u32::from_le_bytes([
+                properties_table[entry_offset + 4],
+                properties_table[entry_offset + 5],
+                properties_table[entry_offset + 6],
+                properties_table[entry_offset + 7],
+            ]) as usize;
+
+            let key = get_string((key_offset as usize).try_into().unwrap(), buffer).unwrap();
+            let value = get_string((value_offset as usize).try_into().unwrap(), buffer).unwrap();
+            properties.insert(key, value);
+        }
+        Some(properties)
     } else {
         None
     };
 
     let custom_strategy_results = if header.custom_strategies_count > 0 {
         let mut custom_strategies = std::collections::HashMap::new();
-        let strategies_offset = header.custom_strategies_offset as usize;
-        let strategies_table = unsafe {
-            get_strategies_table(buffer, strategies_offset, header.custom_strategies_count)
-        };
 
-        for i in (0..header.custom_strategies_count as usize).step_by(2) {
-            let key = get_string(strategies_table[i], buffer).unwrap();
-            let value = buffer[strategies_table[i + 1] as usize] != 0;
+        let strategies_table = &buffer[header.custom_strategies_offset as usize..];
+
+        for i in 0..header.custom_strategies_count as usize {
+            let entry_offset = i * STRATEGIES_ENTRY_SIZE;
+
+            let key_offset = u32::from_le_bytes([
+                strategies_table[entry_offset],
+                strategies_table[entry_offset + 1],
+                strategies_table[entry_offset + 2],
+                strategies_table[entry_offset + 3],
+            ]) as usize;
+
+            let key = get_string((key_offset as usize).try_into().unwrap(), buffer).unwrap();
+
+            let value = strategies_table[entry_offset + std::mem::size_of::<u32>()] != 0;
             custom_strategies.insert(key, value);
         }
+
         Some(custom_strategies)
     } else {
         None
@@ -143,11 +146,10 @@ pub unsafe extern "C" fn quick_check(
     })();
 
     match result {
-        Ok(Some(value)) => {
-            EnabledResponse {
+        Ok(Some(value)) => EnabledResponse {
             value: value as u8,
             error: std::ptr::null_mut(),
-        }},
+        },
         Ok(None) => EnabledResponse {
             value: 2,
             error: std::ptr::null_mut(),
