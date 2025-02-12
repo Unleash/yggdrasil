@@ -221,9 +221,11 @@ internal static class FFI
         {
             if (string.IsNullOrEmpty(s)) return 0;
             int offset = currentOffset;
+            int strLength = Encoding.UTF8.GetByteCount(s);
+
             Encoding.UTF8.GetBytes(s, 0, s!.Length, buffer, offset);
-            buffer[currentOffset + s.Length] = 0;  // Add null terminator
-            currentOffset += s.Length + 1;  // Move past the null terminator
+            buffer[currentOffset + strLength] = 0;  // Add null terminator
+            currentOffset += strLength + 1;  // Move past the null terminator
             return (uint)offset;
         }
 
