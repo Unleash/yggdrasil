@@ -34,7 +34,12 @@ internal static class FFI
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern EnabledMessage quick_check(IntPtr ptr, byte[] message, int messageLength);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    private static extern VariantMessage quick_get_variant(IntPtr ptr, byte[] message, int messageLength);
+    [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern void free_enabled_response(ref EnabledMessage message);
+
+    [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void free_variant_response(ref VariantMessage message);
 
 
     public static IntPtr NewEngine()
@@ -62,7 +67,7 @@ internal static class FFI
         Context context,
         Dictionary<string, bool>? customStrategyResults)
     {
-        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.None);
+        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.None, null);
 
         fixed (byte* requestPtr = requestBuffer)
         {
@@ -89,6 +94,48 @@ internal static class FFI
                 free_enabled_response(ref response);
             }
         }
+    }
+
+    internal unsafe static Variant? QuickVariant(IntPtr ptr,
+        string toggleName,
+        Context context,
+        Dictionary<string, bool>? customStrategyResults)
+    {
+        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.None, null);
+        fixed (byte* requestPtr = requestBuffer)
+        {
+            VariantMessage response = quick_get_variant(ptr, requestBuffer, requestBuffer.Length);
+
+            try
+            {
+                if (response.error != IntPtr.Zero)
+                {
+                    string errorMsg = Marshal.PtrToStringAnsi(response.error);
+                    throw new Exception($"Rust error: {errorMsg}");
+                }
+                var is_enabled = response.is_enabled;
+                var feature_enabled = response.feature_enabled;
+                var variant_name = Marshal.PtrToStringAnsi(response.variant_name);
+
+                if (!string.IsNullOrEmpty(variant_name))
+                {
+                    return new Variant(
+                           variant_name, null,
+                           is_enabled == 1,
+                           feature_enabled == 1
+                       );
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            finally
+            {
+                FreeResponse(response.variant_name);
+            }
+        }
+
     }
 
     public static IntPtr CheckEnabled(
@@ -170,6 +217,7 @@ internal static class FFI
         public uint environment_offset;
         public uint current_time_offset;
         public uint app_name_offset;
+        public uint default_variant_name_offset;
         public uint properties_offset;
         public uint properties_count;
         public uint custom_strategies_offset;
@@ -184,10 +232,19 @@ internal static class FFI
         public IntPtr error;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct VariantMessage
+    {
+        public byte feature_enabled;
+        public byte is_enabled;
+        public IntPtr variant_name;
+        public IntPtr error;
+    }
+
     const int CUSTOM_STRATEGY_ENTRY_SIZE = sizeof(uint) + sizeof(byte);
     const int PROPERTY_ENTRY_SIZE = sizeof(uint) * 2;
 
-    private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies, ToggleMetricRequest metricRequest)
+    private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies, ToggleMetricRequest metricRequest, string? defaultVariantName)
     {
         int GetUtf8ByteCount(string? s) => string.IsNullOrEmpty(s) ? 0 : Encoding.UTF8.GetByteCount(s) + 1; // +1 for null terminators
 
@@ -211,7 +268,8 @@ internal static class FFI
             GetUtf8ByteCount(ctx.RemoteAddress) +
             GetUtf8ByteCount(ctx.Environment) +
             GetUtf8ByteCount(dateTime) +
-            GetUtf8ByteCount(ctx.AppName)
+            GetUtf8ByteCount(ctx.AppName) +
+            GetUtf8ByteCount(defaultVariantName)
         );
 
         // Now we allocate that buffer **once**, this is quite expensive so we want to avoid doing it multiple times
@@ -247,6 +305,7 @@ internal static class FFI
         header.current_time_offset = WriteString(dateTime);
         header.app_name_offset = WriteString(ctx.AppName);
         header.properties_count = (uint)propertiesCount;
+        header.default_variant_name_offset = WriteString(defaultVariantName);
         header.custom_strategies_count = (uint)customStrategiesCount;
         header.metric_request = metricRequest;
 

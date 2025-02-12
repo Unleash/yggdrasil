@@ -64,11 +64,13 @@ public class YggdrasilEngine
 
     public Variant? GetVariant(string toggleName, Context context)
     {
-        var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
-        var contextJson = JsonSerializer.Serialize(context, options);
-        var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, customStrategyPayload);
+        return FFI.QuickVariant(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
 
-        return FFIReader.ReadComplex<Variant>(variantPtr);
+        // var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
+        // var contextJson = JsonSerializer.Serialize(context, options);
+        // var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, customStrategyPayload);
+
+        // return FFIReader.ReadComplex<Variant>(variantPtr);
     }
 
     public MetricsBucket? GetMetrics()

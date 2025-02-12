@@ -3,7 +3,7 @@ use std::{
     ffi::{c_char, c_void},
 };
 
-use unleash_yggdrasil::Context;
+use unleash_yggdrasil::{Context, VariantDef};
 
 use crate::{get_engine, FFIError};
 
@@ -20,6 +20,7 @@ pub struct MessageHeader {
     environment_offset: u32,
     current_time_offset: u32,
     app_name_offset: u32,
+    default_variant_name_offset: u32,
     properties_offset: u32,
     properties_count: u32,
     custom_strategies_offset: u32,
@@ -41,6 +42,14 @@ pub struct EnabledResponse {
     pub error: *mut c_char,
 }
 
+#[repr(C)]
+pub struct VariantResponse {
+    pub feature_enabled: u8,
+    pub is_enabled: u8,
+    pub variant_name: *mut c_char,
+    pub error: *mut c_char,
+}
+
 unsafe fn get_header(buffer: &[u8]) -> &MessageHeader {
     &*(buffer.as_ptr() as *const MessageHeader)
 }
@@ -53,6 +62,7 @@ fn unpack_message(
         Context,
         Option<HashMap<String, bool>>,
         ToggleMetricRequest,
+        Option<String>,
     ),
     FFIError,
 > {
@@ -75,6 +85,11 @@ fn unpack_message(
     }
 
     let toggle_name = get_string(header.toggle_name_offset, buffer).unwrap();
+    let default_variant_name = if header.default_variant_name_offset != 0 {
+        Some(get_string(header.default_variant_name_offset, buffer).unwrap())
+    } else {
+        None
+    };
 
     let properties = if header.properties_count > 0 {
         let mut properties = std::collections::HashMap::new();
@@ -154,7 +169,82 @@ fn unpack_message(
         context,
         custom_strategy_results,
         toggle_metrics,
+        default_variant_name,
     ))
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn quick_get_variant(
+    engine_ptr: *mut c_void,
+    message_ptr: *const u8,
+    message_len: usize,
+) -> VariantResponse {
+    let result: Result<(bool, Option<VariantDef>), FFIError> = (|| {
+        let engine = get_engine(engine_ptr)?;
+
+        if message_ptr.is_null() || message_len == 0 {
+            return Err(FFIError::Utf8Error); //wrong error for now
+        }
+        let message = std::slice::from_raw_parts(message_ptr, message_len);
+        let (toggle_name, context, custom_strategy_results, metrics_request, default_variant_name) =
+            unpack_message(message)?;
+
+        let enabled = engine.check_enabled(&toggle_name, &context, &custom_strategy_results);
+
+        let Some(enabled) = enabled else {
+            if metrics_request == ToggleMetricRequest::Always {
+                engine.count_toggle(&toggle_name, false);
+            }
+            engine.count_variant(
+                &toggle_name,
+                &default_variant_name.unwrap_or("disabled".to_string()),
+            );
+            return Ok((false, None));
+        };
+
+        let variant = engine.check_variant(&toggle_name, &context, &custom_strategy_results);
+
+        match &variant {
+            Some(variant) => {
+                engine.count_variant(&toggle_name, &variant.name);
+            }
+            None => {
+                engine.count_variant(
+                    &toggle_name,
+                    &default_variant_name.unwrap_or("disabled".to_string()),
+                );
+            }
+        };
+        if metrics_request == ToggleMetricRequest::Always
+            || metrics_request == ToggleMetricRequest::IfExists
+        {
+            engine.count_toggle(&toggle_name, enabled);
+        }
+        Ok((enabled, variant))
+    })();
+
+    match result {
+        Ok((enabled, Some(variant))) => {
+            VariantResponse {
+            error: std::ptr::null_mut(),
+            feature_enabled: enabled as u8,
+            is_enabled: variant.enabled as u8,
+            variant_name: std::ffi::CString::new(variant.name).unwrap().into_raw(),
+        }},
+        Ok((enabled, None)) => {
+            VariantResponse {
+            error: std::ptr::null_mut(),
+            feature_enabled: enabled as u8,
+            is_enabled: false as u8,
+            variant_name: std::ptr::null_mut(),
+        }},
+        Err(e) => VariantResponse {
+            error: std::ffi::CString::new(e.to_string()).unwrap().into_raw(),
+            feature_enabled: false as u8,
+            is_enabled: false as u8,
+            variant_name: std::ptr::null_mut(),
+        },
+    }
 }
 
 #[no_mangle]
@@ -170,7 +260,7 @@ pub unsafe extern "C" fn quick_check(
             return Err(FFIError::Utf8Error); //wrong error for now
         }
         let message = std::slice::from_raw_parts(message_ptr, message_len);
-        let (toggle_name, context, custom_strategy_results, metrics_request) =
+        let (toggle_name, context, custom_strategy_results, metrics_request, _) =
             unpack_message(message)?;
 
         let enabled = engine.check_enabled(&toggle_name, &context, &custom_strategy_results);
@@ -220,5 +310,24 @@ pub unsafe extern "C" fn free_enabled_response(response: *mut EnabledResponse) {
     if !response.error.is_null() {
         drop(std::ffi::CString::from_raw(response.error));
         response.error = std::ptr::null_mut();
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn free_variant_response(response: *mut VariantResponse) {
+    if response.is_null() {
+        return;
+    }
+
+    let response = &mut *response;
+
+    if !response.error.is_null() {
+        drop(std::ffi::CString::from_raw(response.error));
+        response.error = std::ptr::null_mut();
+    }
+
+    if !response.variant_name.is_null() {
+        drop(std::ffi::CString::from_raw(response.variant_name));
+        response.variant_name = std::ptr::null_mut();
     }
 }
