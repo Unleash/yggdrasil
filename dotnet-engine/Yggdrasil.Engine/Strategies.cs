@@ -74,6 +74,12 @@ internal class CustomStrategies
 
     internal string GetCustomStrategyPayload(string toggleName, Context context)
     {
-        return JsonSerializer.Serialize(GetCustomStrategies(toggleName, context), options);
+        var custom_strategies = GetCustomStrategies(toggleName, context);
+        if (custom_strategies == null)
+        {
+            return "{}";
+        }
+
+        return JsonSerializer.Serialize(custom_strategies, options);
     }
 }
