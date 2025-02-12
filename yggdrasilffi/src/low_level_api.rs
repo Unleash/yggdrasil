@@ -166,3 +166,17 @@ pub unsafe extern "C" fn quick_check(
         },
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn free_enabled_response(response: *mut EnabledResponse) {
+    if response.is_null() {
+        return;
+    }
+
+    let response = &mut *response;
+
+    if !response.error.is_null() {
+        drop(std::ffi::CString::from_raw(response.error));
+        response.error = std::ptr::null_mut();
+    }
+}

@@ -33,6 +33,8 @@ internal static class FFI
     private static extern IntPtr list_known_toggles(IntPtr ptr);
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
     private static extern EnabledMessage quick_check(IntPtr ptr, byte[] message, int messageLength);
+    [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
+    private static extern void free_enabled_response(ref EnabledMessage message);
 
 
     public static IntPtr NewEngine()
@@ -84,7 +86,7 @@ internal static class FFI
             }
             finally
             {
-                // free_boolean_response(response); // Ensure memory is freed no matter what
+                free_enabled_response(ref response);
             }
         }
     }
