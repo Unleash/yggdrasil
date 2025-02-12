@@ -24,6 +24,15 @@ pub struct MessageHeader {
     properties_count: u32,
     custom_strategies_offset: u32,
     custom_strategies_count: u32,
+    pub metric_request: ToggleMetricRequest,
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ToggleMetricRequest {
+    Always = 0,
+    IfExists = 1,
+    None = 2,
 }
 
 #[repr(C)]
@@ -38,7 +47,15 @@ unsafe fn get_header(buffer: &[u8]) -> &MessageHeader {
 
 fn unpack_message(
     buffer: &[u8],
-) -> Result<(String, Context, Option<HashMap<String, bool>>), FFIError> {
+) -> Result<
+    (
+        String,
+        Context,
+        Option<HashMap<String, bool>>,
+        ToggleMetricRequest,
+    ),
+    FFIError,
+> {
     if buffer.len() < std::mem::size_of::<MessageHeader>() {
         return Err(FFIError::InvalidMessageFormat);
     }
@@ -47,7 +64,7 @@ fn unpack_message(
 
     // Tear out a chunk of the buffer and convert it to an owned string
     // we could probably optimize this by returning a &str but that means
-    // making the context lifetime be bounded by this buffer's lifetime
+    // making the context lifetime be bounded by this buffers lifetime
     fn get_string(offset: u32, data: &[u8]) -> Option<String> {
         if offset == 0 {
             return None;
@@ -80,9 +97,9 @@ fn unpack_message(
                 properties_table[entry_offset + 7],
             ]) as usize;
 
-            // both key and value can be null, if they're null they have offset of 0, in which case
-            // we can ignore them from the props table
-            if key_offset == 0 || value_offset == 0 {
+            // value can be null, if its null it has an offset of 0, in which case
+            // we can ignore this pair from the props table
+            if value_offset == 0 {
                 continue;
             }
             let key = get_string((key_offset as usize).try_into().unwrap(), buffer).unwrap();
@@ -130,7 +147,14 @@ fn unpack_message(
         properties: properties,
     };
 
-    Ok((toggle_name, context, custom_strategy_results))
+    let toggle_metrics = header.metric_request;
+
+    Ok((
+        toggle_name,
+        context,
+        custom_strategy_results,
+        toggle_metrics,
+    ))
 }
 
 #[no_mangle]
@@ -146,9 +170,27 @@ pub unsafe extern "C" fn quick_check(
             return Err(FFIError::Utf8Error); //wrong error for now
         }
         let message = std::slice::from_raw_parts(message_ptr, message_len);
-        let (toggle_name, context, custom_strategy_results) = unpack_message(message)?;
+        let (toggle_name, context, custom_strategy_results, metrics_request) =
+            unpack_message(message)?;
 
-        Ok(engine.check_enabled(&toggle_name, &context, &custom_strategy_results))
+        let enabled = engine.check_enabled(&toggle_name, &context, &custom_strategy_results);
+
+        match enabled {
+            Some(enabled) => {
+                if metrics_request == ToggleMetricRequest::Always
+                    || metrics_request == ToggleMetricRequest::IfExists
+                {
+                    engine.count_toggle(&toggle_name, enabled);
+                }
+            }
+            None => {
+                if metrics_request == ToggleMetricRequest::Always {
+                    engine.count_toggle(&toggle_name, false);
+                }
+            }
+        };
+
+        Ok(enabled)
     })();
 
     match result {

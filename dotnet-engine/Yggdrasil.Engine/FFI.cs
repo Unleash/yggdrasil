@@ -62,7 +62,7 @@ internal static class FFI
         Context context,
         Dictionary<string, bool>? customStrategyResults)
     {
-        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults);
+        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.None);
 
         fixed (byte* requestPtr = requestBuffer)
         {
@@ -153,6 +153,13 @@ internal static class FFI
         return utf8Bytes;
     }
 
+    public enum ToggleMetricRequest : byte
+    {
+        Always = 0,
+        IfExists = 1,
+        None = 2
+    }
+
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct MessageHeader
     {
@@ -167,6 +174,7 @@ internal static class FFI
         public uint properties_count;
         public uint custom_strategies_offset;
         public uint custom_strategies_count;
+        public ToggleMetricRequest metric_request;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -179,7 +187,7 @@ internal static class FFI
     const int CUSTOM_STRATEGY_ENTRY_SIZE = sizeof(uint) + sizeof(byte);
     const int PROPERTY_ENTRY_SIZE = sizeof(uint) * 2;
 
-    private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies)
+    private static byte[] PackMessage(string toggleName, Context ctx, Dictionary<string, bool>? customStrategies, ToggleMetricRequest metricRequest)
     {
         int GetUtf8ByteCount(string? s) => string.IsNullOrEmpty(s) ? 0 : Encoding.UTF8.GetByteCount(s) + 1; // +1 for null terminators
 
@@ -240,6 +248,7 @@ internal static class FFI
         header.app_name_offset = WriteString(ctx.AppName);
         header.properties_count = (uint)propertiesCount;
         header.custom_strategies_count = (uint)customStrategiesCount;
+        header.metric_request = metricRequest;
 
         int propertiesOffset = currentOffset;
         header.properties_offset = (uint)propertiesOffset;
