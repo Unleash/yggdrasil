@@ -18,6 +18,7 @@ pub struct MessageHeader {
     session_id_offset: u32,
     remote_address_offset: u32,
     environment_offset: u32,
+    current_time_offset: u32,
     app_name_offset: u32,
     properties_offset: u32,
     properties_count: u32,
@@ -79,6 +80,11 @@ fn unpack_message(
                 properties_table[entry_offset + 7],
             ]) as usize;
 
+            // both key and value can be null, if they're null they have offset of 0, in which case
+            // we can ignore them from the props table
+            if key_offset == 0 || value_offset == 0 {
+                continue;
+            }
             let key = get_string((key_offset as usize).try_into().unwrap(), buffer).unwrap();
             let value = get_string((value_offset as usize).try_into().unwrap(), buffer).unwrap();
             properties.insert(key, value);
@@ -120,7 +126,7 @@ fn unpack_message(
         remote_address: get_string(header.remote_address_offset, buffer),
         environment: get_string(header.environment_offset, buffer),
         app_name: get_string(header.app_name_offset, buffer),
-        current_time: None,
+        current_time: get_string(header.current_time_offset, buffer),
         properties: properties,
     };
 

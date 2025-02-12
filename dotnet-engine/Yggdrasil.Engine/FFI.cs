@@ -159,6 +159,7 @@ internal static class FFI
         public uint session_id_offset;
         public uint remote_address_offset;
         public uint environment_offset;
+        public uint current_time_offset;
         public uint app_name_offset;
         public uint properties_offset;
         public uint properties_count;
@@ -191,12 +192,15 @@ internal static class FFI
         int customStrategiesTableSize = customStrategiesCount * (sizeof(uint) + sizeof(byte));
         int customStrategiesStringSize = customStrategies?.Sum(kvp => GetUtf8ByteCount(kvp.Key)) ?? 0;
 
+        string? dateTime = ctx.CurrentTime?.ToString("O");
+
         int fixedStringDataSize = (
             GetUtf8ByteCount(toggleName) +
             GetUtf8ByteCount(ctx.UserId) +
             GetUtf8ByteCount(ctx.SessionId) +
             GetUtf8ByteCount(ctx.RemoteAddress) +
             GetUtf8ByteCount(ctx.Environment) +
+            GetUtf8ByteCount(dateTime) +
             GetUtf8ByteCount(ctx.AppName)
         );
 
@@ -228,6 +232,7 @@ internal static class FFI
         header.session_id_offset = WriteString(ctx.SessionId);
         header.remote_address_offset = WriteString(ctx.RemoteAddress);
         header.environment_offset = WriteString(ctx.Environment);
+        header.current_time_offset = WriteString(dateTime);
         header.app_name_offset = WriteString(ctx.AppName);
         header.properties_count = (uint)propertiesCount;
         header.custom_strategies_count = (uint)customStrategiesCount;
@@ -246,6 +251,7 @@ internal static class FFI
             for (var i = 0; i < propertiesCount; i++)
             {
                 var kvp = ctx.Properties.ElementAt(i);
+
                 uint keyPos = WriteString(kvp.Key);
                 uint valuePos = WriteString(kvp.Value);
                 BitConverter.GetBytes(keyPos).CopyTo(buffer, propertiesOffset + i * PROPERTY_ENTRY_SIZE);
