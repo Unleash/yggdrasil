@@ -197,10 +197,6 @@ pub unsafe extern "C" fn quick_get_variant(
             if metrics_request == ToggleMetricRequest::Always {
                 engine.count_toggle(&toggle_name, false);
             }
-            engine.count_variant(
-                &toggle_name,
-                &default_variant_name.unwrap_or("disabled".to_string()),
-            );
             return Ok((false, None));
         };
 
