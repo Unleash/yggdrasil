@@ -298,4 +298,71 @@ public class Tests
         var knownFeatures = engine.ListKnownToggles();
         Assert.AreEqual(1, knownFeatures.Count);
     }
+
+    [Test]
+    public void Checking_Feature_Also_Marks_Metrics()
+    {
+        var engine = new YggdrasilEngine();
+        engine.IsEnabled("test", new Context());
+        var metrics = engine.GetMetrics();
+
+        Assert.NotNull(metrics);
+        Assert.AreEqual(1, metrics!.Toggles.Count);
+    }
+
+    [Test]
+    public void Checking_Variant_For_Missing_Toggle_Marks_Toggle_But_Not_Variant()
+    {
+        var engine = new YggdrasilEngine();
+        engine.GetVariant("test", new Context());
+        var metrics = engine.GetMetrics();
+
+        FeatureCount? thing;
+        metrics!.Toggles.TryGetValue("test", out thing);
+
+        Assert.NotNull(metrics);
+        Assert.AreEqual(1, metrics!.Toggles.Count);
+        Assert.AreEqual(0, thing!.Variants.Count);
+    }
+
+    [Test]
+    public void Checking_Variant_Marks_Toggle_And_Variant()
+    {
+        var engine = new YggdrasilEngine();
+        var testDataObject = new
+        {
+            Version = 2,
+            Features = new[] {
+                new {
+                    Name = "test",
+                    Type = "release",
+                    Enabled = true,
+                    ImpressionData = true,
+                    Strategies = new [] {
+                        new {
+                            Name = "default",
+                            Parameters = new Dictionary<string, string>()
+                        }
+                    },
+                    Variants = new [] {
+                        new                     {
+                        Name = "variant1",
+                        Weight = 33,
+                        }
+                    }
+                }
+            }
+        };
+        engine.TakeState(JsonSerializer.Serialize(testDataObject, options));
+
+        engine.GetVariant("test", new Context());
+        var metrics = engine.GetMetrics();
+
+        FeatureCount? thing;
+        metrics!.Toggles.TryGetValue("test", out thing);
+
+        Assert.NotNull(metrics);
+        Assert.AreEqual(1, metrics!.Toggles.Count);
+        Assert.AreEqual(1, thing!.Variants.Count);
+    }
 }

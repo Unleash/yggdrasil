@@ -90,7 +90,7 @@ public static class FFI
         Context context,
         Dictionary<string, bool>? customStrategyResults)
     {
-        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.None, null);
+        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.Always, null);
 
         fixed (byte* requestPtr = requestBuffer)
         {
@@ -122,7 +122,7 @@ public static class FFI
         Context context,
         Dictionary<string, bool>? customStrategyResults)
     {
-        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.None, null);
+        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.Always, null);
 
         fixed (byte* requestPtr = requestBuffer)
         {
