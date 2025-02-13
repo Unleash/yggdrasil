@@ -178,7 +178,7 @@ fn unpack_message(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn quick_get_variant(
+pub unsafe extern "C" fn one_shot_get_variant(
     engine_ptr: *mut c_void,
     message_ptr: *const u8,
     message_len: usize,
@@ -270,7 +270,7 @@ pub unsafe extern "C" fn quick_get_variant(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn quick_check(
+pub unsafe extern "C" fn one_shot_is_enabled(
     engine_ptr: *mut c_void,
     message_ptr: *const u8,
     message_len: usize,

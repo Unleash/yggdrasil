@@ -114,7 +114,7 @@ public class Tests
                 // Silly hack to deal with the legacy "feature_enabled" property on the specs
                 var expectedResult = JsonSerializer.Deserialize<TestVariantReadModel>(test["expectedResult"].ToString(), options);
                 var enabled = yggdrasilEngine.IsEnabled(toggleName, context).Enabled() ?? false;
-                var result = yggdrasilEngine.GetVariant(toggleName, context).Variant ?? new Variant("disabled", null, false, enabled);;
+                var result = yggdrasilEngine.GetVariant(toggleName, context).Variant ?? new Variant("disabled", null, false, enabled); ;
 
                 Assert.AreEqual(expectedResult!.Name, result.Name, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Name}, got {result.Name}");
                 Assert.AreEqual(expectedResult!.Enabled, result.Enabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Enabled}, got {result.Enabled}");
@@ -211,8 +211,9 @@ public class Tests
         var engine = new YggdrasilEngine();
         engine.TakeState(testData);
         var featureName = "with.impression.data";
-        var result = engine.IsEnabled(featureName, new Context()).Enabled();
-        var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
+        var responseMessage = engine.IsEnabled(featureName, new Context());
+        var result = responseMessage.Enabled();
+        var shouldEmit = responseMessage.ImpressionData;
         Assert.NotNull(result);
         Assert.IsTrue(result);
         Assert.NotNull(shouldEmit);
@@ -245,8 +246,9 @@ public class Tests
         var engine = new YggdrasilEngine();
         engine.TakeState(testData);
         var featureName = "with.impression.data.false";
-        var result = engine.IsEnabled(featureName, new Context()).Enabled();
-        var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
+        var responseMessage = engine.IsEnabled(featureName, new Context());
+        var result = responseMessage.Enabled();
+        var shouldEmit = responseMessage.ImpressionData;
         Assert.NotNull(result);
         Assert.IsTrue(result);
         Assert.IsFalse(shouldEmit);

@@ -29,14 +29,6 @@ public class YggdrasilEngine
         }
     }
 
-    public bool ShouldEmitImpressionEvent(string featureName)
-    {
-        var shouldEmitImpressionEventPtr = FFI.ShouldEmitImpressionEvent(state, featureName);
-        var shouldEmitImpressionEvent = FFIReader.ReadPrimitive<bool>(shouldEmitImpressionEventPtr);
-
-        return shouldEmitImpressionEvent ?? false;
-    }
-
     public void Dispose()
     {
         FFI.FreeEngine(this.state);
@@ -78,18 +70,6 @@ public class YggdrasilEngine
     {
         var metricsPtr = FFI.GetMetrics(state);
         return FFIReader.ReadComplex<MetricsBucket>(metricsPtr);
-    }
-
-    public void CountFeature(string featureName, bool enabled)
-    {
-        var responsePtr = FFI.CountToggle(state, featureName, enabled);
-        FFIReader.CheckResponse(responsePtr);
-    }
-
-    public void CountVariant(string featureName, string variantName)
-    {
-        var responsePtr = FFI.CountVariant(state, featureName, variantName);
-        FFIReader.CheckResponse(responsePtr);
     }
 
     public ICollection<FeatureDefinition> ListKnownToggles()
