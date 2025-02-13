@@ -1,11 +1,10 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
 
 namespace Yggdrasil;
 
-internal static class FFI
+public static class FFI
 {
 
     [DllImport("yggdrasilffi", SetLastError = true, CallingConvention = CallingConvention.Cdecl)]
@@ -63,7 +62,40 @@ internal static class FFI
         return take_state(ptr, ToUtf8Bytes(json));
     }
 
-    internal unsafe static (bool?, bool) QuickCheck(IntPtr ptr,
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct QuickCheckResult
+    {
+        internal byte value;
+        internal byte impressionData;
+
+        public bool ImpressionData => impressionData == 1;
+
+        public bool? Enabled() => value switch
+        {
+            0 => false,
+            1 => true,
+            2 => (bool?)null,
+            _ => throw new Exception("Invalid Rust response")
+        };
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct QuickVariantResult
+    {
+        public byte hasVariant;
+        public byte impressionData;
+
+        public Variant? Variant { get; }
+
+        public QuickVariantResult(Variant? variant, bool impressionData)
+        {
+            this.hasVariant = (byte)(variant != null ? 1 : 0);
+            this.impressionData = (byte)(impressionData ? 1 : 0);
+            this.Variant = variant;
+        }
+    }
+
+    internal unsafe static QuickCheckResult QuickCheck(IntPtr ptr,
         string toggleName,
         Context context,
         Dictionary<string, bool>? customStrategyResults)
@@ -82,14 +114,10 @@ internal static class FFI
                     throw new Exception($"Rust error: {errorMsg}");
                 }
 
-                bool impressionData = response.impression_data == 1;
-
-                return response.value switch
+                return new QuickCheckResult
                 {
-                    0 => (false, impressionData),
-                    1 => (true, impressionData),
-                    2 => ((bool?)null, impressionData),
-                    _ => throw new Exception("Invalid Rust response")
+                    value = response.value,
+                    impressionData = response.impression_data
                 };
             }
             finally
@@ -99,12 +127,13 @@ internal static class FFI
         }
     }
 
-    internal unsafe static (Variant?, bool) QuickVariant(IntPtr ptr,
+    internal unsafe static QuickVariantResult QuickVariant(IntPtr ptr,
         string toggleName,
         Context context,
         Dictionary<string, bool>? customStrategyResults)
     {
         byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.None, null);
+
         fixed (byte* requestPtr = requestBuffer)
         {
             VariantMessage response = quick_get_variant(ptr, requestBuffer, requestBuffer.Length);
@@ -116,32 +145,32 @@ internal static class FFI
                     string errorMsg = Marshal.PtrToStringAnsi(response.error);
                     throw new Exception($"Rust error: {errorMsg}");
                 }
-                var isEnabled = response.is_enabled == 1;
-                var featureEnabled = response.feature_enabled == 1;
+
                 bool impressionData = response.impression_data == 1;
-                var variantName = Marshal.PtrToStringAnsi(response.variant_name);
+                string? variantName = Marshal.PtrToStringAnsi(response.variant_name);
 
                 if (!string.IsNullOrEmpty(variantName))
                 {
                     Payload? payload = null;
                     if (response.payload_type != IntPtr.Zero && response.payload_value != IntPtr.Zero)
                     {
-
-                        var payload_type = Marshal.PtrToStringAnsi(response.payload_type);
-                        var payload_value = Marshal.PtrToStringAnsi(response.payload_value);
-                        payload = new Payload(payload_type, payload_value);
+                        string payloadType = Marshal.PtrToStringAnsi(response.payload_type);
+                        string payloadValue = Marshal.PtrToStringAnsi(response.payload_value);
+                        payload = new Payload(payloadType, payloadValue);
                     }
 
-                    return (new Variant(
-                           variantName,
-                           payload,
-                           isEnabled,
-                           featureEnabled
-                       ), impressionData);
+                    Variant variant = new Variant(
+                        variantName,
+                        payload,
+                        response.is_enabled == 1,
+                        response.feature_enabled == 1
+                    );
+
+                    return new QuickVariantResult(variant, impressionData);
                 }
                 else
                 {
-                    return (null, false);
+                    return new QuickVariantResult(null, false);
                 }
             }
             finally
@@ -149,7 +178,6 @@ internal static class FFI
                 FreeResponse(response.variant_name);
             }
         }
-
     }
 
     public static IntPtr CheckEnabled(

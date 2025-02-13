@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using static Yggdrasil.FFI;
 
 namespace Yggdrasil;
 
@@ -50,7 +51,7 @@ public class YggdrasilEngine
         customStrategies.MapFeatures(json);
     }
 
-    public (bool?, bool) IsEnabled(string toggleName, Context context)
+    public QuickCheckResult IsEnabled(string toggleName, Context context)
     {
         return FFI.QuickCheck(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
         // return true;
@@ -62,7 +63,7 @@ public class YggdrasilEngine
         // return FFIReader.ReadPrimitive<bool>(isEnabledPtr);
     }
 
-    public (Variant?, bool) GetVariant(string toggleName, Context context)
+    public QuickVariantResult GetVariant(string toggleName, Context context)
     {
         return FFI.QuickVariant(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
 

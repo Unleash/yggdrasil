@@ -14,7 +14,7 @@ public class EngineBenchmarks
     }
 
     [Benchmark]
-    public void EmptyIsEnabled() => engine.IsEnabled("Feature.A", context);
+    public void EmptyIsEnabled() => engine.IsEnabled("Feature.A", context).Enabled();
 }
 
 class Program
