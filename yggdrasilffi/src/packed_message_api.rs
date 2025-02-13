@@ -39,6 +39,7 @@ pub enum ToggleMetricRequest {
 #[repr(C)]
 pub struct EnabledResponse {
     pub value: u8,
+    pub impression_data: u8,
     pub error: *mut c_char,
 }
 
@@ -49,6 +50,7 @@ pub struct VariantResponse {
     pub variant_name: *mut c_char,
     pub payload_type: *mut c_char,
     pub payload_value: *mut c_char,
+    pub impression_data: u8,
     pub error: *mut c_char,
 }
 
@@ -181,7 +183,7 @@ pub unsafe extern "C" fn quick_get_variant(
     message_ptr: *const u8,
     message_len: usize,
 ) -> VariantResponse {
-    let result: Result<(bool, Option<VariantDef>), FFIError> = (|| {
+    let result: Result<(bool, bool, Option<VariantDef>), FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
 
         if message_ptr.is_null() || message_len == 0 {
@@ -197,10 +199,11 @@ pub unsafe extern "C" fn quick_get_variant(
             if metrics_request == ToggleMetricRequest::Always {
                 engine.count_toggle(&toggle_name, false);
             }
-            return Ok((false, None));
+            return Ok((false, false, None));
         };
 
         let variant = engine.check_variant(&toggle_name, &context, &custom_strategy_results);
+        let impression_data = engine.should_emit_impression_event(&toggle_name);
 
         match &variant {
             Some(variant) => {
@@ -218,11 +221,11 @@ pub unsafe extern "C" fn quick_get_variant(
         {
             engine.count_toggle(&toggle_name, enabled);
         }
-        Ok((enabled, variant))
+        Ok((enabled, impression_data, variant))
     })();
 
     match result {
-        Ok((enabled, Some(variant))) => {
+        Ok((enabled, impression_data, Some(variant))) => {
             let (payload_type, payload_value) = if let Some(payload) = &variant.payload {
                 let payload_type = std::ffi::CString::new(payload.payload_type.clone())
                     .unwrap()
@@ -240,15 +243,17 @@ pub unsafe extern "C" fn quick_get_variant(
                 feature_enabled: enabled as u8,
                 is_enabled: variant.enabled as u8,
                 variant_name: std::ffi::CString::new(variant.name).unwrap().into_raw(),
+                impression_data: impression_data as u8,
                 payload_type,
                 payload_value,
             }
         }
-        Ok((enabled, None)) => VariantResponse {
+        Ok((enabled, impression_data, None)) => VariantResponse {
             error: std::ptr::null_mut(),
             feature_enabled: enabled as u8,
             is_enabled: false as u8,
             variant_name: std::ptr::null_mut(),
+            impression_data: impression_data as u8,
             payload_type: std::ptr::null_mut(),
             payload_value: std::ptr::null_mut(),
         },
@@ -257,6 +262,7 @@ pub unsafe extern "C" fn quick_get_variant(
             feature_enabled: false as u8,
             is_enabled: false as u8,
             variant_name: std::ptr::null_mut(),
+            impression_data: false as u8,
             payload_type: std::ptr::null_mut(),
             payload_value: std::ptr::null_mut(),
         },
@@ -269,7 +275,7 @@ pub unsafe extern "C" fn quick_check(
     message_ptr: *const u8,
     message_len: usize,
 ) -> EnabledResponse {
-    let result: Result<Option<bool>, FFIError> = (|| {
+    let result: Result<(Option<bool>, bool), FFIError> = (|| {
         let engine = get_engine(engine_ptr)?;
 
         if message_ptr.is_null() || message_len == 0 {
@@ -280,6 +286,7 @@ pub unsafe extern "C" fn quick_check(
             unpack_message(message)?;
 
         let enabled = engine.check_enabled(&toggle_name, &context, &custom_strategy_results);
+        let impression_data = engine.should_emit_impression_event(&toggle_name);
 
         match enabled {
             Some(enabled) => {
@@ -296,20 +303,23 @@ pub unsafe extern "C" fn quick_check(
             }
         };
 
-        Ok(enabled)
+        Ok((enabled, impression_data))
     })();
 
     match result {
-        Ok(Some(value)) => EnabledResponse {
+        Ok((Some(value), impression_data)) => EnabledResponse {
             value: value as u8,
+            impression_data: impression_data as u8,
             error: std::ptr::null_mut(),
         },
-        Ok(None) => EnabledResponse {
+        Ok((None, impression_data)) => EnabledResponse {
             value: 2,
+            impression_data: impression_data as u8,
             error: std::ptr::null_mut(),
         },
         Err(e) => EnabledResponse {
             value: 3,
+            impression_data: false as u8,
             error: std::ffi::CString::new(e.to_string()).unwrap().into_raw(),
         },
     }

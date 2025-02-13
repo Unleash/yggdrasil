@@ -63,7 +63,7 @@ internal static class FFI
         return take_state(ptr, ToUtf8Bytes(json));
     }
 
-    internal unsafe static bool? QuickCheck(IntPtr ptr,
+    internal unsafe static (bool?, bool) QuickCheck(IntPtr ptr,
         string toggleName,
         Context context,
         Dictionary<string, bool>? customStrategyResults)
@@ -82,11 +82,13 @@ internal static class FFI
                     throw new Exception($"Rust error: {errorMsg}");
                 }
 
+                bool impressionData = response.impression_data == 1;
+
                 return response.value switch
                 {
-                    0 => false,
-                    1 => true,
-                    2 => (bool?)null,
+                    0 => (false, impressionData),
+                    1 => (true, impressionData),
+                    2 => ((bool?)null, impressionData),
                     _ => throw new Exception("Invalid Rust response")
                 };
             }
@@ -97,7 +99,7 @@ internal static class FFI
         }
     }
 
-    internal unsafe static Variant? QuickVariant(IntPtr ptr,
+    internal unsafe static (Variant?, bool) QuickVariant(IntPtr ptr,
         string toggleName,
         Context context,
         Dictionary<string, bool>? customStrategyResults)
@@ -114,10 +116,12 @@ internal static class FFI
                     string errorMsg = Marshal.PtrToStringAnsi(response.error);
                     throw new Exception($"Rust error: {errorMsg}");
                 }
-                var is_enabled = response.is_enabled;
-                var feature_enabled = response.feature_enabled;
-                var variant_name = Marshal.PtrToStringAnsi(response.variant_name);
-                if (!string.IsNullOrEmpty(variant_name))
+                var isEnabled = response.is_enabled == 1;
+                var featureEnabled = response.feature_enabled == 1;
+                bool impressionData = response.impression_data == 1;
+                var variantName = Marshal.PtrToStringAnsi(response.variant_name);
+
+                if (!string.IsNullOrEmpty(variantName))
                 {
                     Payload? payload = null;
                     if (response.payload_type != IntPtr.Zero && response.payload_value != IntPtr.Zero)
@@ -128,16 +132,16 @@ internal static class FFI
                         payload = new Payload(payload_type, payload_value);
                     }
 
-                    return new Variant(
-                           variant_name,
+                    return (new Variant(
+                           variantName,
                            payload,
-                           is_enabled == 1,
-                           feature_enabled == 1
-                       );
+                           isEnabled,
+                           featureEnabled
+                       ), impressionData);
                 }
                 else
                 {
-                    return null;
+                    return (null, false);
                 }
             }
             finally
@@ -239,6 +243,7 @@ internal static class FFI
     public struct EnabledMessage
     {
         public byte value;
+        public byte impression_data;
         public IntPtr error;
     }
 
@@ -250,6 +255,7 @@ internal static class FFI
         public IntPtr variant_name;
         public IntPtr payload_type;
         public IntPtr payload_value;
+        public byte impression_data;
         public IntPtr error;
     }
 

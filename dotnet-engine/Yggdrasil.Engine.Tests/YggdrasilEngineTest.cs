@@ -100,9 +100,13 @@ public class Tests
                 var toggleName = (string)test["toggleName"];
                 var expectedResult = (bool)test["expectedResult"];
 
-                var result = yggdrasilEngine.IsEnabled(toggleName, context) ?? false;
+                var (enabled, _) = yggdrasilEngine.IsEnabled(toggleName, context);
+                if (enabled == null)
+                {
+                    enabled = false;
+                }
 
-                Assert.AreEqual(expectedResult, result, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");
+                Assert.AreEqual(expectedResult, enabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {enabled}");
             }
 
             var variantTests = suiteData["variantTests"] ?? new JArray();
@@ -113,14 +117,18 @@ public class Tests
                 var toggleName = (string)test["toggleName"];
                 // Silly hack to deal with the legacy "feature_enabled" property on the specs
                 var expectedResult = JsonSerializer.Deserialize<TestVariantReadModel>(test["expectedResult"].ToString(), options);
-                var enabled = yggdrasilEngine.IsEnabled(toggleName, context) ?? false;
-                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant("disabled", null, false, enabled);
+                var (variant, impressionData) = yggdrasilEngine.GetVariant(toggleName, context);
+                if (variant == null)
+                {
+                    var (enabled, _) = yggdrasilEngine.IsEnabled(toggleName, context);
+                    variant = new Variant("disabled", null, false, enabled ?? false);
+                }
 
-                Assert.AreEqual(expectedResult!.Name, result.Name, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Name}, got {result.Name}");
-                Assert.AreEqual(expectedResult!.Enabled, result.Enabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Enabled}, got {result.Enabled}");
-                Assert.AreEqual(expectedResult!.FeatureEnabled, result.FeatureEnabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.FeatureEnabled}, got {result.FeatureEnabled}");
-                Assert.AreEqual(expectedResult!.Payload?.Type, result.Payload?.Type, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Payload?.Type}, got {result.Payload?.Type}");
-                Assert.AreEqual(expectedResult!.Payload?.Value, result.Payload?.Value, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Payload?.Value}, got {result.Payload?.Value}");
+                Assert.AreEqual(expectedResult!.Name, variant.Name, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Name}, got {variant.Name}");
+                Assert.AreEqual(expectedResult!.Enabled, variant.Enabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Enabled}, got {variant.Enabled}");
+                Assert.AreEqual(expectedResult!.FeatureEnabled, variant.FeatureEnabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.FeatureEnabled}, got {variant.FeatureEnabled}");
+                Assert.AreEqual(expectedResult!.Payload?.Type, variant.Payload?.Type, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Payload?.Type}, got {variant.Payload?.Type}");
+                Assert.AreEqual(expectedResult!.Payload?.Value, variant.Payload?.Value, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Payload?.Value}, got {variant.Payload?.Value}");
             }
 
             Console.WriteLine($"Passed client specification {suite}");
@@ -128,13 +136,14 @@ public class Tests
     }
 
     [Test]
-    public void Simple_Feature_Is_Enabled() {
+    public void Simple_Feature_Is_Enabled()
+    {
         var yggdrasilEngine = new YggdrasilEngine();
         var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.A", context);
+        var (result, _) = yggdrasilEngine.IsEnabled("Feature.A", context);
         Assert.AreEqual(true, result);
     }
 
@@ -146,7 +155,7 @@ public class Tests
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.D", context);
+        var (result, _) = yggdrasilEngine.IsEnabled("Feature.D", context);
         Assert.AreEqual(false, result);
     }
 
@@ -163,7 +172,7 @@ public class Tests
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.D", context);
+        var (result, _) = yggdrasilEngine.IsEnabled("Feature.A", context);
         Assert.AreEqual(true, result);
     }
 
@@ -180,7 +189,7 @@ public class Tests
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.E", context);
+        var (result, impressionData) = yggdrasilEngine.IsEnabled("Feature.E", context);
         Assert.AreEqual(true, result);
     }
 
@@ -210,7 +219,7 @@ public class Tests
         var engine = new YggdrasilEngine();
         engine.TakeState(testData);
         var featureName = "with.impression.data";
-        var result = engine.IsEnabled(featureName, new Context());
+        var (result, impressionData) = engine.IsEnabled(featureName, new Context());
         var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
         Assert.NotNull(result);
         Assert.IsTrue(result);
@@ -244,7 +253,7 @@ public class Tests
         var engine = new YggdrasilEngine();
         engine.TakeState(testData);
         var featureName = "with.impression.data.false";
-        var result = engine.IsEnabled(featureName, new Context());
+        var (result, impressionData) = engine.IsEnabled(featureName, new Context());
         var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
         Assert.NotNull(result);
         Assert.IsTrue(result);

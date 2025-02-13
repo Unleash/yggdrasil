@@ -50,7 +50,7 @@ public class YggdrasilEngine
         customStrategies.MapFeatures(json);
     }
 
-    public bool? IsEnabled(string toggleName, Context context)
+    public (bool?, bool) IsEnabled(string toggleName, Context context)
     {
         return FFI.QuickCheck(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
         // return true;
@@ -62,7 +62,7 @@ public class YggdrasilEngine
         // return FFIReader.ReadPrimitive<bool>(isEnabledPtr);
     }
 
-    public Variant? GetVariant(string toggleName, Context context)
+    public (Variant?, bool) GetVariant(string toggleName, Context context)
     {
         return FFI.QuickVariant(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
 
