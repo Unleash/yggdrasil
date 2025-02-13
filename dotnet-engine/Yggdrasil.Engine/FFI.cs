@@ -84,7 +84,7 @@ public static class FFI
     {
         public byte hasVariant;
         public byte impressionData;
-
+        public bool ImpressionData => impressionData == 1;
         public Variant? Variant { get; }
 
         public QuickVariantResult(Variant? variant, bool impressionData)
