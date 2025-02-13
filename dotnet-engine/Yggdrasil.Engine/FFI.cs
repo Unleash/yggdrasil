@@ -117,14 +117,20 @@ internal static class FFI
                 var is_enabled = response.is_enabled;
                 var feature_enabled = response.feature_enabled;
                 var variant_name = Marshal.PtrToStringAnsi(response.variant_name);
-                var payload_type = Marshal.PtrToStringAnsi(response.payload_type);
-                var payload_value = Marshal.PtrToStringAnsi(response.payload_value);
-
                 if (!string.IsNullOrEmpty(variant_name))
                 {
+                    Payload? payload = null;
+                    if (response.payload_type != IntPtr.Zero && response.payload_value != IntPtr.Zero)
+                    {
+
+                        var payload_type = Marshal.PtrToStringAnsi(response.payload_type);
+                        var payload_value = Marshal.PtrToStringAnsi(response.payload_value);
+                        payload = new Payload(payload_type, payload_value);
+                    }
+
                     return new Variant(
                            variant_name,
-                           new Payload(payload_type, payload_value),
+                           payload,
                            is_enabled == 1,
                            feature_enabled == 1
                        );
