@@ -10,7 +10,7 @@ use crate::{get_engine, FFIError};
 const STRATEGIES_ENTRY_SIZE: usize = 5;
 const PROPERTIES_ENTRY_SIZE: usize = 8;
 
-#[repr(C, packed)]
+#[repr(C)]
 #[derive(Debug)]
 pub struct MessageHeader {
     toggle_name_offset: u32,
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn one_shot_is_enabled(
             context,
             custom_strategy_results,
             metrics_request,
-            default_variant_name,
+            default_variant_name: _,
         } = unpack_message(message)?;
 
         let enabled = engine.check_enabled(&toggle_name, &context, &custom_strategy_results);

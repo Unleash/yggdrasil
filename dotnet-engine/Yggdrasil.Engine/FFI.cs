@@ -205,7 +205,7 @@ public static class FFI
         None = 2
     }
 
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    [StructLayout(LayoutKind.Sequential)]
     public struct MessageHeader
     {
         public uint toggle_name_offset;
