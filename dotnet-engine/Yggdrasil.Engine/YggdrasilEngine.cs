@@ -43,27 +43,14 @@ public class YggdrasilEngine
         customStrategies.MapFeatures(json);
     }
 
-    public QuickCheckResult IsEnabled(string toggleName, Context context)
+    public EnabledResult IsEnabled(string toggleName, Context context)
     {
-        return FFI.QuickCheck(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
-        // return true;
-        // var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
-        // string contextJson = JsonSerializer.Serialize(context, options);
-        // var isEnabledPtr = FFI.CheckEnabled(state, toggleName, contextJson, customStrategyPayload);
-
-        // return true;
-        // return FFIReader.ReadPrimitive<bool>(isEnabledPtr);
+        return FFI.IsEnabled(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
     }
 
-    public QuickVariantResult GetVariant(string toggleName, Context context)
+    public VariantResult GetVariant(string toggleName, Context context)
     {
-        return FFI.QuickVariant(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
-
-        // var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);
-        // var contextJson = JsonSerializer.Serialize(context, options);
-        // var variantPtr = FFI.CheckVariant(state, toggleName, contextJson, customStrategyPayload);
-
-        // return FFIReader.ReadComplex<Variant>(variantPtr);
+        return FFI.GetVariant(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
     }
 
     public MetricsBucket? GetMetrics()

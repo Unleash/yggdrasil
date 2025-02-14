@@ -53,7 +53,7 @@ public static class FFI
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct QuickCheckResult
+    public struct EnabledResult
     {
         internal byte value;
         internal byte impressionData;
@@ -70,14 +70,14 @@ public static class FFI
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct QuickVariantResult
+    public struct VariantResult
     {
         public byte hasVariant;
         public byte impressionData;
         public bool ImpressionData => impressionData == 1;
         public Variant? Variant { get; }
 
-        public QuickVariantResult(Variant? variant, bool impressionData)
+        public VariantResult(Variant? variant, bool impressionData)
         {
             this.hasVariant = (byte)(variant != null ? 1 : 0);
             this.impressionData = (byte)(impressionData ? 1 : 0);
@@ -85,7 +85,7 @@ public static class FFI
         }
     }
 
-    internal unsafe static QuickCheckResult QuickCheck(IntPtr ptr,
+    internal unsafe static EnabledResult IsEnabled(IntPtr ptr,
         string toggleName,
         Context context,
         Dictionary<string, bool>? customStrategyResults)
@@ -104,7 +104,7 @@ public static class FFI
                     throw new Exception($"Rust error: {errorMsg}");
                 }
 
-                return new QuickCheckResult
+                return new EnabledResult
                 {
                     value = response.value,
                     impressionData = response.impression_data
@@ -117,7 +117,7 @@ public static class FFI
         }
     }
 
-    internal unsafe static QuickVariantResult QuickVariant(IntPtr ptr,
+    internal unsafe static VariantResult GetVariant(IntPtr ptr,
         string toggleName,
         Context context,
         Dictionary<string, bool>? customStrategyResults)
@@ -156,11 +156,11 @@ public static class FFI
                         response.feature_enabled == 1
                     );
 
-                    return new QuickVariantResult(variant, impressionData);
+                    return new VariantResult(variant, impressionData);
                 }
                 else
                 {
-                    return new QuickVariantResult(null, false);
+                    return new VariantResult(null, false);
                 }
             }
             finally
@@ -192,7 +192,7 @@ public static class FFI
     /// <returns>A UTF-8 encoded null-terminated byte array.</returns>
     private static byte[] ToUtf8Bytes(string input)
     {
-        byte[] utf8Bytes = System.Text.Encoding.UTF8.GetBytes(input);
+        byte[] utf8Bytes = Encoding.UTF8.GetBytes(input);
         Array.Resize(ref utf8Bytes, utf8Bytes.Length + 1);
         return utf8Bytes;
     }
