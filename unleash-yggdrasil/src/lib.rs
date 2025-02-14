@@ -1779,7 +1779,7 @@ mod test {
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
+        assert!(!metrics.toggles.contains_key("parent-flag"));
     }
 
     #[test]
@@ -1834,7 +1834,7 @@ mod test {
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
+        assert!(!metrics.toggles.contains_key("parent-flag"));
     }
 
     #[test]
@@ -1886,7 +1886,7 @@ mod test {
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
+        assert!(!metrics.toggles.contains_key("parent-flag"));
     }
 
     #[test]
