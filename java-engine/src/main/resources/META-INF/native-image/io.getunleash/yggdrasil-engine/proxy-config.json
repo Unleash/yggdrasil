@@ -1,0 +1,7 @@
+[
+  {
+    "interfaces": [
+      "io.getunleash.engine.UnleashFFI"
+    ]
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "resources": [
+    {
+      "pattern": ".*\\.(dll|so|dylib)",
+      "uri": "classpath:/native"
+    }
+  ]
+}
