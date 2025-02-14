@@ -162,6 +162,35 @@ fn unpack_message(buffer: &[u8]) -> Result<Message, FFIError> {
     })
 }
 
+
+/// # Safety
+///
+/// The caller **must** ensure the following conditions are met:
+///
+/// ## `engine_ptr` Must Be a Valid Pointer
+/// - `engine_ptr` **must point to a valid `Engine` instance**.
+/// - Passing a null or dangling pointer results in **undefined behavior (UB)**.
+/// - The caller **must ensure `engine_ptr` remains valid** while this function executes.
+///
+/// ## `message_ptr` Must Be Non-Null and `message_len` Must Be Valid
+/// - If `message_ptr` is null or `message_len == 0`, the function returns an error (`FFIError::NullError`).
+/// - The function **creates a byte slice** using `std::slice::from_raw_parts(message_ptr, message_len)`, which:
+///   - **Assumes `message_len` is accurate** (overreading causes UB).
+///   - **Assumes `message_ptr` points to a valid, readable memory region** of at least `message_len` bytes.
+/// - Ensure `message_ptr` points to a properly formatted buffer that is **alive and not mutated** during execution.
+///
+/// ## `VariantResponse.error` and CString Fields Must Be Freed by the Caller
+/// - If an error occurs, `error` is allocated using `CString::into_raw()` and **must be freed by the caller**.
+/// - The following fields are also allocated with `CString::into_raw()` and **must be freed by the caller**:
+///   - `variant_name`
+///   - `payload_type`
+///   - `payload_value`
+/// - **Caller Responsibility:** If any of these fields are non-null, free them using `free_variant_response(response)`.
+///
+/// ## Integer Representation and Enum Consistency
+/// - `ToggleMetricRequest` is a `#[repr(u8)]` enum, ensuring it fits within a single byte.
+/// - `feature_enabled`, `is_enabled`, and `impression_data` are also `u8`, avoiding alignment mismatches.
+/// - The caller **must ensure valid numeric values** are passed for `ToggleMetricRequest`.
 #[no_mangle]
 pub unsafe extern "C" fn one_shot_get_variant(
     engine_ptr: *mut c_void,
@@ -259,6 +288,29 @@ pub unsafe extern "C" fn one_shot_get_variant(
     }
 }
 
+
+/// # Safety
+///
+/// The caller **must** ensure the following conditions are met:
+///
+/// `engine_ptr` Must be a valid pointer, passing a null or dangling pointer results in undefined behavior (UB)
+///  Ensure `engine_ptr` was obtained from a valid `Engine`
+///  and is not used after being freed.
+///
+/// If `message_ptr` is null or `message_len == 0`, the function returns an error (`FFIError::NullError`).
+/// The function **creates a byte slice** using `std::slice::from_raw_parts(message_ptr, message_len)`, which:
+/// **Assumes `message_len` is accurate** (overreading causes UB).
+/// **Assumes `message_ptr` points to a valid, readable memory region** of at least `message_len` bytes.
+/// Ensure `message_ptr` points to a properly formatted buffer that is
+/// **alive and not mutated** while this function executes.
+///
+/// `EnabledResponse.error` must be freed by the caller by invoking `free_enabled_response(response)`.
+///
+/// ## Integer Representation and Enum Consistency
+/// - `ToggleMetricRequest` is a `#[repr(u8)]` enum, ensuring it fits within a single byte.
+/// - `value` (boolean state) and `impression_data` are also `u8`, avoiding alignment mismatches.
+/// - It's the callers responsibility to ensure that bytes sent only have their significant bits set.
+/// - The enum should match the Rust enum (`0 = Always`, `1 = IfExists`, `2 = None`).
 #[no_mangle]
 pub unsafe extern "C" fn one_shot_is_enabled(
     engine_ptr: *mut c_void,
@@ -320,6 +372,18 @@ pub unsafe extern "C" fn one_shot_is_enabled(
     }
 }
 
+/// # Safety
+///
+/// - This function **must only be called on a valid `EnabledResponse`** returned from `one_shot_is_enabled`.
+/// - **`response` must be a non-null, valid pointer.**
+///   - If `response` is null, this function does nothing.
+///   - Passing a dangling or already-freed pointer results in **undefined behavior (UB)**.
+///
+/// ## `error` Must Be Freed Only Once
+/// - If `error` is non-null, this function **takes ownership and frees it**.
+/// - The pointer is then set to `null_mut()` to prevent double frees.
+/// - **Caller Responsibility:** Never call this function more than once on the same `EnabledResponse`,
+///   and do not manually free `error` after calling this function.
 #[no_mangle]
 pub unsafe extern "C" fn free_enabled_response(response: *mut EnabledResponse) {
     if response.is_null() {
@@ -334,6 +398,24 @@ pub unsafe extern "C" fn free_enabled_response(response: *mut EnabledResponse) {
     }
 }
 
+/// # Safety
+///
+/// - This function **must only be called on a valid `VariantResponse`** returned from `one_shot_get_variant`.
+/// - **`response` must be a non-null, valid pointer.**
+///   - If `response` is null, this function does nothing.
+///   - Passing a dangling or already-freed pointer results in **undefined behavior (UB)**.
+///
+/// ## CString Fields Must Be Freed Only Once
+/// - If any of the following fields are non-null, this function **takes ownership and frees them**:
+///   - `error`
+///   - `variant_name`
+///   - `payload_type`
+///   - `payload_value`
+/// - The pointers are then set to `null_mut()` to prevent double frees.
+///
+/// ## Caller Responsibilities
+/// - **Never call this function more than once on the same `VariantResponse`.**
+/// - **Do not manually free individual fields after calling this function.**
 #[no_mangle]
 pub unsafe extern "C" fn free_variant_response(response: *mut VariantResponse) {
     if response.is_null() {

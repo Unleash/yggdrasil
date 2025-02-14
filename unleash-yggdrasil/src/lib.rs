@@ -823,7 +823,7 @@ mod test {
         assert!(!engine.is_enabled("segment-flag", &context, &None));
         engine.apply_delta(&patch);
         assert!(engine.is_enabled("test-flag", &context, &None));
-        assert!(!engine.get_toggle("removed-flag").is_some());
+        assert!(engine.get_toggle("removed-flag").is_none());
         assert!(engine.is_enabled("segment-flag", &context, &None));
     }
 
