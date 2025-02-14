@@ -321,14 +321,19 @@ public static class FFI
             // now we can write the properties table pair by pair
             // as we write the bytes with WriteString we can back fill
             // the table offsets
-            for (var i = 0; i < propertiesCount; i++)
-            {
-                var kvp = ctx.Properties.ElementAt(i);
+            int entryIndex = 0;
 
+            foreach (var kvp in ctx.Properties)
+            {
                 uint keyPos = WriteString(kvp.Key);
                 uint valuePos = WriteString(kvp.Value);
-                BitConverter.GetBytes(keyPos).CopyTo(buffer, propertiesOffset + i * PROPERTY_ENTRY_SIZE);
-                BitConverter.GetBytes(valuePos).CopyTo(buffer, propertiesOffset + i * PROPERTY_ENTRY_SIZE + sizeof(uint));
+
+                int entryOffset = propertiesOffset + entryIndex * PROPERTY_ENTRY_SIZE;
+
+                Unsafe.WriteUnaligned(ref buffer[entryOffset], keyPos);
+                Unsafe.WriteUnaligned(ref buffer[entryOffset + sizeof(uint)], valuePos);
+
+                entryIndex++;
             }
         }
 

@@ -267,6 +267,7 @@ impl EngineState {
             .and_then(|state| state.get(name))
     }
 
+    #[inline(always)]
     pub fn count_toggle(&self, name: &str, enabled: bool) {
         self.toggle_metrics
             .entry(name.to_owned())

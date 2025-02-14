@@ -58,6 +58,7 @@ unsafe fn get_header(buffer: &[u8]) -> &MessageHeader {
     &*(buffer.as_ptr() as *const MessageHeader)
 }
 
+#[inline(always)]
 fn unpack_message(
     buffer: &[u8],
 ) -> Result<
@@ -76,28 +77,25 @@ fn unpack_message(
 
     let header: &MessageHeader = unsafe { get_header(buffer) };
 
-    // Tear out a chunk of the buffer and convert it to an owned string
-    // we could probably optimize this by returning a &str but that means
-    // making the context lifetime be bounded by this buffers lifetime
-    fn get_string(offset: u32, data: &[u8]) -> Option<String> {
+    #[inline(always)]
+    fn get_string(offset: u32, data: &[u8]) -> Option<&str> {
         if offset == 0 {
             return None;
         }
         let start = offset as usize;
         let end = data[start..].iter().position(|&b| b == 0).unwrap() + start;
-        Some(String::from_utf8_lossy(&data[start..end]).to_string())
+        Some(unsafe { std::str::from_utf8_unchecked(&data[start..end]) }) // from_utf8_lossy allocates, this doesn't
     }
 
-    let toggle_name = get_string(header.toggle_name_offset, buffer).unwrap();
-    let default_variant_name = if header.default_variant_name_offset != 0 {
-        Some(get_string(header.default_variant_name_offset, buffer).unwrap())
-    } else {
-        None
-    };
+    let toggle_name = get_string(header.toggle_name_offset, buffer)
+        .unwrap()
+        .to_string();
+    let default_variant_name =
+        get_string(header.default_variant_name_offset, buffer).map(ToString::to_string);
 
-    let properties = if header.properties_count > 0 {
-        let mut properties = std::collections::HashMap::new();
+    let mut properties = (header.properties_count > 0).then(HashMap::new);
 
+    if let Some(props) = properties.as_mut() {
         let properties_table = &buffer[header.properties_offset as usize..];
         for i in 0..header.properties_count as usize {
             let entry_offset = i * PROPERTIES_ENTRY_SIZE;
@@ -116,25 +114,19 @@ fn unpack_message(
                 properties_table[entry_offset + 7],
             ]) as usize;
 
-            // value can be null, if its null it has an offset of 0, in which case
-            // we can ignore this pair from the props table
-            if value_offset == 0 {
-                continue;
+            if let (Some(key), Some(value)) = (
+                get_string(key_offset as u32, buffer),
+                get_string(value_offset as u32, buffer),
+            ) {
+                props.insert(key.to_string(), value.to_string());
             }
-            let key = get_string((key_offset as usize).try_into().unwrap(), buffer).unwrap();
-            let value = get_string((value_offset as usize).try_into().unwrap(), buffer).unwrap();
-            properties.insert(key, value);
         }
-        Some(properties)
-    } else {
-        None
-    };
+    }
 
-    let custom_strategy_results = if header.custom_strategies_count > 0 {
-        let mut custom_strategies = std::collections::HashMap::new();
+    let mut custom_strategy_results = (header.custom_strategies_count > 0).then(HashMap::new);
 
+    if let Some(strategies) = custom_strategy_results.as_mut() {
         let strategies_table = &buffer[header.custom_strategies_offset as usize..];
-
         for i in 0..header.custom_strategies_count as usize {
             let entry_offset = i * STRATEGIES_ENTRY_SIZE;
 
@@ -145,25 +137,21 @@ fn unpack_message(
                 strategies_table[entry_offset + 3],
             ]) as usize;
 
-            let key = get_string((key_offset as usize).try_into().unwrap(), buffer).unwrap();
-
-            let value = strategies_table[entry_offset + std::mem::size_of::<u32>()] != 0;
-            custom_strategies.insert(key, value);
+            if let Some(key) = get_string(key_offset as u32, buffer) {
+                let value = strategies_table[entry_offset + std::mem::size_of::<u32>()] != 0;
+                strategies.insert(key.to_string(), value);
+            }
         }
-
-        Some(custom_strategies)
-    } else {
-        None
-    };
+    }
 
     let context = Context {
-        user_id: get_string(header.user_id_offset, buffer),
-        session_id: get_string(header.session_id_offset, buffer),
-        remote_address: get_string(header.remote_address_offset, buffer),
-        environment: get_string(header.environment_offset, buffer),
-        app_name: get_string(header.app_name_offset, buffer),
-        current_time: get_string(header.current_time_offset, buffer),
-        properties: properties,
+        user_id: get_string(header.user_id_offset, buffer).map(ToString::to_string),
+        session_id: get_string(header.session_id_offset, buffer).map(ToString::to_string),
+        remote_address: get_string(header.remote_address_offset, buffer).map(ToString::to_string),
+        environment: get_string(header.environment_offset, buffer).map(ToString::to_string),
+        app_name: get_string(header.app_name_offset, buffer).map(ToString::to_string),
+        current_time: get_string(header.current_time_offset, buffer).map(ToString::to_string),
+        properties,
     };
 
     let toggle_metrics = header.metric_request;
