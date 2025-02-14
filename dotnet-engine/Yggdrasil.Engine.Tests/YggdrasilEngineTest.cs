@@ -70,7 +70,7 @@ public class Tests
         };
 
         runTestFor(() => yggdrasilEngine.IsEnabled("Feature.A", new Context()), "IsEnabled");
-        runTestFor(() => yggdrasilEngine.GetVariant("Feature.A", new Context()), "GetVariant");
+        runTestFor(() => yggdrasilEngine.GetVariant("Feature.A", new Context(), "disabled"), "GetVariant");
         runTestFor(() => yggdrasilEngine.TakeState(suiteData["state"].ToString()), "TakeState");
         runTestFor(() => yggdrasilEngine.GetMetrics(), "GetMetrics");
     }
@@ -114,7 +114,7 @@ public class Tests
                 // Silly hack to deal with the legacy "feature_enabled" property on the specs
                 var expectedResult = JsonSerializer.Deserialize<TestVariantReadModel>(test["expectedResult"].ToString(), options);
                 var enabled = yggdrasilEngine.IsEnabled(toggleName, context).Enabled() ?? false;
-                var result = yggdrasilEngine.GetVariant(toggleName, context).Variant ?? new Variant("disabled", null, false, enabled); ;
+                var result = yggdrasilEngine.GetVariant(toggleName, context, "disabled").Variant ?? new Variant("disabled", null, false, enabled); ;
 
                 Assert.AreEqual(expectedResult!.Name, result.Name, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Name}, got {result.Name}");
                 Assert.AreEqual(expectedResult!.Enabled, result.Enabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Enabled}, got {result.Enabled}");
@@ -303,7 +303,7 @@ public class Tests
     public void Checking_Variant_For_Missing_Toggle_Marks_Toggle_But_Not_Variant()
     {
         var engine = new YggdrasilEngine();
-        engine.GetVariant("test", new Context());
+        engine.GetVariant("test", new Context(), "disabled");
         var metrics = engine.GetMetrics();
 
         FeatureCount? thing;
@@ -344,7 +344,7 @@ public class Tests
         };
         engine.TakeState(JsonSerializer.Serialize(testDataObject, options));
 
-        engine.GetVariant("test", new Context());
+        engine.GetVariant("test", new Context(), "disabled");
         var metrics = engine.GetMetrics();
 
         FeatureCount? thing;
