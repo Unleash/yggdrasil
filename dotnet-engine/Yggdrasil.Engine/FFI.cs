@@ -166,7 +166,7 @@ public static class FFI
             }
             finally
             {
-                FreeResponse(response.variant_name);
+                free_variant_response(ref response);
             }
         }
     }
