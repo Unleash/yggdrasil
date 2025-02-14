@@ -70,7 +70,7 @@ public class Tests
         };
 
         runTestFor(() => yggdrasilEngine.IsEnabled("Feature.A", new Context()), "IsEnabled");
-        runTestFor(() => yggdrasilEngine.GetVariant("Feature.A", new Context()), "GetVariant");
+        runTestFor(() => yggdrasilEngine.GetVariant("Feature.A", new Context(), "disabled"), "GetVariant");
         runTestFor(() => yggdrasilEngine.TakeState(suiteData["state"].ToString()), "TakeState");
         runTestFor(() => yggdrasilEngine.GetMetrics(), "GetMetrics");
     }
@@ -100,9 +100,9 @@ public class Tests
                 var toggleName = (string)test["toggleName"];
                 var expectedResult = (bool)test["expectedResult"];
 
-                var result = yggdrasilEngine.IsEnabled(toggleName, context) ?? false;
+                var enabled = yggdrasilEngine.IsEnabled(toggleName, context).Enabled() ?? false;
 
-                Assert.AreEqual(expectedResult, result, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {result}");
+                Assert.AreEqual(expectedResult, enabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult}, got {enabled}");
             }
 
             var variantTests = suiteData["variantTests"] ?? new JArray();
@@ -113,8 +113,8 @@ public class Tests
                 var toggleName = (string)test["toggleName"];
                 // Silly hack to deal with the legacy "feature_enabled" property on the specs
                 var expectedResult = JsonSerializer.Deserialize<TestVariantReadModel>(test["expectedResult"].ToString(), options);
-                var enabled = yggdrasilEngine.IsEnabled(toggleName, context) ?? false;
-                var result = yggdrasilEngine.GetVariant(toggleName, context) ?? new Variant("disabled", null, false, enabled);
+                var enabled = yggdrasilEngine.IsEnabled(toggleName, context).Enabled() ?? false;
+                var result = yggdrasilEngine.GetVariant(toggleName, context, "disabled").Variant ?? new Variant("disabled", null, false, enabled); ;
 
                 Assert.AreEqual(expectedResult!.Name, result.Name, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Name}, got {result.Name}");
                 Assert.AreEqual(expectedResult!.Enabled, result.Enabled, message: $"Failed client specification '{suite}': Failed test '{test["description"]}': expected {expectedResult.Enabled}, got {result.Enabled}");
@@ -136,7 +136,7 @@ public class Tests
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.D", context);
+        var result = yggdrasilEngine.IsEnabled("Feature.D", context).Enabled();
         Assert.AreEqual(false, result);
     }
 
@@ -153,7 +153,7 @@ public class Tests
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.D", context);
+        var result = yggdrasilEngine.IsEnabled("Feature.D", context).Enabled();
         Assert.AreEqual(true, result);
     }
 
@@ -170,7 +170,7 @@ public class Tests
         var json = File.ReadAllText(filePath);
         yggdrasilEngine.TakeState(json);
         var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.E", context);
+        var result = yggdrasilEngine.IsEnabled("Feature.E", context).Enabled();
         Assert.AreEqual(true, result);
     }
 
@@ -200,8 +200,9 @@ public class Tests
         var engine = new YggdrasilEngine();
         engine.TakeState(testData);
         var featureName = "with.impression.data";
-        var result = engine.IsEnabled(featureName, new Context());
-        var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
+        var responseMessage = engine.IsEnabled(featureName, new Context());
+        var result = responseMessage.Enabled();
+        var shouldEmit = responseMessage.ImpressionData;
         Assert.NotNull(result);
         Assert.IsTrue(result);
         Assert.NotNull(shouldEmit);
@@ -234,8 +235,9 @@ public class Tests
         var engine = new YggdrasilEngine();
         engine.TakeState(testData);
         var featureName = "with.impression.data.false";
-        var result = engine.IsEnabled(featureName, new Context());
-        var shouldEmit = engine.ShouldEmitImpressionEvent(featureName);
+        var responseMessage = engine.IsEnabled(featureName, new Context());
+        var result = responseMessage.Enabled();
+        var shouldEmit = responseMessage.ImpressionData;
         Assert.NotNull(result);
         Assert.IsTrue(result);
         Assert.IsFalse(shouldEmit);
@@ -284,5 +286,72 @@ public class Tests
         engine.TakeState(testData);
         var knownFeatures = engine.ListKnownToggles();
         Assert.AreEqual(1, knownFeatures.Count);
+    }
+
+    [Test]
+    public void Checking_Feature_Also_Marks_Metrics()
+    {
+        var engine = new YggdrasilEngine();
+        engine.IsEnabled("test", new Context());
+        var metrics = engine.GetMetrics();
+
+        Assert.NotNull(metrics);
+        Assert.AreEqual(1, metrics!.Toggles.Count);
+    }
+
+    [Test]
+    public void Checking_Variant_For_Missing_Toggle_Marks_Toggle_But_Not_Variant()
+    {
+        var engine = new YggdrasilEngine();
+        engine.GetVariant("test", new Context(), "disabled");
+        var metrics = engine.GetMetrics();
+
+        FeatureCount? thing;
+        metrics!.Toggles.TryGetValue("test", out thing);
+
+        Assert.NotNull(metrics);
+        Assert.AreEqual(1, metrics!.Toggles.Count);
+        Assert.AreEqual(0, thing!.Variants.Count);
+    }
+
+    [Test]
+    public void Checking_Variant_Marks_Toggle_And_Variant()
+    {
+        var engine = new YggdrasilEngine();
+        var testDataObject = new
+        {
+            Version = 2,
+            Features = new[] {
+                new {
+                    Name = "test",
+                    Type = "release",
+                    Enabled = true,
+                    ImpressionData = true,
+                    Strategies = new [] {
+                        new {
+                            Name = "default",
+                            Parameters = new Dictionary<string, string>()
+                        }
+                    },
+                    Variants = new [] {
+                        new                     {
+                        Name = "variant1",
+                        Weight = 33,
+                        }
+                    }
+                }
+            }
+        };
+        engine.TakeState(JsonSerializer.Serialize(testDataObject, options));
+
+        engine.GetVariant("test", new Context(), "disabled");
+        var metrics = engine.GetMetrics();
+
+        FeatureCount? thing;
+        metrics!.Toggles.TryGetValue("test", out thing);
+
+        Assert.NotNull(metrics);
+        Assert.AreEqual(1, metrics!.Toggles.Count);
+        Assert.AreEqual(1, thing!.Variants.Count);
     }
 }

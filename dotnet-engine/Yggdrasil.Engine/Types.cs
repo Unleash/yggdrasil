@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 
 namespace Yggdrasil;
@@ -189,5 +190,38 @@ class MappedStrategy
     public bool IsEnabled(Context context)
     {
         return Strategy.IsEnabled(Parameters, context);
+    }
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct EnabledResult
+{
+    internal byte value;
+    internal byte impressionData;
+
+    public bool ImpressionData => impressionData == 1;
+
+    public bool? Enabled() => value switch
+    {
+        0 => false,
+        1 => true,
+        2 => (bool?)null,
+        _ => throw new Exception("Invalid Rust response")
+    };
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct VariantResult
+{
+    public byte hasVariant;
+    public byte impressionData;
+    public bool ImpressionData => impressionData == 1;
+    public Variant? Variant { get; }
+
+    public VariantResult(Variant? variant, bool impressionData)
+    {
+        this.hasVariant = (byte)(variant != null ? 1 : 0);
+        this.impressionData = (byte)(impressionData ? 1 : 0);
+        this.Variant = variant;
     }
 }

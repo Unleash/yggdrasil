@@ -267,6 +267,7 @@ impl EngineState {
             .and_then(|state| state.get(name))
     }
 
+    #[inline(always)]
     pub fn count_toggle(&self, name: &str, enabled: bool) {
         self.toggle_metrics
             .entry(name.to_owned())
@@ -822,7 +823,7 @@ mod test {
         assert!(!engine.is_enabled("segment-flag", &context, &None));
         engine.apply_delta(&patch);
         assert!(engine.is_enabled("test-flag", &context, &None));
-        assert!(!engine.get_toggle("removed-flag").is_some());
+        assert!(engine.get_toggle("removed-flag").is_none());
         assert!(engine.is_enabled("segment-flag", &context, &None));
     }
 
@@ -1778,7 +1779,7 @@ mod test {
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
+        assert!(!metrics.toggles.contains_key("parent-flag"));
     }
 
     #[test]
@@ -1833,7 +1834,7 @@ mod test {
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
+        assert!(!metrics.toggles.contains_key("parent-flag"));
     }
 
     #[test]
@@ -1885,7 +1886,7 @@ mod test {
 
         let metrics = state.get_metrics().unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
+        assert!(!metrics.toggles.contains_key("parent-flag"));
     }
 
     #[test]
