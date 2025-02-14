@@ -162,7 +162,6 @@ fn unpack_message(buffer: &[u8]) -> Result<Message, FFIError> {
     })
 }
 
-
 /// # Safety
 ///
 /// The caller **must** ensure the following conditions are met:
@@ -287,7 +286,6 @@ pub unsafe extern "C" fn one_shot_get_variant(
         },
     }
 }
-
 
 /// # Safety
 ///
