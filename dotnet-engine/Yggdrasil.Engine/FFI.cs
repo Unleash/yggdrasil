@@ -120,9 +120,10 @@ public static class FFI
     internal unsafe static VariantResult GetVariant(IntPtr ptr,
         string toggleName,
         Context context,
+        string? defaultVarianName,
         Dictionary<string, bool>? customStrategyResults)
     {
-        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.Always, null);
+        byte[] requestBuffer = PackMessage(toggleName, context, customStrategyResults, ToggleMetricRequest.Always, defaultVarianName);
 
         fixed (byte* requestPtr = requestBuffer)
         {

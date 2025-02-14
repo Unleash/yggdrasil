@@ -48,9 +48,9 @@ public class YggdrasilEngine
         return FFI.IsEnabled(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
     }
 
-    public VariantResult GetVariant(string toggleName, Context context)
+    public VariantResult GetVariant(string toggleName, Context context, string defaultVariantName)
     {
-        return FFI.GetVariant(state, toggleName, context, customStrategies.GetCustomStrategies(toggleName, context));
+        return FFI.GetVariant(state, toggleName, context, defaultVariantName, customStrategies.GetCustomStrategies(toggleName, context));
     }
 
     public MetricsBucket? GetMetrics()
