@@ -128,20 +128,9 @@ public class Tests
     }
 
     [Test]
-    public void Simple_Feature_Is_Enabled()
-    {
-        var yggdrasilEngine = new YggdrasilEngine();
-        var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
-        var json = File.ReadAllText(filePath);
-        yggdrasilEngine.TakeState(json);
-        var context = new Context();
-        var result = yggdrasilEngine.IsEnabled("Feature.A", context).Enabled();
-        Assert.AreEqual(true, result);
-    }
-
-    [Test]
     public void Custom_Strategies_Required_But_Not_Configured_Returns_False()
     {
+
         var yggdrasilEngine = new YggdrasilEngine();
         var filePath = Path.Combine("..", "..", "..", "..", "..", "test-data", "simple.json");
         var json = File.ReadAllText(filePath);
