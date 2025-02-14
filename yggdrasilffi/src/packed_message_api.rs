@@ -58,19 +58,16 @@ unsafe fn get_header(buffer: &[u8]) -> &MessageHeader {
     &*(buffer.as_ptr() as *const MessageHeader)
 }
 
+struct Message {
+    toggle_name: String,
+    context: Context,
+    custom_strategy_results: Option<HashMap<String, bool>>,
+    metrics_request: ToggleMetricRequest,
+    default_variant_name: Option<String>,
+}
+
 #[inline(always)]
-fn unpack_message(
-    buffer: &[u8],
-) -> Result<
-    (
-        String,
-        Context,
-        Option<HashMap<String, bool>>,
-        ToggleMetricRequest,
-        Option<String>,
-    ),
-    FFIError,
-> {
+fn unpack_message(buffer: &[u8]) -> Result<Message, FFIError> {
     if buffer.len() < std::mem::size_of::<MessageHeader>() {
         return Err(FFIError::InvalidMessageFormat);
     }
@@ -156,13 +153,13 @@ fn unpack_message(
 
     let toggle_metrics = header.metric_request;
 
-    Ok((
+    Ok(Message {
         toggle_name,
         context,
         custom_strategy_results,
-        toggle_metrics,
+        metrics_request: toggle_metrics,
         default_variant_name,
-    ))
+    })
 }
 
 #[no_mangle]
@@ -178,8 +175,13 @@ pub unsafe extern "C" fn one_shot_get_variant(
             return Err(FFIError::NullError);
         }
         let message = std::slice::from_raw_parts(message_ptr, message_len);
-        let (toggle_name, context, custom_strategy_results, metrics_request, default_variant_name) =
-            unpack_message(message)?;
+        let Message {
+            toggle_name,
+            context,
+            custom_strategy_results,
+            metrics_request,
+            default_variant_name,
+        } = unpack_message(message)?;
 
         let enabled = engine.check_enabled(&toggle_name, &context, &custom_strategy_results);
 
@@ -270,8 +272,13 @@ pub unsafe extern "C" fn one_shot_is_enabled(
             return Err(FFIError::NullError);
         }
         let message = std::slice::from_raw_parts(message_ptr, message_len);
-        let (toggle_name, context, custom_strategy_results, metrics_request, _) =
-            unpack_message(message)?;
+        let Message {
+            toggle_name,
+            context,
+            custom_strategy_results,
+            metrics_request,
+            default_variant_name,
+        } = unpack_message(message)?;
 
         let enabled = engine.check_enabled(&toggle_name, &context, &custom_strategy_results);
         let impression_data = engine.should_emit_impression_event(&toggle_name);
