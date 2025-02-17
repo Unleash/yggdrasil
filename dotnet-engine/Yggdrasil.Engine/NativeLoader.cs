@@ -56,9 +56,6 @@ internal static class NativeLibLoader
             ? $"yggdrasilffi_{arch}.dll"
             : $"libyggdrasilffi_{arch}{libc}.{(os == "osx" ? "dylib" : "so")}";
 
-        Console.WriteLine($"[NativeLibLoader] Detected OS: {os}, Arch: {arch}, libc: {libc}");
-        Console.WriteLine($"[NativeLibLoader] Selected binary: {filename}");
-
         return filename;
     }
 
