@@ -225,6 +225,7 @@ pub struct EngineState {
     compiled_state: Option<CompiledState>,
     previous_state: ClientFeatures,
     toggle_metrics: DashMap<String, Metric>,
+    toggle_metrics_start: DateTime<Utc>,
     pub started: DateTime<Utc>,
 }
 
@@ -233,6 +234,7 @@ impl Default for EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
+            toggle_metrics_start: Utc::now(),
             previous_state: Default::default(),
             started: Utc::now(),
         }
@@ -354,9 +356,11 @@ impl EngineState {
             .collect();
 
         if !metrics.is_empty() {
+            let start: DateTime<Utc> = self.toggle_metrics_start;
+            self.toggle_metrics_start = Utc::now();
             Some(MetricBucket {
                 toggles: metrics,
-                start: self.started,
+                start,
                 stop: Utc::now(),
             })
         } else {
