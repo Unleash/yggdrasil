@@ -57,12 +57,11 @@ jobs:
             fi
           done
 
-      - name: Publish to Sonatype
+      - name: Publish to Maven Central Portal
         env:
-          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.SONATYPE_USERNAME }}
-          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.SONATYPE_PASSWORD }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingPassphrase: ${{ secrets.GPG_PASSPHRASE }}
+          ORG_GRADLE_PROJECT_mavenCentralToken: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
         run: |
           cd java-engine
-          ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+          ./gradlew publishToMavenCentralPortal
