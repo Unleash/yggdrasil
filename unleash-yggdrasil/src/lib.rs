@@ -356,7 +356,7 @@ impl EngineState {
             .collect();
 
         if !metrics.is_empty() {
-            let start: DateTime<Utc> = self.toggle_metrics_start;
+            let start = self.toggle_metrics_start;
             self.toggle_metrics_start = Utc::now();
             Some(MetricBucket {
                 toggles: metrics,
@@ -1085,6 +1085,27 @@ mod test {
 
         let metrics = state.get_metrics();
         assert!(metrics.is_none());
+    }
+
+    #[test]
+    pub fn getting_metrics_restarts_time() {
+        let compiled_state = HashMap::new();
+        let mut state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        state.count_toggle("some-test-toggle", true);
+
+        let metrics = state.get_metrics().unwrap();
+        let start = metrics.start;
+        std::thread::sleep(std::time::Duration::from_millis(1));
+
+        state.count_toggle("some-test-toggle", true);
+        let metrics = state.get_metrics().unwrap();
+        let new_start = metrics.start;
+
+        assert!(new_start > start);
     }
 
     #[test]
