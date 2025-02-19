@@ -5,18 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.17.0 (2025-02-05)
+## v0.17.1 (2025-02-19)
 
-### New Features
+### Bug Fixes
 
- - <csr-id-8143be838684cdffd59f050417578fc783d60a9c/> move state ingestion entry point
-   * chore: move the switch that checks for delta into yggdrasil main take_state method so no one has to worry about it again
+ - <csr-id-feddb5d52a75f698ee58ce548ccd9cda0b04ad76/> metric bucket start time should be reset everytime it is sent
+   * fix: metric bucket start time should be reset everytime it is sent
    
-   * chore: update client specs to include 19 and 20
-   
-   * fix(ruby): patch custom strategies handling with delta events
-   
-   * chore: bump client spec version for core and ruby to 5.2.0
+   * chore: add test to cover that time is correctly advanced by metrics
    
    ---------
 
@@ -25,6 +21,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-read-only-do-not-edit/>
 
  - 1 commit contributed to the release.
+ - 13 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#219](https://github.com/Unleash/yggdrasil/issues/219)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#219](https://github.com/Unleash/yggdrasil/issues/219)**
+    - Metric bucket start time should be reset everytime it is sent ([`feddb5d`](https://github.com/Unleash/yggdrasil/commit/feddb5d52a75f698ee58ce548ccd9cda0b04ad76))
+</details>
+
+## v0.17.0 (2025-02-05)
+
+### New Features
+
+ - <csr-id-8143be838684cdffd59f050417578fc783d60a9c/> move state ingestion entry point
+   * chore: move the switch that checks for delta into yggdrasil main take_state method so no one has to worry about it again
+* chore: update client specs to include 19 and 20
+* fix(ruby): patch custom strategies handling with delta events
+* chore: bump client spec version for core and ruby to 5.2.0
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
  - 5 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#213](https://github.com/Unleash/yggdrasil/issues/213)
@@ -37,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#213](https://github.com/Unleash/yggdrasil/issues/213)**
     - Move state ingestion entry point ([`8143be8`](https://github.com/Unleash/yggdrasil/commit/8143be838684cdffd59f050417578fc783d60a9c))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.17.0 ([`f0ed1d5`](https://github.com/Unleash/yggdrasil/commit/f0ed1d594b5e73259c9fcb003e904caaaf225b3b))
 </details>
 
 ## v0.16.1 (2025-01-30)
