@@ -56,7 +56,8 @@
     {
       "type": "feature-removed",
       "eventId": 2,
-      "featureName": "removed-flag"
+      "featureName": "removed-flag",
+      "project" : "default"
     },
     {
       "type": "segment-updated",
