@@ -3,7 +3,7 @@ Gem::Specification.new do |s|
   target_platform = -> { ENV['YGG_BUILD_PLATFORM'] || Gem::Platform::CURRENT }
 
   s.name = 'yggdrasil-engine'
-  s.version = '1.0.3'
+  s.version = '1.0.4'
   s.date = '2023-06-28'
   s.summary = 'Unleash engine for evaluating feature toggles'
   s.description = '...'
@@ -14,5 +14,5 @@ Gem::Specification.new do |s|
   s.license = 'MIT'
   s.add_dependency "ffi", "~> 1.16.3"
   s.platform = target_platform.call
-  s.metadata["yggdrasil_core_version"] = '0.17.0'
+  s.metadata["yggdrasil_core_version"] = '0.17.1'
 end
