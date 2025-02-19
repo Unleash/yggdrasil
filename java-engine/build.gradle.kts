@@ -5,6 +5,7 @@ plugins {
     id("com.diffplug.spotless") version "6.23.2"
     id("io.github.gradle-nexus.publish-plugin").version("2.0.0")
     id("pl.allegro.tech.build.axion-release").version("1.16.0")
+    id("tech.yanand.maven-central-publish").version("1.3.0")
 }
 
 version = project.findProperty("version") as String
@@ -14,6 +15,7 @@ val sonatypeUsername: String? by project
 val sonatypePassword: String? by project
 val signingKey: String? by project
 val signingPassphrase: String? by project
+val mavenCentralToken: String? by project
 
 repositories {
     mavenCentral()
@@ -150,4 +152,10 @@ signing {
         useInMemoryPgpKeys(signingKey, signingPassphrase)
         sign(publishing.publications)
     }
+}
+
+mavenCentral {
+    authToken = mavenCentralToken
+    publishingType = "AUTOMATIC"
+    maxWait = 120
 }
