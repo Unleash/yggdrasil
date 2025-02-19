@@ -5,22 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v0.17.1 (2025-02-19)
+## v0.17.2 (2025-02-19)
 
-### Bug Fixes
+### Chore
 
- - <csr-id-feddb5d52a75f698ee58ce548ccd9cda0b04ad76/> metric bucket start time should be reset everytime it is sent
-   * fix: metric bucket start time should be reset everytime it is sent
-   
-   * chore: add test to cover that time is correctly advanced by metrics
-   
-   ---------
+ - <csr-id-b5d787847fb8a3229854cc5e18cea51dca3f3cb6/> bump types to 0.15.9
+   * chore: bump types to 0.15.9
 
 ### Commit Statistics
 
 <csr-read-only-do-not-edit/>
 
  - 1 commit contributed to the release.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#222](https://github.com/Unleash/yggdrasil/issues/222)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#222](https://github.com/Unleash/yggdrasil/issues/222)**
+    - Bump types to 0.15.9 ([`b5d7878`](https://github.com/Unleash/yggdrasil/commit/b5d787847fb8a3229854cc5e18cea51dca3f3cb6))
+</details>
+
+## v0.17.1 (2025-02-19)
+
+### Bug Fixes
+
+ - <csr-id-feddb5d52a75f698ee58ce548ccd9cda0b04ad76/> metric bucket start time should be reset everytime it is sent
+   * fix: metric bucket start time should be reset everytime it is sent
+* chore: add test to cover that time is correctly advanced by metrics
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
  - 13 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#219](https://github.com/Unleash/yggdrasil/issues/219)
@@ -33,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#219](https://github.com/Unleash/yggdrasil/issues/219)**
     - Metric bucket start time should be reset everytime it is sent ([`feddb5d`](https://github.com/Unleash/yggdrasil/commit/feddb5d52a75f698ee58ce548ccd9cda0b04ad76))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.17.1 ([`9b1a14f`](https://github.com/Unleash/yggdrasil/commit/9b1a14f0b6369a64306fe78dd0a806a565b15a5d))
 </details>
 
 ## v0.17.0 (2025-02-05)
@@ -459,7 +483,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release over the course of 13 calendar days.
+ - 3 commits contributed to the release.
  - 14 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#141](https://github.com/Unleash/yggdrasil/issues/141), [#144](https://github.com/Unleash/yggdrasil/issues/144)
@@ -622,7 +646,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-read-only-do-not-edit/>
 
  - 6 commits contributed to the release.
- - 36 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#120](https://github.com/Unleash/yggdrasil/issues/120), [#121](https://github.com/Unleash/yggdrasil/issues/121), [#122](https://github.com/Unleash/yggdrasil/issues/122)
 
@@ -673,7 +696,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-read-only-do-not-edit/>
 
  - 10 commits contributed to the release over the course of 62 calendar days.
- - 71 days passed between releases.
  - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 9 unique issues were worked on: [#101](https://github.com/Unleash/yggdrasil/issues/101), [#102](https://github.com/Unleash/yggdrasil/issues/102), [#103](https://github.com/Unleash/yggdrasil/issues/103), [#109](https://github.com/Unleash/yggdrasil/issues/109), [#110](https://github.com/Unleash/yggdrasil/issues/110), [#114](https://github.com/Unleash/yggdrasil/issues/114), [#118](https://github.com/Unleash/yggdrasil/issues/118), [#97](https://github.com/Unleash/yggdrasil/issues/97), [#98](https://github.com/Unleash/yggdrasil/issues/98)
 
