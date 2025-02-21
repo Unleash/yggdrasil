@@ -28,9 +28,9 @@ interface UnleashFFI extends Library {
 
     Pointer checkVariant(Pointer ptr, Pointer name, Pointer context, Pointer customStrategyResults);
 
-    void countToggle(Pointer ptr, Pointer name, boolean enabled);
+    Pointer countToggle(Pointer ptr, Pointer name, boolean enabled);
 
-    void countVariant(Pointer ptr, Pointer name, Pointer variantName);
+    Pointer countVariant(Pointer ptr, Pointer name, Pointer variantName);
 
     Pointer getMetrics(Pointer ptr);
 

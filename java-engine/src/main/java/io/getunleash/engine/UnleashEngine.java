@@ -109,13 +109,16 @@ public class UnleashEngine {
         }
     }
 
-    public void countToggle(String flagName, boolean enabled) {
-        yggdrasil.countToggle(this.enginePtr, toUtf8Pointer(flagName), enabled);
+    public void countToggle(String flagName, boolean enabled) throws YggdrasilError {
+        read(yggdrasil.countToggle(this.enginePtr, toUtf8Pointer(flagName), enabled),
+                new TypeReference<YggResponse<Void>>() {
+                });
     }
 
-    public void countVariant(String flagName, String variantName) {
-        yggdrasil.countVariant(this.enginePtr, toUtf8Pointer(flagName),
-                toUtf8Pointer(variantName));
+    public void countVariant(String flagName, String variantName) throws YggdrasilError {
+        read(yggdrasil.countVariant(this.enginePtr, toUtf8Pointer(flagName),
+                toUtf8Pointer(variantName)), new TypeReference<YggResponse<Void>>() {
+                });
     }
 
     public MetricsBucket getMetrics() throws YggdrasilError {
