@@ -39,7 +39,7 @@ jobs:
       - name: Build WASM
         run: |
           cd yggdrasilwasm
-          wasm-pack build --target nodejs
+          wasm-pack build --target web
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2

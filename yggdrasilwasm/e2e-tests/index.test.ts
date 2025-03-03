@@ -1,5 +1,5 @@
 import { describe, beforeEach, test, expect } from 'bun:test'
-import { Engine } from '../pkg/yggdrasil_engine'
+import init, { Engine } from '../pkg/yggdrasil_engine'
 
 type BaseTest = {
   toggleName: string
@@ -16,16 +16,16 @@ type VariantTest = BaseTest & {
 }
 
 type VariantResponse = {
-  featureEnabled: boolean,
-  payload: Record<string, string>,
-  enabled: boolean,
+  featureEnabled: boolean
+  payload: Record<string, string>
+  enabled: boolean
   name: string
 }
 
 type LegacyVariantResponse = {
-  feature_enabled: boolean,
-  payload: Record<string, string>,
-  enabled: boolean,
+  feature_enabled: boolean
+  payload: Record<string, string>
+  enabled: boolean
   name: string
 }
 
@@ -56,6 +56,8 @@ const extractResult = <T>(response: Response): T => {
   expect(response.status_code).toBe('Ok')
   return response.value as T
 }
+
+await init()
 
 describe('Client Spec Tests', () => {
   test('Client Spec', async () => {
@@ -98,8 +100,8 @@ describe('Client Spec Tests', () => {
 
         for (const variantTest of variantTests) {
           const toggleName = variantTest.toggleName
-          const expectedResult = variantTest.expectedResult as any as LegacyVariantResponse;
-
+          const expectedResult =
+            variantTest.expectedResult as any as LegacyVariantResponse
 
           test(`Variant Test: ${variantTest.description}`, () => {
             const variantResponse = engine.checkVariant(
@@ -121,10 +123,10 @@ describe('Client Spec Tests', () => {
               extractResult<VariantResponse>(variantResponse) ??
               getDisabledVariant(featureEnabled)
 
-            expect(result.name).toBe(expectedResult.name);
-            expect(result.enabled).toBe(expectedResult.enabled);
-            expect(result.featureEnabled).toBe(expectedResult.feature_enabled);
-            expect(result.payload).toEqual(expectedResult.payload);
+            expect(result.name).toBe(expectedResult.name)
+            expect(result.enabled).toBe(expectedResult.enabled)
+            expect(result.featureEnabled).toBe(expectedResult.feature_enabled)
+            expect(result.payload).toEqual(expectedResult.payload)
           })
         }
       })
