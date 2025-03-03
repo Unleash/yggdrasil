@@ -66,7 +66,7 @@ This project uses wasm-bindgen to generate the Rust/JS bindings. To build the
 project, run:
 
 ```sh
-$ wasm-pack build --target nodejs
+$ wasm-pack build --target web
 ```
 
 There's also a set of integration tests in the `e2e-tests` directory, which will ensure that the WASM module can be loaded and used in Node JS and that calls to the engine are correctly managed. These must be run within the e2e-tests directory:
