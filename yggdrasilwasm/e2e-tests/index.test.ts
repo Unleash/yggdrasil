@@ -1,5 +1,5 @@
 import { describe, beforeEach, test, expect } from 'bun:test'
-import init, { Engine } from '../pkg/yggdrasil_engine'
+import init, { Engine } from '../pkg/yggdrasil_wasm'
 
 type BaseTest = {
   toggleName: string
