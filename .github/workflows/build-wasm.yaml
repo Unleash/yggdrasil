@@ -1,4 +1,4 @@
-name: Build and Publish WASM
+name: Build WASM
 
 on:
   push:
@@ -21,7 +21,7 @@ on:
         required: true
 
 jobs:
-  build-and-publish-wasm:
+  build-wasm:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

@@ -13,13 +13,13 @@ Please note that this is an experimental project and the API is subject to chang
 First, install the package:
 
 ```sh
-$ yarn add @unleash/yggdrasil-engine
+$ yarn add @unleash/yggdrasil-wasm
 ```
 
 Then, you can use it in your code:
 
 ```ts
-import yggdrasil from '../pkg/yggdrasil_engine'
+import yggdrasil from '@unleash/yggdrasil-wasm'
 
 const context = {
   userId: '7'
@@ -69,7 +69,7 @@ project, run:
 $ wasm-pack build --target web
 ```
 
-There's also a set of integration tests in the `e2e-tests` directory, which will ensure that the WASM module can be loaded and used in Node JS and that calls to the engine are correctly managed. These must be run within the e2e-tests directory:
+There's also a set of [Bun](https://bun.sh/) integration tests in the `e2e-tests` directory, which will ensure that the WASM module can be loaded and that calls to the engine are correctly managed. These must be run within the e2e-tests directory:
 
 ```sh
 $ cd e2e-tests

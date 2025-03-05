@@ -1,5 +1,5 @@
 [package]
-name = "yggdrasil-engine"
+name = "yggdrasil-wasm"
 version = "0.3.0"
 authors = ["sighphyre <simon@getunleash.io>"]
 repository = "https://github.com/unleash/yggdrasil"
