@@ -14,10 +14,35 @@ on:
         default: 'latest'
 
 jobs:
-  build-wasm:
+  build-and-publish-wasm:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.UNLEASH_BOT_APP_ID }}
+          private-key: ${{ secrets.UNLEASH_BOT_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Setup git config
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Set version variable
+        run: |
+          PACKAGE_VERSION=$(node -p "'${{ inputs.version }}'.replace(/^v/, '')")
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -34,15 +59,17 @@ jobs:
           cd yggdrasilwasm
           wasm-pack build --target web --scope unleash
 
-  publish-wasm:
-    needs: [build-wasm]
-    uses: Unleash/.github/.github/workflows/npm-release.yml@v2.0.0
-    with:
-      version: ${{ github.event.inputs.version }}
-      tag: ${{ github.event.inputs.tag }}
-      working-directory: yggdrasilwasm/pkg
-      setup-command: "echo 'Skipping setup. Already done.'"
-    secrets:
-      NPM_ACCESS_TOKEN: ${{ secrets.NPM_TOKEN }}
-      UNLEASH_BOT_APP_ID: ${{ secrets.UNLEASH_BOT_APP_ID }}
-      UNLEASH_BOT_PRIVATE_KEY: ${{ secrets.UNLEASH_BOT_PRIVATE_KEY }}
+      - name: 🔖 Create version
+        run: yarn version --new-version ${PACKAGE_VERSION} --no-commit-hooks
+        working-directory: yggdrasilwasm/pkg
+
+      - name: 🚢 Push to git
+        run: |
+          git push origin ${{ github.ref_name }}
+          git push --tags
+
+      - name: 📦️ Publish to NPM
+        run: npm publish --access public --tag ${{ inputs.tag }}
+        working-directory: yggdrasilwasm/pkg
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
