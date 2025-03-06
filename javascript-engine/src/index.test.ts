@@ -27,7 +27,7 @@ type TestSuite = {
 
 describe('Client Spec Tests', () => {
   test('Client Spec', async () => {
-    const basePath = '../../client-specification/specifications'
+    const basePath = '../client-specification/specifications'
     const indexFile = Bun.file(`${basePath}/index.json`)
     const testSuites = await indexFile.json()
 

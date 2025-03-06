@@ -1,6 +1,7 @@
 {
-  "name": "javascript-engine",
+  "name": "@unleash/yggdrasil-engine",
   "version": "0.0.1",
+  "description": "Unleash Yggdrasil Engine for JavaScript.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "type": "module",
