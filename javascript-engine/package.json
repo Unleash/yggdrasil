@@ -13,6 +13,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@unleash/yggdrasil-wasm": "^0.3.1-beta.0"
+    "@unleash/yggdrasil-wasm": "^0.3.1-beta.1"
   }
 }
