@@ -63,11 +63,6 @@ jobs:
         run: yarn version --new-version ${PACKAGE_VERSION} --no-commit-hooks
         working-directory: yggdrasilwasm/pkg
 
-      - name: 🚢 Push to git
-        run: |
-          git push origin ${{ github.ref_name }}
-          git push --tags
-
       - name: 📦️ Publish to NPM
         run: npm publish --access public --tag ${{ inputs.tag }}
         working-directory: yggdrasilwasm/pkg
