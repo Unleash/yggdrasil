@@ -61,8 +61,8 @@ jobs:
 
       - name: 🔖 Set package version
         run: |
-          cd yggdrasilwasm/pkg
-          yarn version set version ${PACKAGE_VERSION}
+          jq --arg version "${PACKAGE_VERSION}" '.version = $version' package.json > package.tmp.json && mv package.tmp.json package.json
+        working-directory: yggdrasilwasm/pkg
 
       - name: 📦️ Publish to NPM
         run: npm publish --access public --tag ${{ inputs.tag }}
