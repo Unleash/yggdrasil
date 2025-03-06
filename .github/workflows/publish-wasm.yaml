@@ -59,9 +59,10 @@ jobs:
           cd yggdrasilwasm
           wasm-pack build --target web --scope unleash
 
-      - name: 🔖 Create version
-        run: yarn version --new-version ${PACKAGE_VERSION} --no-commit-hooks
-        working-directory: yggdrasilwasm/pkg
+      - name: 🔖 Set package version
+        run: |
+          cd yggdrasilwasm/pkg
+          yarn version set version ${PACKAGE_VERSION}
 
       - name: 📦️ Publish to NPM
         run: npm publish --access public --tag ${{ inputs.tag }}
