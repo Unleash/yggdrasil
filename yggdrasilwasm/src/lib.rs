@@ -8,6 +8,17 @@ use wasm_bindgen::prelude::*;
 
 type CustomStrategyResults = HashMap<String, bool>;
 
+const KNOWN_STRATEGIES: [&str; 8] = [
+    "default",
+    "userWithId",
+    "gradualRolloutUserId",
+    "gradualRolloutRandom",
+    "applicationHostname",
+    "gradualRolloutSessionId",
+    "remoteAddress",
+    "flexibleRollout",
+];
+
 #[derive(Serialize, Deserialize)]
 pub struct Response<T> {
     pub status_code: ResponseCode,
@@ -223,5 +234,10 @@ impl Engine {
         };
 
         serde_wasm_bindgen::to_value(&response).unwrap()
+    }
+
+    #[wasm_bindgen(js_name = builtInStrategies)]
+    pub fn built_in_strategies(&self) -> JsValue {
+        serde_wasm_bindgen::to_value(&KNOWN_STRATEGIES).unwrap()
     }
 }

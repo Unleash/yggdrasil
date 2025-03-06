@@ -1,0 +1,17 @@
+{
+  "name": "javascript-engine",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist && bun tsc --emitDeclarationOnly"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@unleash/yggdrasil-wasm": "^0.3.1-beta.0"
+  }
+}
