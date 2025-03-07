@@ -42,7 +42,7 @@ export class UnleashEngine {
     this.strategies.mapFeatures(state)
   }
 
-  public isEnabled(toggleName: string, context: Context): boolean {
+  public isEnabled(toggleName: string, context: Context): boolean | undefined {
     const customStrategyPayload = this.strategies.getCustomStrategyPayload(
       toggleName,
       context
@@ -54,10 +54,10 @@ export class UnleashEngine {
       customStrategyPayload
     )
 
-    return readResponse<boolean>(response) || false
+    return readResponse<boolean>(response)
   }
 
-  public getVariant(toggleName: string, context: Context): Variant {
+  public getVariant(toggleName: string, context: Context): Variant | undefined {
     const customStrategyPayload = this.strategies.getCustomStrategyPayload(
       toggleName,
       context
@@ -69,12 +69,7 @@ export class UnleashEngine {
       customStrategyPayload
     )
 
-    return (
-      readResponse<Variant>(response) || {
-        ...DISABLED_VARIANT,
-        featureEnabled: this.isEnabled(toggleName, context)
-      }
-    )
+    return readResponse<Variant>(response)
   }
 
   public getMetrics(): MetricsBucket | undefined {
