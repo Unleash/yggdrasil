@@ -10,7 +10,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{
     Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition, UpdateMessage,
-    CORE_VERSION,
+    CORE_VERSION, KNOWN_STRATEGIES,
 };
 
 static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
@@ -75,17 +75,6 @@ impl Display for FFIError {
         }
     }
 }
-
-const KNOWN_STRATEGIES: [&str; 8] = [
-    "default",
-    "userWithId",
-    "gradualRolloutUserId",
-    "gradualRolloutRandom",
-    "applicationHostname",
-    "gradualRolloutSessionId",
-    "remoteAddress",
-    "flexibleRollout",
-];
 
 impl From<Utf8Error> for FFIError {
     fn from(_: Utf8Error) -> Self {
