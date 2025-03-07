@@ -1,5 +1,5 @@
 import init, { Engine } from '@unleash/yggdrasil-wasm'
-import { checkResponse, readResponse } from './utils'
+import { checkResponse, readResponse } from './wasm-interop'
 import { Strategies, type Strategy } from './strategies'
 import type {
   Context,
