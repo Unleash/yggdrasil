@@ -1,5 +1,11 @@
 import { describe, beforeEach, test, expect } from 'bun:test'
-import { UnleashEngine, type Payload, type State, type Variant } from '.'
+import {
+  DISABLED_VARIANT,
+  UnleashEngine,
+  type Payload,
+  type State,
+  type Variant
+} from '.'
 
 type BaseTest = {
   toggleName: string
@@ -24,6 +30,11 @@ type TestSuite = {
   tests: ToggleTest[]
   variantTests: VariantTest[]
 }
+
+const getDisabledVariant = (featureEnabled: boolean) => ({
+  ...DISABLED_VARIANT,
+  featureEnabled
+})
 
 describe('Client Spec Tests', () => {
   test('Client Spec', async () => {
@@ -52,7 +63,8 @@ describe('Client Spec Tests', () => {
             toggleTest
 
           test(`Toggle Test: ${description}`, () => {
-            const toggleResponse = engine.isEnabled(toggleName, context)
+            const toggleResponse =
+              engine.isEnabled(toggleName, context) ?? false
 
             expect(toggleResponse).toBe(expectedResult)
           })
@@ -63,7 +75,11 @@ describe('Client Spec Tests', () => {
           const expectedResult = variantTest.expectedResult
 
           test(`Variant Test: ${variantTest.description}`, () => {
-            const result = engine.getVariant(toggleName, variantTest.context)
+            const featureEnabled =
+              engine.isEnabled(toggleName, variantTest.context) ?? false
+            const result =
+              engine.getVariant(toggleName, variantTest.context) ??
+              getDisabledVariant(featureEnabled)
 
             expect(result.name).toBe(expectedResult.name)
             expect(result.enabled).toBe(expectedResult.enabled)
