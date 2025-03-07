@@ -18,6 +18,7 @@ export type Variant = {
   payload?: Payload
   enabled: boolean
   featureEnabled: boolean
+  weight?: number
 }
 
 export type StrategyDefinition = {
@@ -27,10 +28,13 @@ export type StrategyDefinition = {
 
 type Feature = {
   name: string
+  enabled: boolean
   strategies?: StrategyDefinition[]
+  variants?: Variant[]
 }
 
 export type State = {
+  version: number
   features: Feature[]
 }
 
@@ -50,4 +54,9 @@ export type FeatureDefinition = {
   name: string
   project: string
   type?: string
+}
+
+export type Strategy = {
+  name: string
+  isEnabled: (parameters: Record<string, string>, context: Context) => boolean
 }

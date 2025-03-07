@@ -1,12 +1,13 @@
 import init, { Engine } from '@unleash/yggdrasil-wasm'
 import { checkResponse, readResponse } from './wasm-interop'
-import { Strategies, type Strategy } from './strategies'
+import { Strategies } from './strategies'
 import type {
   Context,
   FeatureDefinition,
   MetricsBucket,
   State,
-  Variant
+  Variant,
+  Strategy
 } from './types'
 export * from './types'
 

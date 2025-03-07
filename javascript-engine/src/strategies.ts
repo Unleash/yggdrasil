@@ -1,9 +1,4 @@
-import type { Context, State, StrategyDefinition } from './types'
-
-export type Strategy = {
-  name: string
-  isEnabled: (parameters: Record<string, string>, context: Context) => boolean
-}
+import type { Context, State, Strategy, StrategyDefinition } from './types'
 
 type MappedStrategy = {
   resultName: string
