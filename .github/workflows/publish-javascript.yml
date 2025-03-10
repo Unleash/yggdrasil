@@ -47,15 +47,15 @@ jobs:
           PACKAGE_VERSION=$(bun -p "'${{ inputs.version }}'.replace(/^v/, '')")
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
+      - name: 🔖 Create version
+        run: yarn version --new-version ${PACKAGE_VERSION} --no-commit-hooks
+        working-directory: javascript-engine
+
       - name: Build
         run: |
           cd javascript-engine
           bun i
           bun run build
-
-      - name: 🔖 Create version
-        run: yarn version --new-version ${PACKAGE_VERSION} --no-commit-hooks
-        working-directory: javascript-engine
 
       - name: 🚢 Push to git
         run: |
