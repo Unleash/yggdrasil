@@ -1,4 +1,11 @@
-import type { Context, State, Strategy, StrategyDefinition } from './types'
+import type {
+  Context,
+  DeltaState,
+  Feature,
+  State,
+  Strategy,
+  StrategyDefinition
+} from './types'
 
 type MappedStrategy = {
   resultName: string
@@ -16,7 +23,7 @@ type MappedFeature = {
 export class Strategies {
   private knownStrategies: string[]
   private strategies: Map<string, Strategy> = new Map()
-  private mappedFeatures?: Map<string, MappedFeature>
+  private mappedFeatures: Map<string, MappedFeature> = new Map()
 
   constructor(knownStrategies: string[] = []) {
     this.knownStrategies = knownStrategies
@@ -52,18 +59,43 @@ export class Strategies {
       })
   }
 
-  mapFeatures({ features }: State): void {
-    if (!features) return
+  private mapFeature(feature: Feature): MappedFeature {
+    return {
+      name: feature.name,
+      strategies: this.mapCustomStrategies(feature.strategies)
+    }
+  }
 
-    this.mappedFeatures = new Map(
-      features.map(feature => [
-        feature.name,
-        {
-          name: feature.name,
-          strategies: this.mapCustomStrategies(feature.strategies)
-        }
-      ])
-    )
+  mapFeatures(state: State | DeltaState): void {
+    if ('features' in state) {
+      this.mappedFeatures = new Map(
+        state.features.map(feature => [feature.name, this.mapFeature(feature)])
+      )
+      return
+    }
+
+    if ('events' in state) {
+      state.events
+        .sort((a, b) => a.eventId - b.eventId)
+        .forEach(event => {
+          if (event.type === 'hydration') {
+            event.features.forEach(feature =>
+              this.mappedFeatures.set(feature.name, this.mapFeature(feature))
+            )
+          }
+
+          if (event.type === 'feature-updated') {
+            this.mappedFeatures.set(
+              event.feature.name,
+              this.mapFeature(event.feature)
+            )
+          }
+
+          if (event.type === 'feature-removed') {
+            this.mappedFeatures.delete(event.featureName)
+          }
+        })
+    }
   }
 
   registerCustomStrategies(strategies: Strategy[]): void {
@@ -73,7 +105,7 @@ export class Strategies {
   }
 
   getCustomStrategyPayload(toggleName: string, context: Context) {
-    const feature = this.mappedFeatures?.get(toggleName)
+    const feature = this.mappedFeatures.get(toggleName)
     if (!feature) {
       return {}
     }

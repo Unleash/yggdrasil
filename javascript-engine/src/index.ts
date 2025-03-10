@@ -7,7 +7,8 @@ import type {
   MetricsBucket,
   State,
   Variant,
-  Strategy
+  Strategy,
+  DeltaState
 } from './types'
 export * from './types'
 
@@ -36,7 +37,7 @@ export class UnleashEngine {
     }
   }
 
-  public takeState(state: State): void {
+  public takeState(state: State | DeltaState): void {
     const response = this.engine.takeState(state)
     checkResponse(response)
 
