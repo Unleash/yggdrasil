@@ -33,6 +33,12 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
 
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
@@ -57,7 +63,7 @@ jobs:
           git push --tags
 
       - name: 📦️ Publish to NPM
-        run: bun publish --access public --tag ${{ inputs.tag }}
+        run: npm publish --access public --tag ${{ inputs.tag }}
         working-directory: javascript-engine
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
