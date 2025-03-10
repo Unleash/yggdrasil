@@ -44,6 +44,7 @@ jobs:
       - name: Build
         run: |
           cd javascript-engine
+          bun i
           bun run build
 
       - name: 🔖 Create version
