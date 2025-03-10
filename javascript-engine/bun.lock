@@ -3,11 +3,9 @@
   "workspaces": {
     "": {
       "name": "javascript-engine",
-      "dependencies": {
-        "@unleash/yggdrasil-wasm": "^0.3.1-beta.1",
-      },
       "devDependencies": {
         "@types/bun": "latest",
+        "@unleash/yggdrasil-wasm": "^0.3.1-beta.1",
         "typescript": "^5",
       },
     },
