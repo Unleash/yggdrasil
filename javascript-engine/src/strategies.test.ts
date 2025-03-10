@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test'
-import { UnleashEngine, type DeltaState, type State, type Strategy } from '.'
+import { type DeltaState, type State, type Strategy } from './types'
+import { UnleashEngine } from '.'
 
 describe('Custom Strategy Tests', () => {
   test('Basic custom strategy', () => {

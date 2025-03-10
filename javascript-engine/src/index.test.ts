@@ -1,11 +1,6 @@
 import { describe, beforeEach, test, expect } from 'bun:test'
-import {
-  DISABLED_VARIANT,
-  UnleashEngine,
-  type Payload,
-  type State,
-  type Variant
-} from '.'
+import { type Payload, type State, type Variant } from './types'
+import { DISABLED_VARIANT, UnleashEngine } from '.'
 
 type BaseTest = {
   toggleName: string
