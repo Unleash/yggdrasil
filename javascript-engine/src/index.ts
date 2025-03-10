@@ -10,7 +10,6 @@ import type {
   Strategy,
   DeltaState
 } from './types'
-export * from './types'
 
 await init()
 
