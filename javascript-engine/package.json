@@ -1,0 +1,18 @@
+{
+  "name": "@unleash/yggdrasil-engine",
+  "version": "0.0.1",
+  "description": "Unleash Yggdrasil Engine for JavaScript.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist && bun tsc --emitDeclarationOnly"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@unleash/yggdrasil-wasm": "^0.3.1-beta.1"
+  }
+}

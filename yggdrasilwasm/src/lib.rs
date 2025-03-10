@@ -3,7 +3,9 @@
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
 use std::collections::HashMap;
-use unleash_yggdrasil::{Context, EngineState, ExtendedVariantDef, UpdateMessage};
+use unleash_yggdrasil::{
+    Context, EngineState, ExtendedVariantDef, UpdateMessage, KNOWN_STRATEGIES,
+};
 use wasm_bindgen::prelude::*;
 
 type CustomStrategyResults = HashMap<String, bool>;
@@ -223,5 +225,10 @@ impl Engine {
         };
 
         serde_wasm_bindgen::to_value(&response).unwrap()
+    }
+
+    #[wasm_bindgen(js_name = builtInStrategies)]
+    pub fn built_in_strategies(&self) -> JsValue {
+        serde_wasm_bindgen::to_value(&KNOWN_STRATEGIES).unwrap()
     }
 }

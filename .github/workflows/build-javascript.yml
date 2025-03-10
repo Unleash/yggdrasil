@@ -1,0 +1,36 @@
+name: Build JavaScript
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'javascript-engine/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'javascript-engine/**'
+
+jobs:
+  build-javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Get client spec
+        uses: actions/checkout@v4
+        with:
+          repository: Unleash/client-specification
+          ref: v5.2.2
+          path: client-specification
+
+      - name: Run tests and build
+        run: |
+          cd javascript-engine
+          bun i
+          bun test
+          bun run build

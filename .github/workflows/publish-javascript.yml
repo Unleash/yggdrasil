@@ -1,4 +1,4 @@
-name: Publish WASM
+name: Publish JavaScript
 
 on:
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
         default: 'latest'
 
 jobs:
-  build-and-publish-wasm:
+  build-and-publish-javascript:
     runs-on: ubuntu-latest
     steps:
       - name: Generate token
@@ -33,39 +33,30 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
 
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org'
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Set version variable
         run: |
-          PACKAGE_VERSION=$(node -p "'${{ inputs.version }}'.replace(/^v/, '')")
+          PACKAGE_VERSION=$(bun -p "'${{ inputs.version }}'.replace(/^v/, '')")
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-
-      - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@v0.3.0
-
-      - name: Build WASM
+      - name: Build
         run: |
-          cd yggdrasilwasm
-          wasm-pack build --target web --scope unleash
+          cd javascript-engine
+          bun run build
 
-      - name: 🔖 Set package version
+      - name: 🔖 Create version
+        run: yarn version --new-version ${PACKAGE_VERSION} --no-commit-hooks
+        working-directory: javascript-engine
+
+      - name: 🚢 Push to git
         run: |
-          jq --arg version "${PACKAGE_VERSION}" '.version = $version' package.json > package.tmp.json && mv package.tmp.json package.json
-        working-directory: yggdrasilwasm/pkg
+          git push origin ${{ github.ref_name }}
+          git push --tags
 
       - name: 📦️ Publish to NPM
-        run: npm publish --access public --tag ${{ inputs.tag }}
-        working-directory: yggdrasilwasm/pkg
+        run: bun publish --access public --tag ${{ inputs.tag }}
+        working-directory: javascript-engine
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
