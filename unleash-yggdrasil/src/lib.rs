@@ -63,6 +63,7 @@ pub struct ToggleDefinition {
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub feature_type: Option<String>,
     pub project: String,
+    pub enabled: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -479,6 +480,7 @@ impl EngineState {
                             feature_type: toggle.feature_type.clone(),
                             name: toggle.name.clone(),
                             project: toggle.project.clone(),
+                            enabled: toggle.enabled,
                         }
                     })
                     .collect::<Vec<ToggleDefinition>>()
