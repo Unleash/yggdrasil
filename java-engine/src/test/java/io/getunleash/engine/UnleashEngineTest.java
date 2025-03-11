@@ -112,6 +112,7 @@ class UnleashEngineTest {
         assertEquals("Feature.A", featureA.get().getName());
         assertEquals("test", featureA.get().getProject());
         assertTrue(featureA.get().getType().isPresent());
+        assertTrue(featureA.get().isEnabled());
         assertEquals("experiment", featureA.get().getType().get());
     }
 
@@ -260,6 +261,7 @@ class UnleashEngineTest {
         assertEquals(expectedIsEnabled, result);
     }
 
+    @SuppressWarnings("unused")
     @Test
     void testResourceCleanup() throws InterruptedException {
         UnleashFFI ffiMock = Mockito.mock(UnleashFFI.class);
@@ -289,7 +291,8 @@ class UnleashEngineTest {
     void testCoreVersionIsRetrieved() {
         String coreVersion = UnleashEngine.getCoreVersion();
         assertNotNull(coreVersion);
-        // check that it contains two dots, close enough for a quick and dirty but stable semver check
+        // check that it contains two dots, close enough for a quick and dirty but
+        // stable semver check
         assertTrue(coreVersion.split("\\.").length >= 3);
     }
 

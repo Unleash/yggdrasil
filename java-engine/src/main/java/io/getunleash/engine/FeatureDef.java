@@ -9,15 +9,18 @@ public class FeatureDef {
     private final String name;
     private final Optional<String> type;
     private final String project;
+    private final boolean enabled;
 
     @JsonCreator
     FeatureDef(
             @JsonProperty("name") String name,
             @JsonProperty("type") String featureType,
-            @JsonProperty("project") String project) {
+            @JsonProperty("project") String project,
+            @JsonProperty("enabled") boolean enabled) {
         this.name = name;
         this.project = project;
         this.type = Optional.ofNullable(featureType);
+        this.enabled = enabled;
     }
 
     public String getName() {
@@ -30,5 +33,9 @@ public class FeatureDef {
 
     public String getProject() {
         return project;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
     }
 }
