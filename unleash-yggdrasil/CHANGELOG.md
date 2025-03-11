@@ -5,7 +5,70 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.17.3 (2025-03-11)
+
+### Chore
+
+ - <csr-id-9096eea4dbb24d71ae4876c976f85e5aa9472b04/> javascript engine
+   * chore: javascript engine
+   
+   * docs: update README, package.json, tests
+   
+   * fix: do not push back to git, its our temp pkg dir
+   
+   * chore: use set version instead
+   
+   * chore: use jq instead
+   
+   * chore: bump yggdrasil-wasm
+   
+   * fix: remove defaults from isEnabled and getVariant
+   
+   * refactor: rename utils to wasm-interop
+   
+   * refactor: move KNOWN_STRATEGIES to Ygg
+   
+   * chore: make Clippy happy
+   
+   * test: fix tests
+   
+   * test: add e2e tests for custom strategies
+   
+   * chore: deltas in custom strategies
+   
+   * Update javascript-engine/src/index.ts
+   
+   * fix: imports
+
+### New Features
+
+ - <csr-id-fb10e5b302ec980aa90bbb4199c0bece39c82427/> expose enabled on list features in core and java
+   * feat(java): expose enabled on list features in core and java
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 2 commits contributed to the release.
+ - 20 days passed between releases.
+ - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 2 unique issues were worked on: [#226](https://github.com/Unleash/yggdrasil/issues/226), [#230](https://github.com/Unleash/yggdrasil/issues/230)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#226](https://github.com/Unleash/yggdrasil/issues/226)**
+    - Javascript engine ([`9096eea`](https://github.com/Unleash/yggdrasil/commit/9096eea4dbb24d71ae4876c976f85e5aa9472b04))
+ * **[#230](https://github.com/Unleash/yggdrasil/issues/230)**
+    - Expose enabled on list features in core and java ([`fb10e5b`](https://github.com/Unleash/yggdrasil/commit/fb10e5b302ec980aa90bbb4199c0bece39c82427))
+</details>
+
 ## v0.17.2 (2025-02-19)
+
+<csr-id-b5d787847fb8a3229854cc5e18cea51dca3f3cb6/>
 
 ### Chore
 
@@ -16,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#222](https://github.com/Unleash/yggdrasil/issues/222)
 
@@ -28,6 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#222](https://github.com/Unleash/yggdrasil/issues/222)**
     - Bump types to 0.15.9 ([`b5d7878`](https://github.com/Unleash/yggdrasil/commit/b5d787847fb8a3229854cc5e18cea51dca3f3cb6))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.17.2 ([`1db4699`](https://github.com/Unleash/yggdrasil/commit/1db46994c9908c85de1929f4766e691bd10dac6b))
 </details>
 
 ## v0.17.1 (2025-02-19)
@@ -483,7 +548,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 3 commits contributed to the release.
+ - 3 commits contributed to the release over the course of 13 calendar days.
  - 14 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#141](https://github.com/Unleash/yggdrasil/issues/141), [#144](https://github.com/Unleash/yggdrasil/issues/144)
@@ -646,6 +711,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-read-only-do-not-edit/>
 
  - 6 commits contributed to the release.
+ - 36 days passed between releases.
  - 4 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#120](https://github.com/Unleash/yggdrasil/issues/120), [#121](https://github.com/Unleash/yggdrasil/issues/121), [#122](https://github.com/Unleash/yggdrasil/issues/122)
 
@@ -696,6 +762,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-read-only-do-not-edit/>
 
  - 10 commits contributed to the release over the course of 62 calendar days.
+ - 71 days passed between releases.
  - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 9 unique issues were worked on: [#101](https://github.com/Unleash/yggdrasil/issues/101), [#102](https://github.com/Unleash/yggdrasil/issues/102), [#103](https://github.com/Unleash/yggdrasil/issues/103), [#109](https://github.com/Unleash/yggdrasil/issues/109), [#110](https://github.com/Unleash/yggdrasil/issues/110), [#114](https://github.com/Unleash/yggdrasil/issues/114), [#118](https://github.com/Unleash/yggdrasil/issues/118), [#97](https://github.com/Unleash/yggdrasil/issues/97), [#98](https://github.com/Unleash/yggdrasil/issues/98)
 
