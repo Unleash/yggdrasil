@@ -62,7 +62,7 @@ val copyTestBinary = tasks.register<Copy>("copyTestBinary") {
     val targetPath = file("build/resources/test/native")
 
     val binaryName = when {
-        os.contains("mac") && platform.contains("arm") -> "libyggdrasilffi_arm64.dylib"
+        os.contains("mac") && (platform.contains("arm") || platform.contains("aarch64")) -> "libyggdrasilffi_arm64.dylib"
         os.contains("mac") -> "libyggdrasilffi_x86_64.dylib"
         os.contains("win") -> "yggdrasilffi_x86_64.dll"
         os.contains("linux") -> "libyggdrasilffi_x86_64.so"
@@ -80,6 +80,7 @@ val copyTestBinary = tasks.register<Copy>("copyTestBinary") {
 tasks.named<Test>("test") {
     dependsOn(copyTestBinary)
     useJUnitPlatform()
+    testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
 }
 
 publishing {
