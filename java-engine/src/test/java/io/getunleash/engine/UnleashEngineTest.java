@@ -103,7 +103,7 @@ class UnleashEngineTest {
 
     @Test
     void testGetVariantWithCustomStrategy() throws Exception {
-        engine.takeState(simpleFeatures);
+        engine.takeState("{\"version\":1,\"features\":[{\"name\":\"Feature.D\",\"description\":\"Has a custom strategy\",\"enabled\":true,\"strategies\":[{\"name\":\"custom\",\"constraints\":[],\"parameters\":{\"foo\":\"bar\"}}]}]}");
 
         Context context = new Context();
         VariantDef variant = engine.getVariant("Feature.D", context);
