@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class UnleashEngine {
-    private static final String EMPTY_STRATEGY_RESULTS = "{}";
     private static final Logger log = LoggerFactory.getLogger(UnleashEngine.class);
     private final UnleashFFI yggdrasil;
     private final Pointer enginePtr;
@@ -97,10 +96,11 @@ public class UnleashEngine {
             throws YggdrasilInvalidInputException, YggdrasilError {
         try {
             String jsonContext = mapper.writeValueAsString(context);
+            String strategyResults = customStrategiesEvaluator.eval(name, context);
             VariantDef response = read(
                     yggdrasil.checkVariant(this.enginePtr, toUtf8Pointer(name),
                             toUtf8Pointer(jsonContext),
-                            toUtf8Pointer(EMPTY_STRATEGY_RESULTS)),
+                            toUtf8Pointer(strategyResults)),
                     new TypeReference<YggResponse<VariantDef>>() {
                     });
             return response;
