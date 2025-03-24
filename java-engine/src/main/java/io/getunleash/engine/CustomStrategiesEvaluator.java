@@ -19,17 +19,23 @@ class CustomStrategiesEvaluator {
   private static final Logger log = LoggerFactory.getLogger(CustomStrategiesEvaluator.class);
   static final String EMPTY_STRATEGY_RESULTS = "{}";
   private final Map<String, IStrategy> registeredStrategies;
+  private final Set<String> builtinStrategies;
 
   private final IStrategy fallbackStrategy;
   private final ObjectMapper mapper;
 
   private Map<String, List<MappedStrategy>> featureStrategies = new HashMap<>();
 
-  public CustomStrategiesEvaluator(Stream<IStrategy> customStrategies) {
-    this(customStrategies, null);
+  public CustomStrategiesEvaluator(
+      Stream<IStrategy> customStrategies, Set<String> builtinStrategies) {
+    this(customStrategies, null, builtinStrategies);
   }
 
-  public CustomStrategiesEvaluator(Stream<IStrategy> customStrategies, IStrategy fallbackStrategy) {
+  public CustomStrategiesEvaluator(
+      Stream<IStrategy> customStrategies,
+      IStrategy fallbackStrategy,
+      Set<String> builtinStrategies) {
+    this.builtinStrategies = builtinStrategies;
     this.mapper = new ObjectMapper();
     this.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     this.registeredStrategies =
@@ -61,10 +67,13 @@ class CustomStrategiesEvaluator {
     }
   }
 
-  private List<MappedStrategy> getFeatureStrategies(FeatureDefinition feature) {
+  List<MappedStrategy> getFeatureStrategies(FeatureDefinition feature) {
     List<MappedStrategy> mappedStrategies = new ArrayList<>();
     int index = 1;
     for (StrategyDefinition strategyDefinition : feature.strategies) {
+      if (builtinStrategies.contains(strategyDefinition.name)) {
+        continue;
+      }
       IStrategy impl =
           Optional.ofNullable(registeredStrategies.get(strategyDefinition.name))
               .orElseGet(() -> alwaysFalseStrategy(strategyDefinition.name));
@@ -125,12 +134,12 @@ class CustomStrategiesEvaluator {
     }
   }
 
-  private static class FeatureDefinition {
+  static class FeatureDefinition {
     private final String name;
     private final List<StrategyDefinition> strategies;
 
     @JsonCreator
-    private FeatureDefinition(
+    FeatureDefinition(
         @JsonProperty("name") String name,
         @JsonProperty("strategies") List<StrategyDefinition> strategies) {
       this.name = name;
@@ -138,12 +147,12 @@ class CustomStrategiesEvaluator {
     }
   }
 
-  private static class StrategyDefinition {
+  static class StrategyDefinition {
     private final String name;
     private final Map<String, String> parameters;
 
     @JsonCreator
-    private StrategyDefinition(
+    StrategyDefinition(
         @JsonProperty("name") String name,
         @JsonProperty("parameters") Map<String, String> parameters) {
       this.name = name;
@@ -166,7 +175,7 @@ class CustomStrategiesEvaluator {
     };
   }
 
-  private static class MappedStrategy {
+  static class MappedStrategy {
     private final String resultName;
     private final IStrategy implementation;
     private final StrategyDefinition strategyDefinition;

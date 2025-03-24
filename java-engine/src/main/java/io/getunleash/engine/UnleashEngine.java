@@ -60,10 +60,11 @@ public class UnleashEngine {
                         }
                         return true;
                       }),
-              fallbackStrategy);
+              fallbackStrategy,
+              new HashSet<String>(builtInStrategies));
     } else {
       this.customStrategiesEvaluator =
-          new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy);
+          new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy, new HashSet<String>());
     }
   }
 
