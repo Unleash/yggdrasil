@@ -58,7 +58,8 @@ class UnleashEngineTest {
 
     @BeforeEach
     void createEngine() {
-        engine = new UnleashEngine();
+        List<IStrategy> customStrategies = List.of(alwaysTrue("custom"));
+        engine = new UnleashEngine(customStrategies);
     }
 
     @Test
@@ -97,6 +98,17 @@ class UnleashEngineTest {
         }
 
         assertEquals("disabled", variant.getName());
+        assertFalse(variant.isEnabled());
+    }
+
+    @Test
+    void testGetVariantWithCustomStrategy() throws Exception {
+        engine.takeState("{\"version\":1,\"features\":[{\"name\":\"Feature.D\",\"description\":\"Has a custom strategy\",\"enabled\":true,\"strategies\":[{\"name\":\"custom\",\"constraints\":[],\"parameters\":{\"foo\":\"bar\"}}]}]}");
+
+        Context context = new Context();
+        VariantDef variant = engine.getVariant("Feature.D", context);
+
+        assertEquals(variant.isFeatureEnabled(), true);
         assertFalse(variant.isEnabled());
     }
 
