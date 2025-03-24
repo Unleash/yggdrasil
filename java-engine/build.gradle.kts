@@ -83,6 +83,13 @@ tasks.named<Test>("test") {
     testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
 }
 
+spotless {
+    java {
+        googleJavaFormat("1.17.0")
+        target("src/**/*.java")
+    }
+}
+
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
