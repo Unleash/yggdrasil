@@ -3,7 +3,7 @@ package io.getunleash.engine;
 import java.util.Map;
 
 public interface IStrategy {
-    String getName();
+  String getName();
 
-    boolean isEnabled(Map<String, String> parameters, Context context);
+  boolean isEnabled(Map<String, String> parameters, Context context);
 }
