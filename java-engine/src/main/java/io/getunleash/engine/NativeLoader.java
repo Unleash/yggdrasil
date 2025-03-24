@@ -84,7 +84,7 @@ class NativeLoader {
         } else if (os.contains("linux")) {
             if (isMusl()) {
                 if (arch.contains("aarch64")) {
-                    libName = "libyggdrasilffi_arm64-musl.so ";
+                    libName = "libyggdrasilffi_arm64-musl.so";
                 } else {
                     libName = "libyggdrasilffi_x86_64-musl.so";
                 }
