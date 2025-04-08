@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.17.4 (2025-04-08)
+
+### Chore
+
+ - <csr-id-877fab047590ae80c8b885e4003e2f57fd3f23d0/> bump unleash-types to 0.15.11
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 27 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#235](https://github.com/Unleash/yggdrasil/issues/235)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#235](https://github.com/Unleash/yggdrasil/issues/235)**
+    - Bump unleash-types to 0.15.11 ([`877fab0`](https://github.com/Unleash/yggdrasil/commit/877fab047590ae80c8b885e4003e2f57fd3f23d0))
+</details>
+
 ## v0.17.3 (2025-03-11)
+
+<csr-id-9096eea4dbb24d71ae4876c976f85e5aa9472b04/>
 
 ### Chore
 
@@ -49,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 2 commits contributed to the release.
+ - 3 commits contributed to the release.
  - 20 days passed between releases.
  - 2 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 2 unique issues were worked on: [#226](https://github.com/Unleash/yggdrasil/issues/226), [#230](https://github.com/Unleash/yggdrasil/issues/230)
@@ -64,6 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Javascript engine ([`9096eea`](https://github.com/Unleash/yggdrasil/commit/9096eea4dbb24d71ae4876c976f85e5aa9472b04))
  * **[#230](https://github.com/Unleash/yggdrasil/issues/230)**
     - Expose enabled on list features in core and java ([`fb10e5b`](https://github.com/Unleash/yggdrasil/commit/fb10e5b302ec980aa90bbb4199c0bece39c82427))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.17.3 ([`aee6eda`](https://github.com/Unleash/yggdrasil/commit/aee6edaff3dfc1bde092ef0b00436d3a24fecc82))
 </details>
 
 ## v0.17.2 (2025-02-19)
