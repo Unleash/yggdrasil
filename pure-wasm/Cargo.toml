@@ -1,0 +1,13 @@
+[package]
+name = "pure-wasm"
+version = "0.1.0"
+edition = "2024"
+
+[profile.release]
+panic = "abort"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+unleash-yggdrasil = {path = "../unleash-yggdrasil"}

@@ -9,13 +9,11 @@ use std::str::FromStr;
 use crate::sendable_closures::{SendableContextResolver, SendableFragment};
 use crate::state::SdkError;
 use crate::EnrichedContext as Context;
-use chrono::{DateTime, Utc};
 use ipnetwork::{IpNetwork, IpNetworkError};
 use murmur3::murmur3_32;
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
-use rand::Rng;
 use semver::Version;
 
 #[cfg(feature = "hostname")]
@@ -134,7 +132,7 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
             context
                 .current_time
                 .clone()
-                .or_else(|| Some(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()))
+                .or_else(|| Some("".to_string()))
         }),
         Rule::random => {
             let value = child
@@ -146,7 +144,8 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
                     )
                 })
                 .unwrap_or(100);
-            Box::new(move |_: &Context| Some(rand::thread_rng().gen_range(1..value).to_string()))
+            Box::new(move |_: &Context| Some("100".to_string()))
+
         }
         Rule::property => context_property(child.into_inner()),
         _ => unreachable!(),
@@ -239,13 +238,6 @@ fn numeric(node: Pair<Rule>) -> CompileResult<f64> {
     })
 }
 
-fn date(node: Pair<Rule>) -> CompileResult<DateTime<Utc>> {
-    let value = node.as_str();
-    value.parse::<DateTime<Utc>>().map_err(|e| {
-        SdkError::StrategyParseError(format!("Failed to compile {value} as a date value: {e}"))
-    })
-}
-
 fn semver(node: Pair<Rule>) -> CompileResult<Version> {
     let value = node.as_str();
     Version::parse(value).map_err(|e| {
@@ -315,28 +307,10 @@ fn date_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
     let context_getter = context_value(context_getter_node.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
-    let date = date(date_node)?;
+    // let date = date(date_node)?;
 
     Ok(Box::new(move |context: &Context| {
-        let context_value = context_getter(context);
-        match context_value {
-            Some(context_value) => {
-                let context_value = context_value.parse::<DateTime<Utc>>();
-
-                let Ok(context_value) = context_value else {
-                    return false;
-                };
-
-                match ordinal_operation {
-                    OrdinalComparator::Lte => context_value <= date,
-                    OrdinalComparator::Lt => context_value < date,
-                    OrdinalComparator::Gte => context_value >= date,
-                    OrdinalComparator::Gt => context_value > date,
-                    OrdinalComparator::Eq => context_value == date,
-                }
-            }
-            None => false,
-        }
+        false
     }))
 }
 

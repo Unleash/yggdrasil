@@ -12,9 +12,7 @@ pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
-use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use rand::Rng;
 use serde::{de, Deserialize, Serialize};
 use state::EnrichedContext;
 use std::sync::atomic::Ordering;
@@ -237,8 +235,8 @@ pub struct EngineState {
     compiled_state: Option<CompiledState>,
     previous_state: ClientFeatures,
     toggle_metrics: DashMap<String, Metric>,
-    toggle_metrics_start: DateTime<Utc>,
-    pub started: DateTime<Utc>,
+    // toggle_metrics_start: DateTime<Utc>,
+    // pub started: DateTime<Utc>,
 }
 
 impl Default for EngineState {
@@ -246,9 +244,9 @@ impl Default for EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: Utc::now(),
+            // toggle_metrics_start: Utc::now(),
             previous_state: Default::default(),
-            started: Utc::now(),
+            // started: Utc::now(),
         }
     }
 }
@@ -368,13 +366,14 @@ impl EngineState {
             .collect();
 
         if !metrics.is_empty() {
-            let start = self.toggle_metrics_start;
-            self.toggle_metrics_start = Utc::now();
-            Some(MetricBucket {
-                toggles: metrics,
-                start,
-                stop: Utc::now(),
-            })
+            // let start = self.toggle_metrics_start;
+            // self.toggle_metrics_start = Utc::now();
+            // Some(MetricBucket {
+            //     toggles: metrics,
+            //     start,
+            //     stop: Utc::now(),
+            // })
+            None
         } else {
             None
         }
@@ -547,7 +546,7 @@ impl EngineState {
             .map(|seed| {
                 normalized_hash(group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
             })
-            .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight));
+            .unwrap_or_else(|| 10);
 
         let mut total_weight = 0;
         for variant in variants {
