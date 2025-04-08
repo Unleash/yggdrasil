@@ -12,6 +12,7 @@ pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
+use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
@@ -236,18 +237,19 @@ pub struct EngineState {
     compiled_state: Option<CompiledState>,
     previous_state: ClientFeatures,
     toggle_metrics: DashMap<String, Metric>,
-    // toggle_metrics_start: DateTime<Utc>,
-    // pub started: DateTime<Utc>,
+    toggle_metrics_start: DateTime<Utc>,
+    pub started: DateTime<Utc>,
 }
 
+#[cfg(feature = "wall-clock")]
 impl Default for EngineState {
     fn default() -> Self {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            // toggle_metrics_start: Utc::now(),
+            toggle_metrics_start: Utc::now(),
             previous_state: Default::default(),
-            // started: Utc::now(),
+            started: Utc::now(),
         }
     }
 }
@@ -331,7 +333,7 @@ impl EngineState {
             });
     }
 
-    pub fn get_metrics(&mut self) -> Option<MetricBucket> {
+    pub fn get_metrics(&mut self, close_time: DateTime<Utc>) -> Option<MetricBucket> {
         let metrics: HashMap<String, ToggleStats> = self
             .toggle_metrics
             .iter()
@@ -367,14 +369,13 @@ impl EngineState {
             .collect();
 
         if !metrics.is_empty() {
-            // let start = self.toggle_metrics_start;
-            // self.toggle_metrics_start = Utc::now();
-            // Some(MetricBucket {
-            //     toggles: metrics,
-            //     start,
-            //     stop: Utc::now(),
-            // })
-            None
+            let start = self.toggle_metrics_start;
+            self.toggle_metrics_start = close_time;
+            Some(MetricBucket {
+                toggles: metrics,
+                start,
+                stop: close_time,
+            })
         } else {
             None
         }
@@ -754,6 +755,7 @@ impl Default for VariantDef {
 
 #[cfg(test)]
 mod test {
+    use chrono::Utc;
     use serde::Deserialize;
     use std::{collections::HashMap, fs};
     use test_case::test_case;
@@ -986,7 +988,7 @@ mod test {
         //No user id, no enabled state, this should increment the "no" metric
         state.is_enabled("some-toggle", &blank_context, &None);
 
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 2);
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
     }
@@ -1025,7 +1027,7 @@ mod test {
         state.get_variant("some-toggle", &blank_context, &None);
         state.get_variant("some-toggle", &context_with_user_id_of_7, &None);
 
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
         let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
 
         let variant_metric = metrics
@@ -1069,7 +1071,7 @@ mod test {
             ..Default::default()
         };
 
-        let metrics = state.get_metrics();
+        let metrics = state.get_metrics(Utc::now());
         assert!(metrics.is_none());
     }
 
@@ -1093,10 +1095,10 @@ mod test {
 
         state.is_enabled("some-toggle", &Context::default(), &None);
 
-        let metrics = state.get_metrics();
+        let metrics = state.get_metrics(Utc::now());
         assert!(metrics.is_some());
 
-        let metrics = state.get_metrics();
+        let metrics = state.get_metrics(Utc::now());
         assert!(metrics.is_none());
     }
 
@@ -1110,12 +1112,12 @@ mod test {
 
         state.count_toggle("some-test-toggle", true);
 
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
         let start = metrics.start;
         std::thread::sleep(std::time::Duration::from_millis(1));
 
         state.count_toggle("some-test-toggle", true);
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
         let new_start = metrics.start;
 
         assert!(new_start > start);
@@ -1142,7 +1144,7 @@ mod test {
         state.is_enabled("missing-toggle", &Context::default(), &None);
         state.get_variant("missing-toggle", &Context::default(), &None);
 
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
 
         let some_toggle_stats = metrics.toggles.get("missing-toggle").unwrap();
         assert_eq!(some_toggle_stats.yes, 0);
@@ -1175,7 +1177,7 @@ mod test {
             state.is_enabled("missing-toggle", &Context::default(), &None);
         }
 
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
 
         let some_toggle_stats = metrics.toggles.get("some-toggle").unwrap();
         let missing_toggle_stats = metrics.toggles.get("missing-toggle").unwrap();
@@ -1212,7 +1214,7 @@ mod test {
         let is_enabled = state.is_enabled("some-toggle", &Context::default(), &None);
 
         let is_enabled_metrics = state
-            .get_metrics()
+            .get_metrics(Utc::now())
             .unwrap()
             .toggles
             .get("some-toggle")
@@ -1226,7 +1228,7 @@ mod test {
         state.count_toggle("some-toggle", check_enabled);
 
         let count_toggle_metrics = state
-            .get_metrics()
+            .get_metrics(Utc::now())
             .unwrap()
             .toggles
             .get("some-toggle")
@@ -1260,7 +1262,7 @@ mod test {
 
         let first_variant = state.get_variant("some-toggle", &Context::default(), &None);
         let get_variant_metrics = state
-            .get_metrics()
+            .get_metrics(Utc::now())
             .unwrap()
             .toggles
             .get("some-toggle")
@@ -1274,7 +1276,7 @@ mod test {
         state.count_toggle("some-toggle", true);
         state.count_variant("some-toggle", &second_variant.name);
         let check_variant_metrics = state
-            .get_metrics()
+            .get_metrics(Utc::now())
             .unwrap()
             .toggles
             .get("some-toggle")
@@ -1814,7 +1816,7 @@ mod test {
 
         state.is_enabled("some-toggle", &blank_context, &None);
 
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
         assert!(metrics.toggles.get("parent-flag").is_none());
     }
@@ -1869,7 +1871,7 @@ mod test {
 
         state.is_enabled("some-toggle", &blank_context, &None);
 
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
         assert!(metrics.toggles.get("parent-flag").is_none());
     }
@@ -1921,7 +1923,7 @@ mod test {
 
         assert_eq!(variant.name, "disabled");
 
-        let metrics = state.get_metrics().unwrap();
+        let metrics = state.get_metrics(Utc::now()).unwrap();
         assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
         assert!(metrics.toggles.get("parent-flag").is_none());
     }

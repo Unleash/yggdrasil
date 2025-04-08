@@ -9,6 +9,7 @@ use std::str::FromStr;
 use crate::sendable_closures::{SendableContextResolver, SendableFragment};
 use crate::state::SdkError;
 use crate::EnrichedContext as Context;
+use chrono::{DateTime, Utc};
 use ipnetwork::{IpNetwork, IpNetworkError};
 use murmur3::murmur3_32;
 use pest::iterators::{Pair, Pairs};
@@ -128,12 +129,7 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
         Rule::environment => Box::new(|context: &Context| context.environment.clone()),
         Rule::session_id => Box::new(|context: &Context| context.session_id.clone()),
         Rule::remote_address => Box::new(|context: &Context| context.remote_address.clone()),
-        Rule::current_time => Box::new(|context: &Context| {
-            context
-                .current_time
-                .clone()
-                .or_else(|| Some("".to_string()))
-        }),
+        Rule::current_time => Box::new(|context: &Context| context.current_time.clone()),
         Rule::random => {
             let value = child
                 .into_inner()
@@ -238,6 +234,13 @@ fn numeric(node: Pair<Rule>) -> CompileResult<f64> {
     })
 }
 
+fn date(node: Pair<Rule>) -> CompileResult<DateTime<Utc>> {
+    let value = node.as_str();
+    value.parse::<DateTime<Utc>>().map_err(|e| {
+        SdkError::StrategyParseError(format!("Failed to compile {value} as a date value: {e}"))
+    })
+}
+
 fn semver(node: Pair<Rule>) -> CompileResult<Version> {
     let value = node.as_str();
     Version::parse(value).map_err(|e| {
@@ -307,10 +310,28 @@ fn date_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
     let context_getter = context_value(context_getter_node.into_inner());
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
-    // let date = date(date_node)?;
+    let date = date(date_node)?;
 
     Ok(Box::new(move |context: &Context| {
-        false
+        let context_value = context_getter(context);
+        match context_value {
+            Some(context_value) => {
+                let context_value = context_value.parse::<DateTime<Utc>>();
+
+                let Ok(context_value) = context_value else {
+                    return false;
+                };
+
+                match ordinal_operation {
+                    OrdinalComparator::Lte => context_value <= date,
+                    OrdinalComparator::Lt => context_value < date,
+                    OrdinalComparator::Gte => context_value >= date,
+                    OrdinalComparator::Gt => context_value > date,
+                    OrdinalComparator::Eq => context_value == date,
+                }
+            }
+            None => false,
+        }
     }))
 }
 
