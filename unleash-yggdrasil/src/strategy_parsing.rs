@@ -15,6 +15,7 @@ use murmur3::murmur3_32;
 use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
+use rand::Rng;
 use semver::Version;
 
 #[cfg(feature = "hostname")]
@@ -140,8 +141,7 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
                     )
                 })
                 .unwrap_or(100);
-            Box::new(move |_: &Context| Some("100".to_string()))
-
+            Box::new(move |_: &Context| Some(rand::thread_rng().gen_range(1..value).to_string()))
         }
         Rule::property => context_property(child.into_inner()),
         _ => unreachable!(),
