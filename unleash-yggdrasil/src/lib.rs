@@ -241,6 +241,18 @@ pub struct EngineState {
     pub started: DateTime<Utc>,
 }
 
+impl EngineState {
+    pub fn initial_state(started: DateTime<Utc>) -> Self {
+        Self {
+            compiled_state: Default::default(),
+            toggle_metrics: Default::default(),
+            toggle_metrics_start: started,
+            previous_state: Default::default(),
+            started,
+        }
+    }
+}
+
 #[cfg(feature = "wall-clock")]
 impl Default for EngineState {
     fn default() -> Self {

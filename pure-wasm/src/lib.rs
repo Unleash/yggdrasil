@@ -27,7 +27,7 @@ fn my_random_fn(buf: &mut [u8]) -> Result<(), getrandom::Error> {
 
 #[unsafe(no_mangle)]
 pub fn add(a: i32, b: i32) -> i32 {
-    let engine = EngineState::default();
+    let engine = EngineState::initial_state("2022-01-25T12:00:00.000Z".parse().unwrap());
     let context = unleash_yggdrasil::Context::default();
     engine.is_enabled("test", &context, &None);
     11
