@@ -13,6 +13,7 @@ pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
 use dashmap::DashMap;
+use rand::Rng;
 use serde::{de, Deserialize, Serialize};
 use state::EnrichedContext;
 use std::sync::atomic::Ordering;
@@ -546,7 +547,7 @@ impl EngineState {
             .map(|seed| {
                 normalized_hash(group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
             })
-            .unwrap_or_else(|| 10);
+            .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight));
 
         let mut total_weight = 0;
         for variant in variants {

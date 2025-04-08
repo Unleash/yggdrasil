@@ -11,3 +11,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 unleash-yggdrasil = {path = "../unleash-yggdrasil"}
+getrandom = { version = "0.2", features = ["custom"] }
+rand = "0.8.5"
