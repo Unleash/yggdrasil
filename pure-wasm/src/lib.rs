@@ -1,8 +1,11 @@
 use core::str;
-use std::{ffi::c_void, mem, slice};
+use std::{
+    ffi::{CString, c_char, c_void},
+    mem, slice,
+};
 
-use serde_json::Error;
-use unleash_yggdrasil::{EngineState, UpdateMessage};
+use serde::{Deserialize, Serialize};
+use unleash_yggdrasil::{Context, EngineState};
 
 use getrandom::register_custom_getrandom;
 
@@ -13,7 +16,19 @@ pub fn get_random() -> i32 {
     rand::random::<i32>()
 }
 
-static mut RETURN_LEN: i32 = 0;
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
+enum ResponseCode {
+    Error = -2,
+    NotFound = -1,
+    Ok = 1,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Response<T> {
+    status_code: ResponseCode,
+    value: Option<T>,
+    error_message: Option<String>,
+}
 
 //This is expected to be defined by the caller and passed to the WASM layer
 unsafe extern "C" {
@@ -25,7 +40,8 @@ fn get_random_source(buf: &mut [u8]) -> Result<(), getrandom::Error> {
     if result == 0 {
         Ok(())
     } else {
-        //probably the wrong error code here
+        // probably the wrong error code here, this may need a custom definition
+        // good enough for a spike
         Err(getrandom::Error::UNEXPECTED)
     }
 }
@@ -39,31 +55,15 @@ pub extern "C" fn alloc(len: i32) -> *const u8 {
     ptr
 }
 
-fn export_string(s: String) -> *const u8 {
-    let len = s.len() as i32;
-    let ptr = alloc(len);
-
-    unsafe {
-        core::ptr::copy_nonoverlapping(s.as_ptr(), ptr as *mut u8, len as usize);
-        RETURN_LEN = len;
-    }
-
-    core::mem::forget(s); // don't drop the string
-    ptr
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn get_return_len() -> i32 {
-    unsafe { RETURN_LEN }
-}
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dealloc(ptr: &mut u8, len: i32) {
-    let _ = unsafe { Vec::from_raw_parts(ptr, 0, len as usize) };
+    unsafe { Vec::from_raw_parts(ptr, 0, len as usize) };
 }
 
 #[unsafe(no_mangle)]
 pub fn new_engine() -> *mut c_void {
+    // need to hydrate this from the caller otherwise the metrics will be off
+    // doesn't matter for a spike though
     let engine = EngineState::initial_state("2022-01-25T12:00:00.000Z".parse().unwrap());
     Box::into_raw(Box::new(engine)) as *mut c_void
 }
@@ -76,15 +76,57 @@ unsafe fn materialize_string<'a>(ptr: i32, len: i32) -> &'a str {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *const u8 {
+pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *mut c_char {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
         let json_str = materialize_string(json_ptr, json_len);
 
-        let client_features: Result<UpdateMessage, Error> = serde_json::from_str(json_str);
-        if client_features.is_err() {
-            return export_string(format!("{:#?}", client_features.err().unwrap()));
+        match serde_json::from_str(json_str) {
+            Ok(client_features) => {
+                engine.take_state(client_features);
+                CString::new("Updated features successfully")
+                    .unwrap()
+                    .into_raw()
+            }
+            Err(e) => {
+                let err_msg = format!("Failed to parse JSON: {}", e);
+                CString::new(err_msg).unwrap().into_raw()
+            }
         }
-        return 0 as *const u8;
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn check_enabled(
+    engine_ptr: i32,
+    toggle_name_ptr: i32,
+    toggle_name_len: i32,
+    context_ptr: i32,
+    context_len: i32,
+) -> *const c_char {
+    unsafe {
+        let engine = &mut *(engine_ptr as *mut EngineState);
+        let toggle_name = materialize_string(toggle_name_ptr, toggle_name_len);
+        let context: Context =
+            serde_json::from_str(materialize_string(context_ptr, context_len)).unwrap();
+
+        let enabled = engine.check_enabled(toggle_name, &context, &None);
+
+        let result = if let Some(enabled) = enabled {
+            Response {
+                error_message: None,
+                status_code: ResponseCode::Ok,
+                value: Some(enabled),
+            }
+        } else {
+            Response {
+                error_message: None,
+                status_code: ResponseCode::NotFound,
+                value: None,
+            }
+        };
+        let response_message = serde_json::to_string(&result).unwrap();
+
+        CString::new(response_message).unwrap().into_raw()
     }
 }
