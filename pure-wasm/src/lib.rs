@@ -5,7 +5,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use unleash_yggdrasil::{Context, EngineState};
+use unleash_yggdrasil::{state::EnrichedContext, strategy_parsing::RuleFragment, Context, EngineState};
 
 use getrandom::register_custom_getrandom;
 
@@ -103,30 +103,59 @@ pub extern "C" fn check_enabled(
     toggle_name_len: i32,
     context_ptr: i32,
     context_len: i32,
-) -> *const c_char {
+) -> i32 {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
-        let toggle_name = materialize_string(toggle_name_ptr, toggle_name_len);
-        let context: Context =
-            serde_json::from_str(materialize_string(context_ptr, context_len)).unwrap();
+        let context = Context {
+            user_id: Some("7".to_string()),
+            session_id: None,
+            environment: None,
+            app_name: None,
+            current_time: None,
+            remote_address: None,
+            properties: None,
+        };
 
+        let toggle_name = "Feature.B";
+        let thing = Box::new(
+            |context: &Context| -> bool {
+                true
+            }
+        );
         let enabled = engine.check_enabled(toggle_name, &context, &None);
 
-        let result = if let Some(enabled) = enabled {
-            Response {
-                error_message: None,
-                status_code: ResponseCode::Ok,
-                value: Some(enabled),
-            }
-        } else {
-            Response {
-                error_message: None,
-                status_code: ResponseCode::NotFound,
-                value: None,
-            }
+        let result = Response {
+            error_message: None,
+            status_code: ResponseCode::Ok,
+            value: Some(true),
         };
-        let response_message = serde_json::to_string(&result).unwrap();
 
-        CString::new(response_message).unwrap().into_raw()
+        7
+        // let response_message = serde_json::to_string(&result).unwrap();
+        // CString::new(response_message).unwrap().into_raw()
+
+        // let engine = &mut *(engine_ptr as *mut EngineState);
+        // let toggle_name = materialize_string(toggle_name_ptr, toggle_name_len);
+        // let context: Context =
+        //     serde_json::from_str(materialize_string(context_ptr, context_len)).unwrap();
+
+        // let enabled = engine.check_enabled(toggle_name, &context, &None);
+
+        // let result = if let Some(enabled) = enabled {
+        //     Response {
+        //         error_message: None,
+        //         status_code: ResponseCode::Ok,
+        //         value: Some(enabled),
+        //     }
+        // } else {
+        //     Response {
+        //         error_message: None,
+        //         status_code: ResponseCode::NotFound,
+        //         value: None,
+        //     }
+        // };
+        // let response_message = serde_json::to_string(&result).unwrap();
+
+        // CString::new(response_message).unwrap().into_raw()
     }
 }
