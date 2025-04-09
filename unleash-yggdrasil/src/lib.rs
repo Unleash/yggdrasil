@@ -25,9 +25,10 @@ use unleash_types::client_features::{
     ClientFeature, ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
     Segment, Variant,
 };
+use ahash::AHashMap;
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
-pub type CompiledState = HashMap<String, CompiledToggle>;
+pub type CompiledState = AHashMap<String, CompiledToggle>;
 
 pub const SUPPORTED_SPEC_VERSION: &str = "5.2.2";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
@@ -158,8 +159,8 @@ pub struct EvalWarning {
 
 pub fn compile_state(
     state: &ClientFeatures,
-) -> (HashMap<String, CompiledToggle>, Vec<EvalWarning>) {
-    let mut compiled_state = HashMap::new();
+) -> (AHashMap<String, CompiledToggle>, Vec<EvalWarning>) {
+    let mut compiled_state = AHashMap::new();
     let segment_map = build_segment_map(&state.segments);
     let mut warnings = vec![];
 
@@ -767,6 +768,7 @@ impl Default for VariantDef {
 
 #[cfg(test)]
 mod test {
+    use ahash::AHashMap;
     use chrono::Utc;
     use serde::Deserialize;
     use std::{collections::HashMap, fs};
@@ -919,7 +921,7 @@ mod test {
 
     #[test]
     pub fn stickiness_for_variants_falls_back_to_random_if_no_context_property_present() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "cool-animals".to_string(),
             CompiledToggle {
@@ -946,7 +948,7 @@ mod test {
 
     #[test]
     pub fn get_variant_resolves_to_default_variant_when_variants_is_empty() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "test".to_string(),
             CompiledToggle {
@@ -971,7 +973,7 @@ mod test {
 
     #[test]
     pub fn checking_a_toggle_also_increments_metrics() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1007,7 +1009,7 @@ mod test {
 
     #[test]
     pub fn checking_a_variant_also_increments_metrics_including_toggle_metrics() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1067,7 +1069,7 @@ mod test {
 
     #[test]
     pub fn no_valid_metrics_yields_none() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1089,7 +1091,7 @@ mod test {
 
     #[test]
     pub fn getting_metrics_clears_existing_metrics() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1116,7 +1118,7 @@ mod test {
 
     #[test]
     pub fn getting_metrics_restarts_time() {
-        let compiled_state = HashMap::new();
+        let compiled_state = AHashMap::new();
         let mut state = EngineState {
             compiled_state: Some(compiled_state),
             ..Default::default()
@@ -1137,7 +1139,7 @@ mod test {
 
     #[test]
     pub fn unknown_features_and_variants_get_metrics() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1166,7 +1168,7 @@ mod test {
 
     #[test]
     pub fn multiple_toggle_checks_stack_metrics() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1207,7 +1209,7 @@ mod test {
 
     #[test]
     pub fn check_enabled_and_count_metrics_yields_same_metrics_as_is_enabled() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1256,7 +1258,7 @@ mod test {
 
     #[test]
     pub fn check_variant_and_count_metrics_yields_same_metrics_as_get_variant() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1346,7 +1348,7 @@ mod test {
 
     #[test]
     fn resolves_all_toggles() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1396,7 +1398,7 @@ mod test {
 
     #[test]
     fn resolves_single_toggles() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1508,7 +1510,7 @@ mod test {
 
     #[test]
     pub fn strategy_variants_are_selected_over_base_variants_if_present() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1546,7 +1548,7 @@ mod test {
 
     #[test]
     fn strategy_variants_respect_toggles_being_disabled() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1791,7 +1793,7 @@ mod test {
 
     #[test]
     pub fn metrics_are_not_recorded_for_parent_flags() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1835,7 +1837,7 @@ mod test {
 
     #[test]
     pub fn metrics_are_not_recorded_for_parent_flags_with_variants() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
@@ -1890,7 +1892,7 @@ mod test {
 
     #[test]
     pub fn parent_flags_are_consulted_for_get_variant() {
-        let mut compiled_state = HashMap::new();
+        let mut compiled_state = AHashMap::new();
         compiled_state.insert(
             "some-toggle".to_string(),
             CompiledToggle {
