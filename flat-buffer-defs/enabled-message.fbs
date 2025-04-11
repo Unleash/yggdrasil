@@ -1,0 +1,27 @@
+namespace messaging;
+
+table PropertyEntry {
+  key: string (key);
+  value: string;
+}
+
+table Context {
+  toggle_name: string;
+  user_id: string;
+  session_id: string;
+  environment: string;
+  app_name: string;
+  current_time: string;
+  remote_address: string;
+  properties: [PropertyEntry];
+}
+
+table Response {
+  enabled: bool;
+  has_enabled: bool = false;
+  error: string;
+}
+
+root_type Response;
+root_type Context;
+

@@ -1,33 +1,34 @@
 use core::str;
 use std::{
+    cell::RefCell,
+    collections::HashMap,
     ffi::{CString, c_char, c_void},
     mem, slice,
 };
 
-use serde::{Deserialize, Serialize};
-use unleash_yggdrasil::{state::EnrichedContext, strategy_parsing::RuleFragment, Context, EngineState};
+mod messaging {
+    #![allow(dead_code)]
+    #![allow(non_snake_case)]
+    include!("enabled-message_generated.rs");
+}
+
+use flatbuffers::FlatBufferBuilder;
+use messaging::messaging::ResponseBuilder;
+
+use unleash_yggdrasil::{Context as YggContext, EngineState};
 
 use getrandom::register_custom_getrandom;
 
 register_custom_getrandom!(get_random_source);
 
+thread_local! {
+    static BUILDER: RefCell<FlatBufferBuilder<'static>> =
+        RefCell::new(FlatBufferBuilder::with_capacity(128));
+}
+
 #[unsafe(no_mangle)]
 pub fn get_random() -> i32 {
     rand::random::<i32>()
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
-enum ResponseCode {
-    Error = -2,
-    NotFound = -1,
-    Ok = 1,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Response<T> {
-    status_code: ResponseCode,
-    value: Option<T>,
-    error_message: Option<String>,
 }
 
 //This is expected to be defined by the caller and passed to the WASM layer
@@ -97,65 +98,74 @@ pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn check_enabled(
-    engine_ptr: i32,
-    toggle_name_ptr: i32,
-    toggle_name_len: i32,
-    context_ptr: i32,
-    context_len: i32,
-) -> i32 {
-    unsafe {
-        let engine = &mut *(engine_ptr as *mut EngineState);
-        let context = Context {
-            user_id: Some("7".to_string()),
-            session_id: None,
-            environment: None,
-            app_name: None,
-            current_time: None,
-            remote_address: None,
-            properties: None,
+pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
+    if !ptr.is_null() && len > 0 {
+        unsafe {
+            let _ = Vec::from_raw_parts(ptr, 0, len);
+        }
+    }
+}
+
+// This is only used as a thread local so it's thread safe. If this gets moved out of the
+// thread local this will ruin someone's day. So don't do that. Please bro
+pub fn build_response(enabled: Option<bool>, error: Option<&str>) -> Vec<u8> {
+    BUILDER.with(|cell| {
+        let mut builder = cell.borrow_mut();
+        builder.reset();
+
+        let error_offset = error.map(|e| builder.create_string(e));
+
+        let response = {
+            let mut resp_builder = ResponseBuilder::new(&mut builder);
+            if let Some(flag) = enabled {
+                resp_builder.add_enabled(flag);
+                resp_builder.add_has_enabled(true);
+            }
+            if let Some(err) = error_offset {
+                resp_builder.add_error(err);
+            }
+            resp_builder.finish()
         };
 
-        let toggle_name = "Feature.B";
-        let thing = Box::new(
-            |context: &Context| -> bool {
-                true
-            }
-        );
+        builder.finish(response, None);
+        builder.finished_data().to_vec()
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
+    unsafe {
+        let bytes = std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize);
+        let ctx: messaging::messaging::Context =
+            flatbuffers::root::<messaging::messaging::Context>(bytes).expect("invalid context");
+
+        let toggle_name = ctx.toggle_name().expect("You need to pass a toggle name and you also need to remove this expect before production!");
+
+        let context = YggContext {
+            user_id: ctx.user_id().map(|f| f.to_string()),
+            session_id: ctx.session_id().map(|f| f.to_string()),
+            environment: ctx.environment().map(|f| f.to_string()),
+            app_name: ctx.app_name().map(|f| f.to_string()),
+            current_time: ctx.current_time().map(|f| f.to_string()),
+            remote_address: ctx.remote_address().map(|f| f.to_string()),
+            properties: ctx.properties().map(|entries| {
+                entries
+                    .iter()
+                    .filter_map(|entry| Some((entry.key().to_string(), entry.value()?.to_string())))
+                    .collect::<HashMap<String, String>>()
+            }),
+        };
+
+        let engine = &mut *(engine_ptr as *mut EngineState);
         let enabled = engine.check_enabled(toggle_name, &context, &None);
 
-        let result = Response {
-            error_message: None,
-            status_code: ResponseCode::Ok,
-            value: Some(true),
-        };
+        let response = build_response(enabled, None);
 
-        7
-        // let response_message = serde_json::to_string(&result).unwrap();
-        // CString::new(response_message).unwrap().into_raw()
+        let ptr: u32 = response.as_ptr() as u32;
+        let len: u32 = response.len() as u32;
+        let packed: u64 = ((len as u64) << 32) | ptr as u64;
+        std::mem::forget(response);
 
-        // let engine = &mut *(engine_ptr as *mut EngineState);
-        // let toggle_name = materialize_string(toggle_name_ptr, toggle_name_len);
-        // let context: Context =
-        //     serde_json::from_str(materialize_string(context_ptr, context_len)).unwrap();
-
-        // let enabled = engine.check_enabled(toggle_name, &context, &None);
-
-        // let result = if let Some(enabled) = enabled {
-        //     Response {
-        //         error_message: None,
-        //         status_code: ResponseCode::Ok,
-        //         value: Some(enabled),
-        //     }
-        // } else {
-        //     Response {
-        //         error_message: None,
-        //         status_code: ResponseCode::NotFound,
-        //         value: None,
-        //     }
-        // };
-        // let response_message = serde_json::to_string(&result).unwrap();
-
-        // CString::new(response_message).unwrap().into_raw()
+        packed
     }
 }
