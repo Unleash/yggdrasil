@@ -43,7 +43,7 @@ fn get_random_source(buf: &mut [u8]) -> Result<(), getrandom::Error> {
     } else {
         // probably the wrong error code here, this may need a custom definition
         // good enough for a spike
-        Err(getrandom::Error::UNEXPECTED)
+        Err(getrandom::Error::NO_RDRAND)
     }
 }
 

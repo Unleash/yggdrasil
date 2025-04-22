@@ -1,7 +1,7 @@
 package io.getunleash.engine;
 
 import java.util.Map;
-
+/*
 public class Context {
   private String userId;
   private String sessionId;
@@ -67,3 +67,4 @@ public class Context {
     this.properties = properties;
   }
 }
+*/
