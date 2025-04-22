@@ -1,6 +1,7 @@
 package io.getunleash.engine;
 
 import java.util.Map;
+import java.util.HashMap;
 
 public class WasmContext {
     public String userId;
@@ -9,7 +10,7 @@ public class WasmContext {
     public String instanceId;
     public String environment;
     public String remoteAddress;
-    public Map<String, String> properties;
+    public Map<String, String> properties = new HashMap<>(); 
 
     public Map<String, String> getProperties() {
         return properties;
