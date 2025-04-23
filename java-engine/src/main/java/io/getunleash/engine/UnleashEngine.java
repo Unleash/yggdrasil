@@ -14,10 +14,13 @@ import com.google.flatbuffers.FlatBufferBuilder;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.SecureRandom;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import messaging.ContextMessage;
+import messaging.MetricsBucket;
 import messaging.PropertyEntry;
 import messaging.Response;
 import org.example.wasm.YggdrasilModule;
@@ -29,6 +32,7 @@ public class UnleashEngine {
   private ExportFunction alloc;
   private ExportFunction dealloc;
   private ExportFunction checkEnabled;
+  private ExportFunction getMetrics;
   private ExportFunction deallocResponseBuffer;
   private Memory memory;
 
@@ -129,6 +133,7 @@ public class UnleashEngine {
     this.alloc = instance.export("alloc");
     this.dealloc = instance.export("dealloc");
     this.checkEnabled = instance.export("check_enabled");
+    this.getMetrics = instance.export("get_metrics");
     this.deallocResponseBuffer = instance.export("dealloc_response_buffer");
     this.memory = instance.memory();
 
@@ -184,5 +189,20 @@ public class UnleashEngine {
     dealloc.apply(contextPtr, contextBytes.length);
     deallocResponseBuffer.apply(ptr, len);
     return response.enabled();
+  }
+
+  public MetricsBucket getMetrics()
+          throws JsonMappingException, JsonProcessingException {
+    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+    long packed = (long) getMetrics.apply(this.enginePointer, now.toEpochSecond())[0];
+    int ptr = (int) (packed & 0xFFFFFFFFL);
+    int len = (int) (packed >>> 32);
+    byte[] bytes = instance.memory().readBytes(ptr, len);
+
+    ByteBuffer buf = ByteBuffer.wrap(bytes);
+    buf.order(ByteOrder.LITTLE_ENDIAN); // Apparently flatBuffers are little-endian
+    MetricsBucket bucket = MetricsBucket.getRootAsMetricsBucket(buf);
+    deallocResponseBuffer.apply(ptr, len);
+    return bucket;
   }
 }

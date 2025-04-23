@@ -143,22 +143,22 @@ impl core::fmt::Debug for PropertyEntry<'_> {
       ds.finish()
   }
 }
-pub enum ContextOffset {}
+pub enum ContextMessageOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
-pub struct Context<'a> {
+pub struct ContextMessage<'a> {
   pub _tab: flatbuffers::Table<'a>,
 }
 
-impl<'a> flatbuffers::Follow<'a> for Context<'a> {
-  type Inner = Context<'a>;
+impl<'a> flatbuffers::Follow<'a> for ContextMessage<'a> {
+  type Inner = ContextMessage<'a>;
   #[inline]
   unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
-impl<'a> Context<'a> {
+impl<'a> ContextMessage<'a> {
   pub const VT_TOGGLE_NAME: flatbuffers::VOffsetT = 4;
   pub const VT_USER_ID: flatbuffers::VOffsetT = 6;
   pub const VT_SESSION_ID: flatbuffers::VOffsetT = 8;
@@ -170,14 +170,14 @@ impl<'a> Context<'a> {
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-    Context { _tab: table }
+    ContextMessage { _tab: table }
   }
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
     _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
-    args: &'args ContextArgs<'args>
-  ) -> flatbuffers::WIPOffset<Context<'bldr>> {
-    let mut builder = ContextBuilder::new(_fbb);
+    args: &'args ContextMessageArgs<'args>
+  ) -> flatbuffers::WIPOffset<ContextMessage<'bldr>> {
+    let mut builder = ContextMessageBuilder::new(_fbb);
     if let Some(x) = args.properties { builder.add_properties(x); }
     if let Some(x) = args.remote_address { builder.add_remote_address(x); }
     if let Some(x) = args.current_time { builder.add_current_time(x); }
@@ -195,60 +195,60 @@ impl<'a> Context<'a> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Context::VT_TOGGLE_NAME, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_TOGGLE_NAME, None)}
   }
   #[inline]
   pub fn user_id(&self) -> Option<&'a str> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Context::VT_USER_ID, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_USER_ID, None)}
   }
   #[inline]
   pub fn session_id(&self) -> Option<&'a str> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Context::VT_SESSION_ID, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_SESSION_ID, None)}
   }
   #[inline]
   pub fn environment(&self) -> Option<&'a str> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Context::VT_ENVIRONMENT, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_ENVIRONMENT, None)}
   }
   #[inline]
   pub fn app_name(&self) -> Option<&'a str> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Context::VT_APP_NAME, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_APP_NAME, None)}
   }
   #[inline]
   pub fn current_time(&self) -> Option<&'a str> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Context::VT_CURRENT_TIME, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_CURRENT_TIME, None)}
   }
   #[inline]
   pub fn remote_address(&self) -> Option<&'a str> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Context::VT_REMOTE_ADDRESS, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_REMOTE_ADDRESS, None)}
   }
   #[inline]
   pub fn properties(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PropertyEntry<'a>>>> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PropertyEntry>>>>(Context::VT_PROPERTIES, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PropertyEntry>>>>(ContextMessage::VT_PROPERTIES, None)}
   }
 }
 
-impl flatbuffers::Verifiable for Context<'_> {
+impl flatbuffers::Verifiable for ContextMessage<'_> {
   #[inline]
   fn run_verifier(
     v: &mut flatbuffers::Verifier, pos: usize
@@ -267,7 +267,7 @@ impl flatbuffers::Verifiable for Context<'_> {
     Ok(())
   }
 }
-pub struct ContextArgs<'a> {
+pub struct ContextMessageArgs<'a> {
     pub toggle_name: Option<flatbuffers::WIPOffset<&'a str>>,
     pub user_id: Option<flatbuffers::WIPOffset<&'a str>>,
     pub session_id: Option<flatbuffers::WIPOffset<&'a str>>,
@@ -277,10 +277,10 @@ pub struct ContextArgs<'a> {
     pub remote_address: Option<flatbuffers::WIPOffset<&'a str>>,
     pub properties: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PropertyEntry<'a>>>>>,
 }
-impl<'a> Default for ContextArgs<'a> {
+impl<'a> Default for ContextMessageArgs<'a> {
   #[inline]
   fn default() -> Self {
-    ContextArgs {
+    ContextMessageArgs {
       toggle_name: None,
       user_id: None,
       session_id: None,
@@ -293,61 +293,61 @@ impl<'a> Default for ContextArgs<'a> {
   }
 }
 
-pub struct ContextBuilder<'a: 'b, 'b> {
+pub struct ContextMessageBuilder<'a: 'b, 'b> {
   fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
   start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
 }
-impl<'a: 'b, 'b> ContextBuilder<'a, 'b> {
+impl<'a: 'b, 'b> ContextMessageBuilder<'a, 'b> {
   #[inline]
   pub fn add_toggle_name(&mut self, toggle_name: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Context::VT_TOGGLE_NAME, toggle_name);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_TOGGLE_NAME, toggle_name);
   }
   #[inline]
   pub fn add_user_id(&mut self, user_id: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Context::VT_USER_ID, user_id);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_USER_ID, user_id);
   }
   #[inline]
   pub fn add_session_id(&mut self, session_id: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Context::VT_SESSION_ID, session_id);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_SESSION_ID, session_id);
   }
   #[inline]
   pub fn add_environment(&mut self, environment: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Context::VT_ENVIRONMENT, environment);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_ENVIRONMENT, environment);
   }
   #[inline]
   pub fn add_app_name(&mut self, app_name: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Context::VT_APP_NAME, app_name);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_APP_NAME, app_name);
   }
   #[inline]
   pub fn add_current_time(&mut self, current_time: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Context::VT_CURRENT_TIME, current_time);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_CURRENT_TIME, current_time);
   }
   #[inline]
   pub fn add_remote_address(&mut self, remote_address: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Context::VT_REMOTE_ADDRESS, remote_address);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_REMOTE_ADDRESS, remote_address);
   }
   #[inline]
   pub fn add_properties(&mut self, properties: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<PropertyEntry<'b >>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Context::VT_PROPERTIES, properties);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_PROPERTIES, properties);
   }
   #[inline]
-  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> ContextBuilder<'a, 'b> {
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> ContextMessageBuilder<'a, 'b> {
     let start = _fbb.start_table();
-    ContextBuilder {
+    ContextMessageBuilder {
       fbb_: _fbb,
       start_: start,
     }
   }
   #[inline]
-  pub fn finish(self) -> flatbuffers::WIPOffset<Context<'a>> {
+  pub fn finish(self) -> flatbuffers::WIPOffset<ContextMessage<'a>> {
     let o = self.fbb_.end_table(self.start_);
     flatbuffers::WIPOffset::new(o.value())
   }
 }
 
-impl core::fmt::Debug for Context<'_> {
+impl core::fmt::Debug for ContextMessage<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-    let mut ds = f.debug_struct("Context");
+    let mut ds = f.debug_struct("ContextMessage");
       ds.field("toggle_name", &self.toggle_name());
       ds.field("user_id", &self.user_id());
       ds.field("session_id", &self.session_id());
@@ -490,75 +490,172 @@ impl core::fmt::Debug for Response<'_> {
       ds.finish()
   }
 }
+pub enum MetricsBucketOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct MetricsBucket<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for MetricsBucket<'a> {
+  type Inner = MetricsBucket<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> MetricsBucket<'a> {
+  pub const VT_COUNT: flatbuffers::VOffsetT = 4;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    MetricsBucket { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args MetricsBucketArgs
+  ) -> flatbuffers::WIPOffset<MetricsBucket<'bldr>> {
+    let mut builder = MetricsBucketBuilder::new(_fbb);
+    builder.add_count(args.count);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn count(&self) -> i32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i32>(MetricsBucket::VT_COUNT, Some(0)).unwrap()}
+  }
+}
+
+impl flatbuffers::Verifiable for MetricsBucket<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<i32>("count", Self::VT_COUNT, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct MetricsBucketArgs {
+    pub count: i32,
+}
+impl<'a> Default for MetricsBucketArgs {
+  #[inline]
+  fn default() -> Self {
+    MetricsBucketArgs {
+      count: 0,
+    }
+  }
+}
+
+pub struct MetricsBucketBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> MetricsBucketBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_count(&mut self, count: i32) {
+    self.fbb_.push_slot::<i32>(MetricsBucket::VT_COUNT, count, 0);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> MetricsBucketBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    MetricsBucketBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<MetricsBucket<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for MetricsBucket<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("MetricsBucket");
+      ds.field("count", &self.count());
+      ds.finish()
+  }
+}
 #[inline]
-/// Verifies that a buffer of bytes contains a `Context`
+/// Verifies that a buffer of bytes contains a `MetricsBucket`
 /// and returns it.
 /// Note that verification is still experimental and may not
 /// catch every error, or be maximally performant. For the
 /// previous, unchecked, behavior use
-/// `root_as_context_unchecked`.
-pub fn root_as_context(buf: &[u8]) -> Result<Context, flatbuffers::InvalidFlatbuffer> {
-  flatbuffers::root::<Context>(buf)
+/// `root_as_metrics_bucket_unchecked`.
+pub fn root_as_metrics_bucket(buf: &[u8]) -> Result<MetricsBucket, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::root::<MetricsBucket>(buf)
 }
 #[inline]
 /// Verifies that a buffer of bytes contains a size prefixed
-/// `Context` and returns it.
+/// `MetricsBucket` and returns it.
 /// Note that verification is still experimental and may not
 /// catch every error, or be maximally performant. For the
 /// previous, unchecked, behavior use
-/// `size_prefixed_root_as_context_unchecked`.
-pub fn size_prefixed_root_as_context(buf: &[u8]) -> Result<Context, flatbuffers::InvalidFlatbuffer> {
-  flatbuffers::size_prefixed_root::<Context>(buf)
+/// `size_prefixed_root_as_metrics_bucket_unchecked`.
+pub fn size_prefixed_root_as_metrics_bucket(buf: &[u8]) -> Result<MetricsBucket, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::size_prefixed_root::<MetricsBucket>(buf)
 }
 #[inline]
 /// Verifies, with the given options, that a buffer of bytes
-/// contains a `Context` and returns it.
+/// contains a `MetricsBucket` and returns it.
 /// Note that verification is still experimental and may not
 /// catch every error, or be maximally performant. For the
 /// previous, unchecked, behavior use
-/// `root_as_context_unchecked`.
-pub fn root_as_context_with_opts<'b, 'o>(
+/// `root_as_metrics_bucket_unchecked`.
+pub fn root_as_metrics_bucket_with_opts<'b, 'o>(
   opts: &'o flatbuffers::VerifierOptions,
   buf: &'b [u8],
-) -> Result<Context<'b>, flatbuffers::InvalidFlatbuffer> {
-  flatbuffers::root_with_opts::<Context<'b>>(opts, buf)
+) -> Result<MetricsBucket<'b>, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::root_with_opts::<MetricsBucket<'b>>(opts, buf)
 }
 #[inline]
 /// Verifies, with the given verifier options, that a buffer of
-/// bytes contains a size prefixed `Context` and returns
+/// bytes contains a size prefixed `MetricsBucket` and returns
 /// it. Note that verification is still experimental and may not
 /// catch every error, or be maximally performant. For the
 /// previous, unchecked, behavior use
-/// `root_as_context_unchecked`.
-pub fn size_prefixed_root_as_context_with_opts<'b, 'o>(
+/// `root_as_metrics_bucket_unchecked`.
+pub fn size_prefixed_root_as_metrics_bucket_with_opts<'b, 'o>(
   opts: &'o flatbuffers::VerifierOptions,
   buf: &'b [u8],
-) -> Result<Context<'b>, flatbuffers::InvalidFlatbuffer> {
-  flatbuffers::size_prefixed_root_with_opts::<Context<'b>>(opts, buf)
+) -> Result<MetricsBucket<'b>, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::size_prefixed_root_with_opts::<MetricsBucket<'b>>(opts, buf)
 }
 #[inline]
-/// Assumes, without verification, that a buffer of bytes contains a Context and returns it.
+/// Assumes, without verification, that a buffer of bytes contains a MetricsBucket and returns it.
 /// # Safety
-/// Callers must trust the given bytes do indeed contain a valid `Context`.
-pub unsafe fn root_as_context_unchecked(buf: &[u8]) -> Context {
-  flatbuffers::root_unchecked::<Context>(buf)
+/// Callers must trust the given bytes do indeed contain a valid `MetricsBucket`.
+pub unsafe fn root_as_metrics_bucket_unchecked(buf: &[u8]) -> MetricsBucket {
+  flatbuffers::root_unchecked::<MetricsBucket>(buf)
 }
 #[inline]
-/// Assumes, without verification, that a buffer of bytes contains a size prefixed Context and returns it.
+/// Assumes, without verification, that a buffer of bytes contains a size prefixed MetricsBucket and returns it.
 /// # Safety
-/// Callers must trust the given bytes do indeed contain a valid size prefixed `Context`.
-pub unsafe fn size_prefixed_root_as_context_unchecked(buf: &[u8]) -> Context {
-  flatbuffers::size_prefixed_root_unchecked::<Context>(buf)
+/// Callers must trust the given bytes do indeed contain a valid size prefixed `MetricsBucket`.
+pub unsafe fn size_prefixed_root_as_metrics_bucket_unchecked(buf: &[u8]) -> MetricsBucket {
+  flatbuffers::size_prefixed_root_unchecked::<MetricsBucket>(buf)
 }
 #[inline]
-pub fn finish_context_buffer<'a, 'b>(
+pub fn finish_metrics_bucket_buffer<'a, 'b>(
     fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-    root: flatbuffers::WIPOffset<Context<'a>>) {
+    root: flatbuffers::WIPOffset<MetricsBucket<'a>>) {
   fbb.finish(root, None);
 }
 
 #[inline]
-pub fn finish_size_prefixed_context_buffer<'a, 'b>(fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, root: flatbuffers::WIPOffset<Context<'a>>) {
+pub fn finish_size_prefixed_metrics_bucket_buffer<'a, 'b>(fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, root: flatbuffers::WIPOffset<MetricsBucket<'a>>) {
   fbb.finish_size_prefixed(root, None);
 }
 }  // pub mod messaging

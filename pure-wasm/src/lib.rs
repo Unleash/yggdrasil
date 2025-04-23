@@ -1,4 +1,5 @@
 use core::str;
+use chrono::{DateTime, TimeZone, Utc};
 use std::{
     cell::RefCell,
     collections::HashMap,
@@ -14,6 +15,7 @@ mod messaging {
 
 use flatbuffers::FlatBufferBuilder;
 use messaging::messaging::ResponseBuilder;
+use messaging::messaging::MetricsBucketBuilder;
 
 use unleash_yggdrasil::{Context as YggContext, EngineState};
 
@@ -132,12 +134,32 @@ pub fn build_response(enabled: Option<bool>, error: Option<&str>) -> Vec<u8> {
     })
 }
 
+pub fn build_metrics_response(
+    metrics: Option<unleash_types::client_metrics::MetricBucket>,
+) -> Vec<u8> {
+    BUILDER.with(|cell| {
+        let mut builder = cell.borrow_mut();
+        builder.reset();
+
+        let response = {
+            let mut resp_builder = MetricsBucketBuilder::new(&mut builder);
+            if let Some(metrics) = metrics {
+                resp_builder.add_count(metrics.toggles.iter().count() as i32);
+            }
+            resp_builder.finish()
+        };
+
+        builder.finish(response, None);
+        builder.finished_data().to_vec()
+    })
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
     unsafe {
         let bytes = std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize);
-        let ctx: messaging::messaging::Context =
-            flatbuffers::root::<messaging::messaging::Context>(bytes).expect("invalid context");
+        let ctx: messaging::messaging::ContextMessage =
+            flatbuffers::root::<messaging::messaging::ContextMessage>(bytes).expect("invalid context");
 
         let toggle_name = ctx.toggle_name().expect("You need to pass a toggle name and you also need to remove this expect before production!");
 
@@ -161,6 +183,22 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
         engine.count_toggle(toggle_name, enabled.unwrap_or(false));
 
         let response = build_response(enabled, None);
+
+        let ptr: u32 = response.as_ptr() as u32;
+        let len: u32 = response.len() as u32;
+        let packed: u64 = ((len as u64) << 32) | ptr as u64;
+        std::mem::forget(response);
+
+        packed
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn get_metrics(engine_ptr: i32, close_time: i64) -> u64 {
+    unsafe {
+        let engine = &mut *(engine_ptr as *mut EngineState);
+        let metrics = engine.get_metrics(DateTime::from_timestamp_nanos(close_time));
+        let response = build_metrics_response(metrics);
 
         let ptr: u32 = response.as_ptr() as u32;
         let len: u32 = response.len() as u32;

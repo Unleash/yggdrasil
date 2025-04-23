@@ -3,6 +3,7 @@
  */
 package io.getunleash.engine;
 
+import messaging.MetricsBucket;
 import org.junit.jupiter.api.Test;
 
 public class LibraryTest {
@@ -29,5 +30,16 @@ public class LibraryTest {
     engine.takeState(json);
     boolean result = engine.isEnabled("Feature.A", new Context());
     assert (result);
+  }
+
+  @Test
+  public void getMetricsReturnsCorrectResult() throws Exception {
+    var engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    boolean result = engine.isEnabled("Feature.A", new Context());
+    MetricsBucket bucket = engine.getMetrics();
+    assert (bucket.count() == 1);
   }
 }
