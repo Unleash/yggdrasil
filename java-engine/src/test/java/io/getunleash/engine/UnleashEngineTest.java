@@ -36,7 +36,7 @@ class TestSuite {
   public List<Map<String, Object>> variantTests;
 }
 
-class WasmEngineTest {
+class UnleashEngineTest {
 
   // Assume this is set up to be your feature JSON
   private final String simpleFeatures = loadFeaturesFromFile(
@@ -54,12 +54,12 @@ class WasmEngineTest {
     }
   }
 
-  private WasmEngine engine;
+  private UnleashEngine engine;
 
   @BeforeEach
   void createEngine() {
     // List<IStrategy> customStrategies = List.of(alwaysTrue("custom"));
-    engine = new WasmEngine();
+    engine = new UnleashEngine();
   }
 
   @Test
@@ -71,8 +71,8 @@ class WasmEngineTest {
   void testIsEnabled() throws Exception {
     engine.takeState(simpleFeatures);
 
-    WasmContext context = new WasmContext();
-    Boolean result = engine.checkEnabled("Feature.A", context);
+    Context context = new Context();
+    Boolean result = engine.isEnabled("Feature.A", context);
     assertNotNull(result);
     assertTrue(result);
   }

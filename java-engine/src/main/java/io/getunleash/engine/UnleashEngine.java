@@ -17,12 +17,12 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import messaging.Context;
+import messaging.ContextMessage;
 import messaging.PropertyEntry;
 import messaging.Response;
 import org.example.wasm.YggdrasilModule;
 
-public class WasmEngine {
+public class UnleashEngine {
 
   private Instance instance;
   private long enginePointer;
@@ -42,7 +42,7 @@ public class WasmEngine {
     }
   }
 
-  public static byte[] buildMessage(String toggleName, WasmContext context) {
+  public static byte[] buildMessage(String toggleName, Context context) {
     FlatBufferBuilder builder = new FlatBufferBuilder(1024);
 
     int toggleNameOffset = builder.createString(toggleName);
@@ -73,27 +73,27 @@ public class WasmEngine {
       propertyOffsets[i] = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
     }
 
-    Context.startContext(builder);
+    ContextMessage.startContextMessage(builder);
 
-    if (userIdOffset != 0) Context.addUserId(builder, userIdOffset);
-    if (sessionIdOffset != 0) Context.addSessionId(builder, sessionIdOffset);
-    if (appNameOffset != 0) Context.addAppName(builder, appNameOffset);
-    if (environmentOffset != 0) Context.addEnvironment(builder, environmentOffset);
+    if (userIdOffset != 0) ContextMessage.addUserId(builder, userIdOffset);
+    if (sessionIdOffset != 0) ContextMessage.addSessionId(builder, sessionIdOffset);
+    if (appNameOffset != 0) ContextMessage.addAppName(builder, appNameOffset);
+    if (environmentOffset != 0) ContextMessage.addEnvironment(builder, environmentOffset);
 
-    Context.addCurrentTime(builder, currentTimeOffset);
-    Context.addToggleName(builder, toggleNameOffset);
+    ContextMessage.addCurrentTime(builder, currentTimeOffset);
+    ContextMessage.addToggleName(builder, toggleNameOffset);
 
     if (propertyOffsets.length > 0) {
-      int propsVec = Context.createPropertiesVector(builder, propertyOffsets);
-      Context.addProperties(builder, propsVec);
+      int propsVec = ContextMessage.createPropertiesVector(builder, propertyOffsets);
+      ContextMessage.addProperties(builder, propsVec);
     }
 
-    int ctx = Context.endContext(builder);
+    int ctx = ContextMessage.endContextMessage(builder);
     builder.finish(ctx);
     return builder.sizedByteArray();
   }
 
-  public WasmEngine() {
+  public UnleashEngine() {
     ImportValues imports =
         ImportValues.builder()
             .addFunction(
@@ -152,7 +152,7 @@ public class WasmEngine {
     dealloc.apply(ptr, len);
   }
 
-  public boolean checkEnabled(String toggleName, WasmContext context)
+  public boolean isEnabled(String toggleName, Context context)
       throws JsonMappingException, JsonProcessingException {
 
     byte[] contextBytes = buildMessage(toggleName, context);

@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test;
 public class LibraryTest {
   @Test
   public void engineCanBeNewedUpWithoutError() throws Exception {
-    new WasmEngine();
+    new UnleashEngine();
   }
 
   @Test
   public void takeStateLoadsJsonCorrectly() throws Exception {
-    var engine = new WasmEngine();
+    var engine = new UnleashEngine();
 
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
@@ -22,12 +22,12 @@ public class LibraryTest {
 
   @Test
   public void isEnabledReturnsCorrectResult() throws Exception {
-    var engine = new WasmEngine();
+    var engine = new UnleashEngine();
 
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
     engine.takeState(json);
-    boolean result = engine.checkEnabled("Feature.A", new WasmContext());
+    boolean result = engine.isEnabled("Feature.A", new Context());
     assert (result);
   }
 }

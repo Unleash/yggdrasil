@@ -5,7 +5,7 @@ table PropertyEntry {
   value: string;
 }
 
-table Context {
+table ContextMessage {
   toggle_name: string;
   user_id: string;
   session_id: string;
@@ -23,5 +23,5 @@ table Response {
 }
 
 root_type Response;
-root_type Context;
+root_type ContextMessage;
 
