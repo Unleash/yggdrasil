@@ -22,6 +22,10 @@ table Response {
   error: string;
 }
 
+table MetricsBucket {
+    count: int;
+}
+
 root_type Response;
 root_type ContextMessage;
-
+root_type MetricsBucket;
