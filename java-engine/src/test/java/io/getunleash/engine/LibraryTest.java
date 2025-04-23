@@ -6,28 +6,28 @@ package io.getunleash.engine;
 import org.junit.Test;
 
 public class LibraryTest {
-    @Test
-    public void engineCanBeNewedUpWithoutError() throws Exception {
-        new WasmEngine();
-    }
+  @Test
+  public void engineCanBeNewedUpWithoutError() throws Exception {
+    new WasmEngine();
+  }
 
-    @Test
-    public void takeStateLoadsJsonCorrectly() throws Exception {
-        var engine = new WasmEngine();
+  @Test
+  public void takeStateLoadsJsonCorrectly() throws Exception {
+    var engine = new WasmEngine();
 
-        String path = "../test-data/simple.json";
-        String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
-        engine.takeState(json);
-    }
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+  }
 
-    @Test
-    public void isEnabledReturnsCorrectResult() throws Exception {
-        var engine = new WasmEngine();
+  @Test
+  public void isEnabledReturnsCorrectResult() throws Exception {
+    var engine = new WasmEngine();
 
-        String path = "../test-data/simple.json";
-        String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
-        engine.takeState(json);
-        boolean result = engine.checkEnabled("Feature.A", new WasmContext());
-        assert(result);
-    }
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    boolean result = engine.checkEnabled("Feature.A", new WasmContext());
+    assert (result);
+  }
 }
