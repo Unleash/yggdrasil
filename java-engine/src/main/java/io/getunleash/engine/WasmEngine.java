@@ -19,6 +19,7 @@ import messaging.PropertyEntry;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.example.wasm.YggdrasilModule;
@@ -44,49 +45,58 @@ public class WasmEngine {
     }
 
     public static byte[] buildMessage(String toggleName, WasmContext context) {
-        FlatBufferBuilder builder = new FlatBufferBuilder(1024); // is this big enough for most contexts? I want to say
-                                                                 // yes but needs some benching
-        Context.startContext(builder);
-
-        if (context.getUserId() != null) {
-            int userIdOffset = builder.createString(context.getUserId());
-            Context.addUserId(builder, userIdOffset);
-        }
-        if (context.getSessionId() != null) {
-            int sessionIdOffset = builder.createString(context.getSessionId());
-            Context.addSessionId(builder, sessionIdOffset);
-        }
-        if (context.getAppName() != null) {
-            int appNameOffset = builder.createString(context.getAppName());
-            Context.addAppName(builder, appNameOffset);
-        }
-        if (context.getCurrentTime() != null) {
-            int currentTimeOffset = builder.createString(context.getCurrentTime());
-            Context.addCurrentTime(builder, currentTimeOffset);
-        } else {
-            int currentTimeOffset = builder.createString(java.time.Instant.now().toString());
-            Context.addCurrentTime(builder, currentTimeOffset);
-        }
-
-        if (context.getEnvironment() != null) {
-            int environmentOffset = builder.createString(context.getEnvironment());
-            Context.addEnvironment(builder, environmentOffset);
-        }
+        FlatBufferBuilder builder = new FlatBufferBuilder(1024);
 
         int toggleNameOffset = builder.createString(toggleName);
+
+        int userIdOffset = context.getUserId() != null
+                ? builder.createString(context.getUserId())
+                : 0;
+
+        int sessionIdOffset = context.getSessionId() != null
+                ? builder.createString(context.getSessionId())
+                : 0;
+
+        int appNameOffset = context.getAppName() != null
+                ? builder.createString(context.getAppName())
+                : 0;
+
+        String currentTime = context.getCurrentTime() != null
+                ? context.getCurrentTime()
+                : java.time.Instant.now().toString();
+        int currentTimeOffset = builder.createString(currentTime);
+
+        int environmentOffset = context.getEnvironment() != null
+                ? builder.createString(context.getEnvironment())
+                : 0;
+
+        List<Map.Entry<String, String>> entries = new ArrayList<>(context.properties.entrySet());
+        int[] propertyOffsets = new int[entries.size()];
+        for (int i = 0; i < entries.size(); i++) {
+            Map.Entry<String, String> entry = entries.get(i);
+            int keyOffset = builder.createString(entry.getKey());
+            int valueOffset = builder.createString(entry.getValue());
+            propertyOffsets[i] = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
+        }
+
+        Context.startContext(builder);
+
+        if (userIdOffset != 0)
+            Context.addUserId(builder, userIdOffset);
+        if (sessionIdOffset != 0)
+            Context.addSessionId(builder, sessionIdOffset);
+        if (appNameOffset != 0)
+            Context.addAppName(builder, appNameOffset);
+        if (environmentOffset != 0)
+            Context.addEnvironment(builder, environmentOffset);
+
+        Context.addCurrentTime(builder, currentTimeOffset);
         Context.addToggleName(builder, toggleNameOffset);
 
-        int[] props = context.properties.entrySet().stream()
-                .map(entry -> {
-                    int keyOffset = builder.createString(entry.getKey());
-                    int valueOffset = builder.createString(entry.getValue());
-                    return PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
-                })
-                .mapToInt(Integer::intValue)
-                .toArray();
-
-        int propsVec = Context.createPropertiesVector(builder, props);
-        Context.addProperties(builder, propsVec);
+        if (propertyOffsets.length > 0) {
+            int propsVec = Context.createPropertiesVector(builder, propertyOffsets);
+            Context.addProperties(builder, propsVec);
+        }
 
         int ctx = Context.endContext(builder);
         builder.finish(ctx);
