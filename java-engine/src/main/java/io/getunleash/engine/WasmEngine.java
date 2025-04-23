@@ -43,13 +43,40 @@ public class WasmEngine {
         }
     }
 
-    public static byte[] buildContext(String toggleName, Map<String, String> properties) {
+    public static byte[] buildMessage(String toggleName, WasmContext context) {
         FlatBufferBuilder builder = new FlatBufferBuilder(1024); // is this big enough for most contexts? I want to say
                                                                  // yes but needs some benching
-        int toggleNameOffset = builder.createString(toggleName);
+        Context.startContext(builder);
 
-        // Build PropertyEntry vector
-        int[] props = properties.entrySet().stream()
+        if (context.getUserId() != null) {
+            int userIdOffset = builder.createString(context.getUserId());
+            Context.addUserId(builder, userIdOffset);
+        }
+        if (context.getSessionId() != null) {
+            int sessionIdOffset = builder.createString(context.getSessionId());
+            Context.addSessionId(builder, sessionIdOffset);
+        }
+        if (context.getAppName() != null) {
+            int appNameOffset = builder.createString(context.getAppName());
+            Context.addAppName(builder, appNameOffset);
+        }
+        if (context.getCurrentTime() != null) {
+            int currentTimeOffset = builder.createString(context.getCurrentTime());
+            Context.addCurrentTime(builder, currentTimeOffset);
+        } else {
+            int currentTimeOffset = builder.createString(java.time.Instant.now().toString());
+            Context.addCurrentTime(builder, currentTimeOffset);
+        }
+
+        if (context.getEnvironment() != null) {
+            int environmentOffset = builder.createString(context.getEnvironment());
+            Context.addEnvironment(builder, environmentOffset);
+        }
+
+        int toggleNameOffset = builder.createString(toggleName);
+        Context.addToggleName(builder, toggleNameOffset);
+
+        int[] props = context.properties.entrySet().stream()
                 .map(entry -> {
                     int keyOffset = builder.createString(entry.getKey());
                     int valueOffset = builder.createString(entry.getValue());
@@ -58,16 +85,10 @@ public class WasmEngine {
                 .mapToInt(Integer::intValue)
                 .toArray();
 
-        int userIdOffset = builder.createString("some-user-called-greg");
-
         int propsVec = Context.createPropertiesVector(builder, props);
-
-        Context.startContext(builder);
-        Context.addToggleName(builder, toggleNameOffset);
-        Context.addUserId(builder, userIdOffset);
         Context.addProperties(builder, propsVec);
-        int ctx = Context.endContext(builder);
 
+        int ctx = Context.endContext(builder);
         builder.finish(ctx);
         return builder.sizedByteArray();
     }
@@ -131,7 +152,7 @@ public class WasmEngine {
     public boolean checkEnabled(String toggleName, WasmContext context)
             throws JsonMappingException, JsonProcessingException {
 
-        byte[] contextBytes = buildContext(toggleName, context.getProperties());
+        byte[] contextBytes = buildMessage(toggleName, context);
         int contextPtr = (int) alloc.apply(contextBytes.length)[0];
         memory.write(contextPtr, contextBytes);
 

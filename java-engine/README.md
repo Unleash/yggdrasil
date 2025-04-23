@@ -5,7 +5,7 @@
 You need flatbuffers compiler version 23.1.21
 
 ```bash
-flatc --java -o java-engine/src/main/java/io/getunleash/engine/messaging flat-buffer-defs/enabled-message.fbs
+flatc --java -o java-engine/src/main/java flat-buffer-defs/enabled-message.fbs
 ```
 
 ## Build

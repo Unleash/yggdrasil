@@ -158,6 +158,7 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
 
         let engine = &mut *(engine_ptr as *mut EngineState);
         let enabled = engine.check_enabled(toggle_name, &context, &None);
+        engine.count_toggle(toggle_name, enabled.unwrap_or(false));
 
         let response = build_response(enabled, None);
 
