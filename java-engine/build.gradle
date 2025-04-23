@@ -34,6 +34,10 @@ spotless {
     }
 }
 
+test {
+    useJUnitPlatform()
+}
+
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
@@ -62,6 +66,12 @@ dependencies {
     implementation("io.getunleash:unleash-client-java:9.3.2")
 
     implementation("com.google.flatbuffers:flatbuffers-java:23.1.21")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
+
+    testImplementation("org.mockito:mockito-core:4.11.0")
+
+    testImplementation("org.slf4j:slf4j-simple:2.0.5")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
