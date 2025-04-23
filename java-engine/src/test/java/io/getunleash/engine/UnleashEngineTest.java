@@ -2,32 +2,14 @@ package io.getunleash.engine;
 
 // import static io.getunleash.engine.TestStrategies.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.params.provider.Arguments.of;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
 import java.io.IOException;
-import java.lang.ref.PhantomReference;
-import java.lang.ref.Reference;
-import java.lang.ref.ReferenceQueue;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
 
 class TestSuite {
   public String name;
@@ -39,8 +21,8 @@ class TestSuite {
 class UnleashEngineTest {
 
   // Assume this is set up to be your feature JSON
-  private final String simpleFeatures = loadFeaturesFromFile(
-      "../client-specification/specifications/01-simple-examples.json");
+  private final String simpleFeatures =
+      loadFeaturesFromFile("../client-specification/specifications/01-simple-examples.json");
 
   public static String loadFeaturesFromFile(String filePath) {
     ObjectMapper mapper = new ObjectMapper();
@@ -141,7 +123,8 @@ class UnleashEngineTest {
   //       false);
   //   File basePath = Paths.get("../client-specification/specifications").toFile();
   //   File indexFile = new File(basePath, "index.json");
-  //   List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<List<String>>() {
+  //   List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<List<String>>()
+  // {
   //   });
 
   //   for (String suite : testSuites) {
@@ -174,32 +157,33 @@ class UnleashEngineTest {
   //       }
   //     }
 
-      // List<Map<String, Object>> variantTests = suiteData.variantTests;
-      // if (variantTests != null) {
-      //   for (Map<String, Object> test : variantTests) {
-      //     String contextJson = objectMapper.writeValueAsString(test.get("context"));
-      //     Context context = objectMapper.readValue(contextJson, Context.class);
-      //     String toggleName = (String) test.get("toggleName");
+  // List<Map<String, Object>> variantTests = suiteData.variantTests;
+  // if (variantTests != null) {
+  //   for (Map<String, Object> test : variantTests) {
+  //     String contextJson = objectMapper.writeValueAsString(test.get("context"));
+  //     Context context = objectMapper.readValue(contextJson, Context.class);
+  //     String toggleName = (String) test.get("toggleName");
 
-      //     VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
-      //     VariantDef result = engine.getVariant(toggleName, context);
-      //     if (result == null) {
-      //       // this behavior should be implemented in the SDK
-      //       result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName,
-      //           context));
-      //     }
+  //     VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"),
+  // VariantDef.class);
+  //     VariantDef result = engine.getVariant(toggleName, context);
+  //     if (result == null) {
+  //       // this behavior should be implemented in the SDK
+  //       result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName,
+  //           context));
+  //     }
 
-      //     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
-      //     String resultJson = objectMapper.writeValueAsString(result);
+  //     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
+  //     String resultJson = objectMapper.writeValueAsString(result);
 
-      //     assertEquals(
-      //         expectedResultJson,
-      //         resultJson,
-      //         String.format(
-      //             "[%s] Failed test '%s': expected %b, got %b",
-      //             suiteData.name, test.get("description"), expectedResultJson, resultJson));
-      //   }
-      // }
+  //     assertEquals(
+  //         expectedResultJson,
+  //         resultJson,
+  //         String.format(
+  //             "[%s] Failed test '%s': expected %b, got %b",
+  //             suiteData.name, test.get("description"), expectedResultJson, resultJson));
+  //   }
+  // }
 
   //     System.out.printf("Completed specification '%s'%n", suite);
   //   }

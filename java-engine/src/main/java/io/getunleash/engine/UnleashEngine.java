@@ -191,8 +191,7 @@ public class UnleashEngine {
     return response.enabled();
   }
 
-  public MetricsBucket getMetrics()
-          throws JsonMappingException, JsonProcessingException {
+  public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
     long packed = (long) getMetrics.apply(this.enginePointer, now.toEpochSecond())[0];
     int ptr = (int) (packed & 0xFFFFFFFFL);
