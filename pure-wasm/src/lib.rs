@@ -6,6 +6,7 @@ use std::{
     ffi::{CString, c_char, c_void},
     mem, slice,
 };
+mod logging;
 
 #[allow(clippy::all)]
 mod messaging {
@@ -230,6 +231,7 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
         let packed: u64 = ((len as u64) << 32) | ptr as u64;
         std::mem::forget(response);
 
+        wasm_log!("{}: {}", toggle_name, context.runtime_hostname.unwrap_or_default());
         packed
     }
 }

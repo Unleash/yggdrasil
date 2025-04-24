@@ -36,6 +36,8 @@ public class UnleashEngine {
   private ExportFunction checkEnabled;
   private ExportFunction getMetrics;
   private ExportFunction deallocResponseBuffer;
+  private ExportFunction getLogBufferPtr;
+  private ExportFunction getLogBufferLen;
   private Memory memory;
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -154,6 +156,7 @@ public class UnleashEngine {
     this.checkEnabled = instance.export("check_enabled");
     this.getMetrics = instance.export("get_metrics");
     this.deallocResponseBuffer = instance.export("dealloc_response_buffer");
+    this.getLogBufferPtr = instance.export("get_log_buffer_ptr");
     this.memory = instance.memory();
 
     this.enginePointer = newEngine.apply()[0];
@@ -211,10 +214,16 @@ public class UnleashEngine {
 
     dealloc.apply(contextPtr, contextBytes.length);
     deallocResponseBuffer.apply(ptr, len);
+    readLog();
     if (response.hasEnabled()) {
       return response.enabled();
     }
     return null;
+  }
+
+  private void readLog() {
+    int start = (int) this.getLogBufferPtr.apply()[0];
+    System.out.println("DebugLog: " + memory.readCString(start));
   }
 
   public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {
