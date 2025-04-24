@@ -184,8 +184,6 @@ class UnleashEngineTest {
       //             suiteData.name, test.get("description"), expectedResultJson, resultJson));
       //   }
       // }
-
-      System.out.printf("Completed specification '%s'%n", suite);
     }
   }
 

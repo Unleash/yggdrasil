@@ -37,7 +37,6 @@ public class UnleashEngine {
   private ExportFunction getMetrics;
   private ExportFunction deallocResponseBuffer;
   private ExportFunction getLogBufferPtr;
-  private ExportFunction getLogBufferLen;
   private Memory memory;
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -51,11 +50,15 @@ public class UnleashEngine {
   }
 
   private static String getRuntimeHostname() {
-    try {
-      return InetAddress.getLocalHost().getHostName();
-    } catch (UnknownHostException e) {
-      return null;
+    String hostname = System.getProperty("hostname");
+    if (hostname == null) {
+      try {
+        hostname = InetAddress.getLocalHost().getHostName();
+      } catch (UnknownHostException e) {
+        hostname = "undefined";
+      }
     }
+    return hostname;
   }
 
   public static byte[] buildMessage(String toggleName, Context context) {
@@ -65,44 +68,54 @@ public class UnleashEngine {
 
     int userIdOffset = context.getUserId() != null ? builder.createString(context.getUserId()) : 0;
 
-    int sessionIdOffset =
-        context.getSessionId() != null ? builder.createString(context.getSessionId()) : 0;
+    int sessionIdOffset = context.getSessionId() != null ? builder.createString(context.getSessionId()) : 0;
 
-    int appNameOffset =
-        context.getAppName() != null ? builder.createString(context.getAppName()) : 0;
+    int appNameOffset = context.getAppName() != null ? builder.createString(context.getAppName()) : 0;
 
-    String currentTime =
-        context.getCurrentTime() != null
-            ? context.getCurrentTime()
-            : java.time.Instant.now().toString();
+    int remoteAddressOffset = context.getRemoteAddress() != null
+        ? builder.createString(context.getRemoteAddress())
+        : 0;
+
+    String currentTime = context.getCurrentTime() != null
+        ? context.getCurrentTime()
+        : java.time.Instant.now().toString();
     int currentTimeOffset = builder.createString(currentTime);
 
-    int environmentOffset =
-        context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
+    int environmentOffset = context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
 
     List<Map.Entry<String, String>> entries = new ArrayList<>(context.properties.entrySet());
-    int[] propertyOffsets = new int[entries.size()];
-    for (int i = 0; i < entries.size(); i++) {
-      Map.Entry<String, String> entry = entries.get(i);
+    List<Integer> offsets = new ArrayList<>();
+    for (Map.Entry<String, String> entry : entries) {
+      if (entry.getValue() == null) {
+        continue;
+      }
       int keyOffset = builder.createString(entry.getKey());
       int valueOffset = builder.createString(entry.getValue());
-      propertyOffsets[i] = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
+      int propOffset = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
+      offsets.add(propOffset);
     }
 
+    int[] propertyOffsets = offsets.stream().mapToInt(Integer::intValue).toArray();
+
     String runtimeHostname = getRuntimeHostname();
-    int runtimeHostnameOffset =
-        runtimeHostname != null
-            ? builder.createString(runtimeHostname)
-            : builder.createString(getRuntimeHostname());
+    int runtimeHostnameOffset = runtimeHostname != null
+        ? builder.createString(runtimeHostname)
+        : builder.createString(getRuntimeHostname());
 
     int propsVec = ContextMessage.createPropertiesVector(builder, propertyOffsets);
 
     ContextMessage.startContextMessage(builder);
 
-    if (userIdOffset != 0) ContextMessage.addUserId(builder, userIdOffset);
-    if (sessionIdOffset != 0) ContextMessage.addSessionId(builder, sessionIdOffset);
-    if (appNameOffset != 0) ContextMessage.addAppName(builder, appNameOffset);
-    if (environmentOffset != 0) ContextMessage.addEnvironment(builder, environmentOffset);
+    if (userIdOffset != 0)
+      ContextMessage.addUserId(builder, userIdOffset);
+    if (sessionIdOffset != 0)
+      ContextMessage.addSessionId(builder, sessionIdOffset);
+    if (appNameOffset != 0)
+      ContextMessage.addAppName(builder, appNameOffset);
+    if (environmentOffset != 0)
+      ContextMessage.addEnvironment(builder, environmentOffset);
+    if (remoteAddressOffset != 0)
+      ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
     if (runtimeHostnameOffset != 0)
       ContextMessage.addRuntimeHostname(builder, runtimeHostnameOffset);
 
@@ -119,35 +132,34 @@ public class UnleashEngine {
   }
 
   public UnleashEngine() {
-    ImportValues imports =
-        ImportValues.builder()
-            .addFunction(
-                new HostFunction(
-                    "env",
-                    "fill_random",
-                    List.of(ValueType.I32, ValueType.I32),
-                    List.of(ValueType.I32),
-                    (Instance instance, long... args) -> {
-                      int ptr = (int) args[0];
-                      int len = (int) args[1];
+    ImportValues imports = ImportValues.builder()
+        .addFunction(
+            new HostFunction(
+                "env",
+                "fill_random",
+                List.of(ValueType.I32, ValueType.I32),
+                List.of(ValueType.I32),
+                (Instance instance, long... args) -> {
+                  int ptr = (int) args[0];
+                  int len = (int) args[1];
 
-                      if (len <= 0 || ptr < 0) return new long[] {1};
+                  if (len <= 0 || ptr < 0)
+                    return new long[] { 1 };
 
-                      byte[] randomBytes = new byte[len];
-                      new SecureRandom().nextBytes(randomBytes);
+                  byte[] randomBytes = new byte[len];
+                  new SecureRandom().nextBytes(randomBytes);
 
-                      instance.memory().write(ptr, randomBytes);
+                  instance.memory().write(ptr, randomBytes);
 
-                      return new long[] {0};
-                    }))
-            .build();
+                  return new long[] { 0 };
+                }))
+        .build();
 
-    instance =
-        Instance.builder(YggdrasilModule.load())
-            .withMachineFactory(YggdrasilModule::create)
-            .withImportValues(imports)
-            .withMemoryFactory(limits -> new ByteBufferMemory(limits))
-            .build();
+    instance = Instance.builder(YggdrasilModule.load())
+        .withMachineFactory(YggdrasilModule::create)
+        .withImportValues(imports)
+        .withMemoryFactory(limits -> new ByteBufferMemory(limits))
+        .build();
 
     ExportFunction newEngine = instance.export("new_engine");
 
@@ -223,7 +235,10 @@ public class UnleashEngine {
 
   private void readLog() {
     int start = (int) this.getLogBufferPtr.apply()[0];
-    System.out.println("DebugLog: " + memory.readCString(start));
+    String msg = memory.readCString(start);
+    if (msg != null && !msg.isEmpty()) {
+      System.out.println("DebugLog: " + msg);
+    }
   }
 
   public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {
