@@ -202,6 +202,9 @@ public class UnleashEngine {
     buf.order(ByteOrder.LITTLE_ENDIAN); // Apparently flatBuffers are little-endian
     MetricsBucket bucket = MetricsBucket.getRootAsMetricsBucket(buf);
     deallocResponseBuffer.apply(ptr, len);
+    if (bucket.togglesVector() == null) {
+      return null;
+    }
     return bucket;
   }
 }
