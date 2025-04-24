@@ -43,8 +43,10 @@ public class LibraryTest {
     boolean result2 = engine.isEnabled("Feature.C", new Context());
     boolean result3 = engine.isEnabled("Feature.C", new Context());
     MetricsBucket bucket = engine.getMetrics();
-    ToggleEntry featA = bucket.toggles(0).key().equals("Feature.A") ? bucket.toggles(0) : bucket.toggles(1);
-    ToggleEntry featC = bucket.toggles(0).key().equals("Feature.C") ? bucket.toggles(0) : bucket.toggles(1);
+    ToggleEntry featA =
+        bucket.toggles(0).key().equals("Feature.A") ? bucket.toggles(0) : bucket.toggles(1);
+    ToggleEntry featC =
+        bucket.toggles(0).key().equals("Feature.C") ? bucket.toggles(0) : bucket.toggles(1);
     assert (featA.value().yes() == 1);
     assert (featC.value().yes() == 2);
   }
