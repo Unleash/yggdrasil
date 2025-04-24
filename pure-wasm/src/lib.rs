@@ -137,17 +137,41 @@ pub fn build_response(enabled: Option<bool>, error: Option<&str>) -> Vec<u8> {
 }
 
 pub fn build_metrics_response(
-    metrics: Option<unleash_types::client_metrics::MetricBucket>,
+    metrics: unleash_types::client_metrics::MetricBucket,
 ) -> Vec<u8> {
     BUILDER.with(|cell| {
         let mut builder = cell.borrow_mut();
         builder.reset();
 
         let response = {
+            let items: Vec<_> = metrics.toggles.iter().map(|(toggle_key, stats)| {
+                let variant_items: Vec<_> = stats.variants.iter().map(|(variant_key, count)| {
+                    let variant_key = builder.create_string(variant_key);
+                    let mut variant_builder =
+                        messaging::messaging::VariantEntryBuilder::new(&mut builder);
+                    variant_builder.add_key(variant_key);
+                    variant_builder.add_value(*count);
+                    variant_builder.finish()
+                }).collect();
+                let variant_vector = builder.create_vector(&variant_items);
+
+                let toggle_key = builder.create_string(toggle_key);
+                let mut toggle_builder = messaging::messaging::ToggleStatsBuilder::new(&mut builder);
+                toggle_builder.add_no(stats.no);
+                toggle_builder.add_yes(stats.yes);
+                toggle_builder.add_variants(variant_vector);
+                let toggle_value = toggle_builder.finish();
+                let mut toggle_entry_builder =
+                    messaging::messaging::ToggleEntryBuilder::new(&mut builder);
+                toggle_entry_builder.add_value(toggle_value);
+                toggle_entry_builder.add_key(toggle_key);
+                toggle_entry_builder.finish()
+            }).collect();
+            let toggle_vector = builder.create_vector(&items);
             let mut resp_builder = MetricsBucketBuilder::new(&mut builder);
-            if let Some(metrics) = metrics {
-                resp_builder.add_count(metrics.toggles.iter().count() as i32);
-            }
+                resp_builder.add_start(metrics.start.timestamp_nanos_opt().unwrap());
+                resp_builder.add_stop(metrics.stop.timestamp_nanos_opt().unwrap());
+                resp_builder.add_toggles(toggle_vector);
             resp_builder.finish()
         };
 
@@ -201,7 +225,7 @@ pub extern "C" fn get_metrics(engine_ptr: i32, close_time: i64) -> u64 {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
         let metrics = engine.get_metrics(DateTime::from_timestamp_nanos(close_time));
-        let response = build_metrics_response(metrics);
+        let response = build_metrics_response(metrics.unwrap());
 
         let ptr: u32 = response.as_ptr() as u32;
         let len: u32 = response.len() as u32;

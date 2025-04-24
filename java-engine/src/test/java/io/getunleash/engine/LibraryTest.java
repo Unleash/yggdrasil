@@ -4,6 +4,7 @@
 package io.getunleash.engine;
 
 import messaging.MetricsBucket;
+import messaging.ToggleEntry;
 import org.junit.jupiter.api.Test;
 
 public class LibraryTest {
@@ -39,7 +40,12 @@ public class LibraryTest {
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
     engine.takeState(json);
     boolean result = engine.isEnabled("Feature.A", new Context());
+    boolean result2 = engine.isEnabled("Feature.C", new Context());
+    boolean result3 = engine.isEnabled("Feature.C", new Context());
     MetricsBucket bucket = engine.getMetrics();
-    assert (bucket.count() == 1);
+    ToggleEntry featA = bucket.toggles(0).key().equals("Feature.A") ? bucket.toggles(0) : bucket.toggles(1);
+    ToggleEntry featC = bucket.toggles(0).key().equals("Feature.C") ? bucket.toggles(0) : bucket.toggles(1);
+    assert (featA.value().yes() == 1);
+    assert (featC.value().yes() == 2);
   }
 }
