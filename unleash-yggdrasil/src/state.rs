@@ -11,8 +11,8 @@ pub struct EnrichedContext {
     pub remote_address: Option<String>,
     pub properties: Option<HashMap<String, String>>,
     pub external_results: Option<HashMap<String, bool>>,
-    pub(crate) toggle_name: String,
-    pub(crate) runtime_hostname: Option<String>,
+    pub toggle_name: String,
+    pub runtime_hostname: Option<String>,
 }
 
 impl EnrichedContext {

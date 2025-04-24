@@ -11,6 +11,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.flatbuffers.FlatBufferBuilder;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.SecureRandom;
@@ -46,6 +48,14 @@ public class UnleashEngine {
     }
   }
 
+  private static String getRuntimeHostname() {
+    try {
+      return InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException e) {
+      return null;
+    }
+  }
+
   public static byte[] buildMessage(String toggleName, Context context) {
     FlatBufferBuilder builder = new FlatBufferBuilder(1024);
 
@@ -77,18 +87,27 @@ public class UnleashEngine {
       propertyOffsets[i] = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
     }
 
+    String runtimeHostname = getRuntimeHostname();
+    int runtimeHostnameOffset =
+        runtimeHostname != null
+            ? builder.createString(runtimeHostname)
+            : builder.createString(getRuntimeHostname());
+
+    int propsVec = ContextMessage.createPropertiesVector(builder, propertyOffsets);
+
     ContextMessage.startContextMessage(builder);
 
     if (userIdOffset != 0) ContextMessage.addUserId(builder, userIdOffset);
     if (sessionIdOffset != 0) ContextMessage.addSessionId(builder, sessionIdOffset);
     if (appNameOffset != 0) ContextMessage.addAppName(builder, appNameOffset);
     if (environmentOffset != 0) ContextMessage.addEnvironment(builder, environmentOffset);
+    if (runtimeHostnameOffset != 0)
+      ContextMessage.addRuntimeHostname(builder, runtimeHostnameOffset);
 
     ContextMessage.addCurrentTime(builder, currentTimeOffset);
     ContextMessage.addToggleName(builder, toggleNameOffset);
 
     if (propertyOffsets.length > 0) {
-      int propsVec = ContextMessage.createPropertiesVector(builder, propertyOffsets);
       ContextMessage.addProperties(builder, propsVec);
     }
 
@@ -157,7 +176,7 @@ public class UnleashEngine {
     dealloc.apply(ptr, len);
   }
 
-  public boolean isEnabled(String toggleName, Context context)
+  public Boolean isEnabled(String toggleName, Context context)
       throws JsonMappingException, JsonProcessingException {
 
     byte[] contextBytes = buildMessage(toggleName, context);
@@ -170,12 +189,16 @@ public class UnleashEngine {
     // 1) a pointer
     // 2) a length so we can read the pointer value to the end but not beyond
     // However, we don't have a way to pass complex objects back to the host
-    // function. We can use a pre-allocated shared buffer but we would need to have that
-    // buffer size appropriately tuned for real workloads. Which requires a bunch of experimentation
-    // sooooo... instead we hack this. We're using 32 bit WASM here, which means pointers are 32
+    // function. We can use a pre-allocated shared buffer but we would need to have
+    // that
+    // buffer size appropriately tuned for real workloads. Which requires a bunch of
+    // experimentation
+    // sooooo... instead we hack this. We're using 32 bit WASM here, which means
+    // pointers are 32
     // bits
     // and we need a second 32 bit number to represent the length of the buffer.
-    // We can pass a 64 bit number across the WASM boundary, which is really two 32 bit numbers
+    // We can pass a 64 bit number across the WASM boundary, which is really two 32
+    // bit numbers
     // wearing a silly hat
     int ptr = (int) (packed & 0xFFFFFFFFL);
     int len = (int) (packed >>> 32);
@@ -188,7 +211,10 @@ public class UnleashEngine {
 
     dealloc.apply(contextPtr, contextBytes.length);
     deallocResponseBuffer.apply(ptr, len);
-    return response.enabled();
+    if (response.hasEnabled()) {
+      return response.enabled();
+    }
+    return null;
   }
 
   public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {

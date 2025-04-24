@@ -13,6 +13,7 @@ table ContextMessage {
   app_name: string;
   current_time: string;
   remote_address: string;
+  runtime_hostname: string;
   properties: [PropertyEntry];
 }
 
