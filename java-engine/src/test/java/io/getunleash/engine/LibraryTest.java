@@ -50,4 +50,14 @@ public class LibraryTest {
     assert (featA.value().yes() == 1);
     assert (featC.value().yes() == 2);
   }
+
+  @Test
+  public void getEmptyMetricsBucketReturnsNull() throws Exception {
+    var engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    MetricsBucket bucket = engine.getMetrics();
+    assert (bucket == null);
+  }
 }
