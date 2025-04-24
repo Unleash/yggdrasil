@@ -3,8 +3,11 @@ package io.getunleash.engine;
 // import static io.getunleash.engine.TestStrategies.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
@@ -61,11 +64,11 @@ class UnleashEngineTest {
 
   // @Test
   // void testIsEnabledWithoutValidResponse() throws Exception {
-  //   engine.takeState(simpleFeatures);
+  // engine.takeState(simpleFeatures);
 
-  //   WasmContext context = new WasmContext();
-  //   Boolean result = engine.checkEnabled("IDoNotExist", context);
-  //   assertNull(result); // not found
+  // WasmContext context = new WasmContext();
+  // Boolean result = engine.checkEnabled("IDoNotExist", context);
+  // assertNull(result); // not found
   // }
 
   // @Test
@@ -116,78 +119,75 @@ class UnleashEngineTest {
   // assertEquals("experiment", featureA.get().getType().get());
   // }
 
-  // @Test
-  // public void testClientSpec() throws Exception {
-  //   ObjectMapper objectMapper = new ObjectMapper();
-  //   objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
-  //       false);
-  //   File basePath = Paths.get("../client-specification/specifications").toFile();
-  //   File indexFile = new File(basePath, "index.json");
-  //   List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<List<String>>()
-  // {
-  //   });
+  @Test
+  public void testClientSpec() throws Exception {
+    ObjectMapper objectMapper = new ObjectMapper();
+    objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    File basePath = Paths.get("../client-specification/specifications").toFile();
+    File indexFile = new File(basePath, "index.json");
+    List<String> testSuites =
+        objectMapper.readValue(indexFile, new TypeReference<List<String>>() {});
 
-  //   for (String suite : testSuites) {
-  //     File suiteFile = new File(basePath, suite);
-  //     TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {
-  //     });
+    for (String suite : testSuites) {
+      File suiteFile = new File(basePath, suite);
+      TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {});
 
-  //     engine.takeState(objectMapper.writeValueAsString(suiteData.state));
+      engine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
-  //     List<Map<String, Object>> tests = suiteData.tests;
-  //     if (tests != null) {
-  //       for (Map<String, Object> test : tests) {
-  //         String contextJson = objectMapper.writeValueAsString(test.get("context"));
-  //         WasmContext context = objectMapper.readValue(contextJson, WasmContext.class);
-  //         String toggleName = (String) test.get("toggleName");
-  //         boolean expectedResult = (Boolean) test.get("expectedResult");
+      List<Map<String, Object>> tests = suiteData.tests;
+      if (tests != null) {
+        for (Map<String, Object> test : tests) {
+          String contextJson = objectMapper.writeValueAsString(test.get("context"));
+          Context context = objectMapper.readValue(contextJson, Context.class);
+          String toggleName = (String) test.get("toggleName");
+          boolean expectedResult = (Boolean) test.get("expectedResult");
 
-  //         Boolean result = engine.checkEnabled(toggleName, context);
+          Boolean result = engine.isEnabled(toggleName, context);
 
-  //         if (result == null) {
-  //           result = false; // Default should be provided by SDK
-  //         }
+          if (result == null) {
+            result = false; // Default should be provided by SDK
+          }
 
-  //         assertEquals(
-  //             expectedResult,
-  //             result,
-  //             String.format(
-  //                 "[%s] Failed test '%s': expected %b, got %b",
-  //                 suiteData.name, test.get("description"), expectedResult, result));
-  //       }
-  //     }
+          assertEquals(
+              expectedResult,
+              result,
+              String.format(
+                  "[%s] Failed test '%s': expected %b, got %b",
+                  suiteData.name, test.get("description"), expectedResult, result));
+        }
+      }
 
-  // List<Map<String, Object>> variantTests = suiteData.variantTests;
-  // if (variantTests != null) {
-  //   for (Map<String, Object> test : variantTests) {
-  //     String contextJson = objectMapper.writeValueAsString(test.get("context"));
-  //     Context context = objectMapper.readValue(contextJson, Context.class);
-  //     String toggleName = (String) test.get("toggleName");
+      // List<Map<String, Object>> variantTests = suiteData.variantTests;
+      // if (variantTests != null) {
+      //   for (Map<String, Object> test : variantTests) {
+      //     String contextJson = objectMapper.writeValueAsString(test.get("context"));
+      //     Context context = objectMapper.readValue(contextJson, Context.class);
+      //     String toggleName = (String) test.get("toggleName");
 
-  //     VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"),
-  // VariantDef.class);
-  //     VariantDef result = engine.getVariant(toggleName, context);
-  //     if (result == null) {
-  //       // this behavior should be implemented in the SDK
-  //       result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName,
-  //           context));
-  //     }
+      //     VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"),
+      //         VariantDef.class);
+      //     VariantDef result = engine.getVariant(toggleName, context);
+      //     if (result == null) {
+      //       // this behavior should be implemented in the SDK
+      //       result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName,
+      //           context));
+      //     }
 
-  //     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
-  //     String resultJson = objectMapper.writeValueAsString(result);
+      //     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
+      //     String resultJson = objectMapper.writeValueAsString(result);
 
-  //     assertEquals(
-  //         expectedResultJson,
-  //         resultJson,
-  //         String.format(
-  //             "[%s] Failed test '%s': expected %b, got %b",
-  //             suiteData.name, test.get("description"), expectedResultJson, resultJson));
-  //   }
-  // }
+      //     assertEquals(
+      //         expectedResultJson,
+      //         resultJson,
+      //         String.format(
+      //             "[%s] Failed test '%s': expected %b, got %b",
+      //             suiteData.name, test.get("description"), expectedResultJson, resultJson));
+      //   }
+      // }
 
-  //     System.out.printf("Completed specification '%s'%n", suite);
-  //   }
-  // }
+      System.out.printf("Completed specification '%s'%n", suite);
+    }
+  }
 
   // @Test
   // void testMetrics() throws YggdrasilError {
