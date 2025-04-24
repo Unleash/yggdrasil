@@ -68,20 +68,23 @@ public class UnleashEngine {
 
     int userIdOffset = context.getUserId() != null ? builder.createString(context.getUserId()) : 0;
 
-    int sessionIdOffset = context.getSessionId() != null ? builder.createString(context.getSessionId()) : 0;
+    int sessionIdOffset =
+        context.getSessionId() != null ? builder.createString(context.getSessionId()) : 0;
 
-    int appNameOffset = context.getAppName() != null ? builder.createString(context.getAppName()) : 0;
+    int appNameOffset =
+        context.getAppName() != null ? builder.createString(context.getAppName()) : 0;
 
-    int remoteAddressOffset = context.getRemoteAddress() != null
-        ? builder.createString(context.getRemoteAddress())
-        : 0;
+    int remoteAddressOffset =
+        context.getRemoteAddress() != null ? builder.createString(context.getRemoteAddress()) : 0;
 
-    String currentTime = context.getCurrentTime() != null
-        ? context.getCurrentTime()
-        : java.time.Instant.now().toString();
+    String currentTime =
+        context.getCurrentTime() != null
+            ? context.getCurrentTime()
+            : java.time.Instant.now().toString();
     int currentTimeOffset = builder.createString(currentTime);
 
-    int environmentOffset = context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
+    int environmentOffset =
+        context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
 
     List<Map.Entry<String, String>> entries = new ArrayList<>(context.properties.entrySet());
     List<Integer> offsets = new ArrayList<>();
@@ -98,24 +101,20 @@ public class UnleashEngine {
     int[] propertyOffsets = offsets.stream().mapToInt(Integer::intValue).toArray();
 
     String runtimeHostname = getRuntimeHostname();
-    int runtimeHostnameOffset = runtimeHostname != null
-        ? builder.createString(runtimeHostname)
-        : builder.createString(getRuntimeHostname());
+    int runtimeHostnameOffset =
+        runtimeHostname != null
+            ? builder.createString(runtimeHostname)
+            : builder.createString(getRuntimeHostname());
 
     int propsVec = ContextMessage.createPropertiesVector(builder, propertyOffsets);
 
     ContextMessage.startContextMessage(builder);
 
-    if (userIdOffset != 0)
-      ContextMessage.addUserId(builder, userIdOffset);
-    if (sessionIdOffset != 0)
-      ContextMessage.addSessionId(builder, sessionIdOffset);
-    if (appNameOffset != 0)
-      ContextMessage.addAppName(builder, appNameOffset);
-    if (environmentOffset != 0)
-      ContextMessage.addEnvironment(builder, environmentOffset);
-    if (remoteAddressOffset != 0)
-      ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
+    if (userIdOffset != 0) ContextMessage.addUserId(builder, userIdOffset);
+    if (sessionIdOffset != 0) ContextMessage.addSessionId(builder, sessionIdOffset);
+    if (appNameOffset != 0) ContextMessage.addAppName(builder, appNameOffset);
+    if (environmentOffset != 0) ContextMessage.addEnvironment(builder, environmentOffset);
+    if (remoteAddressOffset != 0) ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
     if (runtimeHostnameOffset != 0)
       ContextMessage.addRuntimeHostname(builder, runtimeHostnameOffset);
 
@@ -132,34 +131,35 @@ public class UnleashEngine {
   }
 
   public UnleashEngine() {
-    ImportValues imports = ImportValues.builder()
-        .addFunction(
-            new HostFunction(
-                "env",
-                "fill_random",
-                List.of(ValueType.I32, ValueType.I32),
-                List.of(ValueType.I32),
-                (Instance instance, long... args) -> {
-                  int ptr = (int) args[0];
-                  int len = (int) args[1];
+    ImportValues imports =
+        ImportValues.builder()
+            .addFunction(
+                new HostFunction(
+                    "env",
+                    "fill_random",
+                    List.of(ValueType.I32, ValueType.I32),
+                    List.of(ValueType.I32),
+                    (Instance instance, long... args) -> {
+                      int ptr = (int) args[0];
+                      int len = (int) args[1];
 
-                  if (len <= 0 || ptr < 0)
-                    return new long[] { 1 };
+                      if (len <= 0 || ptr < 0) return new long[] {1};
 
-                  byte[] randomBytes = new byte[len];
-                  new SecureRandom().nextBytes(randomBytes);
+                      byte[] randomBytes = new byte[len];
+                      new SecureRandom().nextBytes(randomBytes);
 
-                  instance.memory().write(ptr, randomBytes);
+                      instance.memory().write(ptr, randomBytes);
 
-                  return new long[] { 0 };
-                }))
-        .build();
+                      return new long[] {0};
+                    }))
+            .build();
 
-    instance = Instance.builder(YggdrasilModule.load())
-        .withMachineFactory(YggdrasilModule::create)
-        .withImportValues(imports)
-        .withMemoryFactory(limits -> new ByteBufferMemory(limits))
-        .build();
+    instance =
+        Instance.builder(YggdrasilModule.load())
+            .withMachineFactory(YggdrasilModule::create)
+            .withImportValues(imports)
+            .withMemoryFactory(limits -> new ByteBufferMemory(limits))
+            .build();
 
     ExportFunction newEngine = instance.export("new_engine");
 
