@@ -23,8 +23,29 @@ table Response {
   error: string;
 }
 
+// Helper table to simulate HashMap<String, u32>
+table VariantEntry {
+  key: string;
+  value: uint;
+}
+
+table ToggleStats {
+  no: uint = 0;
+  yes: uint = 0;
+  variants: [VariantEntry];
+}
+
+// Helper table to simulate HashMap<String, ToggleStats>
+table ToggleEntry {
+  key: string;
+  value: ToggleStats;
+}
+
 table MetricsBucket {
-    count: int;
+  // Representing DateTime<Utc> as UNIX timestamp in milliseconds
+  start: long;
+  stop: long;
+  toggles: [ToggleEntry];
 }
 
 root_type Response;

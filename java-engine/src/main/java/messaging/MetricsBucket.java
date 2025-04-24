@@ -33,23 +33,72 @@ public final class MetricsBucket extends Table {
     return this;
   }
 
-  public int count() {
+  public long start() {
     int o = __offset(4);
-    return o != 0 ? bb.getInt(o + bb_pos) : 0;
+    return o != 0 ? bb.getLong(o + bb_pos) : 0L;
   }
 
-  public static int createMetricsBucket(FlatBufferBuilder builder, int count) {
-    builder.startTable(1);
-    MetricsBucket.addCount(builder, count);
+  public long stop() {
+    int o = __offset(6);
+    return o != 0 ? bb.getLong(o + bb_pos) : 0L;
+  }
+
+  public messaging.ToggleEntry toggles(int j) {
+    return toggles(new messaging.ToggleEntry(), j);
+  }
+
+  public messaging.ToggleEntry toggles(messaging.ToggleEntry obj, int j) {
+    int o = __offset(8);
+    return o != 0 ? obj.__assign(__indirect(__vector(o) + j * 4), bb) : null;
+  }
+
+  public int togglesLength() {
+    int o = __offset(8);
+    return o != 0 ? __vector_len(o) : 0;
+  }
+
+  public messaging.ToggleEntry.Vector togglesVector() {
+    return togglesVector(new messaging.ToggleEntry.Vector());
+  }
+
+  public messaging.ToggleEntry.Vector togglesVector(messaging.ToggleEntry.Vector obj) {
+    int o = __offset(8);
+    return o != 0 ? obj.__assign(__vector(o), 4, bb) : null;
+  }
+
+  public static int createMetricsBucket(
+      FlatBufferBuilder builder, long start, long stop, int togglesOffset) {
+    builder.startTable(3);
+    MetricsBucket.addStop(builder, stop);
+    MetricsBucket.addStart(builder, start);
+    MetricsBucket.addToggles(builder, togglesOffset);
     return MetricsBucket.endMetricsBucket(builder);
   }
 
   public static void startMetricsBucket(FlatBufferBuilder builder) {
-    builder.startTable(1);
+    builder.startTable(3);
   }
 
-  public static void addCount(FlatBufferBuilder builder, int count) {
-    builder.addInt(0, count, 0);
+  public static void addStart(FlatBufferBuilder builder, long start) {
+    builder.addLong(0, start, 0L);
+  }
+
+  public static void addStop(FlatBufferBuilder builder, long stop) {
+    builder.addLong(1, stop, 0L);
+  }
+
+  public static void addToggles(FlatBufferBuilder builder, int togglesOffset) {
+    builder.addOffset(2, togglesOffset, 0);
+  }
+
+  public static int createTogglesVector(FlatBufferBuilder builder, int[] data) {
+    builder.startVector(4, data.length, 4);
+    for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]);
+    return builder.endVector();
+  }
+
+  public static void startTogglesVector(FlatBufferBuilder builder, int numElems) {
+    builder.startVector(4, numElems, 4);
   }
 
   public static int endMetricsBucket(FlatBufferBuilder builder) {

@@ -507,6 +507,365 @@ impl core::fmt::Debug for Response<'_> {
       ds.finish()
   }
 }
+pub enum VariantEntryOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct VariantEntry<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for VariantEntry<'a> {
+  type Inner = VariantEntry<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> VariantEntry<'a> {
+  pub const VT_KEY: flatbuffers::VOffsetT = 4;
+  pub const VT_VALUE: flatbuffers::VOffsetT = 6;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    VariantEntry { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args VariantEntryArgs<'args>
+  ) -> flatbuffers::WIPOffset<VariantEntry<'bldr>> {
+    let mut builder = VariantEntryBuilder::new(_fbb);
+    builder.add_value(args.value);
+    if let Some(x) = args.key { builder.add_key(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn key(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(VariantEntry::VT_KEY, None)}
+  }
+  #[inline]
+  pub fn value(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(VariantEntry::VT_VALUE, Some(0)).unwrap()}
+  }
+}
+
+impl flatbuffers::Verifiable for VariantEntry<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("key", Self::VT_KEY, false)?
+     .visit_field::<u32>("value", Self::VT_VALUE, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct VariantEntryArgs<'a> {
+    pub key: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub value: u32,
+}
+impl<'a> Default for VariantEntryArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    VariantEntryArgs {
+      key: None,
+      value: 0,
+    }
+  }
+}
+
+pub struct VariantEntryBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> VariantEntryBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_key(&mut self, key: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(VariantEntry::VT_KEY, key);
+  }
+  #[inline]
+  pub fn add_value(&mut self, value: u32) {
+    self.fbb_.push_slot::<u32>(VariantEntry::VT_VALUE, value, 0);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> VariantEntryBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    VariantEntryBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<VariantEntry<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for VariantEntry<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("VariantEntry");
+      ds.field("key", &self.key());
+      ds.field("value", &self.value());
+      ds.finish()
+  }
+}
+pub enum ToggleStatsOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct ToggleStats<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for ToggleStats<'a> {
+  type Inner = ToggleStats<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> ToggleStats<'a> {
+  pub const VT_NO: flatbuffers::VOffsetT = 4;
+  pub const VT_YES: flatbuffers::VOffsetT = 6;
+  pub const VT_VARIANTS: flatbuffers::VOffsetT = 8;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    ToggleStats { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args ToggleStatsArgs<'args>
+  ) -> flatbuffers::WIPOffset<ToggleStats<'bldr>> {
+    let mut builder = ToggleStatsBuilder::new(_fbb);
+    if let Some(x) = args.variants { builder.add_variants(x); }
+    builder.add_yes(args.yes);
+    builder.add_no(args.no);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn no(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(ToggleStats::VT_NO, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn yes(&self) -> u32 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<u32>(ToggleStats::VT_YES, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn variants(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<VariantEntry<'a>>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<VariantEntry>>>>(ToggleStats::VT_VARIANTS, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for ToggleStats<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<u32>("no", Self::VT_NO, false)?
+     .visit_field::<u32>("yes", Self::VT_YES, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<VariantEntry>>>>("variants", Self::VT_VARIANTS, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct ToggleStatsArgs<'a> {
+    pub no: u32,
+    pub yes: u32,
+    pub variants: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<VariantEntry<'a>>>>>,
+}
+impl<'a> Default for ToggleStatsArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    ToggleStatsArgs {
+      no: 0,
+      yes: 0,
+      variants: None,
+    }
+  }
+}
+
+pub struct ToggleStatsBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> ToggleStatsBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_no(&mut self, no: u32) {
+    self.fbb_.push_slot::<u32>(ToggleStats::VT_NO, no, 0);
+  }
+  #[inline]
+  pub fn add_yes(&mut self, yes: u32) {
+    self.fbb_.push_slot::<u32>(ToggleStats::VT_YES, yes, 0);
+  }
+  #[inline]
+  pub fn add_variants(&mut self, variants: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<VariantEntry<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ToggleStats::VT_VARIANTS, variants);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> ToggleStatsBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    ToggleStatsBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<ToggleStats<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for ToggleStats<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("ToggleStats");
+      ds.field("no", &self.no());
+      ds.field("yes", &self.yes());
+      ds.field("variants", &self.variants());
+      ds.finish()
+  }
+}
+pub enum ToggleEntryOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct ToggleEntry<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for ToggleEntry<'a> {
+  type Inner = ToggleEntry<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> ToggleEntry<'a> {
+  pub const VT_KEY: flatbuffers::VOffsetT = 4;
+  pub const VT_VALUE: flatbuffers::VOffsetT = 6;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    ToggleEntry { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args ToggleEntryArgs<'args>
+  ) -> flatbuffers::WIPOffset<ToggleEntry<'bldr>> {
+    let mut builder = ToggleEntryBuilder::new(_fbb);
+    if let Some(x) = args.value { builder.add_value(x); }
+    if let Some(x) = args.key { builder.add_key(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn key(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ToggleEntry::VT_KEY, None)}
+  }
+  #[inline]
+  pub fn value(&self) -> Option<ToggleStats<'a>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<ToggleStats>>(ToggleEntry::VT_VALUE, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for ToggleEntry<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("key", Self::VT_KEY, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<ToggleStats>>("value", Self::VT_VALUE, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct ToggleEntryArgs<'a> {
+    pub key: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub value: Option<flatbuffers::WIPOffset<ToggleStats<'a>>>,
+}
+impl<'a> Default for ToggleEntryArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    ToggleEntryArgs {
+      key: None,
+      value: None,
+    }
+  }
+}
+
+pub struct ToggleEntryBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> ToggleEntryBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_key(&mut self, key: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ToggleEntry::VT_KEY, key);
+  }
+  #[inline]
+  pub fn add_value(&mut self, value: flatbuffers::WIPOffset<ToggleStats<'b >>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<ToggleStats>>(ToggleEntry::VT_VALUE, value);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> ToggleEntryBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    ToggleEntryBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<ToggleEntry<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for ToggleEntry<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("ToggleEntry");
+      ds.field("key", &self.key());
+      ds.field("value", &self.value());
+      ds.finish()
+  }
+}
 pub enum MetricsBucketOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
@@ -523,7 +882,9 @@ impl<'a> flatbuffers::Follow<'a> for MetricsBucket<'a> {
 }
 
 impl<'a> MetricsBucket<'a> {
-  pub const VT_COUNT: flatbuffers::VOffsetT = 4;
+  pub const VT_START: flatbuffers::VOffsetT = 4;
+  pub const VT_STOP: flatbuffers::VOffsetT = 6;
+  pub const VT_TOGGLES: flatbuffers::VOffsetT = 8;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -532,20 +893,36 @@ impl<'a> MetricsBucket<'a> {
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
     _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
-    args: &'args MetricsBucketArgs
+    args: &'args MetricsBucketArgs<'args>
   ) -> flatbuffers::WIPOffset<MetricsBucket<'bldr>> {
     let mut builder = MetricsBucketBuilder::new(_fbb);
-    builder.add_count(args.count);
+    builder.add_stop(args.stop);
+    builder.add_start(args.start);
+    if let Some(x) = args.toggles { builder.add_toggles(x); }
     builder.finish()
   }
 
 
   #[inline]
-  pub fn count(&self) -> i32 {
+  pub fn start(&self) -> i64 {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<i32>(MetricsBucket::VT_COUNT, Some(0)).unwrap()}
+    unsafe { self._tab.get::<i64>(MetricsBucket::VT_START, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn stop(&self) -> i64 {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<i64>(MetricsBucket::VT_STOP, Some(0)).unwrap()}
+  }
+  #[inline]
+  pub fn toggles(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<ToggleEntry<'a>>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<ToggleEntry>>>>(MetricsBucket::VT_TOGGLES, None)}
   }
 }
 
@@ -556,19 +933,25 @@ impl flatbuffers::Verifiable for MetricsBucket<'_> {
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
-     .visit_field::<i32>("count", Self::VT_COUNT, false)?
+     .visit_field::<i64>("start", Self::VT_START, false)?
+     .visit_field::<i64>("stop", Self::VT_STOP, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<ToggleEntry>>>>("toggles", Self::VT_TOGGLES, false)?
      .finish();
     Ok(())
   }
 }
-pub struct MetricsBucketArgs {
-    pub count: i32,
+pub struct MetricsBucketArgs<'a> {
+    pub start: i64,
+    pub stop: i64,
+    pub toggles: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<ToggleEntry<'a>>>>>,
 }
-impl<'a> Default for MetricsBucketArgs {
+impl<'a> Default for MetricsBucketArgs<'a> {
   #[inline]
   fn default() -> Self {
     MetricsBucketArgs {
-      count: 0,
+      start: 0,
+      stop: 0,
+      toggles: None,
     }
   }
 }
@@ -579,8 +962,16 @@ pub struct MetricsBucketBuilder<'a: 'b, 'b> {
 }
 impl<'a: 'b, 'b> MetricsBucketBuilder<'a, 'b> {
   #[inline]
-  pub fn add_count(&mut self, count: i32) {
-    self.fbb_.push_slot::<i32>(MetricsBucket::VT_COUNT, count, 0);
+  pub fn add_start(&mut self, start: i64) {
+    self.fbb_.push_slot::<i64>(MetricsBucket::VT_START, start, 0);
+  }
+  #[inline]
+  pub fn add_stop(&mut self, stop: i64) {
+    self.fbb_.push_slot::<i64>(MetricsBucket::VT_STOP, stop, 0);
+  }
+  #[inline]
+  pub fn add_toggles(&mut self, toggles: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<ToggleEntry<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MetricsBucket::VT_TOGGLES, toggles);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> MetricsBucketBuilder<'a, 'b> {
@@ -600,7 +991,9 @@ impl<'a: 'b, 'b> MetricsBucketBuilder<'a, 'b> {
 impl core::fmt::Debug for MetricsBucket<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     let mut ds = f.debug_struct("MetricsBucket");
-      ds.field("count", &self.count());
+      ds.field("start", &self.start());
+      ds.field("stop", &self.stop());
+      ds.field("toggles", &self.toggles());
       ds.finish()
   }
 }
