@@ -12,6 +12,7 @@ pub mod state;
 pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
+use ahash::AHashMap;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use rand::Rng;
@@ -25,7 +26,6 @@ use unleash_types::client_features::{
     ClientFeature, ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
     Segment, Variant,
 };
-use ahash::AHashMap;
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = AHashMap<String, CompiledToggle>;
@@ -394,8 +394,16 @@ impl EngineState {
         }
     }
 
-    fn is_parent_dependency_satisfied(&self, toggle: &CompiledToggle, context: &Context) -> bool {
+    fn is_parent_dependency_satisfied(
+        &self,
+        toggle: &CompiledToggle,
+        enriched_context: &EnrichedContext,
+    ) -> bool {
         toggle.dependencies.iter().all(|parent_dependency| {
+            let context = EnrichedContext {
+                toggle_name: toggle.name.clone(),
+                ..enriched_context.clone()
+            };
             let Some(compiled_parent) = self.get_toggle(&parent_dependency.feature) else {
                 return false;
             };
@@ -404,9 +412,9 @@ impl EngineState {
                 return false;
             }
 
-            let parent_enabled = self.enabled(compiled_parent, context, &None); //parent toggles explicitly don't support custom strategies
+            let parent_enabled = self.enabled(compiled_parent, &context);
             let expected_parent_enabled_state = parent_dependency.enabled.unwrap_or(true);
-            let parent_variant = self.check_variant_by_toggle(compiled_parent, context);
+            let parent_variant = self.check_variant_by_toggle(compiled_parent, &context);
 
             let is_variant_dependency_satisfied = {
                 if let (Some(expected_variants), Some(actual_variant)) =
@@ -426,20 +434,10 @@ impl EngineState {
         })
     }
 
-    fn enabled(
-        &self,
-        toggle: &CompiledToggle,
-        context: &Context,
-        external_values: &Option<HashMap<String, bool>>,
-    ) -> bool {
-        let enriched_context = EnrichedContext::from(
-            context.clone(),
-            toggle.name.clone(),
-            external_values.clone(),
-        );
+    fn enabled(&self, toggle: &CompiledToggle, context: &EnrichedContext) -> bool {
         toggle.enabled
             && self.is_parent_dependency_satisfied(toggle, context)
-            && (toggle.compiled_strategy)(&enriched_context)
+            && (toggle.compiled_strategy)(&context)
     }
 
     pub fn resolve_all(
@@ -451,13 +449,19 @@ impl EngineState {
             state
                 .iter()
                 .map(|(name, toggle)| {
-                    let enabled = self.enabled(toggle, context, external_values);
+                    let enriched_context = EnrichedContext::from(
+                        context.clone(),
+                        name.clone(),
+                        external_values.clone(),
+                    );
+
+                    let enabled = self.enabled(toggle, &enriched_context);
                     (
                         name.clone(),
                         ResolvedToggle {
                             enabled,
                             impression_data: toggle.impression_data,
-                            variant: self.get_variant(name, context, external_values),
+                            variant: self.get_variant(name, &context, external_values),
                             project: toggle.project.clone(),
                         },
                     )
@@ -474,7 +478,10 @@ impl EngineState {
     ) -> Option<ResolvedToggle> {
         self.compiled_state.as_ref().and_then(|state| {
             state.get(name).map(|compiled_toggle| ResolvedToggle {
-                enabled: self.enabled(compiled_toggle, context, external_values),
+                enabled: self.enabled(
+                    compiled_toggle,
+                    &EnrichedContext::from(context.clone(), name.into(), external_values.clone()),
+                ),
                 impression_data: compiled_toggle.impression_data,
                 variant: self.get_variant(name, context, external_values),
                 project: compiled_toggle.project.clone(),
@@ -513,14 +520,9 @@ impl EngineState {
             .unwrap_or_default()
     }
 
-    pub fn check_enabled(
-        &self,
-        name: &str,
-        context: &Context,
-        external_values: &Option<HashMap<String, bool>>,
-    ) -> Option<bool> {
-        self.get_toggle(name)
-            .map(|toggle| self.enabled(toggle, context, external_values))
+    pub fn check_enabled(&self, context: &EnrichedContext) -> Option<bool> {
+        self.get_toggle(&context.toggle_name)
+            .map(|toggle| self.enabled(toggle, &context))
     }
 
     pub fn is_enabled(
@@ -529,9 +531,12 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> bool {
+        let enriched_context =
+            EnrichedContext::from(context.clone(), name.to_string(), external_values.clone());
+
         let is_enabled = self
             .get_toggle(name)
-            .map(|toggle| self.enabled(toggle, context, external_values))
+            .map(|toggle| self.enabled(toggle, &enriched_context))
             .unwrap_or_default();
 
         self.count_toggle(name, is_enabled);
@@ -543,7 +548,7 @@ impl EngineState {
         &self,
         variants: &'a Vec<CompiledVariant>,
         group_id: &str,
-        context: &Context,
+        context: &EnrichedContext,
     ) -> Option<&'a CompiledVariant> {
         if variants.is_empty() {
             return None;
@@ -576,15 +581,13 @@ impl EngineState {
     fn check_variant_by_toggle(
         &self,
         toggle: &CompiledToggle,
-        context: &Context,
+        context: &EnrichedContext,
     ) -> Option<VariantDef> {
         let strategy_variants =
             toggle
                 .compiled_variant_strategy
                 .as_ref()
                 .and_then(|variant_strategies| {
-                    let context = EnrichedContext::from(context.clone(), toggle.name.clone(), None);
-
                     let resolved_strategy_variants: Option<(&Vec<CompiledVariant>, &String)> =
                         variant_strategies
                             .iter()
@@ -611,14 +614,9 @@ impl EngineState {
         })
     }
 
-    pub fn check_variant(
-        &self,
-        name: &str,
-        context: &Context,
-        external_values: &Option<HashMap<String, bool>>,
-    ) -> Option<VariantDef> {
-        self.get_toggle(name).map(|toggle| {
-            if self.enabled(toggle, context, external_values) {
+    pub fn check_variant(&self, context: &EnrichedContext) -> Option<VariantDef> {
+        self.get_toggle(&context.toggle_name).map(|toggle| {
+            if self.enabled(toggle, context) {
                 self.check_variant_by_toggle(toggle, context)
                     .unwrap_or_default()
             } else {
@@ -634,12 +632,15 @@ impl EngineState {
         external_values: &Option<HashMap<String, bool>>,
     ) -> ExtendedVariantDef {
         let toggle = self.get_toggle(name);
+        let enriched_context =
+            EnrichedContext::from(context.clone(), name.to_string(), external_values.clone());
+
         let enabled = toggle
-            .map(|t| self.enabled(t, context, external_values))
+            .map(|t| self.enabled(t, &enriched_context))
             .unwrap_or_default();
 
         let variant = match toggle {
-            Some(toggle) if enabled => self.check_variant_by_toggle(toggle, context),
+            Some(toggle) if enabled => self.check_variant_by_toggle(toggle, &enriched_context),
             _ => None,
         }
         .unwrap_or_default();
@@ -669,7 +670,7 @@ impl EngineState {
     }
 }
 
-fn get_seed(stickiness: Option<String>, context: &Context) -> Option<String> {
+fn get_seed(stickiness: Option<String>, context: &EnrichedContext) -> Option<String> {
     match stickiness.as_deref() {
         Some("default") | None => context
             .user_id
@@ -692,7 +693,7 @@ fn get_seed(stickiness: Option<String>, context: &Context) -> Option<String> {
 
 fn lookup_override_context<'a>(
     variant_override: &Override,
-    context: &'a Context,
+    context: &'a EnrichedContext,
 ) -> Option<&'a String> {
     match variant_override.context_name.as_ref() as &str {
         "userId" => context.user_id.as_ref(),
@@ -710,7 +711,7 @@ fn lookup_override_context<'a>(
 
 fn check_for_variant_override<'a>(
     variants: &'a Vec<CompiledVariant>,
-    context: &Context,
+    context: &EnrichedContext,
 ) -> Option<&'a CompiledVariant> {
     for variant in variants {
         if let Some(overrides) = &variant.overrides {
@@ -778,8 +779,8 @@ mod test {
     };
 
     use crate::{
-        check_for_variant_override, get_seed, CompiledToggle, CompiledVariant, Context,
-        EngineState, UpdateMessage, VariantDef,
+        check_for_variant_override, get_seed, state::EnrichedContext, CompiledToggle,
+        CompiledVariant, Context, EngineState, UpdateMessage, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -1236,7 +1237,11 @@ mod test {
             .yes;
 
         let check_enabled = state
-            .check_enabled("some-toggle", &Context::default(), &None)
+            .check_enabled(&EnrichedContext::from(
+                Context::default(),
+                "some-toggle".into(),
+                None,
+            ))
             .unwrap();
 
         state.count_toggle("some-toggle", check_enabled);
@@ -1284,7 +1289,11 @@ mod test {
             .clone();
 
         let second_variant = state
-            .check_variant("some-toggle", &Context::default(), &None)
+            .check_variant(&EnrichedContext::from(
+                Context::default(),
+                "some-toggle".into(),
+                None,
+            ))
             .unwrap_or_default();
 
         state.count_toggle("some-toggle", true);
@@ -1340,8 +1349,11 @@ mod test {
             .unwrap()
             .insert("customId".to_string(), "customId".to_string());
 
+        let enriched_context =
+            EnrichedContext::from(context.clone(), "some-toggle".to_string(), None);
+
         assert_eq!(
-            get_seed(stickiness.map(String::from), &context),
+            get_seed(stickiness.map(String::from), &enriched_context),
             expected.map(String::from)
         );
     }
@@ -1468,7 +1480,10 @@ mod test {
                 values: override_values.iter().map(|s| s.to_string()).collect(),
             }]),
         }];
-        let result = check_for_variant_override(&variants, &context);
+        let enriched_context =
+            EnrichedContext::from(context.clone(), "some-toggle".to_string(), None);
+
+        let result = check_for_variant_override(&variants, &enriched_context);
         assert_eq!(result.is_some(), expected);
     }
 
@@ -1713,7 +1728,9 @@ mod test {
         };
 
         let warnings = engine.take_state(feature_set);
-        let enabled = engine.check_enabled("toggle1", &context, &None).unwrap();
+        let enabled = engine
+            .check_enabled(&EnrichedContext::from(context, "toggle1".into(), None))
+            .unwrap();
 
         assert!(enabled);
         assert!(warnings.is_none());
@@ -1785,7 +1802,9 @@ mod test {
         };
 
         let warnings = engine.take_state(feature_set);
-        let enabled = engine.check_enabled("toggle1", &context, &None).unwrap();
+        let enabled = engine
+            .check_enabled(&EnrichedContext::from(context, "toggle1".into(), None))
+            .unwrap();
 
         assert!(enabled);
         assert!(warnings.is_none());

@@ -7,9 +7,11 @@ use std::{
     mem, slice,
 };
 
+#[allow(clippy::all)]
 mod messaging {
     #![allow(dead_code)]
     #![allow(non_snake_case)]
+    #![allow(warnings)]
     include!("enabled-message_generated.rs");
 }
 
@@ -17,7 +19,7 @@ use flatbuffers::FlatBufferBuilder;
 use messaging::messaging::ResponseBuilder;
 use messaging::messaging::MetricsBucketBuilder;
 
-use unleash_yggdrasil::{Context as YggContext, EngineState};
+use unleash_yggdrasil::{Context as YggContext, EngineState, state::EnrichedContext};
 
 use getrandom::register_custom_getrandom;
 
@@ -179,7 +181,8 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
         };
 
         let engine = &mut *(engine_ptr as *mut EngineState);
-        let enabled = engine.check_enabled(toggle_name, &context, &None);
+        let enriched_context = EnrichedContext::from(context, toggle_name.to_string(), None);
+        let enabled = engine.check_enabled(&enriched_context);
         engine.count_toggle(toggle_name, enabled.unwrap_or(false));
 
         let response = build_response(enabled, None);
