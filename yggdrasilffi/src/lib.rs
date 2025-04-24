@@ -10,8 +10,8 @@ use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{
-    Context, EngineState, EvalWarning, ExtendedVariantDef, ToggleDefinition, UpdateMessage,
-    CORE_VERSION, KNOWN_STRATEGIES,
+    state::EnrichedContext, Context, EngineState, EvalWarning, ExtendedVariantDef,
+    ToggleDefinition, UpdateMessage, CORE_VERSION, KNOWN_STRATEGIES,
 };
 
 static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
@@ -199,8 +199,10 @@ pub unsafe extern "C" fn check_enabled(
         let context: Context = get_json(context_ptr)?;
         let custom_strategy_results =
             get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
+        let enriched_context =
+            EnrichedContext::from(context, toggle_name.into(), Some(custom_strategy_results));
 
-        Ok(engine.check_enabled(toggle_name, &context, &Some(custom_strategy_results)))
+        Ok(engine.check_enabled(&enriched_context))
     })();
 
     result_to_json_ptr(result)
@@ -230,14 +232,11 @@ pub unsafe extern "C" fn check_variant(
         let context: Context = get_json(context_ptr)?;
         let custom_strategy_results =
             get_json::<CustomStrategyResults>(custom_strategy_results_ptr)?;
-        let base_variant = engine.check_variant(
-            toggle_name,
-            &context,
-            &Some(custom_strategy_results.clone()),
-        );
-        let toggle_enabled = engine
-            .check_enabled(toggle_name, &context, &Some(custom_strategy_results))
-            .unwrap_or_default();
+        let enriched_context =
+            EnrichedContext::from(context, toggle_name.into(), Some(custom_strategy_results));
+
+        let base_variant = engine.check_variant(&enriched_context);
+        let toggle_enabled = engine.check_enabled(&enriched_context).unwrap_or_default();
         Ok(base_variant.map(|variant| variant.to_enriched_response(toggle_enabled)))
     })();
 
