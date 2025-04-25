@@ -166,7 +166,8 @@ impl<'a> ContextMessage<'a> {
   pub const VT_APP_NAME: flatbuffers::VOffsetT = 12;
   pub const VT_CURRENT_TIME: flatbuffers::VOffsetT = 14;
   pub const VT_REMOTE_ADDRESS: flatbuffers::VOffsetT = 16;
-  pub const VT_PROPERTIES: flatbuffers::VOffsetT = 18;
+  pub const VT_RUNTIME_HOSTNAME: flatbuffers::VOffsetT = 18;
+  pub const VT_PROPERTIES: flatbuffers::VOffsetT = 20;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -179,6 +180,7 @@ impl<'a> ContextMessage<'a> {
   ) -> flatbuffers::WIPOffset<ContextMessage<'bldr>> {
     let mut builder = ContextMessageBuilder::new(_fbb);
     if let Some(x) = args.properties { builder.add_properties(x); }
+    if let Some(x) = args.runtime_hostname { builder.add_runtime_hostname(x); }
     if let Some(x) = args.remote_address { builder.add_remote_address(x); }
     if let Some(x) = args.current_time { builder.add_current_time(x); }
     if let Some(x) = args.app_name { builder.add_app_name(x); }
@@ -240,6 +242,13 @@ impl<'a> ContextMessage<'a> {
     unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_REMOTE_ADDRESS, None)}
   }
   #[inline]
+  pub fn runtime_hostname(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(ContextMessage::VT_RUNTIME_HOSTNAME, None)}
+  }
+  #[inline]
   pub fn properties(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PropertyEntry<'a>>>> {
     // Safety:
     // Created from valid Table for this object
@@ -262,6 +271,7 @@ impl flatbuffers::Verifiable for ContextMessage<'_> {
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("app_name", Self::VT_APP_NAME, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("current_time", Self::VT_CURRENT_TIME, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("remote_address", Self::VT_REMOTE_ADDRESS, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("runtime_hostname", Self::VT_RUNTIME_HOSTNAME, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<PropertyEntry>>>>("properties", Self::VT_PROPERTIES, false)?
      .finish();
     Ok(())
@@ -275,6 +285,7 @@ pub struct ContextMessageArgs<'a> {
     pub app_name: Option<flatbuffers::WIPOffset<&'a str>>,
     pub current_time: Option<flatbuffers::WIPOffset<&'a str>>,
     pub remote_address: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub runtime_hostname: Option<flatbuffers::WIPOffset<&'a str>>,
     pub properties: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PropertyEntry<'a>>>>>,
 }
 impl<'a> Default for ContextMessageArgs<'a> {
@@ -288,6 +299,7 @@ impl<'a> Default for ContextMessageArgs<'a> {
       app_name: None,
       current_time: None,
       remote_address: None,
+      runtime_hostname: None,
       properties: None,
     }
   }
@@ -327,6 +339,10 @@ impl<'a: 'b, 'b> ContextMessageBuilder<'a, 'b> {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_REMOTE_ADDRESS, remote_address);
   }
   #[inline]
+  pub fn add_runtime_hostname(&mut self, runtime_hostname: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_RUNTIME_HOSTNAME, runtime_hostname);
+  }
+  #[inline]
   pub fn add_properties(&mut self, properties: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<PropertyEntry<'b >>>>) {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_PROPERTIES, properties);
   }
@@ -355,6 +371,7 @@ impl core::fmt::Debug for ContextMessage<'_> {
       ds.field("app_name", &self.app_name());
       ds.field("current_time", &self.current_time());
       ds.field("remote_address", &self.remote_address());
+      ds.field("runtime_hostname", &self.runtime_hostname());
       ds.field("properties", &self.properties());
       ds.finish()
   }

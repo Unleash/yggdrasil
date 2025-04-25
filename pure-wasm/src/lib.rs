@@ -6,6 +6,7 @@ use std::{
     ffi::{CString, c_char, c_void},
     mem, slice,
 };
+mod logging;
 
 #[allow(clippy::all)]
 mod messaging {
@@ -19,7 +20,7 @@ use flatbuffers::FlatBufferBuilder;
 use messaging::messaging::MetricsBucketBuilder;
 use messaging::messaging::ResponseBuilder;
 
-use unleash_yggdrasil::{Context as YggContext, EngineState, state::EnrichedContext};
+use unleash_yggdrasil::{EngineState, state::EnrichedContext};
 
 use getrandom::register_custom_getrandom;
 
@@ -201,7 +202,10 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
 
         let toggle_name = ctx.toggle_name().expect("You need to pass a toggle name and you also need to remove this expect before production!");
 
-        let context = YggContext {
+        let context = EnrichedContext {
+            external_results: None,
+            toggle_name: toggle_name.to_string(),
+            runtime_hostname: ctx.runtime_hostname().map(|f| f.to_string()),
             user_id: ctx.user_id().map(|f| f.to_string()),
             session_id: ctx.session_id().map(|f| f.to_string()),
             environment: ctx.environment().map(|f| f.to_string()),
@@ -217,8 +221,7 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
         };
 
         let engine = &mut *(engine_ptr as *mut EngineState);
-        let enriched_context = EnrichedContext::from(context, toggle_name.to_string(), None);
-        let enabled = engine.check_enabled(&enriched_context);
+        let enabled = engine.check_enabled(&context);
         engine.count_toggle(toggle_name, enabled.unwrap_or(false));
 
         let response = build_response(enabled, None);

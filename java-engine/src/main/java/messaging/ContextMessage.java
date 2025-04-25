@@ -124,27 +124,40 @@ public final class ContextMessage extends Table {
     return __vector_in_bytebuffer(_bb, 16, 1);
   }
 
+  public String runtimeHostname() {
+    int o = __offset(18);
+    return o != 0 ? __string(o + bb_pos) : null;
+  }
+
+  public ByteBuffer runtimeHostnameAsByteBuffer() {
+    return __vector_as_bytebuffer(18, 1);
+  }
+
+  public ByteBuffer runtimeHostnameInByteBuffer(ByteBuffer _bb) {
+    return __vector_in_bytebuffer(_bb, 18, 1);
+  }
+
   public messaging.PropertyEntry properties(int j) {
     return properties(new messaging.PropertyEntry(), j);
   }
 
   public messaging.PropertyEntry properties(messaging.PropertyEntry obj, int j) {
-    int o = __offset(18);
+    int o = __offset(20);
     return o != 0 ? obj.__assign(__indirect(__vector(o) + j * 4), bb) : null;
   }
 
   public int propertiesLength() {
-    int o = __offset(18);
+    int o = __offset(20);
     return o != 0 ? __vector_len(o) : 0;
   }
 
   public messaging.PropertyEntry propertiesByKey(String key) {
-    int o = __offset(18);
+    int o = __offset(20);
     return o != 0 ? messaging.PropertyEntry.__lookup_by_key(null, __vector(o), key, bb) : null;
   }
 
   public messaging.PropertyEntry propertiesByKey(messaging.PropertyEntry obj, String key) {
-    int o = __offset(18);
+    int o = __offset(20);
     return o != 0 ? messaging.PropertyEntry.__lookup_by_key(obj, __vector(o), key, bb) : null;
   }
 
@@ -153,7 +166,7 @@ public final class ContextMessage extends Table {
   }
 
   public messaging.PropertyEntry.Vector propertiesVector(messaging.PropertyEntry.Vector obj) {
-    int o = __offset(18);
+    int o = __offset(20);
     return o != 0 ? obj.__assign(__vector(o), 4, bb) : null;
   }
 
@@ -166,9 +179,11 @@ public final class ContextMessage extends Table {
       int appNameOffset,
       int currentTimeOffset,
       int remoteAddressOffset,
+      int runtimeHostnameOffset,
       int propertiesOffset) {
-    builder.startTable(8);
+    builder.startTable(9);
     ContextMessage.addProperties(builder, propertiesOffset);
+    ContextMessage.addRuntimeHostname(builder, runtimeHostnameOffset);
     ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
     ContextMessage.addCurrentTime(builder, currentTimeOffset);
     ContextMessage.addAppName(builder, appNameOffset);
@@ -180,7 +195,7 @@ public final class ContextMessage extends Table {
   }
 
   public static void startContextMessage(FlatBufferBuilder builder) {
-    builder.startTable(8);
+    builder.startTable(9);
   }
 
   public static void addToggleName(FlatBufferBuilder builder, int toggleNameOffset) {
@@ -211,8 +226,12 @@ public final class ContextMessage extends Table {
     builder.addOffset(6, remoteAddressOffset, 0);
   }
 
+  public static void addRuntimeHostname(FlatBufferBuilder builder, int runtimeHostnameOffset) {
+    builder.addOffset(7, runtimeHostnameOffset, 0);
+  }
+
   public static void addProperties(FlatBufferBuilder builder, int propertiesOffset) {
-    builder.addOffset(7, propertiesOffset, 0);
+    builder.addOffset(8, propertiesOffset, 0);
   }
 
   public static int createPropertiesVector(FlatBufferBuilder builder, int[] data) {
