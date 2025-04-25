@@ -193,7 +193,7 @@ public class UnleashEngine {
 
   public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-    long packed = (long) getMetrics.apply(this.enginePointer, now.toEpochSecond())[0];
+    long packed = (long) getMetrics.apply(this.enginePointer, now.toInstant().toEpochMilli())[0];
     int ptr = (int) (packed & 0xFFFFFFFFL);
     int len = (int) (packed >>> 32);
     byte[] bytes = instance.memory().readBytes(ptr, len);

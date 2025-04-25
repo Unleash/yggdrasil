@@ -177,8 +177,8 @@ pub fn build_metrics_response(
                 .collect();
             let toggle_vector = builder.create_vector(&items);
             let mut resp_builder = MetricsBucketBuilder::new(&mut builder);
-            resp_builder.add_start(metrics.start.timestamp_nanos_opt().unwrap());
-            resp_builder.add_stop(metrics.stop.timestamp_nanos_opt().unwrap());
+            resp_builder.add_start(metrics.start.timestamp_millis());
+            resp_builder.add_stop(metrics.stop.timestamp_millis());
             resp_builder.add_toggles(toggle_vector);
             resp_builder.finish()
         } else {
@@ -236,7 +236,7 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
 pub extern "C" fn get_metrics(engine_ptr: i32, close_time: i64) -> u64 {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
-        let metrics = engine.get_metrics(DateTime::from_timestamp_nanos(close_time));
+        let metrics = engine.get_metrics(DateTime::from_timestamp_millis(close_time).unwrap());
         let response = build_metrics_response(metrics);
 
         let ptr: u32 = response.as_ptr() as u32;
