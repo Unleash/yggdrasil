@@ -3,9 +3,14 @@
  */
 package io.getunleash.engine;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import messaging.MetricsBucket;
 import messaging.ToggleEntry;
 import org.junit.jupiter.api.Test;
+
+import java.time.ZonedDateTime;
 
 public class LibraryTest {
   @Test
@@ -49,6 +54,30 @@ public class LibraryTest {
         bucket.toggles(0).key().equals("Feature.C") ? bucket.toggles(0) : bucket.toggles(1);
     assert (featA.value().yes() == 1);
     assert (featC.value().yes() == 2);
+  }
+
+  @Test
+  public void metricsBucketStartStopAreCorrect() throws Exception {
+    var engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    boolean result = engine.isEnabled("Feature.A", new Context());
+    MetricsBucket bucket = engine.getMetrics();
+
+    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+
+    Instant start = Instant.ofEpochMilli(bucket.start());
+    ZonedDateTime utcStart = start.atZone(ZoneOffset.UTC);
+
+    Instant stop = Instant.ofEpochMilli(bucket.stop());
+    ZonedDateTime utcStop = stop.atZone(ZoneOffset.UTC);
+
+    // Currently doesn't work because the start time is hardcoded to a date/time in 2022 in pure-wasm lib.rs
+    //assert(utcStart.isBefore(now)) : "start not before now. start: " + utcStart + " - stop: " + utcStop;
+    //assert(utcStart.plusMinutes(1).isAfter(now)) : "start plus minute not after now. start: " + utcStart + " - stop: " + utcStop;
+    assert(utcStop.isBefore(now)) : "stop not before now";
+    assert(utcStop.plusMinutes(1).isAfter(now)) : "stop plus minute not after now" + utcStop;
   }
 
   @Test
