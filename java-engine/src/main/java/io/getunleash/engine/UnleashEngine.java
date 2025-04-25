@@ -25,6 +25,8 @@ import messaging.ContextMessage;
 import messaging.MetricsBucket;
 import messaging.PropertyEntry;
 import messaging.Response;
+import messaging.Variant;
+import messaging.VariantPayload;
 import org.example.wasm.YggdrasilModule;
 
 public class UnleashEngine {
@@ -34,6 +36,7 @@ public class UnleashEngine {
   private ExportFunction alloc;
   private ExportFunction dealloc;
   private ExportFunction checkEnabled;
+  private ExportFunction checkVariant;
   private ExportFunction getMetrics;
   private ExportFunction deallocResponseBuffer;
   private ExportFunction getLogBufferPtr;
@@ -166,6 +169,7 @@ public class UnleashEngine {
     this.alloc = instance.export("alloc");
     this.dealloc = instance.export("dealloc");
     this.checkEnabled = instance.export("check_enabled");
+    this.checkVariant = instance.export("check_variant");
     this.getMetrics = instance.export("get_metrics");
     this.deallocResponseBuffer = instance.export("dealloc_response_buffer");
     this.getLogBufferPtr = instance.export("get_log_buffer_ptr");
@@ -239,6 +243,42 @@ public class UnleashEngine {
     if (msg != null && !msg.isEmpty()) {
       System.out.println("DebugLog: " + msg);
     }
+  }
+
+  public VariantDef getVariant(String toggleName, Context context)
+      throws JsonMappingException, JsonProcessingException {
+    byte[] contextBytes = buildMessage(toggleName, context);
+    int contextPtr = (int) alloc.apply(contextBytes.length)[0];
+    memory.write(contextPtr, contextBytes);
+
+    long packed = (long) checkVariant.apply(this.enginePointer, contextPtr, contextBytes.length)[0];
+
+    int ptr = (int) (packed & 0xFFFFFFFFL);
+    int len = (int) (packed >>> 32);
+    byte[] bytes = instance.memory().readBytes(ptr, len);
+
+    ByteBuffer buf = ByteBuffer.wrap(bytes);
+    buf.order(ByteOrder.LITTLE_ENDIAN);
+
+    Variant variant = Variant.getRootAsVariant(buf);
+    if (variant.name() == null) {
+      dealloc.apply(contextPtr, contextBytes.length);
+      deallocResponseBuffer.apply(ptr, len);
+      return null;
+    }
+    VariantPayload messagePayload = variant.payload();
+    Payload payload = null;
+
+    if (messagePayload != null) {
+      payload = new Payload();
+      payload.setType(messagePayload.payloadType());
+      payload.setValue(messagePayload.value());
+    }
+
+    dealloc.apply(contextPtr, contextBytes.length);
+    deallocResponseBuffer.apply(ptr, len);
+
+    return new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled());
   }
 
   public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {

@@ -157,33 +157,32 @@ class UnleashEngineTest {
         }
       }
 
-      // List<Map<String, Object>> variantTests = suiteData.variantTests;
-      // if (variantTests != null) {
-      //   for (Map<String, Object> test : variantTests) {
-      //     String contextJson = objectMapper.writeValueAsString(test.get("context"));
-      //     Context context = objectMapper.readValue(contextJson, Context.class);
-      //     String toggleName = (String) test.get("toggleName");
+      List<Map<String, Object>> variantTests = suiteData.variantTests;
+      if (variantTests != null) {
+        for (Map<String, Object> test : variantTests) {
+          String contextJson = objectMapper.writeValueAsString(test.get("context"));
+          Context context = objectMapper.readValue(contextJson, Context.class);
+          String toggleName = (String) test.get("toggleName");
 
-      //     VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"),
-      //         VariantDef.class);
-      //     VariantDef result = engine.getVariant(toggleName, context);
-      //     if (result == null) {
-      //       // this behavior should be implemented in the SDK
-      //       result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName,
-      //           context));
-      //     }
+          VariantDef expectedResult =
+              objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
+          VariantDef result = engine.getVariant(toggleName, context);
+          if (result == null) {
+            // // this behavior should be implemented in the SDK
+            result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName, context));
+          }
 
-      //     String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
-      //     String resultJson = objectMapper.writeValueAsString(result);
+          String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
+          String resultJson = objectMapper.writeValueAsString(result);
 
-      //     assertEquals(
-      //         expectedResultJson,
-      //         resultJson,
-      //         String.format(
-      //             "[%s] Failed test '%s': expected %b, got %b",
-      //             suiteData.name, test.get("description"), expectedResultJson, resultJson));
-      //   }
-      // }
+          assertEquals(
+              expectedResultJson,
+              resultJson,
+              String.format(
+                  "[%s] Failed test '%s': expected %b, got %b",
+                  suiteData.name, test.get("description"), expectedResultJson, resultJson));
+        }
+      }
     }
   }
 

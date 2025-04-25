@@ -17,10 +17,10 @@ mod messaging {
 }
 
 use flatbuffers::FlatBufferBuilder;
-use messaging::messaging::MetricsBucketBuilder;
 use messaging::messaging::ResponseBuilder;
+use messaging::messaging::{MetricsBucketBuilder, VariantBuilder, VariantPayloadBuilder};
 
-use unleash_yggdrasil::{EngineState, state::EnrichedContext};
+use unleash_yggdrasil::{EngineState, ExtendedVariantDef, state::EnrichedContext};
 
 use getrandom::register_custom_getrandom;
 
@@ -137,6 +137,44 @@ pub fn build_response(enabled: Option<bool>, error: Option<&str>) -> Vec<u8> {
     })
 }
 
+pub fn build_variant_response(variant: Option<ExtendedVariantDef>, error: Option<&str>) -> Vec<u8> {
+    BUILDER.with(|cell| {
+        let mut builder = cell.borrow_mut();
+        builder.reset();
+
+        let response = if let Some(variant) = variant {
+            let payload_offset = variant.payload.as_ref().map(|payload| {
+                let payload_type_offset = builder.create_string(&payload.payload_type);
+                let value_offset = builder.create_string(&payload.value);
+
+                let mut variant_payload = VariantPayloadBuilder::new(&mut builder);
+                variant_payload.add_payload_type(payload_type_offset);
+                variant_payload.add_value(value_offset);
+
+                variant_payload.finish()
+            });
+
+            let variant_name_offset = builder.create_string(&variant.name);
+
+            let mut variant_builder = VariantBuilder::new(&mut builder);
+            variant_builder.add_feature_enabled(variant.feature_enabled);
+            variant_builder.add_enabled(variant.enabled);
+            variant_builder.add_name(variant_name_offset);
+            if let Some(payload_offset) = payload_offset {
+                variant_builder.add_payload(payload_offset);
+            }
+
+            variant_builder.finish()
+        } else {
+            let resp_builder = VariantBuilder::new(&mut builder);
+            resp_builder.finish()
+        };
+
+        builder.finish(response, None);
+        builder.finished_data().to_vec()
+    })
+}
+
 pub fn build_metrics_response(
     metrics: Option<unleash_types::client_metrics::MetricBucket>,
 ) -> Vec<u8> {
@@ -225,6 +263,62 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
         engine.count_toggle(toggle_name, enabled.unwrap_or(false));
 
         let response = build_response(enabled, None);
+
+        let ptr: u32 = response.as_ptr() as u32;
+        let len: u32 = response.len() as u32;
+        let packed: u64 = ((len as u64) << 32) | ptr as u64;
+        std::mem::forget(response);
+
+        packed
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
+    unsafe {
+        let bytes = std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize);
+        let ctx: messaging::messaging::ContextMessage =
+            flatbuffers::root::<messaging::messaging::ContextMessage>(bytes)
+                .expect("invalid context");
+
+        let toggle_name = ctx.toggle_name().expect("You need to pass a toggle name and you also need to remove this expect before production!");
+
+        let context = EnrichedContext {
+            external_results: None,
+            toggle_name: toggle_name.to_string(),
+            runtime_hostname: ctx.runtime_hostname().map(|f| f.to_string()),
+            user_id: ctx.user_id().map(|f| f.to_string()),
+            session_id: ctx.session_id().map(|f| f.to_string()),
+            environment: ctx.environment().map(|f| f.to_string()),
+            app_name: ctx.app_name().map(|f| f.to_string()),
+            current_time: ctx.current_time().map(|f| f.to_string()),
+            remote_address: ctx.remote_address().map(|f| f.to_string()),
+            properties: ctx.properties().map(|entries| {
+                entries
+                    .iter()
+                    .filter_map(|entry| Some((entry.key().to_string(), entry.value()?.to_string())))
+                    .collect::<HashMap<String, String>>()
+            }),
+        };
+
+        let engine = &mut *(engine_ptr as *mut EngineState);
+        let variant = engine.check_variant(&context);
+        let enabled = engine.check_enabled(&context).unwrap_or_default();
+
+        engine.count_toggle(toggle_name, variant.is_some());
+
+        if let Some(variant) = &variant {
+            engine.count_variant(toggle_name, &variant.name);
+        }
+
+        let extended_variant = variant.map(|variant| ExtendedVariantDef {
+            enabled: variant.enabled,
+            feature_enabled: enabled,
+            name: variant.name,
+            payload: variant.payload.clone(),
+        });
+
+        let response = build_variant_response(extended_variant, None);
 
         let ptr: u32 = response.as_ptr() as u32;
         let len: u32 = response.len() as u32;
