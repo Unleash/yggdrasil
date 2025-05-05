@@ -62,30 +62,29 @@ class UnleashEngineTest {
     assertTrue(result);
   }
 
-  // @Test
-  // void testIsEnabledWithoutValidResponse() throws Exception {
-  // engine.takeState(simpleFeatures);
+  @Test
+  void testIsEnabledWithoutValidResponse() throws Exception {
+    engine.takeState(simpleFeatures);
 
-  // WasmContext context = new WasmContext();
-  // Boolean result = engine.checkEnabled("IDoNotExist", context);
-  // assertNull(result); // not found
-  // }
+    Context context = new Context();
+    Boolean result = engine.isEnabled("IDoNotExist", context);
+    assertNull(result); // not found
+  }
 
-  // @Test
-  // void testGetVariant() throws Exception {
-  // engine.takeState(simpleFeatures);
+  @Test
+  void testGetVariant() throws Exception {
+    engine.takeState(simpleFeatures);
 
-  // Context context = new Context();
-  // VariantDef variant = engine.getVariant("Feature.A", context);
+    Context context = new Context();
+    VariantDef variant = engine.getVariant("Feature.A", context);
 
-  // if (variant == null) {
-  // variant = new VariantDef("disabled", null, false,
-  // engine.isEnabled("Feature.A", context));
-  // }
+    if (variant == null) {
+      variant = new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context));
+    }
 
-  // assertEquals("disabled", variant.getName());
-  // assertFalse(variant.isEnabled());
-  // }
+    assertEquals("disabled", variant.getName());
+    assertFalse(variant.isEnabled());
+  }
 
   // @Test
   // void testGetVariantWithCustomStrategy() throws Exception {
