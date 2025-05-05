@@ -23,7 +23,19 @@ table Response {
   error: string;
 }
 
-// Helper table to simulate HashMap<String, u32>
+table Variant {
+  enabled: bool;
+  feature_enabled: bool;
+  name: string;
+  payload: VariantPayload;
+}
+
+table VariantPayload {
+  //this is fine for data transfer but the SDK expects 'type' not 'payload_type'
+  payload_type: string;
+  value: string;
+}
+
 table VariantEntry {
   key: string;
   value: uint;
@@ -35,7 +47,6 @@ table ToggleStats {
   variants: [VariantEntry];
 }
 
-// Helper table to simulate HashMap<String, ToggleStats>
 table ToggleEntry {
   key: string;
   value: ToggleStats;

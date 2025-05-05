@@ -507,6 +507,268 @@ impl core::fmt::Debug for Response<'_> {
       ds.finish()
   }
 }
+pub enum VariantOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct Variant<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for Variant<'a> {
+  type Inner = Variant<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> Variant<'a> {
+  pub const VT_ENABLED: flatbuffers::VOffsetT = 4;
+  pub const VT_FEATURE_ENABLED: flatbuffers::VOffsetT = 6;
+  pub const VT_NAME: flatbuffers::VOffsetT = 8;
+  pub const VT_PAYLOAD: flatbuffers::VOffsetT = 10;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    Variant { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args VariantArgs<'args>
+  ) -> flatbuffers::WIPOffset<Variant<'bldr>> {
+    let mut builder = VariantBuilder::new(_fbb);
+    if let Some(x) = args.payload { builder.add_payload(x); }
+    if let Some(x) = args.name { builder.add_name(x); }
+    builder.add_feature_enabled(args.feature_enabled);
+    builder.add_enabled(args.enabled);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn enabled(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(Variant::VT_ENABLED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn feature_enabled(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(Variant::VT_FEATURE_ENABLED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn name(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Variant::VT_NAME, None)}
+  }
+  #[inline]
+  pub fn payload(&self) -> Option<VariantPayload<'a>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<VariantPayload>>(Variant::VT_PAYLOAD, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for Variant<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<bool>("enabled", Self::VT_ENABLED, false)?
+     .visit_field::<bool>("feature_enabled", Self::VT_FEATURE_ENABLED, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("name", Self::VT_NAME, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<VariantPayload>>("payload", Self::VT_PAYLOAD, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct VariantArgs<'a> {
+    pub enabled: bool,
+    pub feature_enabled: bool,
+    pub name: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub payload: Option<flatbuffers::WIPOffset<VariantPayload<'a>>>,
+}
+impl<'a> Default for VariantArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    VariantArgs {
+      enabled: false,
+      feature_enabled: false,
+      name: None,
+      payload: None,
+    }
+  }
+}
+
+pub struct VariantBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> VariantBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_enabled(&mut self, enabled: bool) {
+    self.fbb_.push_slot::<bool>(Variant::VT_ENABLED, enabled, false);
+  }
+  #[inline]
+  pub fn add_feature_enabled(&mut self, feature_enabled: bool) {
+    self.fbb_.push_slot::<bool>(Variant::VT_FEATURE_ENABLED, feature_enabled, false);
+  }
+  #[inline]
+  pub fn add_name(&mut self, name: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Variant::VT_NAME, name);
+  }
+  #[inline]
+  pub fn add_payload(&mut self, payload: flatbuffers::WIPOffset<VariantPayload<'b >>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<VariantPayload>>(Variant::VT_PAYLOAD, payload);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> VariantBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    VariantBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<Variant<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for Variant<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("Variant");
+      ds.field("enabled", &self.enabled());
+      ds.field("feature_enabled", &self.feature_enabled());
+      ds.field("name", &self.name());
+      ds.field("payload", &self.payload());
+      ds.finish()
+  }
+}
+pub enum VariantPayloadOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct VariantPayload<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for VariantPayload<'a> {
+  type Inner = VariantPayload<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> VariantPayload<'a> {
+  pub const VT_PAYLOAD_TYPE: flatbuffers::VOffsetT = 4;
+  pub const VT_VALUE: flatbuffers::VOffsetT = 6;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    VariantPayload { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args VariantPayloadArgs<'args>
+  ) -> flatbuffers::WIPOffset<VariantPayload<'bldr>> {
+    let mut builder = VariantPayloadBuilder::new(_fbb);
+    if let Some(x) = args.value { builder.add_value(x); }
+    if let Some(x) = args.payload_type { builder.add_payload_type(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn payload_type(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(VariantPayload::VT_PAYLOAD_TYPE, None)}
+  }
+  #[inline]
+  pub fn value(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(VariantPayload::VT_VALUE, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for VariantPayload<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("payload_type", Self::VT_PAYLOAD_TYPE, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("value", Self::VT_VALUE, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct VariantPayloadArgs<'a> {
+    pub payload_type: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub value: Option<flatbuffers::WIPOffset<&'a str>>,
+}
+impl<'a> Default for VariantPayloadArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    VariantPayloadArgs {
+      payload_type: None,
+      value: None,
+    }
+  }
+}
+
+pub struct VariantPayloadBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> VariantPayloadBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_payload_type(&mut self, payload_type: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(VariantPayload::VT_PAYLOAD_TYPE, payload_type);
+  }
+  #[inline]
+  pub fn add_value(&mut self, value: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(VariantPayload::VT_VALUE, value);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> VariantPayloadBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    VariantPayloadBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<VariantPayload<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for VariantPayload<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("VariantPayload");
+      ds.field("payload_type", &self.payload_type());
+      ds.field("value", &self.value());
+      ds.finish()
+  }
+}
 pub enum VariantEntryOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
