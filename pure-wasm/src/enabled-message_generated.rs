@@ -1259,6 +1259,251 @@ impl core::fmt::Debug for MetricsBucket<'_> {
       ds.finish()
   }
 }
+pub enum FeatureDefOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct FeatureDef<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for FeatureDef<'a> {
+  type Inner = FeatureDef<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> FeatureDef<'a> {
+  pub const VT_NAME: flatbuffers::VOffsetT = 4;
+  pub const VT_TYPE_: flatbuffers::VOffsetT = 6;
+  pub const VT_PROJECT: flatbuffers::VOffsetT = 8;
+  pub const VT_ENABLED: flatbuffers::VOffsetT = 10;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    FeatureDef { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args FeatureDefArgs<'args>
+  ) -> flatbuffers::WIPOffset<FeatureDef<'bldr>> {
+    let mut builder = FeatureDefBuilder::new(_fbb);
+    if let Some(x) = args.project { builder.add_project(x); }
+    if let Some(x) = args.type_ { builder.add_type_(x); }
+    if let Some(x) = args.name { builder.add_name(x); }
+    builder.add_enabled(args.enabled);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn name(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(FeatureDef::VT_NAME, None)}
+  }
+  #[inline]
+  pub fn type_(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(FeatureDef::VT_TYPE_, None)}
+  }
+  #[inline]
+  pub fn project(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(FeatureDef::VT_PROJECT, None)}
+  }
+  #[inline]
+  pub fn enabled(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(FeatureDef::VT_ENABLED, Some(false)).unwrap()}
+  }
+}
+
+impl flatbuffers::Verifiable for FeatureDef<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("name", Self::VT_NAME, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("type_", Self::VT_TYPE_, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("project", Self::VT_PROJECT, false)?
+     .visit_field::<bool>("enabled", Self::VT_ENABLED, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct FeatureDefArgs<'a> {
+    pub name: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub type_: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub project: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub enabled: bool,
+}
+impl<'a> Default for FeatureDefArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    FeatureDefArgs {
+      name: None,
+      type_: None,
+      project: None,
+      enabled: false,
+    }
+  }
+}
+
+pub struct FeatureDefBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> FeatureDefBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_name(&mut self, name: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(FeatureDef::VT_NAME, name);
+  }
+  #[inline]
+  pub fn add_type_(&mut self, type_: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(FeatureDef::VT_TYPE_, type_);
+  }
+  #[inline]
+  pub fn add_project(&mut self, project: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(FeatureDef::VT_PROJECT, project);
+  }
+  #[inline]
+  pub fn add_enabled(&mut self, enabled: bool) {
+    self.fbb_.push_slot::<bool>(FeatureDef::VT_ENABLED, enabled, false);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> FeatureDefBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    FeatureDefBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<FeatureDef<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for FeatureDef<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("FeatureDef");
+      ds.field("name", &self.name());
+      ds.field("type_", &self.type_());
+      ds.field("project", &self.project());
+      ds.field("enabled", &self.enabled());
+      ds.finish()
+  }
+}
+pub enum FeatureDefsOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct FeatureDefs<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for FeatureDefs<'a> {
+  type Inner = FeatureDefs<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> FeatureDefs<'a> {
+  pub const VT_ITEMS: flatbuffers::VOffsetT = 4;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    FeatureDefs { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args FeatureDefsArgs<'args>
+  ) -> flatbuffers::WIPOffset<FeatureDefs<'bldr>> {
+    let mut builder = FeatureDefsBuilder::new(_fbb);
+    if let Some(x) = args.items { builder.add_items(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn items(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<FeatureDef<'a>>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<FeatureDef>>>>(FeatureDefs::VT_ITEMS, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for FeatureDefs<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<FeatureDef>>>>("items", Self::VT_ITEMS, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct FeatureDefsArgs<'a> {
+    pub items: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<FeatureDef<'a>>>>>,
+}
+impl<'a> Default for FeatureDefsArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    FeatureDefsArgs {
+      items: None,
+    }
+  }
+}
+
+pub struct FeatureDefsBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> FeatureDefsBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_items(&mut self, items: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<FeatureDef<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(FeatureDefs::VT_ITEMS, items);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> FeatureDefsBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    FeatureDefsBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<FeatureDefs<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for FeatureDefs<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("FeatureDefs");
+      ds.field("items", &self.items());
+      ds.finish()
+  }
+}
 #[inline]
 /// Verifies that a buffer of bytes contains a `MetricsBucket`
 /// and returns it.

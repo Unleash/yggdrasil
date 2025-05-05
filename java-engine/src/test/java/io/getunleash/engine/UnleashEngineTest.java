@@ -100,23 +100,22 @@ class UnleashEngineTest {
   // assertFalse(variant.isEnabled());
   // }
 
-  // @Test
-  // void testListKnownTogglesReturnsAllFeatures() throws Exception {
-  // engine.takeState(
-  // "{\"version\":1,\"features\":[{\"name\":\"Feature.A\",\"type\":\"experiment\",\"description\":\"Enabled
-  // toggle\",\"project\":\"test\",\"enabled\":true,\"strategies\":[{\"name\":\"default\"}]}]}");
-  // List<FeatureDef> features = engine.listKnownToggles();
-  // assertEquals(1, features.size());
+  @Test
+  void testListKnownTogglesReturnsAllFeatures() throws Exception {
+    engine.takeState(
+        "{\"version\":1,\"features\":[{\"name\":\"Feature.A\",\"type\":\"experiment\",\"description\":\"Enabled toggle\",\"project\":\"test\",\"enabled\":true,\"strategies\":[{\"name\":\"default\"}]}]}");
+    List<FeatureDef> features = engine.listKnownToggles();
+    assertEquals(1, features.size());
 
-  // Optional<FeatureDef> featureA =
-  // features.stream().filter(f -> f.getName().equals("Feature.A")).findFirst();
-  // assertTrue(featureA.isPresent());
-  // assertEquals("Feature.A", featureA.get().getName());
-  // assertEquals("test", featureA.get().getProject());
-  // assertTrue(featureA.get().getType().isPresent());
-  // assertTrue(featureA.get().isEnabled());
-  // assertEquals("experiment", featureA.get().getType().get());
-  // }
+    Optional<FeatureDef> featureA =
+        features.stream().filter(f -> f.getName().equals("Feature.A")).findFirst();
+    assertTrue(featureA.isPresent());
+    assertEquals("Feature.A", featureA.get().getName());
+    assertEquals("test", featureA.get().getProject());
+    assertTrue(featureA.get().getType().isPresent());
+    assertTrue(featureA.get().isEnabled());
+    assertEquals("experiment", featureA.get().getType().get());
+  }
 
   @Test
   public void testClientSpec() throws Exception {

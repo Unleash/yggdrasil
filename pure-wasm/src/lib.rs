@@ -20,7 +20,9 @@ use flatbuffers::FlatBufferBuilder;
 use messaging::messaging::ResponseBuilder;
 use messaging::messaging::{MetricsBucketBuilder, VariantBuilder, VariantPayloadBuilder};
 
-use unleash_yggdrasil::{EngineState, ExtendedVariantDef, state::EnrichedContext};
+use unleash_yggdrasil::{
+    EngineState, ExtendedVariantDef, ToggleDefinition, state::EnrichedContext,
+};
 
 use getrandom::register_custom_getrandom;
 
@@ -230,6 +232,47 @@ pub fn build_metrics_response(
     })
 }
 
+fn build_known_toggles_response(known_toggles: Vec<ToggleDefinition>) -> Vec<u8> {
+    BUILDER.with(|cell| {
+        let mut builder = cell.borrow_mut();
+        builder.reset();
+
+        let items: Vec<_> = known_toggles
+            .iter()
+            .map(|toggle| {
+                let toggle_name_offset = builder.create_string(&toggle.name);
+                let project_offset = builder.create_string(&toggle.project);
+                let feature_type_offset = toggle
+                    .feature_type
+                    .as_ref()
+                    .map(|f| builder.create_string(f));
+
+                let mut feature_def_builder =
+                    messaging::messaging::FeatureDefBuilder::new(&mut builder);
+
+                feature_def_builder.add_name(toggle_name_offset);
+                feature_def_builder.add_project(project_offset);
+                feature_def_builder.add_enabled(toggle.enabled);
+                if feature_type_offset.is_some() {
+                    feature_def_builder.add_type_(feature_type_offset.unwrap());
+                }
+                feature_def_builder.finish()
+            })
+            .collect();
+
+        let toggle_vector = builder.create_vector(&items);
+
+        let resp_builder = {
+            let mut resp_builder = messaging::messaging::FeatureDefsBuilder::new(&mut builder);
+            resp_builder.add_items(toggle_vector);
+            resp_builder.finish()
+        };
+
+        builder.finish(resp_builder, None);
+        builder.finished_data().to_vec()
+    })
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
     unsafe {
@@ -335,6 +378,22 @@ pub extern "C" fn get_metrics(engine_ptr: i32, close_time: i64) -> u64 {
         let engine = &mut *(engine_ptr as *mut EngineState);
         let metrics = engine.get_metrics(DateTime::from_timestamp_millis(close_time).unwrap());
         let response = build_metrics_response(metrics);
+
+        let ptr: u32 = response.as_ptr() as u32;
+        let len: u32 = response.len() as u32;
+        let packed: u64 = ((len as u64) << 32) | ptr as u64;
+        std::mem::forget(response);
+
+        packed
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn list_known_toggles(engine_ptr: i32) -> u64 {
+    unsafe {
+        let engine = &mut *(engine_ptr as *mut EngineState);
+        let known_toggles = engine.list_known_toggles();
+        let response = build_known_toggles_response(known_toggles);
 
         let ptr: u32 = response.as_ptr() as u32;
         let len: u32 = response.len() as u32;

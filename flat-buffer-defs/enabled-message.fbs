@@ -59,6 +59,17 @@ table MetricsBucket {
   toggles: [ToggleEntry];
 }
 
+table FeatureDef {
+  name: string;
+  type: string;
+  project: string;
+  enabled: bool;
+}
+
+table FeatureDefs {
+  items: [FeatureDef];
+}
+
 root_type Response;
 root_type ContextMessage;
 root_type MetricsBucket;
