@@ -1,6 +1,9 @@
 package io.getunleash.engine;
 
-/*
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Optional;
+
 public class FeatureDef {
   private final String name;
   private final Optional<String> type;
@@ -35,4 +38,3 @@ public class FeatureDef {
     return enabled;
   }
 }
-*/

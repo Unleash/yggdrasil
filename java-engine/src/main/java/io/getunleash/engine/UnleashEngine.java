@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import messaging.ContextMessage;
+import messaging.FeatureDefs;
 import messaging.MetricsBucket;
 import messaging.PropertyEntry;
 import messaging.Response;
@@ -41,6 +42,7 @@ public class UnleashEngine {
   private ExportFunction getMetrics;
   private ExportFunction deallocResponseBuffer;
   private ExportFunction getLogBufferPtr;
+  private ExportFunction listKnownToggles;
   private Memory memory;
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -174,6 +176,7 @@ public class UnleashEngine {
     this.getMetrics = instance.export("get_metrics");
     this.deallocResponseBuffer = instance.export("dealloc_response_buffer");
     this.getLogBufferPtr = instance.export("get_log_buffer_ptr");
+    this.listKnownToggles = instance.export("list_known_toggles");
     this.memory = instance.memory();
 
     this.enginePointer = newEngine.apply()[0];
@@ -194,6 +197,24 @@ public class UnleashEngine {
 
     System.out.println(result);
     dealloc.apply(ptr, len);
+  }
+
+  public List<FeatureDef> listKnownToggles() throws Exception {
+    long packed = (long) listKnownToggles.apply(this.enginePointer)[0];
+    FeatureDefs featureDefs = derefWasmPointer(packed, FeatureDefs::getRootAsFeatureDefs);
+
+    List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
+    for (int i = 0; i < featureDefs.itemsLength(); i++) {
+      FeatureDef featureDef =
+          new FeatureDef(
+              featureDefs.items(i).name(),
+              featureDefs.items(i).type(),
+              featureDefs.items(i).project(),
+              featureDefs.items(i).enabled());
+      defs.add(featureDef);
+    }
+
+    return defs;
   }
 
   public Boolean isEnabled(String toggleName, Context context)

@@ -3,42 +3,71 @@
 package messaging;
 
 import com.google.flatbuffers.BaseVector;
-import com.google.flatbuffers.BooleanVector;
-import com.google.flatbuffers.ByteVector;
 import com.google.flatbuffers.Constants;
-import com.google.flatbuffers.DoubleVector;
 import com.google.flatbuffers.FlatBufferBuilder;
-import com.google.flatbuffers.FloatVector;
-import com.google.flatbuffers.IntVector;
-import com.google.flatbuffers.LongVector;
-import com.google.flatbuffers.ShortVector;
-import com.google.flatbuffers.StringVector;
-import com.google.flatbuffers.Struct;
 import com.google.flatbuffers.Table;
-import com.google.flatbuffers.UnionVector;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
 public final class MetricsBucket extends Table {
-  public static void ValidateVersion() { Constants.FLATBUFFERS_23_1_21(); }
-  public static MetricsBucket getRootAsMetricsBucket(ByteBuffer _bb) { return getRootAsMetricsBucket(_bb, new MetricsBucket()); }
-  public static MetricsBucket getRootAsMetricsBucket(ByteBuffer _bb, MetricsBucket obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __reset(_i, _bb); }
-  public MetricsBucket __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
+  public static void ValidateVersion() {
+    Constants.FLATBUFFERS_23_1_21();
+  }
 
-  public long start() { int o = __offset(4); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
-  public long stop() { int o = __offset(6); return o != 0 ? bb.getLong(o + bb_pos) : 0L; }
-  public messaging.ToggleEntry toggles(int j) { return toggles(new messaging.ToggleEntry(), j); }
-  public messaging.ToggleEntry toggles(messaging.ToggleEntry obj, int j) { int o = __offset(8); return o != 0 ? obj.__assign(__indirect(__vector(o) + j * 4), bb) : null; }
-  public int togglesLength() { int o = __offset(8); return o != 0 ? __vector_len(o) : 0; }
-  public messaging.ToggleEntry.Vector togglesVector() { return togglesVector(new messaging.ToggleEntry.Vector()); }
-  public messaging.ToggleEntry.Vector togglesVector(messaging.ToggleEntry.Vector obj) { int o = __offset(8); return o != 0 ? obj.__assign(__vector(o), 4, bb) : null; }
+  public static MetricsBucket getRootAsMetricsBucket(ByteBuffer _bb) {
+    return getRootAsMetricsBucket(_bb, new MetricsBucket());
+  }
 
-  public static int createMetricsBucket(FlatBufferBuilder builder,
-      long start,
-      long stop,
-      int togglesOffset) {
+  public static MetricsBucket getRootAsMetricsBucket(ByteBuffer _bb, MetricsBucket obj) {
+    _bb.order(ByteOrder.LITTLE_ENDIAN);
+    return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb));
+  }
+
+  public void __init(int _i, ByteBuffer _bb) {
+    __reset(_i, _bb);
+  }
+
+  public MetricsBucket __assign(int _i, ByteBuffer _bb) {
+    __init(_i, _bb);
+    return this;
+  }
+
+  public long start() {
+    int o = __offset(4);
+    return o != 0 ? bb.getLong(o + bb_pos) : 0L;
+  }
+
+  public long stop() {
+    int o = __offset(6);
+    return o != 0 ? bb.getLong(o + bb_pos) : 0L;
+  }
+
+  public messaging.ToggleEntry toggles(int j) {
+    return toggles(new messaging.ToggleEntry(), j);
+  }
+
+  public messaging.ToggleEntry toggles(messaging.ToggleEntry obj, int j) {
+    int o = __offset(8);
+    return o != 0 ? obj.__assign(__indirect(__vector(o) + j * 4), bb) : null;
+  }
+
+  public int togglesLength() {
+    int o = __offset(8);
+    return o != 0 ? __vector_len(o) : 0;
+  }
+
+  public messaging.ToggleEntry.Vector togglesVector() {
+    return togglesVector(new messaging.ToggleEntry.Vector());
+  }
+
+  public messaging.ToggleEntry.Vector togglesVector(messaging.ToggleEntry.Vector obj) {
+    int o = __offset(8);
+    return o != 0 ? obj.__assign(__vector(o), 4, bb) : null;
+  }
+
+  public static int createMetricsBucket(
+      FlatBufferBuilder builder, long start, long stop, int togglesOffset) {
     builder.startTable(3);
     MetricsBucket.addStop(builder, stop);
     MetricsBucket.addStart(builder, start);
@@ -46,24 +75,57 @@ public final class MetricsBucket extends Table {
     return MetricsBucket.endMetricsBucket(builder);
   }
 
-  public static void startMetricsBucket(FlatBufferBuilder builder) { builder.startTable(3); }
-  public static void addStart(FlatBufferBuilder builder, long start) { builder.addLong(0, start, 0L); }
-  public static void addStop(FlatBufferBuilder builder, long stop) { builder.addLong(1, stop, 0L); }
-  public static void addToggles(FlatBufferBuilder builder, int togglesOffset) { builder.addOffset(2, togglesOffset, 0); }
-  public static int createTogglesVector(FlatBufferBuilder builder, int[] data) { builder.startVector(4, data.length, 4); for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]); return builder.endVector(); }
-  public static void startTogglesVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
+  public static void startMetricsBucket(FlatBufferBuilder builder) {
+    builder.startTable(3);
+  }
+
+  public static void addStart(FlatBufferBuilder builder, long start) {
+    builder.addLong(0, start, 0L);
+  }
+
+  public static void addStop(FlatBufferBuilder builder, long stop) {
+    builder.addLong(1, stop, 0L);
+  }
+
+  public static void addToggles(FlatBufferBuilder builder, int togglesOffset) {
+    builder.addOffset(2, togglesOffset, 0);
+  }
+
+  public static int createTogglesVector(FlatBufferBuilder builder, int[] data) {
+    builder.startVector(4, data.length, 4);
+    for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]);
+    return builder.endVector();
+  }
+
+  public static void startTogglesVector(FlatBufferBuilder builder, int numElems) {
+    builder.startVector(4, numElems, 4);
+  }
+
   public static int endMetricsBucket(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;
   }
-  public static void finishMetricsBucketBuffer(FlatBufferBuilder builder, int offset) { builder.finish(offset); }
-  public static void finishSizePrefixedMetricsBucketBuffer(FlatBufferBuilder builder, int offset) { builder.finishSizePrefixed(offset); }
+
+  public static void finishMetricsBucketBuffer(FlatBufferBuilder builder, int offset) {
+    builder.finish(offset);
+  }
+
+  public static void finishSizePrefixedMetricsBucketBuffer(FlatBufferBuilder builder, int offset) {
+    builder.finishSizePrefixed(offset);
+  }
 
   public static final class Vector extends BaseVector {
-    public Vector __assign(int _vector, int _element_size, ByteBuffer _bb) { __reset(_vector, _element_size, _bb); return this; }
+    public Vector __assign(int _vector, int _element_size, ByteBuffer _bb) {
+      __reset(_vector, _element_size, _bb);
+      return this;
+    }
 
-    public MetricsBucket get(int j) { return get(new MetricsBucket(), j); }
-    public MetricsBucket get(MetricsBucket obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
+    public MetricsBucket get(int j) {
+      return get(new MetricsBucket(), j);
+    }
+
+    public MetricsBucket get(MetricsBucket obj, int j) {
+      return obj.__assign(__indirect(__element(j), bb), bb);
+    }
   }
 }
-
