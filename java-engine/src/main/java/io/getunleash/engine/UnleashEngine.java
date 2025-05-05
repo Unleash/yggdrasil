@@ -21,6 +21,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import messaging.ContextMessage;
 import messaging.MetricsBucket;
 import messaging.PropertyEntry;
@@ -64,7 +65,7 @@ public class UnleashEngine {
     return hostname;
   }
 
-  public static byte[] buildMessage(String toggleName, Context context) {
+  private static byte[] buildMessage(String toggleName, Context context) {
     FlatBufferBuilder builder = new FlatBufferBuilder(1024);
 
     int toggleNameOffset = builder.createString(toggleName);
@@ -202,35 +203,10 @@ public class UnleashEngine {
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
     memory.write(contextPtr, contextBytes);
 
-    long packed = (long) checkEnabled.apply(this.enginePointer, contextPtr, contextBytes.length)[0];
+    Response response =
+        this.<Response>callWasmFunctionWithResponse(
+            contextPtr, contextBytes.length, checkEnabled::apply, Response::getRootAsResponse);
 
-    // This is not sane. To receive the response we need to two things:
-    // 1) a pointer
-    // 2) a length so we can read the pointer value to the end but not beyond
-    // However, we don't have a way to pass complex objects back to the host
-    // function. We can use a pre-allocated shared buffer but we would need to have
-    // that
-    // buffer size appropriately tuned for real workloads. Which requires a bunch of
-    // experimentation
-    // sooooo... instead we hack this. We're using 32 bit WASM here, which means
-    // pointers are 32
-    // bits
-    // and we need a second 32 bit number to represent the length of the buffer.
-    // We can pass a 64 bit number across the WASM boundary, which is really two 32
-    // bit numbers
-    // wearing a silly hat
-    int ptr = (int) (packed & 0xFFFFFFFFL);
-    int len = (int) (packed >>> 32);
-    byte[] bytes = instance.memory().readBytes(ptr, len);
-
-    ByteBuffer buf = ByteBuffer.wrap(bytes);
-    buf.order(ByteOrder.LITTLE_ENDIAN); // Apparently flatBuffers are little-endian
-
-    Response response = Response.getRootAsResponse(buf);
-
-    dealloc.apply(contextPtr, contextBytes.length);
-    deallocResponseBuffer.apply(ptr, len);
-    readLog();
     if (response.hasEnabled()) {
       return response.enabled();
     }
@@ -251,50 +227,83 @@ public class UnleashEngine {
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
     memory.write(contextPtr, contextBytes);
 
-    long packed = (long) checkVariant.apply(this.enginePointer, contextPtr, contextBytes.length)[0];
+    Variant variant =
+        this.<Variant>callWasmFunctionWithResponse(
+            contextPtr, contextBytes.length, checkVariant::apply, Variant::getRootAsVariant);
+
+    if (variant.name() != null) {
+      Payload payload = null;
+
+      VariantPayload variantPayload = variant.payload();
+
+      if (variantPayload != null) {
+        payload = new Payload();
+        payload.setType(variant.payload().payloadType());
+        payload.setValue(variant.payload().value());
+      }
+
+      return new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled());
+    } else {
+      return null;
+    }
+  }
+
+  public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {
+    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+
+    long packed = (long) getMetrics.apply(this.enginePointer, now.toInstant().toEpochMilli())[0];
+    MetricsBucket bucket = derefWasmPointer(packed, MetricsBucket::getRootAsMetricsBucket);
+
+    if (bucket.togglesVector() == null) {
+      return null;
+    }
+    return bucket;
+  }
+
+  private <T> T derefWasmPointer(long packed, Function<ByteBuffer, T> decoder) {
+    // This is not sane. To receive the response we need to two things:
+    // 1) a pointer
+    // 2) a length so we can read the pointer value to the end but not beyond
+    //
+    // However, we don't have a way to pass complex objects back to the host
+    // function. We can use a pre-allocated shared buffer but we would need to have
+    // that buffer size appropriately tuned for real workloads.
+    // Which requires a bunch of experimentation sooooo...
+    // instead we hack this. We're using 32 bit WASM here, which means
+    // pointers are 32 bits and we need a second 32 bit number to represent the
+    // length of the buffer. We can pass a 64 bit number across the WASM boundary,
+    // which is really two 32 bit numbers wearing a silly hat
 
     int ptr = (int) (packed & 0xFFFFFFFFL);
     int len = (int) (packed >>> 32);
+
     byte[] bytes = instance.memory().readBytes(ptr, len);
 
     ByteBuffer buf = ByteBuffer.wrap(bytes);
     buf.order(ByteOrder.LITTLE_ENDIAN);
 
-    Variant variant = Variant.getRootAsVariant(buf);
-    if (variant.name() == null) {
-      dealloc.apply(contextPtr, contextBytes.length);
-      deallocResponseBuffer.apply(ptr, len);
-      return null;
-    }
-    VariantPayload messagePayload = variant.payload();
-    Payload payload = null;
-
-    if (messagePayload != null) {
-      payload = new Payload();
-      payload.setType(messagePayload.payloadType());
-      payload.setValue(messagePayload.value());
-    }
-
-    dealloc.apply(contextPtr, contextBytes.length);
+    T response = decoder.apply(buf);
     deallocResponseBuffer.apply(ptr, len);
-
-    return new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled());
+    return response;
   }
 
-  public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {
-    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-    long packed = (long) getMetrics.apply(this.enginePointer, now.toInstant().toEpochMilli())[0];
-    int ptr = (int) (packed & 0xFFFFFFFFL);
-    int len = (int) (packed >>> 32);
-    byte[] bytes = instance.memory().readBytes(ptr, len);
+  private <T> T callWasmFunctionWithResponse(
+      int messagePtr,
+      int messageLen,
+      TriFunction<Long, Integer, Integer, long[]> nativeCall,
+      Function<ByteBuffer, T> decoder) {
+    long packed = nativeCall.apply(this.enginePointer, messagePtr, messageLen)[0];
+    T response = derefWasmPointer(packed, decoder);
 
-    ByteBuffer buf = ByteBuffer.wrap(bytes);
-    buf.order(ByteOrder.LITTLE_ENDIAN); // Apparently flatBuffers are little-endian
-    MetricsBucket bucket = MetricsBucket.getRootAsMetricsBucket(buf);
-    deallocResponseBuffer.apply(ptr, len);
-    if (bucket.togglesVector() == null) {
-      return null;
-    }
-    return bucket;
+    dealloc.apply(messagePtr, messageLen);
+
+    readLog();
+
+    return response;
+  }
+
+  @FunctionalInterface
+  public interface TriFunction<A, B, C, R> {
+    R apply(A a, B b, C c);
   }
 }
