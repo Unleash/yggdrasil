@@ -5,6 +5,7 @@ use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{ExtendedVariantDef, ToggleDefinition};
 
 use crate::messaging::messaging::{
+    BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
     FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsBucket, MetricsBucketBuilder,
     Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
     VariantEntryBuilder, VariantPayloadBuilder,
@@ -180,6 +181,33 @@ impl FlatbufferSerializable<Vec<ToggleDefinition>> for FeatureDefs<'static> {
 
         let mut resp_builder = FeatureDefsBuilder::new(builder);
         resp_builder.add_items(toggle_vector);
+        resp_builder.finish()
+    }
+}
+
+impl FlatbufferSerializable<&str> for CoreVersion<'static> {
+    fn as_flat_buffer(builder: &mut FlatBufferBuilder<'static>, version: &str) -> WIPOffset<Self> {
+        let version_offset = builder.create_string(version);
+        let mut resp_builder = CoreVersionBuilder::new(builder);
+        resp_builder.add_version(version_offset);
+        resp_builder.finish()
+    }
+}
+
+impl FlatbufferSerializable<[&'static str; 8]> for BuiltInStrategies<'static> {
+    fn as_flat_buffer(
+        builder: &mut FlatBufferBuilder<'static>,
+        strategies: [&'static str; 8],
+    ) -> WIPOffset<Self> {
+        let items: Vec<_> = strategies
+            .iter()
+            .map(|strategy| builder.create_string(strategy))
+            .collect();
+
+        let strategy_vector = builder.create_vector(&items);
+
+        let mut resp_builder = BuiltInStrategiesBuilder::new(builder);
+        resp_builder.add_values(strategy_vector);
         resp_builder.finish()
     }
 }

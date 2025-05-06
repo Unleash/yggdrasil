@@ -10,8 +10,12 @@ use std::{
 };
 
 use getrandom::register_custom_getrandom;
-use messaging::messaging::{ContextMessage, FeatureDefs, MetricsBucket, Response, Variant};
-use unleash_yggdrasil::{EngineState, ExtendedVariantDef, state::EnrichedContext};
+use messaging::messaging::{
+    BuiltInStrategies, ContextMessage, CoreVersion, FeatureDefs, MetricsBucket, Response, Variant,
+};
+use unleash_yggdrasil::{
+    EngineState, ExtendedVariantDef, KNOWN_STRATEGIES, state::EnrichedContext,
+};
 
 mod logging;
 mod random;
@@ -178,4 +182,14 @@ pub unsafe extern "C" fn list_known_toggles(engine_ptr: i32) -> u64 {
 
         FeatureDefs::build_response(known_toggles)
     }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn get_core_version() -> u64 {
+    CoreVersion::build_response(env!("CARGO_PKG_VERSION"))
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn get_built_in_strategies() -> u64 {
+    BuiltInStrategies::build_response(KNOWN_STRATEGIES)
 }

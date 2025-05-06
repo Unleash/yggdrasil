@@ -1156,6 +1156,200 @@ impl core::fmt::Debug for ToggleStats<'_> {
       ds.finish()
   }
 }
+pub enum CoreVersionOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct CoreVersion<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for CoreVersion<'a> {
+  type Inner = CoreVersion<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> CoreVersion<'a> {
+  pub const VT_VERSION: flatbuffers::VOffsetT = 4;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    CoreVersion { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args CoreVersionArgs<'args>
+  ) -> flatbuffers::WIPOffset<CoreVersion<'bldr>> {
+    let mut builder = CoreVersionBuilder::new(_fbb);
+    if let Some(x) = args.version { builder.add_version(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn version(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(CoreVersion::VT_VERSION, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for CoreVersion<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("version", Self::VT_VERSION, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct CoreVersionArgs<'a> {
+    pub version: Option<flatbuffers::WIPOffset<&'a str>>,
+}
+impl<'a> Default for CoreVersionArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    CoreVersionArgs {
+      version: None,
+    }
+  }
+}
+
+pub struct CoreVersionBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> CoreVersionBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_version(&mut self, version: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(CoreVersion::VT_VERSION, version);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> CoreVersionBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    CoreVersionBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<CoreVersion<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for CoreVersion<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("CoreVersion");
+      ds.field("version", &self.version());
+      ds.finish()
+  }
+}
+pub enum BuiltInStrategiesOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct BuiltInStrategies<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for BuiltInStrategies<'a> {
+  type Inner = BuiltInStrategies<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> BuiltInStrategies<'a> {
+  pub const VT_VALUES: flatbuffers::VOffsetT = 4;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    BuiltInStrategies { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args BuiltInStrategiesArgs<'args>
+  ) -> flatbuffers::WIPOffset<BuiltInStrategies<'bldr>> {
+    let mut builder = BuiltInStrategiesBuilder::new(_fbb);
+    if let Some(x) = args.values { builder.add_values(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn values(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>(BuiltInStrategies::VT_VALUES, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for BuiltInStrategies<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("values", Self::VT_VALUES, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct BuiltInStrategiesArgs<'a> {
+    pub values: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
+}
+impl<'a> Default for BuiltInStrategiesArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    BuiltInStrategiesArgs {
+      values: None,
+    }
+  }
+}
+
+pub struct BuiltInStrategiesBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> BuiltInStrategiesBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_values(&mut self, values: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<&'b  str>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(BuiltInStrategies::VT_VALUES, values);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> BuiltInStrategiesBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    BuiltInStrategiesBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<BuiltInStrategies<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for BuiltInStrategies<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("BuiltInStrategies");
+      ds.field("values", &self.values());
+      ds.finish()
+  }
+}
 pub enum ToggleEntryOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
