@@ -15,6 +15,12 @@ table ContextMessage {
   remote_address: string;
   runtime_hostname: string;
   properties: [PropertyEntry];
+  custom_strategies_results: [CustomStrategyResult];
+}
+
+table CustomStrategyResult {
+  key: string (key);
+  value: bool;
 }
 
 table Response {

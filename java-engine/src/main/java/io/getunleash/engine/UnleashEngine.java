@@ -67,7 +67,39 @@ public class UnleashEngine {
     return hostname;
   }
 
-  private static byte[] buildMessage(String toggleName, Context context) {
+  private static int[] buildProperties(FlatBufferBuilder builder, Map<String, String> properties) {
+    List<Map.Entry<String, String>> entries = new ArrayList<>(properties.entrySet());
+    List<Integer> offsets = new ArrayList<>();
+    for (Map.Entry<String, String> entry : entries) {
+      if (entry.getValue() == null) {
+        continue;
+      }
+      int keyOffset = builder.createString(entry.getKey());
+      int valueOffset = builder.createString(entry.getValue());
+      int propOffset = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
+      offsets.add(propOffset);
+    }
+    return offsets.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private static int[] buildCustomStrategyResults(
+      FlatBufferBuilder builder, Map<String, Boolean> results) {
+    List<Map.Entry<String, Boolean>> entries = new ArrayList<>(results.entrySet());
+    List<Integer> offsets = new ArrayList<>();
+    for (Map.Entry<String, Boolean> entry : entries) {
+      if (entry.getValue() == null) {
+        continue;
+      }
+      int keyOffset = builder.createString(entry.getKey());
+      int valueOffset = builder.createString(entry.getValue().toString());
+      int propOffset = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
+      offsets.add(propOffset);
+    }
+    return offsets.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private static byte[] buildMessage(
+      String toggleName, Context context, Map<String, Boolean> customStrategyResults) {
     FlatBufferBuilder builder = new FlatBufferBuilder(1024);
 
     int toggleNameOffset = builder.createString(toggleName);
@@ -92,19 +124,8 @@ public class UnleashEngine {
     int environmentOffset =
         context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
 
-    List<Map.Entry<String, String>> entries = new ArrayList<>(context.properties.entrySet());
-    List<Integer> offsets = new ArrayList<>();
-    for (Map.Entry<String, String> entry : entries) {
-      if (entry.getValue() == null) {
-        continue;
-      }
-      int keyOffset = builder.createString(entry.getKey());
-      int valueOffset = builder.createString(entry.getValue());
-      int propOffset = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
-      offsets.add(propOffset);
-    }
-
-    int[] propertyOffsets = offsets.stream().mapToInt(Integer::intValue).toArray();
+    int[] propertyOffsets = buildProperties(builder, context.properties);
+    int[] customStrategyResultsOffsets = buildCustomStrategyResults(builder, customStrategyResults);
 
     String runtimeHostname = getRuntimeHostname();
     int runtimeHostnameOffset =
@@ -113,6 +134,8 @@ public class UnleashEngine {
             : builder.createString(getRuntimeHostname());
 
     int propsVec = ContextMessage.createPropertiesVector(builder, propertyOffsets);
+    int customStrategyResultsVec =
+        ContextMessage.createCustomStrategiesResultsVector(builder, customStrategyResultsOffsets);
 
     ContextMessage.startContextMessage(builder);
 
@@ -129,6 +152,10 @@ public class UnleashEngine {
 
     if (propertyOffsets.length > 0) {
       ContextMessage.addProperties(builder, propsVec);
+    }
+
+    if (customStrategyResultsOffsets.length > 0) {
+      ContextMessage.addCustomStrategiesResults(builder, customStrategyResultsVec);
     }
 
     int ctx = ContextMessage.endContextMessage(builder);
@@ -220,7 +247,7 @@ public class UnleashEngine {
   public Boolean isEnabled(String toggleName, Context context)
       throws JsonMappingException, JsonProcessingException {
 
-    byte[] contextBytes = buildMessage(toggleName, context);
+    byte[] contextBytes = buildMessage(toggleName, context, Map.of());
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
     memory.write(contextPtr, contextBytes);
 
@@ -244,7 +271,7 @@ public class UnleashEngine {
 
   public VariantDef getVariant(String toggleName, Context context)
       throws JsonMappingException, JsonProcessingException {
-    byte[] contextBytes = buildMessage(toggleName, context);
+    byte[] contextBytes = buildMessage(toggleName, context, Map.of());
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
     memory.write(contextPtr, contextBytes);
 
