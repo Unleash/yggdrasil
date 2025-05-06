@@ -1,14 +1,20 @@
 use chrono::DateTime;
 use core::str;
+use random::get_random_source;
+use serialisation::FlatbufferSerializable;
 use std::{
-    cell::RefCell,
     collections::HashMap,
     ffi::{CString, c_char, c_void},
     mem, slice,
 };
-use unleash_types::client_metrics::MetricBucket;
-mod logging;
 
+use getrandom::register_custom_getrandom;
+use messaging::messaging::{ContextMessage, FeatureDefs, MetricsBucket, Response, Variant};
+use unleash_yggdrasil::{EngineState, ExtendedVariantDef, state::EnrichedContext};
+
+mod logging;
+mod random;
+mod serialisation;
 #[allow(clippy::all)]
 mod messaging {
     #![allow(dead_code)]
@@ -17,54 +23,53 @@ mod messaging {
     include!("enabled-message_generated.rs");
 }
 
-use flatbuffers::{FlatBufferBuilder, Follow, WIPOffset};
-use messaging::messaging::{
-    FeatureDefs, MetricsBucket, MetricsBucketBuilder, Response, Variant, VariantBuilder,
-    VariantPayloadBuilder,
-};
-use messaging::messaging::{
-    ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, VariantEntryBuilder,
-};
-
-use unleash_yggdrasil::{
-    EngineState, ExtendedVariantDef, ToggleDefinition, state::EnrichedContext,
-};
-
-use getrandom::register_custom_getrandom;
-
 register_custom_getrandom!(get_random_source);
 
-thread_local! {
-    static BUILDER: RefCell<FlatBufferBuilder<'static>> =
-        RefCell::new(FlatBufferBuilder::with_capacity(128));
+#[derive(Debug)]
+pub enum WasmError {
+    InvalidContext,
+}
+
+impl TryFrom<ContextMessage<'_>> for EnrichedContext {
+    type Error = WasmError;
+
+    fn try_from(value: ContextMessage) -> Result<Self, Self::Error> {
+        let toggle_name = value.toggle_name().ok_or(WasmError::InvalidContext)?;
+
+        let context = EnrichedContext {
+            external_results: None,
+            toggle_name: toggle_name.to_string(),
+            runtime_hostname: value.runtime_hostname().map(|f| f.to_string()),
+            user_id: value.user_id().map(|f| f.to_string()),
+            session_id: value.session_id().map(|f| f.to_string()),
+            environment: value.environment().map(|f| f.to_string()),
+            app_name: value.app_name().map(|f| f.to_string()),
+            current_time: value.current_time().map(|f| f.to_string()),
+            remote_address: value.remote_address().map(|f| f.to_string()),
+            properties: value.properties().map(|entries| {
+                entries
+                    .iter()
+                    .filter_map(|entry| Some((entry.key().to_string(), entry.value()?.to_string())))
+                    .collect::<HashMap<String, String>>()
+            }),
+        };
+
+        Ok(context)
+    }
 }
 
 #[unsafe(no_mangle)]
-pub fn get_random() -> i32 {
-    rand::random::<i32>()
-}
-
-//This is expected to be defined by the caller and passed to the WASM layer
-unsafe extern "C" {
-    fn fill_random(ptr: *mut u8, len: usize) -> i32;
-}
-
-fn get_random_source(buf: &mut [u8]) -> Result<(), getrandom::Error> {
-    let result = unsafe { fill_random(buf.as_mut_ptr(), buf.len()) };
-    if result == 0 {
-        Ok(())
-    } else {
-        // probably the wrong error code here, this may need a custom definition
-        // good enough for a spike
-        Err(getrandom::Error::NO_RDRAND)
-    }
+pub fn new_engine() -> *mut c_void {
+    // need to hydrate this from the caller otherwise the metrics will be off
+    // doesn't matter for a spike though
+    let engine = EngineState::initial_state("2022-01-25T12:00:00.000Z".parse().unwrap());
+    Box::into_raw(Box::new(engine)) as *mut c_void
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn alloc(len: i32) -> *const u8 {
     let mut buf = Vec::with_capacity(len as usize);
     let ptr = buf.as_mut_ptr();
-    // needs to be paired with dealloc, otherwise something leaks, just not sure what yet
     mem::forget(buf);
     ptr
 }
@@ -75,11 +80,12 @@ pub unsafe extern "C" fn dealloc(ptr: &mut u8, len: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub fn new_engine() -> *mut c_void {
-    // need to hydrate this from the caller otherwise the metrics will be off
-    // doesn't matter for a spike though
-    let engine = EngineState::initial_state("2022-01-25T12:00:00.000Z".parse().unwrap());
-    Box::into_raw(Box::new(engine)) as *mut c_void
+pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
+    if !ptr.is_null() && len > 0 {
+        unsafe {
+            let _ = Vec::from_raw_parts(ptr, 0, len);
+        }
+    }
 }
 
 unsafe fn materialize_string<'a>(ptr: i32, len: i32) -> &'a str {
@@ -111,176 +117,6 @@ pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
-    if !ptr.is_null() && len > 0 {
-        unsafe {
-            let _ = Vec::from_raw_parts(ptr, 0, len);
-        }
-    }
-}
-
-pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
-    fn as_flat_buffer(builder: &mut FlatBufferBuilder<'static>, input: TInput) -> WIPOffset<Self>;
-
-    fn build_response(input: TInput) -> Vec<u8> {
-        BUILDER.with(|cell| {
-            let mut builder = cell.borrow_mut();
-            builder.reset();
-
-            let offset = Self::as_flat_buffer(&mut builder, input);
-
-            builder.finish(offset, None);
-            builder.finished_data().to_vec()
-        })
-    }
-}
-
-impl FlatbufferSerializable<Result<Option<bool>, &str>> for Response<'static> {
-    fn as_flat_buffer(
-        builder: &mut FlatBufferBuilder<'static>,
-        from: Result<Option<bool>, &str>,
-    ) -> WIPOffset<Response<'static>> {
-        let error_offset = from.as_ref().err().map(|e| builder.create_string(e));
-
-        let mut response_builder = ResponseBuilder::new(builder);
-
-        match from {
-            Ok(Some(flag)) => {
-                response_builder.add_enabled(flag);
-                response_builder.add_has_enabled(true);
-            }
-            Ok(None) => {
-                response_builder.add_has_enabled(false);
-            }
-            Err(_) => {
-                response_builder.add_error(error_offset.unwrap());
-            }
-        }
-
-        response_builder.finish()
-    }
-}
-impl FlatbufferSerializable<Result<Option<ExtendedVariantDef>, &str>> for Variant<'static> {
-    fn as_flat_buffer(
-        builder: &mut FlatBufferBuilder<'static>,
-        input: Result<Option<ExtendedVariantDef>, &str>,
-    ) -> WIPOffset<Self> {
-        let variant = input.unwrap();
-
-        if let Some(variant) = variant {
-            let payload_offset = variant.payload.as_ref().map(|payload| {
-                let payload_type_offset = builder.create_string(&payload.payload_type);
-                let value_offset = builder.create_string(&payload.value);
-
-                let mut variant_payload = VariantPayloadBuilder::new(builder);
-                variant_payload.add_payload_type(payload_type_offset);
-                variant_payload.add_value(value_offset);
-
-                variant_payload.finish()
-            });
-
-            let variant_name_offset = builder.create_string(&variant.name);
-
-            let mut variant_builder = VariantBuilder::new(builder);
-            variant_builder.add_feature_enabled(variant.feature_enabled);
-            variant_builder.add_enabled(variant.enabled);
-            variant_builder.add_name(variant_name_offset);
-            if let Some(payload_offset) = payload_offset {
-                variant_builder.add_payload(payload_offset);
-            }
-
-            variant_builder.finish()
-        } else {
-            let resp_builder = VariantBuilder::new(builder);
-            resp_builder.finish()
-        }
-    }
-}
-
-impl FlatbufferSerializable<Option<MetricBucket>> for MetricsBucket<'static> {
-    fn as_flat_buffer(
-        builder: &mut FlatBufferBuilder<'static>,
-        metrics: Option<MetricBucket>,
-    ) -> WIPOffset<Self> {
-        if let Some(metrics) = metrics {
-            let items: Vec<_> = metrics
-                .toggles
-                .iter()
-                .map(|(toggle_key, stats)| {
-                    let variant_items: Vec<_> = stats
-                        .variants
-                        .iter()
-                        .map(|(variant_key, count)| {
-                            let variant_key = builder.create_string(variant_key);
-                            let mut variant_builder = VariantEntryBuilder::new(builder);
-                            variant_builder.add_key(variant_key);
-                            variant_builder.add_value(*count);
-                            variant_builder.finish()
-                        })
-                        .collect();
-                    let variant_vector = builder.create_vector(&variant_items);
-
-                    let toggle_key = builder.create_string(toggle_key);
-                    let mut toggle_builder = ToggleStatsBuilder::new(builder);
-                    toggle_builder.add_no(stats.no);
-                    toggle_builder.add_yes(stats.yes);
-                    toggle_builder.add_variants(variant_vector);
-                    let toggle_value = toggle_builder.finish();
-                    let mut toggle_entry_builder = ToggleEntryBuilder::new(builder);
-                    toggle_entry_builder.add_value(toggle_value);
-                    toggle_entry_builder.add_key(toggle_key);
-                    toggle_entry_builder.finish()
-                })
-                .collect();
-            let toggle_vector = builder.create_vector(&items);
-            let mut resp_builder = MetricsBucketBuilder::new(builder);
-            resp_builder.add_start(metrics.start.timestamp_millis());
-            resp_builder.add_stop(metrics.stop.timestamp_millis());
-            resp_builder.add_toggles(toggle_vector);
-            resp_builder.finish()
-        } else {
-            let resp_builder = MetricsBucketBuilder::new(builder);
-            resp_builder.finish()
-        }
-    }
-}
-
-impl FlatbufferSerializable<Vec<ToggleDefinition>> for FeatureDefs<'static> {
-    fn as_flat_buffer(
-        builder: &mut FlatBufferBuilder<'static>,
-        known_toggles: Vec<ToggleDefinition>,
-    ) -> WIPOffset<Self> {
-        let items: Vec<_> = known_toggles
-            .iter()
-            .map(|toggle| {
-                let toggle_name_offset = builder.create_string(&toggle.name);
-                let project_offset = builder.create_string(&toggle.project);
-                let feature_type_offset = toggle
-                    .feature_type
-                    .as_ref()
-                    .map(|f| builder.create_string(f));
-
-                let mut feature_def_builder = messaging::messaging::FeatureDefBuilder::new(builder);
-
-                feature_def_builder.add_name(toggle_name_offset);
-                feature_def_builder.add_project(project_offset);
-                feature_def_builder.add_enabled(toggle.enabled);
-                if feature_type_offset.is_some() {
-                    feature_def_builder.add_type_(feature_type_offset.unwrap());
-                }
-                feature_def_builder.finish()
-            })
-            .collect();
-
-        let toggle_vector = builder.create_vector(&items);
-
-        let mut resp_builder = messaging::messaging::FeatureDefsBuilder::new(builder);
-        resp_builder.add_items(toggle_vector);
-        resp_builder.finish()
-    }
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
     unsafe {
         let bytes = std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize);
@@ -288,29 +124,11 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
             flatbuffers::root::<messaging::messaging::ContextMessage>(bytes)
                 .expect("invalid context");
 
-        let toggle_name = ctx.toggle_name().expect("You need to pass a toggle name and you also need to remove this expect before production!");
-
-        let context = EnrichedContext {
-            external_results: None,
-            toggle_name: toggle_name.to_string(),
-            runtime_hostname: ctx.runtime_hostname().map(|f| f.to_string()),
-            user_id: ctx.user_id().map(|f| f.to_string()),
-            session_id: ctx.session_id().map(|f| f.to_string()),
-            environment: ctx.environment().map(|f| f.to_string()),
-            app_name: ctx.app_name().map(|f| f.to_string()),
-            current_time: ctx.current_time().map(|f| f.to_string()),
-            remote_address: ctx.remote_address().map(|f| f.to_string()),
-            properties: ctx.properties().map(|entries| {
-                entries
-                    .iter()
-                    .filter_map(|entry| Some((entry.key().to_string(), entry.value()?.to_string())))
-                    .collect::<HashMap<String, String>>()
-            }),
-        };
+        let context: EnrichedContext = ctx.try_into().expect("Failed to convert context");
 
         let engine = &mut *(engine_ptr as *mut EngineState);
         let enabled = engine.check_enabled(&context);
-        engine.count_toggle(toggle_name, enabled.unwrap_or(false));
+        engine.count_toggle(&context.toggle_name, enabled.unwrap_or(false));
 
         let response = Response::build_response(Ok(enabled));
 
@@ -331,34 +149,16 @@ pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: 
             flatbuffers::root::<messaging::messaging::ContextMessage>(bytes)
                 .expect("invalid context");
 
-        let toggle_name = ctx.toggle_name().expect("You need to pass a toggle name and you also need to remove this expect before production!");
-
-        let context = EnrichedContext {
-            external_results: None,
-            toggle_name: toggle_name.to_string(),
-            runtime_hostname: ctx.runtime_hostname().map(|f| f.to_string()),
-            user_id: ctx.user_id().map(|f| f.to_string()),
-            session_id: ctx.session_id().map(|f| f.to_string()),
-            environment: ctx.environment().map(|f| f.to_string()),
-            app_name: ctx.app_name().map(|f| f.to_string()),
-            current_time: ctx.current_time().map(|f| f.to_string()),
-            remote_address: ctx.remote_address().map(|f| f.to_string()),
-            properties: ctx.properties().map(|entries| {
-                entries
-                    .iter()
-                    .filter_map(|entry| Some((entry.key().to_string(), entry.value()?.to_string())))
-                    .collect::<HashMap<String, String>>()
-            }),
-        };
+        let context: EnrichedContext = ctx.try_into().expect("Failed to convert context");
 
         let engine = &mut *(engine_ptr as *mut EngineState);
         let variant = engine.check_variant(&context);
         let enabled = engine.check_enabled(&context).unwrap_or_default();
 
-        engine.count_toggle(toggle_name, variant.is_some());
+        engine.count_toggle(&context.toggle_name, variant.is_some());
 
         if let Some(variant) = &variant {
-            engine.count_variant(toggle_name, &variant.name);
+            engine.count_variant(&context.toggle_name, &variant.name);
         }
 
         let extended_variant = variant.map(|variant| ExtendedVariantDef {
