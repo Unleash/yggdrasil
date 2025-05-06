@@ -39,4 +39,8 @@ public class Context {
   public Map<String, String> getProperties() {
     return properties;
   }
+
+  public void setProperties(Map<String, String> properties) {
+    this.properties = properties;
+  }
 }
