@@ -1,5 +1,6 @@
 use chrono::DateTime;
 use core::str;
+use flatbuffers::root;
 use random::get_random_source;
 use serialisation::FlatbufferSerializable;
 use std::{
@@ -64,10 +65,9 @@ impl TryFrom<ContextMessage<'_>> for EnrichedContext {
 }
 
 #[unsafe(no_mangle)]
-pub fn new_engine() -> *mut c_void {
-    // need to hydrate this from the caller otherwise the metrics will be off
-    // doesn't matter for a spike though
-    let engine = EngineState::initial_state("2022-01-25T12:00:00.000Z".parse().unwrap());
+pub fn new_engine(start_time: i64) -> *mut c_void {
+    let start_time = DateTime::from_timestamp_millis(start_time).unwrap();
+    let engine = EngineState::initial_state(start_time);
     Box::into_raw(Box::new(engine)) as *mut c_void
 }
 
@@ -93,18 +93,12 @@ pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
     }
 }
 
-unsafe fn materialize_string<'a>(ptr: i32, len: i32) -> &'a str {
-    unsafe {
-        let bytes = slice::from_raw_parts(ptr as *const u8, len as usize);
-        str::from_utf8_unchecked(bytes)
-    }
-}
-
 #[unsafe(no_mangle)]
 pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *mut c_char {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
-        let json_str = materialize_string(json_ptr, json_len);
+        let json_bytes = slice::from_raw_parts(json_ptr as *const u8, json_len as usize);
+        let json_str = str::from_utf8_unchecked(json_bytes);
 
         match serde_json::from_str(json_str) {
             Ok(client_features) => {
@@ -125,9 +119,7 @@ pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *
 pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
     unsafe {
         let bytes = std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize);
-        let ctx: messaging::messaging::ContextMessage =
-            flatbuffers::root::<messaging::messaging::ContextMessage>(bytes)
-                .expect("invalid context");
+        let ctx: ContextMessage = root::<ContextMessage>(bytes).expect("invalid context");
 
         let context: EnrichedContext = ctx.try_into().expect("Failed to convert context");
 
@@ -135,14 +127,7 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
         let enabled = engine.check_enabled(&context);
         engine.count_toggle(&context.toggle_name, enabled.unwrap_or(false));
 
-        let response = Response::build_response(Ok(enabled));
-
-        let ptr: u32 = response.as_ptr() as u32;
-        let len: u32 = response.len() as u32;
-        let packed: u64 = ((len as u64) << 32) | ptr as u64;
-        std::mem::forget(response);
-
-        packed
+        Response::build_response(Ok(enabled))
     }
 }
 
@@ -150,9 +135,7 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
 pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
     unsafe {
         let bytes = std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize);
-        let ctx: messaging::messaging::ContextMessage =
-            flatbuffers::root::<messaging::messaging::ContextMessage>(bytes)
-                .expect("invalid context");
+        let ctx: ContextMessage = root::<ContextMessage>(bytes).expect("invalid context");
 
         let context: EnrichedContext = ctx.try_into().expect("Failed to convert context");
 
@@ -173,14 +156,7 @@ pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: 
             payload: variant.payload.clone(),
         });
 
-        let response = Variant::build_response(Ok(extended_variant));
-
-        let ptr: u32 = response.as_ptr() as u32;
-        let len: u32 = response.len() as u32;
-        let packed: u64 = ((len as u64) << 32) | ptr as u64;
-        std::mem::forget(response);
-
-        packed
+        Variant::build_response(Ok(extended_variant))
     }
 }
 
@@ -189,14 +165,8 @@ pub extern "C" fn get_metrics(engine_ptr: i32, close_time: i64) -> u64 {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
         let metrics = engine.get_metrics(DateTime::from_timestamp_millis(close_time).unwrap());
-        let response = MetricsBucket::build_response(metrics);
 
-        let ptr: u32 = response.as_ptr() as u32;
-        let len: u32 = response.len() as u32;
-        let packed: u64 = ((len as u64) << 32) | ptr as u64;
-        std::mem::forget(response);
-
-        packed
+        MetricsBucket::build_response(metrics)
     }
 }
 
@@ -205,13 +175,7 @@ pub unsafe extern "C" fn list_known_toggles(engine_ptr: i32) -> u64 {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
         let known_toggles = engine.list_known_toggles();
-        let response = FeatureDefs::build_response(known_toggles);
 
-        let ptr: u32 = response.as_ptr() as u32;
-        let len: u32 = response.len() as u32;
-        let packed: u64 = ((len as u64) << 32) | ptr as u64;
-        std::mem::forget(response);
-
-        packed
+        FeatureDefs::build_response(known_toggles)
     }
 }

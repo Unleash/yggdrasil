@@ -9,7 +9,6 @@ import com.dylibso.chicory.runtime.Memory;
 import com.dylibso.chicory.wasm.types.ValueType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.flatbuffers.FlatBufferBuilder;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -48,16 +47,6 @@ public class UnleashEngine {
   private Memory memory;
 
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
-
-  private static final ObjectMapper objectMapper = new ObjectMapper();
-
-  public static String toJson(Object obj) {
-    try {
-      return objectMapper.writeValueAsString(obj);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to serialize to JSON", e);
-    }
-  }
 
   private static String getRuntimeHostname() {
     String hostname = System.getProperty("hostname");
@@ -228,7 +217,8 @@ public class UnleashEngine {
     this.listKnownToggles = instance.export("list_known_toggles");
     this.memory = instance.memory();
 
-    this.enginePointer = newEngine.apply()[0];
+    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+    this.enginePointer = newEngine.apply(now.toInstant().toEpochMilli())[0];
   }
 
   public void takeState(String message) {
