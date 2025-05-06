@@ -71,12 +71,10 @@ public class LibraryTest {
     Instant stop = Instant.ofEpochMilli(bucket.stop());
     ZonedDateTime utcStop = stop.atZone(ZoneOffset.UTC);
 
-    // Currently doesn't work because the start time is hardcoded to a date/time in 2022 in
-    // pure-wasm lib.rs
-    // assert(utcStart.isBefore(now)) : "start not before now. start: " + utcStart + " - stop: " +
-    // utcStop;
-    // assert(utcStart.plusMinutes(1).isAfter(now)) : "start plus minute not after now. start: " +
-    // utcStart + " - stop: " + utcStop;
+    assert (utcStart.isBefore(now))
+        : "start not before now. start: " + utcStart + " - stop: " + utcStop;
+    assert (utcStart.plusMinutes(1).isAfter(now))
+        : "start plus minute not after now. start: " + utcStart + " - stop: " + utcStop;
     assert (utcStop.isBefore(now)) : "stop not before now";
     assert (utcStop.plusMinutes(1).isAfter(now)) : "stop plus minute not after now" + utcStop;
   }

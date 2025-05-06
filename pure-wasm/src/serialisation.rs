@@ -5,7 +5,9 @@ use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{ExtendedVariantDef, ToggleDefinition};
 
 use crate::messaging::messaging::{
-    FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsBucket, MetricsBucketBuilder, Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder, VariantEntryBuilder, VariantPayloadBuilder
+    FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsBucket, MetricsBucketBuilder,
+    Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
+    VariantEntryBuilder, VariantPayloadBuilder,
 };
 
 thread_local! {
@@ -16,8 +18,8 @@ thread_local! {
 pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
     fn as_flat_buffer(builder: &mut FlatBufferBuilder<'static>, input: TInput) -> WIPOffset<Self>;
 
-    fn build_response(input: TInput) -> Vec<u8> {
-        BUILDER.with(|cell| {
+    fn build_response(input: TInput) -> u64 {
+        let response = BUILDER.with(|cell| {
             let mut builder = cell.borrow_mut();
             builder.reset();
 
@@ -25,7 +27,14 @@ pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
 
             builder.finish(offset, None);
             builder.finished_data().to_vec()
-        })
+        });
+
+        let ptr: u32 = response.as_ptr() as u32;
+        let len: u32 = response.len() as u32;
+        let packed: u64 = ((len as u64) << 32) | ptr as u64;
+
+        std::mem::forget(response);
+        packed
     }
 }
 
