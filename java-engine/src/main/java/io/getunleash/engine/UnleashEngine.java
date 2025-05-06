@@ -95,8 +95,8 @@ public class UnleashEngine {
         continue;
       }
       int keyOffset = builder.createString(entry.getKey());
-      int valueOffset = builder.createString(entry.getValue().toString());
-      int propOffset = PropertyEntry.createPropertyEntry(builder, keyOffset, valueOffset);
+      int propOffset =
+          PropertyEntry.createPropertyEntry(builder, keyOffset, entry.getValue() ? 1 : 0);
       offsets.add(propOffset);
     }
     return offsets.stream().mapToInt(Integer::intValue).toArray();
@@ -171,6 +171,10 @@ public class UnleashEngine {
     this(null, null);
   }
 
+  public UnleashEngine(List<IStrategy> customStrategies) {
+    this(customStrategies, null);
+  }
+
   public UnleashEngine(List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
     ImportValues imports =
         ImportValues.builder()
@@ -229,6 +233,7 @@ public class UnleashEngine {
 
   public void takeState(String message) {
 
+    customStrategiesEvaluator.loadStrategiesFor(message);
     int len = message.getBytes().length;
 
     int ptr = (int) alloc.apply(len)[0];

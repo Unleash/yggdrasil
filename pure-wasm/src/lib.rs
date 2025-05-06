@@ -37,7 +37,6 @@ impl TryFrom<ContextMessage<'_>> for EnrichedContext {
         let toggle_name = value.toggle_name().ok_or(WasmError::InvalidContext)?;
 
         let context = EnrichedContext {
-            external_results: None,
             toggle_name: toggle_name.to_string(),
             runtime_hostname: value.runtime_hostname().map(|f| f.to_string()),
             user_id: value.user_id().map(|f| f.to_string()),
@@ -51,6 +50,12 @@ impl TryFrom<ContextMessage<'_>> for EnrichedContext {
                     .iter()
                     .filter_map(|entry| Some((entry.key().to_string(), entry.value()?.to_string())))
                     .collect::<HashMap<String, String>>()
+            }),
+            external_results: value.custom_strategies_results().map(|entries| {
+                entries
+                    .iter()
+                    .map(|entry| (entry.key().to_string(), entry.value()))
+                    .collect::<HashMap<String, bool>>()
             }),
         };
 

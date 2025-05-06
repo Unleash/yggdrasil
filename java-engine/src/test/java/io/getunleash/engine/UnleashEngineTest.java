@@ -1,7 +1,8 @@
 package io.getunleash.engine;
 
-// import static io.getunleash.engine.TestStrategies.*;
+import static io.getunleash.engine.TestStrategies.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.params.provider.Arguments.of;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -14,8 +15,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class TestSuite {
   public String name;
@@ -46,8 +51,8 @@ class UnleashEngineTest {
 
   @BeforeEach
   void createEngine() {
-    // List<IStrategy> customStrategies = List.of(alwaysTrue("custom"));
-    engine = new UnleashEngine();
+    List<IStrategy> customStrategies = List.of(alwaysTrue("custom"));
+    engine = new UnleashEngine(customStrategies);
   }
 
   @Test
@@ -89,19 +94,17 @@ class UnleashEngineTest {
     assertFalse(variant.isEnabled());
   }
 
-  // @Test
-  // void testGetVariantWithCustomStrategy() throws Exception {
-  // engine.takeState(
-  // "{\"version\":1,\"features\":[{\"name\":\"Feature.D\",\"description\":\"Has a
-  // custom
-  // strategy\",\"enabled\":true,\"strategies\":[{\"name\":\"custom\",\"constraints\":[],\"parameters\":{\"foo\":\"bar\"}}]}]}");
+  @Test
+  void testGetVariantWithCustomStrategy() throws Exception {
+    engine.takeState(
+        "{\"version\":1,\"features\":[{\"name\":\"Feature.D\",\"description\":\"Has a custom strategy\",\"enabled\":true,\"strategies\":[{\"name\":\"custom\",\"constraints\":[],\"parameters\":{\"foo\":\"bar\"}}]}]}");
 
-  // Context context = new Context();
-  // VariantDef variant = engine.getVariant("Feature.D", context);
+    Context context = new Context();
+    VariantDef variant = engine.getVariant("Feature.D", context);
 
-  // assertEquals(variant.isFeatureEnabled(), true);
-  // assertFalse(variant.isEnabled());
-  // }
+    assertEquals(variant.isFeatureEnabled(), true);
+    assertFalse(variant.isEnabled());
+  }
 
   @Test
   void testListKnownTogglesReturnsAllFeatures() throws Exception {
@@ -169,7 +172,7 @@ class UnleashEngineTest {
               objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
           VariantDef result = engine.getVariant(toggleName, context);
           if (result == null) {
-            // // this behavior should be implemented in the SDK
+            // this behavior should be implemented in the SDK
             result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName, context));
           }
 
@@ -241,20 +244,20 @@ class UnleashEngineTest {
   // engine.shouldEmitImpressionEvent(featureName));
   // }
 
-  // @ParameterizedTest
-  // @MethodSource("customStrategiesInput")
-  // void customStrategiesRequired_whenNotConfigured_returnsFalse(
-  // List<IStrategy> customStrategies,
-  // String featureName,
-  // Context context,
-  // boolean expectedIsEnabled)
-  // throws Exception {
-  // UnleashEngine customEngine = new UnleashEngine(customStrategies);
-  // takeFeaturesFromResource(customEngine, "custom-strategy-tests.json");
-  // Boolean result = customEngine.isEnabled(featureName, context);
-  // assertNotNull(result);
-  // assertEquals(expectedIsEnabled, result);
-  // }
+  @ParameterizedTest
+  @MethodSource("customStrategiesInput")
+  void customStrategiesRequired_whenNotConfigured_returnsFalse(
+      List<IStrategy> customStrategies,
+      String featureName,
+      Context context,
+      boolean expectedIsEnabled)
+      throws Exception {
+    UnleashEngine customEngine = new UnleashEngine(customStrategies);
+    takeFeaturesFromResource(customEngine, "custom-strategy-tests.json");
+    Boolean result = customEngine.isEnabled(featureName, context);
+    assertNotNull(result);
+    assertEquals(expectedIsEnabled, result);
+  }
 
   // @SuppressWarnings("unused")
   // @Test
@@ -292,63 +295,61 @@ class UnleashEngineTest {
   // assertTrue(coreVersion.split("\\.").length >= 3);
   // }
 
-  // private static Stream<Arguments> customStrategiesInput() {
-  // Context oneYesContext = new Context();
-  // oneYesContext.setProperties(mapOf("one", "yes"));
-  // return Stream.of(
-  // of(null, "Feature.Custom.Strategies", new Context(), false),
-  // of(Collections.emptyList(), "Feature.Custom.Strategies", new Context(),
-  // false),
-  // of(
-  // Collections.singletonList(alwaysTrue("custom")),
-  // "Feature.Custom.Strategies",
-  // new Context(),
-  // true),
-  // of(
-  // Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
-  // "Feature.Custom.Strategies",
-  // new Context(),
-  // false),
-  // of(
-  // Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
-  // "Feature.Custom.Strategies",
-  // oneYesContext,
-  // true),
-  // of(
-  // Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
-  // "Feature.Mixed.Strategies",
-  // oneYesContext,
-  // true),
-  // of(
-  // Collections.singletonList(alwaysTrue("custom")),
-  // "Feature.Mixed.Strategies",
-  // oneYesContext,
-  // true),
-  // of(Collections.emptyList(), "Feature.Mixed.Strategies", oneYesContext, true),
-  // of(
-  // Collections.singletonList(alwaysFails("custom")),
-  // "Feature.Mixed.Strategies",
-  // oneYesContext,
-  // true));
-  // }
+  private static Stream<Arguments> customStrategiesInput() {
+    Context oneYesContext = new Context();
+    oneYesContext.setProperties(mapOf("one", "yes"));
+    return Stream.of(
+        of(null, "Feature.Custom.Strategies", new Context(), false),
+        of(Collections.emptyList(), "Feature.Custom.Strategies", new Context(), false),
+        of(
+            Collections.singletonList(alwaysTrue("custom")),
+            "Feature.Custom.Strategies",
+            new Context(),
+            true),
+        of(
+            Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+            "Feature.Custom.Strategies",
+            new Context(),
+            false),
+        of(
+            Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+            "Feature.Custom.Strategies",
+            oneYesContext,
+            true),
+        of(
+            Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+            "Feature.Mixed.Strategies",
+            oneYesContext,
+            true),
+        of(
+            Collections.singletonList(alwaysTrue("custom")),
+            "Feature.Mixed.Strategies",
+            oneYesContext,
+            true),
+        of(Collections.emptyList(), "Feature.Mixed.Strategies", oneYesContext, true),
+        of(
+            Collections.singletonList(alwaysFails("custom")),
+            "Feature.Mixed.Strategies",
+            oneYesContext,
+            true));
+  }
 
-  // static Map<String, String> mapOf(String key, String value) {
-  // return new HashMap<String, String>() {
-  // {
-  // put(key, value);
-  // }
-  // };
-  // }
+  static Map<String, String> mapOf(String key, String value) {
+    return new HashMap<String, String>() {
+      {
+        put(key, value);
+      }
+    };
+  }
 
-  // private void takeFeaturesFromResource(UnleashEngine engine, String resource)
-  // {
-  // try {
-  // String features = readResource(resource);
-  // engine.takeState(features);
-  // } catch (Exception e) {
-  // throw new RuntimeException("Something went wrong here", e);
-  // }
-  // }
+  private void takeFeaturesFromResource(UnleashEngine engine, String resource) {
+    try {
+      String features = readResource(resource);
+      engine.takeState(features);
+    } catch (Exception e) {
+      throw new RuntimeException("Something went wrong here", e);
+    }
+  }
 
   public static String readResource(String resource) throws IOException, URISyntaxException {
     return new String(
