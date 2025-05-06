@@ -9,6 +9,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -347,14 +350,13 @@ class UnleashEngineTest {
   // }
   // }
 
-  // public static String readResource(String resource) throws IOException,
-  // URISyntaxException {
-  // return new String(
-  // Files.readAllBytes(
-  // Paths.get(
-  // Objects.requireNonNull(
-  // UnleashEngineTest.class.getClassLoader().getResource(resource))
-  // .toURI())),
-  // StandardCharsets.UTF_8);
-  // }
+  public static String readResource(String resource) throws IOException, URISyntaxException {
+    return new String(
+        Files.readAllBytes(
+            Paths.get(
+                Objects.requireNonNull(
+                        UnleashEngineTest.class.getClassLoader().getResource(resource))
+                    .toURI())),
+        StandardCharsets.UTF_8);
+  }
 }
