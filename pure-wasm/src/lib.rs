@@ -6,6 +6,7 @@ use std::{
     ffi::{CString, c_char, c_void},
     mem, slice,
 };
+use unleash_types::client_metrics::MetricBucket;
 mod logging;
 
 #[allow(clippy::all)]
@@ -16,9 +17,14 @@ mod messaging {
     include!("enabled-message_generated.rs");
 }
 
-use flatbuffers::FlatBufferBuilder;
-use messaging::messaging::ResponseBuilder;
-use messaging::messaging::{MetricsBucketBuilder, VariantBuilder, VariantPayloadBuilder};
+use flatbuffers::{FlatBufferBuilder, Follow, WIPOffset};
+use messaging::messaging::{
+    FeatureDefs, MetricsBucket, MetricsBucketBuilder, Response, Variant, VariantBuilder,
+    VariantPayloadBuilder,
+};
+use messaging::messaging::{
+    ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, VariantEntryBuilder,
+};
 
 use unleash_yggdrasil::{
     EngineState, ExtendedVariantDef, ToggleDefinition, state::EnrichedContext,
@@ -113,43 +119,60 @@ pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
     }
 }
 
-// This is only used as a thread local so it's thread safe. If this gets moved out of the
-// thread local this will ruin someone's day. So don't do that. Please bro
-pub fn build_response(enabled: Option<bool>, error: Option<&str>) -> Vec<u8> {
-    BUILDER.with(|cell| {
-        let mut builder = cell.borrow_mut();
-        builder.reset();
+pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
+    fn as_flat_buffer(builder: &mut FlatBufferBuilder<'static>, input: TInput) -> WIPOffset<Self>;
 
-        let error_offset = error.map(|e| builder.create_string(e));
+    fn build_response(input: TInput) -> Vec<u8> {
+        BUILDER.with(|cell| {
+            let mut builder = cell.borrow_mut();
+            builder.reset();
 
-        let response = {
-            let mut resp_builder = ResponseBuilder::new(&mut builder);
-            if let Some(flag) = enabled {
-                resp_builder.add_enabled(flag);
-                resp_builder.add_has_enabled(true);
-            }
-            if let Some(err) = error_offset {
-                resp_builder.add_error(err);
-            }
-            resp_builder.finish()
-        };
+            let offset = Self::as_flat_buffer(&mut builder, input);
 
-        builder.finish(response, None);
-        builder.finished_data().to_vec()
-    })
+            builder.finish(offset, None);
+            builder.finished_data().to_vec()
+        })
+    }
 }
 
-pub fn build_variant_response(variant: Option<ExtendedVariantDef>, error: Option<&str>) -> Vec<u8> {
-    BUILDER.with(|cell| {
-        let mut builder = cell.borrow_mut();
-        builder.reset();
+impl FlatbufferSerializable<Result<Option<bool>, &str>> for Response<'static> {
+    fn as_flat_buffer(
+        builder: &mut FlatBufferBuilder<'static>,
+        from: Result<Option<bool>, &str>,
+    ) -> WIPOffset<Response<'static>> {
+        let error_offset = from.as_ref().err().map(|e| builder.create_string(e));
 
-        let response = if let Some(variant) = variant {
+        let mut response_builder = ResponseBuilder::new(builder);
+
+        match from {
+            Ok(Some(flag)) => {
+                response_builder.add_enabled(flag);
+                response_builder.add_has_enabled(true);
+            }
+            Ok(None) => {
+                response_builder.add_has_enabled(false);
+            }
+            Err(_) => {
+                response_builder.add_error(error_offset.unwrap());
+            }
+        }
+
+        response_builder.finish()
+    }
+}
+impl FlatbufferSerializable<Result<Option<ExtendedVariantDef>, &str>> for Variant<'static> {
+    fn as_flat_buffer(
+        builder: &mut FlatBufferBuilder<'static>,
+        input: Result<Option<ExtendedVariantDef>, &str>,
+    ) -> WIPOffset<Self> {
+        let variant = input.unwrap();
+
+        if let Some(variant) = variant {
             let payload_offset = variant.payload.as_ref().map(|payload| {
                 let payload_type_offset = builder.create_string(&payload.payload_type);
                 let value_offset = builder.create_string(&payload.value);
 
-                let mut variant_payload = VariantPayloadBuilder::new(&mut builder);
+                let mut variant_payload = VariantPayloadBuilder::new(builder);
                 variant_payload.add_payload_type(payload_type_offset);
                 variant_payload.add_value(value_offset);
 
@@ -158,7 +181,7 @@ pub fn build_variant_response(variant: Option<ExtendedVariantDef>, error: Option
 
             let variant_name_offset = builder.create_string(&variant.name);
 
-            let mut variant_builder = VariantBuilder::new(&mut builder);
+            let mut variant_builder = VariantBuilder::new(builder);
             variant_builder.add_feature_enabled(variant.feature_enabled);
             variant_builder.add_enabled(variant.enabled);
             variant_builder.add_name(variant_name_offset);
@@ -168,22 +191,18 @@ pub fn build_variant_response(variant: Option<ExtendedVariantDef>, error: Option
 
             variant_builder.finish()
         } else {
-            let resp_builder = VariantBuilder::new(&mut builder);
+            let resp_builder = VariantBuilder::new(builder);
             resp_builder.finish()
-        };
-
-        builder.finish(response, None);
-        builder.finished_data().to_vec()
-    })
+        }
+    }
 }
 
-pub fn build_metrics_response(
-    metrics: Option<unleash_types::client_metrics::MetricBucket>,
-) -> Vec<u8> {
-    BUILDER.with(|cell| {
-        let mut builder = cell.borrow_mut();
-        builder.reset();
-        let response = if let Some(metrics) = metrics {
+impl FlatbufferSerializable<Option<MetricBucket>> for MetricsBucket<'static> {
+    fn as_flat_buffer(
+        builder: &mut FlatBufferBuilder<'static>,
+        metrics: Option<MetricBucket>,
+    ) -> WIPOffset<Self> {
+        if let Some(metrics) = metrics {
             let items: Vec<_> = metrics
                 .toggles
                 .iter()
@@ -193,8 +212,7 @@ pub fn build_metrics_response(
                         .iter()
                         .map(|(variant_key, count)| {
                             let variant_key = builder.create_string(variant_key);
-                            let mut variant_builder =
-                                messaging::messaging::VariantEntryBuilder::new(&mut builder);
+                            let mut variant_builder = VariantEntryBuilder::new(builder);
                             variant_builder.add_key(variant_key);
                             variant_builder.add_value(*count);
                             variant_builder.finish()
@@ -203,40 +221,35 @@ pub fn build_metrics_response(
                     let variant_vector = builder.create_vector(&variant_items);
 
                     let toggle_key = builder.create_string(toggle_key);
-                    let mut toggle_builder =
-                        messaging::messaging::ToggleStatsBuilder::new(&mut builder);
+                    let mut toggle_builder = ToggleStatsBuilder::new(builder);
                     toggle_builder.add_no(stats.no);
                     toggle_builder.add_yes(stats.yes);
                     toggle_builder.add_variants(variant_vector);
                     let toggle_value = toggle_builder.finish();
-                    let mut toggle_entry_builder =
-                        messaging::messaging::ToggleEntryBuilder::new(&mut builder);
+                    let mut toggle_entry_builder = ToggleEntryBuilder::new(builder);
                     toggle_entry_builder.add_value(toggle_value);
                     toggle_entry_builder.add_key(toggle_key);
                     toggle_entry_builder.finish()
                 })
                 .collect();
             let toggle_vector = builder.create_vector(&items);
-            let mut resp_builder = MetricsBucketBuilder::new(&mut builder);
+            let mut resp_builder = MetricsBucketBuilder::new(builder);
             resp_builder.add_start(metrics.start.timestamp_millis());
             resp_builder.add_stop(metrics.stop.timestamp_millis());
             resp_builder.add_toggles(toggle_vector);
             resp_builder.finish()
         } else {
-            let resp_builder = MetricsBucketBuilder::new(&mut builder);
+            let resp_builder = MetricsBucketBuilder::new(builder);
             resp_builder.finish()
-        };
-
-        builder.finish(response, None);
-        builder.finished_data().to_vec()
-    })
+        }
+    }
 }
 
-fn build_known_toggles_response(known_toggles: Vec<ToggleDefinition>) -> Vec<u8> {
-    BUILDER.with(|cell| {
-        let mut builder = cell.borrow_mut();
-        builder.reset();
-
+impl FlatbufferSerializable<Vec<ToggleDefinition>> for FeatureDefs<'static> {
+    fn as_flat_buffer(
+        builder: &mut FlatBufferBuilder<'static>,
+        known_toggles: Vec<ToggleDefinition>,
+    ) -> WIPOffset<Self> {
         let items: Vec<_> = known_toggles
             .iter()
             .map(|toggle| {
@@ -247,8 +260,7 @@ fn build_known_toggles_response(known_toggles: Vec<ToggleDefinition>) -> Vec<u8>
                     .as_ref()
                     .map(|f| builder.create_string(f));
 
-                let mut feature_def_builder =
-                    messaging::messaging::FeatureDefBuilder::new(&mut builder);
+                let mut feature_def_builder = messaging::messaging::FeatureDefBuilder::new(builder);
 
                 feature_def_builder.add_name(toggle_name_offset);
                 feature_def_builder.add_project(project_offset);
@@ -262,15 +274,10 @@ fn build_known_toggles_response(known_toggles: Vec<ToggleDefinition>) -> Vec<u8>
 
         let toggle_vector = builder.create_vector(&items);
 
-        let resp_builder = {
-            let mut resp_builder = messaging::messaging::FeatureDefsBuilder::new(&mut builder);
-            resp_builder.add_items(toggle_vector);
-            resp_builder.finish()
-        };
-
-        builder.finish(resp_builder, None);
-        builder.finished_data().to_vec()
-    })
+        let mut resp_builder = messaging::messaging::FeatureDefsBuilder::new(builder);
+        resp_builder.add_items(toggle_vector);
+        resp_builder.finish()
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -305,7 +312,7 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
         let enabled = engine.check_enabled(&context);
         engine.count_toggle(toggle_name, enabled.unwrap_or(false));
 
-        let response = build_response(enabled, None);
+        let response = Response::build_response(Ok(enabled));
 
         let ptr: u32 = response.as_ptr() as u32;
         let len: u32 = response.len() as u32;
@@ -361,7 +368,7 @@ pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: 
             payload: variant.payload.clone(),
         });
 
-        let response = build_variant_response(extended_variant, None);
+        let response = Variant::build_response(Ok(extended_variant));
 
         let ptr: u32 = response.as_ptr() as u32;
         let len: u32 = response.len() as u32;
@@ -377,7 +384,7 @@ pub extern "C" fn get_metrics(engine_ptr: i32, close_time: i64) -> u64 {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
         let metrics = engine.get_metrics(DateTime::from_timestamp_millis(close_time).unwrap());
-        let response = build_metrics_response(metrics);
+        let response = MetricsBucket::build_response(metrics);
 
         let ptr: u32 = response.as_ptr() as u32;
         let len: u32 = response.len() as u32;
@@ -393,7 +400,7 @@ pub unsafe extern "C" fn list_known_toggles(engine_ptr: i32) -> u64 {
     unsafe {
         let engine = &mut *(engine_ptr as *mut EngineState);
         let known_toggles = engine.list_known_toggles();
-        let response = build_known_toggles_response(known_toggles);
+        let response = FeatureDefs::build_response(known_toggles);
 
         let ptr: u32 = response.as_ptr() as u32;
         let len: u32 = response.len() as u32;
