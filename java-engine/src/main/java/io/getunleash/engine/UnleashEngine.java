@@ -19,9 +19,11 @@ import java.security.SecureRandom;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import messaging.ContextMessage;
 import messaging.FeatureDefs;
 import messaging.MetricsBucket;
@@ -44,6 +46,8 @@ public class UnleashEngine {
   private ExportFunction getLogBufferPtr;
   private ExportFunction listKnownToggles;
   private Memory memory;
+
+  private final CustomStrategiesEvaluator customStrategiesEvaluator;
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -164,6 +168,10 @@ public class UnleashEngine {
   }
 
   public UnleashEngine() {
+    this(null, null);
+  }
+
+  public UnleashEngine(List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
     ImportValues imports =
         ImportValues.builder()
             .addFunction(
@@ -195,6 +203,16 @@ public class UnleashEngine {
             .build();
 
     ExportFunction newEngine = instance.export("new_engine");
+
+    if (customStrategies != null && !customStrategies.isEmpty()) {
+      List<String> builtInStrategies = new ArrayList<>();
+      this.customStrategiesEvaluator =
+          new CustomStrategiesEvaluator(
+              customStrategies.stream(), fallbackStrategy, new HashSet<String>(builtInStrategies));
+    } else {
+      this.customStrategiesEvaluator =
+          new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy, new HashSet<String>());
+    }
 
     this.alloc = instance.export("alloc");
     this.dealloc = instance.export("dealloc");
@@ -247,7 +265,8 @@ public class UnleashEngine {
   public Boolean isEnabled(String toggleName, Context context)
       throws JsonMappingException, JsonProcessingException {
 
-    byte[] contextBytes = buildMessage(toggleName, context, Map.of());
+    Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
+    byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
     memory.write(contextPtr, contextBytes);
 
@@ -271,7 +290,8 @@ public class UnleashEngine {
 
   public VariantDef getVariant(String toggleName, Context context)
       throws JsonMappingException, JsonProcessingException {
-    byte[] contextBytes = buildMessage(toggleName, context, Map.of());
+    Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
+    byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
     memory.write(contextPtr, contextBytes);
 

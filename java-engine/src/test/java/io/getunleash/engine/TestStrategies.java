@@ -1,6 +1,7 @@
 package io.getunleash.engine;
 
-/*
+import java.util.Map;
+
 class TestStrategies {
   static IStrategy alwaysTrue(String name) {
     return new IStrategy() {
@@ -53,4 +54,3 @@ class TestStrategies {
     };
   }
 }
-*/
