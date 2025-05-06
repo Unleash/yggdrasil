@@ -168,6 +168,7 @@ impl<'a> ContextMessage<'a> {
   pub const VT_REMOTE_ADDRESS: flatbuffers::VOffsetT = 16;
   pub const VT_RUNTIME_HOSTNAME: flatbuffers::VOffsetT = 18;
   pub const VT_PROPERTIES: flatbuffers::VOffsetT = 20;
+  pub const VT_CUSTOM_STRATEGIES_RESULTS: flatbuffers::VOffsetT = 22;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -179,6 +180,7 @@ impl<'a> ContextMessage<'a> {
     args: &'args ContextMessageArgs<'args>
   ) -> flatbuffers::WIPOffset<ContextMessage<'bldr>> {
     let mut builder = ContextMessageBuilder::new(_fbb);
+    if let Some(x) = args.custom_strategies_results { builder.add_custom_strategies_results(x); }
     if let Some(x) = args.properties { builder.add_properties(x); }
     if let Some(x) = args.runtime_hostname { builder.add_runtime_hostname(x); }
     if let Some(x) = args.remote_address { builder.add_remote_address(x); }
@@ -255,6 +257,13 @@ impl<'a> ContextMessage<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PropertyEntry>>>>(ContextMessage::VT_PROPERTIES, None)}
   }
+  #[inline]
+  pub fn custom_strategies_results(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<CustomStrategyResult<'a>>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<CustomStrategyResult>>>>(ContextMessage::VT_CUSTOM_STRATEGIES_RESULTS, None)}
+  }
 }
 
 impl flatbuffers::Verifiable for ContextMessage<'_> {
@@ -273,6 +282,7 @@ impl flatbuffers::Verifiable for ContextMessage<'_> {
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("remote_address", Self::VT_REMOTE_ADDRESS, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("runtime_hostname", Self::VT_RUNTIME_HOSTNAME, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<PropertyEntry>>>>("properties", Self::VT_PROPERTIES, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<CustomStrategyResult>>>>("custom_strategies_results", Self::VT_CUSTOM_STRATEGIES_RESULTS, false)?
      .finish();
     Ok(())
   }
@@ -287,6 +297,7 @@ pub struct ContextMessageArgs<'a> {
     pub remote_address: Option<flatbuffers::WIPOffset<&'a str>>,
     pub runtime_hostname: Option<flatbuffers::WIPOffset<&'a str>>,
     pub properties: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<PropertyEntry<'a>>>>>,
+    pub custom_strategies_results: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<CustomStrategyResult<'a>>>>>,
 }
 impl<'a> Default for ContextMessageArgs<'a> {
   #[inline]
@@ -301,6 +312,7 @@ impl<'a> Default for ContextMessageArgs<'a> {
       remote_address: None,
       runtime_hostname: None,
       properties: None,
+      custom_strategies_results: None,
     }
   }
 }
@@ -347,6 +359,10 @@ impl<'a: 'b, 'b> ContextMessageBuilder<'a, 'b> {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_PROPERTIES, properties);
   }
   #[inline]
+  pub fn add_custom_strategies_results(&mut self, custom_strategies_results: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<CustomStrategyResult<'b >>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(ContextMessage::VT_CUSTOM_STRATEGIES_RESULTS, custom_strategies_results);
+  }
+  #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> ContextMessageBuilder<'a, 'b> {
     let start = _fbb.start_table();
     ContextMessageBuilder {
@@ -373,6 +389,132 @@ impl core::fmt::Debug for ContextMessage<'_> {
       ds.field("remote_address", &self.remote_address());
       ds.field("runtime_hostname", &self.runtime_hostname());
       ds.field("properties", &self.properties());
+      ds.field("custom_strategies_results", &self.custom_strategies_results());
+      ds.finish()
+  }
+}
+pub enum CustomStrategyResultOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct CustomStrategyResult<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for CustomStrategyResult<'a> {
+  type Inner = CustomStrategyResult<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> CustomStrategyResult<'a> {
+  pub const VT_KEY: flatbuffers::VOffsetT = 4;
+  pub const VT_VALUE: flatbuffers::VOffsetT = 6;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    CustomStrategyResult { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args CustomStrategyResultArgs<'args>
+  ) -> flatbuffers::WIPOffset<CustomStrategyResult<'bldr>> {
+    let mut builder = CustomStrategyResultBuilder::new(_fbb);
+    if let Some(x) = args.key { builder.add_key(x); }
+    builder.add_value(args.value);
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn key(&self) -> &'a str {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(CustomStrategyResult::VT_KEY, None).unwrap()}
+  }
+  #[inline]
+  pub fn key_compare_less_than(&self, o: &CustomStrategyResult) -> bool {
+    self.key() < o.key()
+  }
+
+  #[inline]
+  pub fn key_compare_with_value(&self, val: & str) -> ::core::cmp::Ordering {
+    let key = self.key();
+    key.cmp(val)
+  }
+  #[inline]
+  pub fn value(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(CustomStrategyResult::VT_VALUE, Some(false)).unwrap()}
+  }
+}
+
+impl flatbuffers::Verifiable for CustomStrategyResult<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("key", Self::VT_KEY, true)?
+     .visit_field::<bool>("value", Self::VT_VALUE, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct CustomStrategyResultArgs<'a> {
+    pub key: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub value: bool,
+}
+impl<'a> Default for CustomStrategyResultArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    CustomStrategyResultArgs {
+      key: None, // required field
+      value: false,
+    }
+  }
+}
+
+pub struct CustomStrategyResultBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> CustomStrategyResultBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_key(&mut self, key: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(CustomStrategyResult::VT_KEY, key);
+  }
+  #[inline]
+  pub fn add_value(&mut self, value: bool) {
+    self.fbb_.push_slot::<bool>(CustomStrategyResult::VT_VALUE, value, false);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> CustomStrategyResultBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    CustomStrategyResultBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<CustomStrategyResult<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    self.fbb_.required(o, CustomStrategyResult::VT_KEY,"key");
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for CustomStrategyResult<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("CustomStrategyResult");
+      ds.field("key", &self.key());
+      ds.field("value", &self.value());
       ds.finish()
   }
 }

@@ -170,6 +170,46 @@ public final class ContextMessage extends Table {
     return o != 0 ? obj.__assign(__vector(o), 4, bb) : null;
   }
 
+  public messaging.CustomStrategyResult customStrategiesResults(int j) {
+    return customStrategiesResults(new messaging.CustomStrategyResult(), j);
+  }
+
+  public messaging.CustomStrategyResult customStrategiesResults(
+      messaging.CustomStrategyResult obj, int j) {
+    int o = __offset(22);
+    return o != 0 ? obj.__assign(__indirect(__vector(o) + j * 4), bb) : null;
+  }
+
+  public int customStrategiesResultsLength() {
+    int o = __offset(22);
+    return o != 0 ? __vector_len(o) : 0;
+  }
+
+  public messaging.CustomStrategyResult customStrategiesResultsByKey(String key) {
+    int o = __offset(22);
+    return o != 0
+        ? messaging.CustomStrategyResult.__lookup_by_key(null, __vector(o), key, bb)
+        : null;
+  }
+
+  public messaging.CustomStrategyResult customStrategiesResultsByKey(
+      messaging.CustomStrategyResult obj, String key) {
+    int o = __offset(22);
+    return o != 0
+        ? messaging.CustomStrategyResult.__lookup_by_key(obj, __vector(o), key, bb)
+        : null;
+  }
+
+  public messaging.CustomStrategyResult.Vector customStrategiesResultsVector() {
+    return customStrategiesResultsVector(new messaging.CustomStrategyResult.Vector());
+  }
+
+  public messaging.CustomStrategyResult.Vector customStrategiesResultsVector(
+      messaging.CustomStrategyResult.Vector obj) {
+    int o = __offset(22);
+    return o != 0 ? obj.__assign(__vector(o), 4, bb) : null;
+  }
+
   public static int createContextMessage(
       FlatBufferBuilder builder,
       int toggleNameOffset,
@@ -180,8 +220,10 @@ public final class ContextMessage extends Table {
       int currentTimeOffset,
       int remoteAddressOffset,
       int runtimeHostnameOffset,
-      int propertiesOffset) {
-    builder.startTable(9);
+      int propertiesOffset,
+      int customStrategiesResultsOffset) {
+    builder.startTable(10);
+    ContextMessage.addCustomStrategiesResults(builder, customStrategiesResultsOffset);
     ContextMessage.addProperties(builder, propertiesOffset);
     ContextMessage.addRuntimeHostname(builder, runtimeHostnameOffset);
     ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
@@ -195,7 +237,7 @@ public final class ContextMessage extends Table {
   }
 
   public static void startContextMessage(FlatBufferBuilder builder) {
-    builder.startTable(9);
+    builder.startTable(10);
   }
 
   public static void addToggleName(FlatBufferBuilder builder, int toggleNameOffset) {
@@ -241,6 +283,21 @@ public final class ContextMessage extends Table {
   }
 
   public static void startPropertiesVector(FlatBufferBuilder builder, int numElems) {
+    builder.startVector(4, numElems, 4);
+  }
+
+  public static void addCustomStrategiesResults(
+      FlatBufferBuilder builder, int customStrategiesResultsOffset) {
+    builder.addOffset(9, customStrategiesResultsOffset, 0);
+  }
+
+  public static int createCustomStrategiesResultsVector(FlatBufferBuilder builder, int[] data) {
+    builder.startVector(4, data.length, 4);
+    for (int i = data.length - 1; i >= 0; i--) builder.addOffset(data[i]);
+    return builder.endVector();
+  }
+
+  public static void startCustomStrategiesResultsVector(FlatBufferBuilder builder, int numElems) {
     builder.startVector(4, numElems, 4);
   }
 
