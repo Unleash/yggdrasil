@@ -669,6 +669,7 @@ impl<'a> Variant<'a> {
   pub const VT_FEATURE_ENABLED: flatbuffers::VOffsetT = 6;
   pub const VT_NAME: flatbuffers::VOffsetT = 8;
   pub const VT_PAYLOAD: flatbuffers::VOffsetT = 10;
+  pub const VT_ERROR: flatbuffers::VOffsetT = 12;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -680,6 +681,7 @@ impl<'a> Variant<'a> {
     args: &'args VariantArgs<'args>
   ) -> flatbuffers::WIPOffset<Variant<'bldr>> {
     let mut builder = VariantBuilder::new(_fbb);
+    if let Some(x) = args.error { builder.add_error(x); }
     if let Some(x) = args.payload { builder.add_payload(x); }
     if let Some(x) = args.name { builder.add_name(x); }
     builder.add_feature_enabled(args.feature_enabled);
@@ -716,6 +718,13 @@ impl<'a> Variant<'a> {
     // which contains a valid value in this slot
     unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<VariantPayload>>(Variant::VT_PAYLOAD, None)}
   }
+  #[inline]
+  pub fn error(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Variant::VT_ERROR, None)}
+  }
 }
 
 impl flatbuffers::Verifiable for Variant<'_> {
@@ -729,6 +738,7 @@ impl flatbuffers::Verifiable for Variant<'_> {
      .visit_field::<bool>("feature_enabled", Self::VT_FEATURE_ENABLED, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("name", Self::VT_NAME, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<VariantPayload>>("payload", Self::VT_PAYLOAD, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("error", Self::VT_ERROR, false)?
      .finish();
     Ok(())
   }
@@ -738,6 +748,7 @@ pub struct VariantArgs<'a> {
     pub feature_enabled: bool,
     pub name: Option<flatbuffers::WIPOffset<&'a str>>,
     pub payload: Option<flatbuffers::WIPOffset<VariantPayload<'a>>>,
+    pub error: Option<flatbuffers::WIPOffset<&'a str>>,
 }
 impl<'a> Default for VariantArgs<'a> {
   #[inline]
@@ -747,6 +758,7 @@ impl<'a> Default for VariantArgs<'a> {
       feature_enabled: false,
       name: None,
       payload: None,
+      error: None,
     }
   }
 }
@@ -773,6 +785,10 @@ impl<'a: 'b, 'b> VariantBuilder<'a, 'b> {
     self.fbb_.push_slot_always::<flatbuffers::WIPOffset<VariantPayload>>(Variant::VT_PAYLOAD, payload);
   }
   #[inline]
+  pub fn add_error(&mut self, error: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Variant::VT_ERROR, error);
+  }
+  #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> VariantBuilder<'a, 'b> {
     let start = _fbb.start_table();
     VariantBuilder {
@@ -794,6 +810,7 @@ impl core::fmt::Debug for Variant<'_> {
       ds.field("feature_enabled", &self.feature_enabled());
       ds.field("name", &self.name());
       ds.field("payload", &self.payload());
+      ds.field("error", &self.error());
       ds.finish()
   }
 }

@@ -34,6 +34,7 @@ table Variant {
   feature_enabled: bool;
   name: string;
   payload: VariantPayload;
+  error: string;
 }
 
 table VariantPayload {

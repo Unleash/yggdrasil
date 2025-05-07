@@ -4,11 +4,14 @@ use flatbuffers::{FlatBufferBuilder, Follow, WIPOffset};
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{ExtendedVariantDef, ToggleDefinition};
 
-use crate::messaging::messaging::{
-    BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
-    FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsBucket, MetricsBucketBuilder,
-    Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
-    VariantEntryBuilder, VariantPayloadBuilder,
+use crate::{
+    WasmError,
+    messaging::messaging::{
+        BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
+        FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsBucket, MetricsBucketBuilder,
+        Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
+        VariantEntryBuilder, VariantPayloadBuilder,
+    },
 };
 
 thread_local! {
@@ -39,65 +42,74 @@ pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
     }
 }
 
-impl FlatbufferSerializable<Result<Option<bool>, &str>> for Response<'static> {
+impl FlatbufferSerializable<Result<Option<bool>, WasmError>> for Response<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
-        from: Result<Option<bool>, &str>,
+        from: Result<Option<bool>, WasmError>,
     ) -> WIPOffset<Response<'static>> {
-        let error_offset = from.as_ref().err().map(|e| builder.create_string(e));
-
-        let mut response_builder = ResponseBuilder::new(builder);
-
         match from {
             Ok(Some(flag)) => {
+                let mut response_builder = ResponseBuilder::new(builder);
                 response_builder.add_enabled(flag);
                 response_builder.add_has_enabled(true);
+                response_builder.finish()
             }
             Ok(None) => {
+                let mut response_builder = ResponseBuilder::new(builder);
                 response_builder.add_has_enabled(false);
+                response_builder.finish()
             }
-            Err(_) => {
-                response_builder.add_error(error_offset.unwrap());
+            Err(err) => {
+                let error_offset = builder.create_string(&err.to_string());
+                let mut response_builder = ResponseBuilder::new(builder);
+                response_builder.add_has_enabled(false);
+                response_builder.add_error(error_offset);
+                response_builder.finish()
             }
         }
-
-        response_builder.finish()
     }
 }
 
-impl FlatbufferSerializable<Result<Option<ExtendedVariantDef>, &str>> for Variant<'static> {
+impl FlatbufferSerializable<Result<Option<ExtendedVariantDef>, WasmError>> for Variant<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
-        input: Result<Option<ExtendedVariantDef>, &str>,
+        from: Result<Option<ExtendedVariantDef>, WasmError>,
     ) -> WIPOffset<Self> {
-        let variant = input.unwrap();
+        match from {
+            Ok(Some(variant)) => {
+                let payload_offset = variant.payload.as_ref().map(|payload| {
+                    let payload_type_offset = builder.create_string(&payload.payload_type);
+                    let value_offset = builder.create_string(&payload.value);
 
-        if let Some(variant) = variant {
-            let payload_offset = variant.payload.as_ref().map(|payload| {
-                let payload_type_offset = builder.create_string(&payload.payload_type);
-                let value_offset = builder.create_string(&payload.value);
+                    let mut variant_payload = VariantPayloadBuilder::new(builder);
+                    variant_payload.add_payload_type(payload_type_offset);
+                    variant_payload.add_value(value_offset);
 
-                let mut variant_payload = VariantPayloadBuilder::new(builder);
-                variant_payload.add_payload_type(payload_type_offset);
-                variant_payload.add_value(value_offset);
+                    variant_payload.finish()
+                });
 
-                variant_payload.finish()
-            });
+                let variant_name_offset = builder.create_string(&variant.name);
 
-            let variant_name_offset = builder.create_string(&variant.name);
+                let mut variant_builder = VariantBuilder::new(builder);
+                variant_builder.add_feature_enabled(variant.feature_enabled);
+                variant_builder.add_enabled(variant.enabled);
+                variant_builder.add_name(variant_name_offset);
+                if let Some(payload_offset) = payload_offset {
+                    variant_builder.add_payload(payload_offset);
+                }
 
-            let mut variant_builder = VariantBuilder::new(builder);
-            variant_builder.add_feature_enabled(variant.feature_enabled);
-            variant_builder.add_enabled(variant.enabled);
-            variant_builder.add_name(variant_name_offset);
-            if let Some(payload_offset) = payload_offset {
-                variant_builder.add_payload(payload_offset);
+                variant_builder.finish()
             }
-
-            variant_builder.finish()
-        } else {
-            let resp_builder = VariantBuilder::new(builder);
-            resp_builder.finish()
+            Ok(None) => {
+                let resp_builder = VariantBuilder::new(builder);
+                resp_builder.finish()
+            }
+            Err(err) => {
+                let error_offset = builder.create_string(&err.to_string());
+                let mut response_builder = VariantBuilder::new(builder);
+                response_builder.add_error(error_offset);
+                response_builder.finish()
+            }
         }
     }
 }
