@@ -1,22 +1,40 @@
-use std::cell::RefCell;
+use std::{
+    cell::RefCell,
+    fmt::{Display, Formatter},
+};
 
 use flatbuffers::{FlatBufferBuilder, Follow, WIPOffset};
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{ExtendedVariantDef, ToggleDefinition};
 
-use crate::{
-    WasmError,
-    messaging::messaging::{
-        BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
-        FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsBucket, MetricsBucketBuilder,
-        Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
-        VariantEntryBuilder, VariantPayloadBuilder,
-    },
+use crate::messaging::messaging::{
+    BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
+    FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsBucket, MetricsBucketBuilder,
+    Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
+    VariantEntryBuilder, VariantPayloadBuilder,
 };
 
 thread_local! {
     static BUILDER: RefCell<FlatBufferBuilder<'static>> =
         RefCell::new(FlatBufferBuilder::with_capacity(128));
+}
+
+#[derive(Debug)]
+pub enum WasmError {
+    InvalidContext(String),
+}
+
+pub struct ResponseMessage<T> {
+    pub message: Option<T>,
+    pub impression_data: bool,
+}
+
+impl Display for WasmError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WasmError::InvalidContext(msg) => write!(f, "Invalid context: {}", msg),
+        }
+    }
 }
 
 pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
@@ -42,23 +60,26 @@ pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
     }
 }
 
-impl FlatbufferSerializable<Result<Option<bool>, WasmError>> for Response<'static> {
+impl FlatbufferSerializable<Result<ResponseMessage<bool>, WasmError>> for Response<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
-        from: Result<Option<bool>, WasmError>,
+        from: Result<ResponseMessage<bool>, WasmError>,
     ) -> WIPOffset<Response<'static>> {
         match from {
-            Ok(Some(flag)) => {
-                let mut response_builder = ResponseBuilder::new(builder);
-                response_builder.add_enabled(flag);
-                response_builder.add_has_enabled(true);
-                response_builder.finish()
-            }
-            Ok(None) => {
-                let mut response_builder = ResponseBuilder::new(builder);
-                response_builder.add_has_enabled(false);
-                response_builder.finish()
-            }
+            Ok(response) => match response.message {
+                Some(flag) => {
+                    let mut response_builder = ResponseBuilder::new(builder);
+                    response_builder.add_impression_data(response.impression_data);
+                    response_builder.add_enabled(flag);
+                    response_builder.add_has_enabled(true);
+                    response_builder.finish()
+                }
+                None => {
+                    let mut response_builder = ResponseBuilder::new(builder);
+                    response_builder.add_has_enabled(false);
+                    response_builder.finish()
+                }
+            },
             Err(err) => {
                 let error_offset = builder.create_string(&err.to_string());
                 let mut response_builder = ResponseBuilder::new(builder);
@@ -70,40 +91,45 @@ impl FlatbufferSerializable<Result<Option<bool>, WasmError>> for Response<'stati
     }
 }
 
-impl FlatbufferSerializable<Result<Option<ExtendedVariantDef>, WasmError>> for Variant<'static> {
+impl FlatbufferSerializable<Result<ResponseMessage<ExtendedVariantDef>, WasmError>>
+    for Variant<'static>
+{
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
-        from: Result<Option<ExtendedVariantDef>, WasmError>,
+        from: Result<ResponseMessage<ExtendedVariantDef>, WasmError>,
     ) -> WIPOffset<Self> {
         match from {
-            Ok(Some(variant)) => {
-                let payload_offset = variant.payload.as_ref().map(|payload| {
-                    let payload_type_offset = builder.create_string(&payload.payload_type);
-                    let value_offset = builder.create_string(&payload.value);
+            Ok(response) => match response.message {
+                Some(variant) => {
+                    let payload_offset = variant.payload.as_ref().map(|payload| {
+                        let payload_type_offset = builder.create_string(&payload.payload_type);
+                        let value_offset = builder.create_string(&payload.value);
 
-                    let mut variant_payload = VariantPayloadBuilder::new(builder);
-                    variant_payload.add_payload_type(payload_type_offset);
-                    variant_payload.add_value(value_offset);
+                        let mut variant_payload = VariantPayloadBuilder::new(builder);
+                        variant_payload.add_payload_type(payload_type_offset);
+                        variant_payload.add_value(value_offset);
 
-                    variant_payload.finish()
-                });
+                        variant_payload.finish()
+                    });
 
-                let variant_name_offset = builder.create_string(&variant.name);
+                    let variant_name_offset = builder.create_string(&variant.name);
 
-                let mut variant_builder = VariantBuilder::new(builder);
-                variant_builder.add_feature_enabled(variant.feature_enabled);
-                variant_builder.add_enabled(variant.enabled);
-                variant_builder.add_name(variant_name_offset);
-                if let Some(payload_offset) = payload_offset {
-                    variant_builder.add_payload(payload_offset);
+                    let mut variant_builder = VariantBuilder::new(builder);
+                    variant_builder.add_feature_enabled(variant.feature_enabled);
+                    variant_builder.add_impression_data(response.impression_data);
+                    variant_builder.add_enabled(variant.enabled);
+                    variant_builder.add_name(variant_name_offset);
+                    if let Some(payload_offset) = payload_offset {
+                        variant_builder.add_payload(payload_offset);
+                    }
+
+                    variant_builder.finish()
                 }
-
-                variant_builder.finish()
-            }
-            Ok(None) => {
-                let resp_builder = VariantBuilder::new(builder);
-                resp_builder.finish()
-            }
+                None => {
+                    let resp_builder = VariantBuilder::new(builder);
+                    resp_builder.finish()
+                }
+            },
             Err(err) => {
                 let error_offset = builder.create_string(&err.to_string());
                 let mut response_builder = VariantBuilder::new(builder);

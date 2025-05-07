@@ -535,8 +535,9 @@ impl<'a> flatbuffers::Follow<'a> for Response<'a> {
 
 impl<'a> Response<'a> {
   pub const VT_ENABLED: flatbuffers::VOffsetT = 4;
-  pub const VT_HAS_ENABLED: flatbuffers::VOffsetT = 6;
-  pub const VT_ERROR: flatbuffers::VOffsetT = 8;
+  pub const VT_IMPRESSION_DATA: flatbuffers::VOffsetT = 6;
+  pub const VT_HAS_ENABLED: flatbuffers::VOffsetT = 8;
+  pub const VT_ERROR: flatbuffers::VOffsetT = 10;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -550,6 +551,7 @@ impl<'a> Response<'a> {
     let mut builder = ResponseBuilder::new(_fbb);
     if let Some(x) = args.error { builder.add_error(x); }
     builder.add_has_enabled(args.has_enabled);
+    builder.add_impression_data(args.impression_data);
     builder.add_enabled(args.enabled);
     builder.finish()
   }
@@ -561,6 +563,13 @@ impl<'a> Response<'a> {
     // Created from valid Table for this object
     // which contains a valid value in this slot
     unsafe { self._tab.get::<bool>(Response::VT_ENABLED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn impression_data(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(Response::VT_IMPRESSION_DATA, Some(false)).unwrap()}
   }
   #[inline]
   pub fn has_enabled(&self) -> bool {
@@ -586,6 +595,7 @@ impl flatbuffers::Verifiable for Response<'_> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
      .visit_field::<bool>("enabled", Self::VT_ENABLED, false)?
+     .visit_field::<bool>("impression_data", Self::VT_IMPRESSION_DATA, false)?
      .visit_field::<bool>("has_enabled", Self::VT_HAS_ENABLED, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("error", Self::VT_ERROR, false)?
      .finish();
@@ -594,6 +604,7 @@ impl flatbuffers::Verifiable for Response<'_> {
 }
 pub struct ResponseArgs<'a> {
     pub enabled: bool,
+    pub impression_data: bool,
     pub has_enabled: bool,
     pub error: Option<flatbuffers::WIPOffset<&'a str>>,
 }
@@ -602,6 +613,7 @@ impl<'a> Default for ResponseArgs<'a> {
   fn default() -> Self {
     ResponseArgs {
       enabled: false,
+      impression_data: false,
       has_enabled: false,
       error: None,
     }
@@ -616,6 +628,10 @@ impl<'a: 'b, 'b> ResponseBuilder<'a, 'b> {
   #[inline]
   pub fn add_enabled(&mut self, enabled: bool) {
     self.fbb_.push_slot::<bool>(Response::VT_ENABLED, enabled, false);
+  }
+  #[inline]
+  pub fn add_impression_data(&mut self, impression_data: bool) {
+    self.fbb_.push_slot::<bool>(Response::VT_IMPRESSION_DATA, impression_data, false);
   }
   #[inline]
   pub fn add_has_enabled(&mut self, has_enabled: bool) {
@@ -644,6 +660,7 @@ impl core::fmt::Debug for Response<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     let mut ds = f.debug_struct("Response");
       ds.field("enabled", &self.enabled());
+      ds.field("impression_data", &self.impression_data());
       ds.field("has_enabled", &self.has_enabled());
       ds.field("error", &self.error());
       ds.finish()
@@ -666,10 +683,11 @@ impl<'a> flatbuffers::Follow<'a> for Variant<'a> {
 
 impl<'a> Variant<'a> {
   pub const VT_ENABLED: flatbuffers::VOffsetT = 4;
-  pub const VT_FEATURE_ENABLED: flatbuffers::VOffsetT = 6;
-  pub const VT_NAME: flatbuffers::VOffsetT = 8;
-  pub const VT_PAYLOAD: flatbuffers::VOffsetT = 10;
-  pub const VT_ERROR: flatbuffers::VOffsetT = 12;
+  pub const VT_IMPRESSION_DATA: flatbuffers::VOffsetT = 6;
+  pub const VT_FEATURE_ENABLED: flatbuffers::VOffsetT = 8;
+  pub const VT_NAME: flatbuffers::VOffsetT = 10;
+  pub const VT_PAYLOAD: flatbuffers::VOffsetT = 12;
+  pub const VT_ERROR: flatbuffers::VOffsetT = 14;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -685,6 +703,7 @@ impl<'a> Variant<'a> {
     if let Some(x) = args.payload { builder.add_payload(x); }
     if let Some(x) = args.name { builder.add_name(x); }
     builder.add_feature_enabled(args.feature_enabled);
+    builder.add_impression_data(args.impression_data);
     builder.add_enabled(args.enabled);
     builder.finish()
   }
@@ -696,6 +715,13 @@ impl<'a> Variant<'a> {
     // Created from valid Table for this object
     // which contains a valid value in this slot
     unsafe { self._tab.get::<bool>(Variant::VT_ENABLED, Some(false)).unwrap()}
+  }
+  #[inline]
+  pub fn impression_data(&self) -> bool {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<bool>(Variant::VT_IMPRESSION_DATA, Some(false)).unwrap()}
   }
   #[inline]
   pub fn feature_enabled(&self) -> bool {
@@ -735,6 +761,7 @@ impl flatbuffers::Verifiable for Variant<'_> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
      .visit_field::<bool>("enabled", Self::VT_ENABLED, false)?
+     .visit_field::<bool>("impression_data", Self::VT_IMPRESSION_DATA, false)?
      .visit_field::<bool>("feature_enabled", Self::VT_FEATURE_ENABLED, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<&str>>("name", Self::VT_NAME, false)?
      .visit_field::<flatbuffers::ForwardsUOffset<VariantPayload>>("payload", Self::VT_PAYLOAD, false)?
@@ -745,6 +772,7 @@ impl flatbuffers::Verifiable for Variant<'_> {
 }
 pub struct VariantArgs<'a> {
     pub enabled: bool,
+    pub impression_data: bool,
     pub feature_enabled: bool,
     pub name: Option<flatbuffers::WIPOffset<&'a str>>,
     pub payload: Option<flatbuffers::WIPOffset<VariantPayload<'a>>>,
@@ -755,6 +783,7 @@ impl<'a> Default for VariantArgs<'a> {
   fn default() -> Self {
     VariantArgs {
       enabled: false,
+      impression_data: false,
       feature_enabled: false,
       name: None,
       payload: None,
@@ -771,6 +800,10 @@ impl<'a: 'b, 'b> VariantBuilder<'a, 'b> {
   #[inline]
   pub fn add_enabled(&mut self, enabled: bool) {
     self.fbb_.push_slot::<bool>(Variant::VT_ENABLED, enabled, false);
+  }
+  #[inline]
+  pub fn add_impression_data(&mut self, impression_data: bool) {
+    self.fbb_.push_slot::<bool>(Variant::VT_IMPRESSION_DATA, impression_data, false);
   }
   #[inline]
   pub fn add_feature_enabled(&mut self, feature_enabled: bool) {
@@ -807,6 +840,7 @@ impl core::fmt::Debug for Variant<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     let mut ds = f.debug_struct("Variant");
       ds.field("enabled", &self.enabled());
+      ds.field("impression_data", &self.impression_data());
       ds.field("feature_enabled", &self.feature_enabled());
       ds.field("name", &self.name());
       ds.field("payload", &self.payload());

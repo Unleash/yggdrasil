@@ -2,11 +2,10 @@ use chrono::DateTime;
 use core::str;
 use flatbuffers::root;
 use random::get_random_source;
-use serialisation::FlatbufferSerializable;
+use serialisation::{FlatbufferSerializable, ResponseMessage, WasmError};
 use std::{
     collections::HashMap,
     ffi::{CString, c_char, c_void},
-    fmt::{Display, Formatter},
     mem, slice,
 };
 
@@ -30,19 +29,6 @@ mod messaging {
 }
 
 register_custom_getrandom!(get_random_source);
-
-#[derive(Debug)]
-pub enum WasmError {
-    InvalidContext(String),
-}
-
-impl Display for WasmError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            WasmError::InvalidContext(msg) => write!(f, "Invalid context: {}", msg),
-        }
-    }
-}
 
 impl TryFrom<ContextMessage<'_>> for EnrichedContext {
     type Error = WasmError;
@@ -132,7 +118,7 @@ pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *
 
 #[unsafe(no_mangle)]
 pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
-    let enabled: Result<Option<bool>, WasmError> = (|| {
+    let enabled: Result<ResponseMessage<bool>, WasmError> = (|| {
         let bytes =
             unsafe { std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize) };
         let ctx =
@@ -144,15 +130,21 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
 
         let engine = unsafe { &mut *(engine_ptr as *mut EngineState) };
         let enabled = engine.check_enabled(&context);
+        let impression_data = engine.should_emit_impression_event(&context.toggle_name);
         engine.count_toggle(&context.toggle_name, enabled.unwrap_or(false));
-        Ok(enabled)
+
+        Ok(ResponseMessage {
+            message: enabled,
+            impression_data,
+        })
     })();
+
     Response::build_response(enabled)
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
-    let extended_variant: Result<Option<ExtendedVariantDef>, WasmError> = (|| {
+    let extended_variant: Result<ResponseMessage<ExtendedVariantDef>, WasmError> = (|| {
         let bytes =
             unsafe { std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize) };
         let ctx: ContextMessage =
@@ -172,12 +164,18 @@ pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: 
             engine.count_variant(&context.toggle_name, &variant.name);
         }
 
-        Ok(variant.map(|variant| ExtendedVariantDef {
+        let impression_data = engine.should_emit_impression_event(&context.toggle_name);
+        let variant_def = variant.map(|variant| ExtendedVariantDef {
             enabled: variant.enabled,
             feature_enabled: enabled,
             name: variant.name,
             payload: variant.payload.clone(),
-        }))
+        });
+
+        Ok(ResponseMessage {
+            message: variant_def,
+            impression_data,
+        })
     })();
 
     Variant::build_response(extended_variant)

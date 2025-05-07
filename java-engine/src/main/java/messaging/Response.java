@@ -38,47 +38,61 @@ public final class Response extends Table {
     return o != 0 ? 0 != bb.get(o + bb_pos) : false;
   }
 
-  public boolean hasEnabled() {
+  public boolean impressionData() {
     int o = __offset(6);
     return o != 0 ? 0 != bb.get(o + bb_pos) : false;
   }
 
-  public String error() {
+  public boolean hasEnabled() {
     int o = __offset(8);
+    return o != 0 ? 0 != bb.get(o + bb_pos) : false;
+  }
+
+  public String error() {
+    int o = __offset(10);
     return o != 0 ? __string(o + bb_pos) : null;
   }
 
   public ByteBuffer errorAsByteBuffer() {
-    return __vector_as_bytebuffer(8, 1);
+    return __vector_as_bytebuffer(10, 1);
   }
 
   public ByteBuffer errorInByteBuffer(ByteBuffer _bb) {
-    return __vector_in_bytebuffer(_bb, 8, 1);
+    return __vector_in_bytebuffer(_bb, 10, 1);
   }
 
   public static int createResponse(
-      FlatBufferBuilder builder, boolean enabled, boolean hasEnabled, int errorOffset) {
-    builder.startTable(3);
+      FlatBufferBuilder builder,
+      boolean enabled,
+      boolean impressionData,
+      boolean hasEnabled,
+      int errorOffset) {
+    builder.startTable(4);
     Response.addError(builder, errorOffset);
     Response.addHasEnabled(builder, hasEnabled);
+    Response.addImpressionData(builder, impressionData);
     Response.addEnabled(builder, enabled);
     return Response.endResponse(builder);
   }
 
   public static void startResponse(FlatBufferBuilder builder) {
-    builder.startTable(3);
+    builder.startTable(4);
   }
 
   public static void addEnabled(FlatBufferBuilder builder, boolean enabled) {
     builder.addBoolean(0, enabled, false);
   }
 
+  public static void addImpressionData(FlatBufferBuilder builder, boolean impressionData) {
+    builder.addBoolean(1, impressionData, false);
+  }
+
   public static void addHasEnabled(FlatBufferBuilder builder, boolean hasEnabled) {
-    builder.addBoolean(1, hasEnabled, false);
+    builder.addBoolean(2, hasEnabled, false);
   }
 
   public static void addError(FlatBufferBuilder builder, int errorOffset) {
-    builder.addOffset(2, errorOffset, 0);
+    builder.addOffset(3, errorOffset, 0);
   }
 
   public static int endResponse(FlatBufferBuilder builder) {

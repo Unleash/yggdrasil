@@ -38,22 +38,27 @@ public final class Variant extends Table {
     return o != 0 ? 0 != bb.get(o + bb_pos) : false;
   }
 
-  public boolean featureEnabled() {
+  public boolean impressionData() {
     int o = __offset(6);
     return o != 0 ? 0 != bb.get(o + bb_pos) : false;
   }
 
-  public String name() {
+  public boolean featureEnabled() {
     int o = __offset(8);
+    return o != 0 ? 0 != bb.get(o + bb_pos) : false;
+  }
+
+  public String name() {
+    int o = __offset(10);
     return o != 0 ? __string(o + bb_pos) : null;
   }
 
   public ByteBuffer nameAsByteBuffer() {
-    return __vector_as_bytebuffer(8, 1);
+    return __vector_as_bytebuffer(10, 1);
   }
 
   public ByteBuffer nameInByteBuffer(ByteBuffer _bb) {
-    return __vector_in_bytebuffer(_bb, 8, 1);
+    return __vector_in_bytebuffer(_bb, 10, 1);
   }
 
   public messaging.VariantPayload payload() {
@@ -61,61 +66,67 @@ public final class Variant extends Table {
   }
 
   public messaging.VariantPayload payload(messaging.VariantPayload obj) {
-    int o = __offset(10);
+    int o = __offset(12);
     return o != 0 ? obj.__assign(__indirect(o + bb_pos), bb) : null;
   }
 
   public String error() {
-    int o = __offset(12);
+    int o = __offset(14);
     return o != 0 ? __string(o + bb_pos) : null;
   }
 
   public ByteBuffer errorAsByteBuffer() {
-    return __vector_as_bytebuffer(12, 1);
+    return __vector_as_bytebuffer(14, 1);
   }
 
   public ByteBuffer errorInByteBuffer(ByteBuffer _bb) {
-    return __vector_in_bytebuffer(_bb, 12, 1);
+    return __vector_in_bytebuffer(_bb, 14, 1);
   }
 
   public static int createVariant(
       FlatBufferBuilder builder,
       boolean enabled,
+      boolean impressionData,
       boolean featureEnabled,
       int nameOffset,
       int payloadOffset,
       int errorOffset) {
-    builder.startTable(5);
+    builder.startTable(6);
     Variant.addError(builder, errorOffset);
     Variant.addPayload(builder, payloadOffset);
     Variant.addName(builder, nameOffset);
     Variant.addFeatureEnabled(builder, featureEnabled);
+    Variant.addImpressionData(builder, impressionData);
     Variant.addEnabled(builder, enabled);
     return Variant.endVariant(builder);
   }
 
   public static void startVariant(FlatBufferBuilder builder) {
-    builder.startTable(5);
+    builder.startTable(6);
   }
 
   public static void addEnabled(FlatBufferBuilder builder, boolean enabled) {
     builder.addBoolean(0, enabled, false);
   }
 
+  public static void addImpressionData(FlatBufferBuilder builder, boolean impressionData) {
+    builder.addBoolean(1, impressionData, false);
+  }
+
   public static void addFeatureEnabled(FlatBufferBuilder builder, boolean featureEnabled) {
-    builder.addBoolean(1, featureEnabled, false);
+    builder.addBoolean(2, featureEnabled, false);
   }
 
   public static void addName(FlatBufferBuilder builder, int nameOffset) {
-    builder.addOffset(2, nameOffset, 0);
+    builder.addOffset(3, nameOffset, 0);
   }
 
   public static void addPayload(FlatBufferBuilder builder, int payloadOffset) {
-    builder.addOffset(3, payloadOffset, 0);
+    builder.addOffset(4, payloadOffset, 0);
   }
 
   public static void addError(FlatBufferBuilder builder, int errorOffset) {
-    builder.addOffset(4, errorOffset, 0);
+    builder.addOffset(5, errorOffset, 0);
   }
 
   public static int endVariant(FlatBufferBuilder builder) {
