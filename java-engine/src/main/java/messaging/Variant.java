@@ -65,13 +65,28 @@ public final class Variant extends Table {
     return o != 0 ? obj.__assign(__indirect(o + bb_pos), bb) : null;
   }
 
+  public String error() {
+    int o = __offset(12);
+    return o != 0 ? __string(o + bb_pos) : null;
+  }
+
+  public ByteBuffer errorAsByteBuffer() {
+    return __vector_as_bytebuffer(12, 1);
+  }
+
+  public ByteBuffer errorInByteBuffer(ByteBuffer _bb) {
+    return __vector_in_bytebuffer(_bb, 12, 1);
+  }
+
   public static int createVariant(
       FlatBufferBuilder builder,
       boolean enabled,
       boolean featureEnabled,
       int nameOffset,
-      int payloadOffset) {
-    builder.startTable(4);
+      int payloadOffset,
+      int errorOffset) {
+    builder.startTable(5);
+    Variant.addError(builder, errorOffset);
     Variant.addPayload(builder, payloadOffset);
     Variant.addName(builder, nameOffset);
     Variant.addFeatureEnabled(builder, featureEnabled);
@@ -80,7 +95,7 @@ public final class Variant extends Table {
   }
 
   public static void startVariant(FlatBufferBuilder builder) {
-    builder.startTable(4);
+    builder.startTable(5);
   }
 
   public static void addEnabled(FlatBufferBuilder builder, boolean enabled) {
@@ -97,6 +112,10 @@ public final class Variant extends Table {
 
   public static void addPayload(FlatBufferBuilder builder, int payloadOffset) {
     builder.addOffset(3, payloadOffset, 0);
+  }
+
+  public static void addError(FlatBufferBuilder builder, int errorOffset) {
+    builder.addOffset(4, errorOffset, 0);
   }
 
   public static int endVariant(FlatBufferBuilder builder) {

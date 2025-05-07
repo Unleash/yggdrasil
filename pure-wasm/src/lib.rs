@@ -6,6 +6,7 @@ use serialisation::FlatbufferSerializable;
 use std::{
     collections::HashMap,
     ffi::{CString, c_char, c_void},
+    fmt::{Display, Formatter},
     mem, slice,
 };
 
@@ -32,14 +33,24 @@ register_custom_getrandom!(get_random_source);
 
 #[derive(Debug)]
 pub enum WasmError {
-    InvalidContext,
+    InvalidContext(String),
+}
+
+impl Display for WasmError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WasmError::InvalidContext(msg) => write!(f, "Invalid context: {}", msg),
+        }
+    }
 }
 
 impl TryFrom<ContextMessage<'_>> for EnrichedContext {
     type Error = WasmError;
 
     fn try_from(value: ContextMessage) -> Result<Self, Self::Error> {
-        let toggle_name = value.toggle_name().ok_or(WasmError::InvalidContext)?;
+        let toggle_name = value
+            .toggle_name()
+            .ok_or(WasmError::InvalidContext("missing flag name".into()))?;
 
         let context = EnrichedContext {
             toggle_name: toggle_name.to_string(),
@@ -121,29 +132,37 @@ pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *
 
 #[unsafe(no_mangle)]
 pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
-    unsafe {
-        let bytes = std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize);
-        let ctx: ContextMessage = root::<ContextMessage>(bytes).expect("invalid context");
+    let enabled: Result<Option<bool>, WasmError> = (|| {
+        let bytes =
+            unsafe { std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize) };
+        let ctx =
+            root::<ContextMessage>(bytes).map_err(|e| WasmError::InvalidContext(e.to_string()))?;
 
-        let context: EnrichedContext = ctx.try_into().expect("Failed to convert context");
+        let context: EnrichedContext = ctx
+            .try_into()
+            .map_err(|e: WasmError| WasmError::InvalidContext(e.to_string()))?;
 
-        let engine = &mut *(engine_ptr as *mut EngineState);
+        let engine = unsafe { &mut *(engine_ptr as *mut EngineState) };
         let enabled = engine.check_enabled(&context);
         engine.count_toggle(&context.toggle_name, enabled.unwrap_or(false));
-
-        Response::build_response(Ok(enabled))
-    }
+        Ok(enabled)
+    })();
+    Response::build_response(enabled)
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
-    unsafe {
-        let bytes = std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize);
-        let ctx: ContextMessage = root::<ContextMessage>(bytes).expect("invalid context");
+    let extended_variant: Result<Option<ExtendedVariantDef>, WasmError> = (|| {
+        let bytes =
+            unsafe { std::slice::from_raw_parts(message_ptr as *const u8, message_len as usize) };
+        let ctx: ContextMessage =
+            root::<ContextMessage>(bytes).map_err(|e| WasmError::InvalidContext(e.to_string()))?;
 
-        let context: EnrichedContext = ctx.try_into().expect("Failed to convert context");
+        let context: EnrichedContext = ctx
+            .try_into()
+            .map_err(|e: WasmError| WasmError::InvalidContext(e.to_string()))?;
 
-        let engine = &mut *(engine_ptr as *mut EngineState);
+        let engine = unsafe { &mut *(engine_ptr as *mut EngineState) };
         let variant = engine.check_variant(&context);
         let enabled = engine.check_enabled(&context).unwrap_or_default();
 
@@ -153,15 +172,15 @@ pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: 
             engine.count_variant(&context.toggle_name, &variant.name);
         }
 
-        let extended_variant = variant.map(|variant| ExtendedVariantDef {
+        Ok(variant.map(|variant| ExtendedVariantDef {
             enabled: variant.enabled,
             feature_enabled: enabled,
             name: variant.name,
             payload: variant.payload.clone(),
-        });
+        }))
+    })();
 
-        Variant::build_response(Ok(extended_variant))
-    }
+    Variant::build_response(extended_variant)
 }
 
 #[unsafe(no_mangle)]
