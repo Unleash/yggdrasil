@@ -10,52 +10,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract Yggdrasil Core Version
+      - name: Install rust
         run: |
-          cd java-engine
-          CORE_VERSION=$(grep -E '^yggdrasilCoreVersion=' gradle.properties | cut -d'=' -f2)
-          echo "FFI Library Version: $CORE_VERSION"
-          echo "CORE_VERSION=$CORE_VERSION" >> $GITHUB_ENV
-
-      - name: Set Platform Property for Gradle
-        run: |
-          echo "platform=${{ matrix.platform }}" >> $GITHUB_ENV
-
-      - name: Set up Binary List
-        run: |
-          # List of binaries we want to download
-          binaries=(
-            "libyggdrasilffi_x86_64.so"
-            "libyggdrasilffi_arm64.so"
-            "libyggdrasilffi_x86_64-musl.so"
-            "libyggdrasilffi_arm64-musl.so"
-            "yggdrasilffi_x86_64.dll"
-            "yggdrasilffi_arm64.dll"
-            "libyggdrasilffi_x86_64.dylib"
-            "libyggdrasilffi_arm64.dylib"
-          )
-          echo "binaries=${binaries[@]}" >> $GITHUB_ENV
-
-      - name: Download All Binaries
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TARGET_DIR="java-engine/binaries"
-          mkdir -p "$TARGET_DIR"
-
-          for binary in ${binaries[@]}; do
-            echo "Downloading $binary..."
-            curl -L -o "$TARGET_DIR/$binary" \
-              -H "Authorization: token $GITHUB_TOKEN" \
-              "https://github.com/${{ github.repository }}/releases/download/unleash-yggdrasil-v${CORE_VERSION}/$binary"
-
-            if [ -f "$TARGET_DIR/$binary" ]; then
-              echo "$binary downloaded successfully."
-            else
-              echo "Error: $binary could not be downloaded."
-              exit 1
-            fi
-          done
+          rustup set auto-self-update disable
+          rustup toolchain install stable --profile default
+          rustup show
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+      - name: Install wasm-target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Build yggdrasil wasm
+        working-directory: pure-wasm
+        run: cargo build --release --target wasm32-unknown-unknown
 
       - name: Publish to Maven Central Portal
         env:
