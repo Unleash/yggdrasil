@@ -23,13 +23,6 @@ sourceSets["main"].java {
     srcDir("build/generated-sources/chicory-aot")
 }
 
-spotless {
-    java {
-        googleJavaFormat("1.17.0")
-        target("src/**/*.java")
-    }
-}
-
 version = project.findProperty("version") as String
 
 val binariesDir = file("binaries")
