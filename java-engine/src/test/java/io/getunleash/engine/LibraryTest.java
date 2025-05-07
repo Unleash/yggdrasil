@@ -18,7 +18,7 @@ public class LibraryTest {
 
   @Test
   public void takeStateLoadsJsonCorrectly() throws Exception {
-    var engine = new UnleashEngine();
+    UnleashEngine engine = new UnleashEngine();
 
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
@@ -27,7 +27,7 @@ public class LibraryTest {
 
   @Test
   public void isEnabledReturnsCorrectResult() throws Exception {
-    var engine = new UnleashEngine();
+    UnleashEngine engine = new UnleashEngine();
 
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
@@ -38,7 +38,7 @@ public class LibraryTest {
 
   @Test
   public void getMetricsReturnsCorrectResult() throws Exception {
-    var engine = new UnleashEngine();
+    UnleashEngine engine = new UnleashEngine();
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
     engine.takeState(json);
@@ -56,7 +56,7 @@ public class LibraryTest {
 
   @Test
   public void metricsBucketStartStopAreCorrect() throws Exception {
-    var engine = new UnleashEngine();
+    UnleashEngine engine = new UnleashEngine();
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
     engine.takeState(json);
@@ -81,7 +81,7 @@ public class LibraryTest {
 
   @Test
   public void getEmptyMetricsBucketReturnsNull() throws Exception {
-    var engine = new UnleashEngine();
+    UnleashEngine engine = new UnleashEngine();
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
     engine.takeState(json);
