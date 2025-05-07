@@ -286,14 +286,30 @@ class UnleashEngineTest {
   // Mockito.verify(ffiMock).freeEngine(Mockito.any());
   // }
 
-  // @Test
-  // void testCoreVersionIsRetrieved() {
-  // String coreVersion = UnleashEngine.getCoreVersion();
-  // assertNotNull(coreVersion);
-  // // check that it contains two dots, close enough for a quick and dirty but
-  // // stable semver check
-  // assertTrue(coreVersion.split("\\.").length >= 3);
-  // }
+  @Test
+  void testBuiltInStrategiesAreRetrieved() {
+    List<String> strategies = UnleashEngine.getBuiltInStrategies();
+
+    assertNotNull(strategies);
+    assertFalse(strategies.isEmpty());
+    assertTrue(strategies.contains("default"));
+    assertTrue(strategies.contains("userWithId"));
+    assertTrue(strategies.contains("gradualRolloutUserId"));
+    assertTrue(strategies.contains("gradualRolloutRandom"));
+    assertTrue(strategies.contains("applicationHostname"));
+    assertTrue(strategies.contains("gradualRolloutSessionId"));
+    assertTrue(strategies.contains("remoteAddress"));
+    assertTrue(strategies.contains("flexibleRollout"));
+  }
+
+  @Test
+  void testCoreVersionIsRetrieved() {
+    String coreVersion = UnleashEngine.getCoreVersion();
+    assertNotNull(coreVersion);
+    // check that it contains two dots, close enough for a quick and dirty but
+    // stable semver check
+    assertTrue(coreVersion.split("\\.").length >= 3);
+  }
 
   private static Stream<Arguments> customStrategiesInput() {
     Context oneYesContext = new Context();

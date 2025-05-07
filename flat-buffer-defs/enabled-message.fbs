@@ -53,6 +53,14 @@ table ToggleStats {
   variants: [VariantEntry];
 }
 
+table CoreVersion {
+  version: string;
+}
+
+table BuiltInStrategies {
+  values: [string];
+}
+
 table ToggleEntry {
   key: string;
   value: ToggleStats;

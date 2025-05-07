@@ -23,7 +23,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import messaging.BuiltInStrategies;
 import messaging.ContextMessage;
+import messaging.CoreVersion;
 import messaging.FeatureDefs;
 import messaging.MetricsBucket;
 import messaging.PropertyEntry;
@@ -34,19 +36,65 @@ import org.example.wasm.YggdrasilModule;
 
 public class UnleashEngine {
 
-  private Instance instance;
+  private static Instance instance;
+  private static ExportFunction alloc;
+  private static ExportFunction dealloc;
+  private static ExportFunction checkEnabled;
+  private static ExportFunction checkVariant;
+  private static ExportFunction getMetrics;
+  private static ExportFunction deallocResponseBuffer;
+  private static ExportFunction getLogBufferPtr;
+  private static ExportFunction listKnownToggles;
+  private static ExportFunction getCoreVersion;
+  private static ExportFunction getBuiltInStrategies;
+  private static ExportFunction newEngine;
   private long enginePointer;
-  private ExportFunction alloc;
-  private ExportFunction dealloc;
-  private ExportFunction checkEnabled;
-  private ExportFunction checkVariant;
-  private ExportFunction getMetrics;
-  private ExportFunction deallocResponseBuffer;
-  private ExportFunction getLogBufferPtr;
-  private ExportFunction listKnownToggles;
   private Memory memory;
-
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
+
+  static {
+    ImportValues imports =
+        ImportValues.builder()
+            .addFunction(
+                new HostFunction(
+                    "env",
+                    "fill_random",
+                    List.of(ValueType.I32, ValueType.I32),
+                    List.of(ValueType.I32),
+                    (Instance instance, long... args) -> {
+                      int ptr = (int) args[0];
+                      int len = (int) args[1];
+
+                      if (len <= 0 || ptr < 0) return new long[] {1};
+
+                      byte[] randomBytes = new byte[len];
+                      new SecureRandom().nextBytes(randomBytes);
+
+                      instance.memory().write(ptr, randomBytes);
+
+                      return new long[] {0};
+                    }))
+            .build();
+
+    instance =
+        Instance.builder(YggdrasilModule.load())
+            .withMachineFactory(YggdrasilModule::create)
+            .withImportValues(imports)
+            .withMemoryFactory(limits -> new ByteBufferMemory(limits))
+            .build();
+
+    newEngine = instance.export("new_engine");
+    alloc = instance.export("alloc");
+    dealloc = instance.export("dealloc");
+    checkEnabled = instance.export("check_enabled");
+    checkVariant = instance.export("check_variant");
+    getMetrics = instance.export("get_metrics");
+    deallocResponseBuffer = instance.export("dealloc_response_buffer");
+    getLogBufferPtr = instance.export("get_log_buffer_ptr");
+    listKnownToggles = instance.export("list_known_toggles");
+    getCoreVersion = instance.export("get_core_version");
+    getBuiltInStrategies = instance.export("get_built_in_strategies");
+  }
 
   private static String getRuntimeHostname() {
     String hostname = System.getProperty("hostname");
@@ -165,38 +213,6 @@ public class UnleashEngine {
   }
 
   public UnleashEngine(List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
-    ImportValues imports =
-        ImportValues.builder()
-            .addFunction(
-                new HostFunction(
-                    "env",
-                    "fill_random",
-                    List.of(ValueType.I32, ValueType.I32),
-                    List.of(ValueType.I32),
-                    (Instance instance, long... args) -> {
-                      int ptr = (int) args[0];
-                      int len = (int) args[1];
-
-                      if (len <= 0 || ptr < 0) return new long[] {1};
-
-                      byte[] randomBytes = new byte[len];
-                      new SecureRandom().nextBytes(randomBytes);
-
-                      instance.memory().write(ptr, randomBytes);
-
-                      return new long[] {0};
-                    }))
-            .build();
-
-    instance =
-        Instance.builder(YggdrasilModule.load())
-            .withMachineFactory(YggdrasilModule::create)
-            .withImportValues(imports)
-            .withMemoryFactory(limits -> new ByteBufferMemory(limits))
-            .build();
-
-    ExportFunction newEngine = instance.export("new_engine");
-
     if (customStrategies != null && !customStrategies.isEmpty()) {
       List<String> builtInStrategies = new ArrayList<>();
       this.customStrategiesEvaluator =
@@ -207,15 +223,7 @@ public class UnleashEngine {
           new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy, new HashSet<String>());
     }
 
-    this.alloc = instance.export("alloc");
-    this.dealloc = instance.export("dealloc");
-    this.checkEnabled = instance.export("check_enabled");
-    this.checkVariant = instance.export("check_variant");
-    this.getMetrics = instance.export("get_metrics");
-    this.deallocResponseBuffer = instance.export("dealloc_response_buffer");
-    this.getLogBufferPtr = instance.export("get_log_buffer_ptr");
-    this.listKnownToggles = instance.export("list_known_toggles");
-    this.memory = instance.memory();
+    memory = instance.memory();
 
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
     this.enginePointer = newEngine.apply(now.toInstant().toEpochMilli())[0];
@@ -276,7 +284,7 @@ public class UnleashEngine {
   }
 
   private void readLog() {
-    int start = (int) this.getLogBufferPtr.apply()[0];
+    int start = (int) getLogBufferPtr.apply()[0];
     String msg = memory.readCString(start);
     if (msg != null && !msg.isEmpty()) {
       System.out.println("DebugLog: " + msg);
@@ -323,7 +331,28 @@ public class UnleashEngine {
     return bucket;
   }
 
-  private <T> T derefWasmPointer(long packed, Function<ByteBuffer, T> decoder) {
+  public static String getCoreVersion() {
+    long packed = (long) getCoreVersion.apply()[0];
+    CoreVersion version = derefWasmPointer(packed, CoreVersion::getRootAsCoreVersion);
+
+    return version.version();
+  }
+
+  public static List<String> getBuiltInStrategies() {
+    long packed = (long) getBuiltInStrategies.apply()[0];
+    BuiltInStrategies builtInStrategiesMessage =
+        derefWasmPointer(packed, BuiltInStrategies::getRootAsBuiltInStrategies);
+
+    List<String> builtInStrategies = new ArrayList<>(builtInStrategiesMessage.valuesLength());
+    for (int i = 0; i < builtInStrategiesMessage.valuesLength(); i++) {
+      String strategyName = builtInStrategiesMessage.values(i);
+      builtInStrategies.add(strategyName);
+    }
+
+    return builtInStrategies;
+  }
+
+  private static <T> T derefWasmPointer(long packed, Function<ByteBuffer, T> decoder) {
     // This is not sane. To receive the response we need to two things:
     // 1) a pointer
     // 2) a length so we can read the pointer value to the end but not beyond
