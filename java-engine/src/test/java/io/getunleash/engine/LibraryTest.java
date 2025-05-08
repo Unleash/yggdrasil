@@ -6,8 +6,6 @@ package io.getunleash.engine;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import messaging.MetricsBucket;
-import messaging.ToggleEntry;
 import org.junit.jupiter.api.Test;
 
 public class LibraryTest {
@@ -46,12 +44,10 @@ public class LibraryTest {
     boolean result2 = engine.isEnabled("Feature.C", new Context());
     boolean result3 = engine.isEnabled("Feature.C", new Context());
     MetricsBucket bucket = engine.getMetrics();
-    ToggleEntry featA =
-        bucket.toggles(0).key().equals("Feature.A") ? bucket.toggles(0) : bucket.toggles(1);
-    ToggleEntry featC =
-        bucket.toggles(0).key().equals("Feature.C") ? bucket.toggles(0) : bucket.toggles(1);
-    assert (featA.value().yes() == 1);
-    assert (featC.value().yes() == 2);
+    FeatureCount featA = bucket.getToggles().get("Feature.A");
+    FeatureCount featC = bucket.getToggles().get("Feature.C");
+    assert (featA.getYes() == 1);
+    assert (featC.getYes() == 2);
   }
 
   @Test
@@ -65,10 +61,10 @@ public class LibraryTest {
 
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 
-    Instant start = Instant.ofEpochMilli(bucket.start());
+    Instant start = bucket.getStart();
     ZonedDateTime utcStart = start.atZone(ZoneOffset.UTC);
 
-    Instant stop = Instant.ofEpochMilli(bucket.stop());
+    Instant stop = bucket.getStop();
     ZonedDateTime utcStop = stop.atZone(ZoneOffset.UTC);
 
     assert (utcStart.isBefore(now))

@@ -1515,36 +1515,36 @@ impl core::fmt::Debug for ToggleEntry<'_> {
       ds.finish()
   }
 }
-pub enum MetricsBucketOffset {}
+pub enum MetricsResponseOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
-pub struct MetricsBucket<'a> {
+pub struct MetricsResponse<'a> {
   pub _tab: flatbuffers::Table<'a>,
 }
 
-impl<'a> flatbuffers::Follow<'a> for MetricsBucket<'a> {
-  type Inner = MetricsBucket<'a>;
+impl<'a> flatbuffers::Follow<'a> for MetricsResponse<'a> {
+  type Inner = MetricsResponse<'a>;
   #[inline]
   unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
     Self { _tab: flatbuffers::Table::new(buf, loc) }
   }
 }
 
-impl<'a> MetricsBucket<'a> {
+impl<'a> MetricsResponse<'a> {
   pub const VT_START: flatbuffers::VOffsetT = 4;
   pub const VT_STOP: flatbuffers::VOffsetT = 6;
   pub const VT_TOGGLES: flatbuffers::VOffsetT = 8;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
-    MetricsBucket { _tab: table }
+    MetricsResponse { _tab: table }
   }
   #[allow(unused_mut)]
   pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
     _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
-    args: &'args MetricsBucketArgs<'args>
-  ) -> flatbuffers::WIPOffset<MetricsBucket<'bldr>> {
-    let mut builder = MetricsBucketBuilder::new(_fbb);
+    args: &'args MetricsResponseArgs<'args>
+  ) -> flatbuffers::WIPOffset<MetricsResponse<'bldr>> {
+    let mut builder = MetricsResponseBuilder::new(_fbb);
     builder.add_stop(args.stop);
     builder.add_start(args.start);
     if let Some(x) = args.toggles { builder.add_toggles(x); }
@@ -1557,25 +1557,25 @@ impl<'a> MetricsBucket<'a> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<i64>(MetricsBucket::VT_START, Some(0)).unwrap()}
+    unsafe { self._tab.get::<i64>(MetricsResponse::VT_START, Some(0)).unwrap()}
   }
   #[inline]
   pub fn stop(&self) -> i64 {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<i64>(MetricsBucket::VT_STOP, Some(0)).unwrap()}
+    unsafe { self._tab.get::<i64>(MetricsResponse::VT_STOP, Some(0)).unwrap()}
   }
   #[inline]
   pub fn toggles(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<ToggleEntry<'a>>>> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<ToggleEntry>>>>(MetricsBucket::VT_TOGGLES, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<ToggleEntry>>>>(MetricsResponse::VT_TOGGLES, None)}
   }
 }
 
-impl flatbuffers::Verifiable for MetricsBucket<'_> {
+impl flatbuffers::Verifiable for MetricsResponse<'_> {
   #[inline]
   fn run_verifier(
     v: &mut flatbuffers::Verifier, pos: usize
@@ -1589,15 +1589,15 @@ impl flatbuffers::Verifiable for MetricsBucket<'_> {
     Ok(())
   }
 }
-pub struct MetricsBucketArgs<'a> {
+pub struct MetricsResponseArgs<'a> {
     pub start: i64,
     pub stop: i64,
     pub toggles: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<ToggleEntry<'a>>>>>,
 }
-impl<'a> Default for MetricsBucketArgs<'a> {
+impl<'a> Default for MetricsResponseArgs<'a> {
   #[inline]
   fn default() -> Self {
-    MetricsBucketArgs {
+    MetricsResponseArgs {
       start: 0,
       stop: 0,
       toggles: None,
@@ -1605,41 +1605,41 @@ impl<'a> Default for MetricsBucketArgs<'a> {
   }
 }
 
-pub struct MetricsBucketBuilder<'a: 'b, 'b> {
+pub struct MetricsResponseBuilder<'a: 'b, 'b> {
   fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
   start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
 }
-impl<'a: 'b, 'b> MetricsBucketBuilder<'a, 'b> {
+impl<'a: 'b, 'b> MetricsResponseBuilder<'a, 'b> {
   #[inline]
   pub fn add_start(&mut self, start: i64) {
-    self.fbb_.push_slot::<i64>(MetricsBucket::VT_START, start, 0);
+    self.fbb_.push_slot::<i64>(MetricsResponse::VT_START, start, 0);
   }
   #[inline]
   pub fn add_stop(&mut self, stop: i64) {
-    self.fbb_.push_slot::<i64>(MetricsBucket::VT_STOP, stop, 0);
+    self.fbb_.push_slot::<i64>(MetricsResponse::VT_STOP, stop, 0);
   }
   #[inline]
   pub fn add_toggles(&mut self, toggles: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<ToggleEntry<'b >>>>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MetricsBucket::VT_TOGGLES, toggles);
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(MetricsResponse::VT_TOGGLES, toggles);
   }
   #[inline]
-  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> MetricsBucketBuilder<'a, 'b> {
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> MetricsResponseBuilder<'a, 'b> {
     let start = _fbb.start_table();
-    MetricsBucketBuilder {
+    MetricsResponseBuilder {
       fbb_: _fbb,
       start_: start,
     }
   }
   #[inline]
-  pub fn finish(self) -> flatbuffers::WIPOffset<MetricsBucket<'a>> {
+  pub fn finish(self) -> flatbuffers::WIPOffset<MetricsResponse<'a>> {
     let o = self.fbb_.end_table(self.start_);
     flatbuffers::WIPOffset::new(o.value())
   }
 }
 
-impl core::fmt::Debug for MetricsBucket<'_> {
+impl core::fmt::Debug for MetricsResponse<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-    let mut ds = f.debug_struct("MetricsBucket");
+    let mut ds = f.debug_struct("MetricsResponse");
       ds.field("start", &self.start());
       ds.field("stop", &self.stop());
       ds.field("toggles", &self.toggles());
@@ -1892,74 +1892,74 @@ impl core::fmt::Debug for FeatureDefs<'_> {
   }
 }
 #[inline]
-/// Verifies that a buffer of bytes contains a `MetricsBucket`
+/// Verifies that a buffer of bytes contains a `MetricsResponse`
 /// and returns it.
 /// Note that verification is still experimental and may not
 /// catch every error, or be maximally performant. For the
 /// previous, unchecked, behavior use
-/// `root_as_metrics_bucket_unchecked`.
-pub fn root_as_metrics_bucket(buf: &[u8]) -> Result<MetricsBucket, flatbuffers::InvalidFlatbuffer> {
-  flatbuffers::root::<MetricsBucket>(buf)
+/// `root_as_metrics_response_unchecked`.
+pub fn root_as_metrics_response(buf: &[u8]) -> Result<MetricsResponse, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::root::<MetricsResponse>(buf)
 }
 #[inline]
 /// Verifies that a buffer of bytes contains a size prefixed
-/// `MetricsBucket` and returns it.
+/// `MetricsResponse` and returns it.
 /// Note that verification is still experimental and may not
 /// catch every error, or be maximally performant. For the
 /// previous, unchecked, behavior use
-/// `size_prefixed_root_as_metrics_bucket_unchecked`.
-pub fn size_prefixed_root_as_metrics_bucket(buf: &[u8]) -> Result<MetricsBucket, flatbuffers::InvalidFlatbuffer> {
-  flatbuffers::size_prefixed_root::<MetricsBucket>(buf)
+/// `size_prefixed_root_as_metrics_response_unchecked`.
+pub fn size_prefixed_root_as_metrics_response(buf: &[u8]) -> Result<MetricsResponse, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::size_prefixed_root::<MetricsResponse>(buf)
 }
 #[inline]
 /// Verifies, with the given options, that a buffer of bytes
-/// contains a `MetricsBucket` and returns it.
+/// contains a `MetricsResponse` and returns it.
 /// Note that verification is still experimental and may not
 /// catch every error, or be maximally performant. For the
 /// previous, unchecked, behavior use
-/// `root_as_metrics_bucket_unchecked`.
-pub fn root_as_metrics_bucket_with_opts<'b, 'o>(
+/// `root_as_metrics_response_unchecked`.
+pub fn root_as_metrics_response_with_opts<'b, 'o>(
   opts: &'o flatbuffers::VerifierOptions,
   buf: &'b [u8],
-) -> Result<MetricsBucket<'b>, flatbuffers::InvalidFlatbuffer> {
-  flatbuffers::root_with_opts::<MetricsBucket<'b>>(opts, buf)
+) -> Result<MetricsResponse<'b>, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::root_with_opts::<MetricsResponse<'b>>(opts, buf)
 }
 #[inline]
 /// Verifies, with the given verifier options, that a buffer of
-/// bytes contains a size prefixed `MetricsBucket` and returns
+/// bytes contains a size prefixed `MetricsResponse` and returns
 /// it. Note that verification is still experimental and may not
 /// catch every error, or be maximally performant. For the
 /// previous, unchecked, behavior use
-/// `root_as_metrics_bucket_unchecked`.
-pub fn size_prefixed_root_as_metrics_bucket_with_opts<'b, 'o>(
+/// `root_as_metrics_response_unchecked`.
+pub fn size_prefixed_root_as_metrics_response_with_opts<'b, 'o>(
   opts: &'o flatbuffers::VerifierOptions,
   buf: &'b [u8],
-) -> Result<MetricsBucket<'b>, flatbuffers::InvalidFlatbuffer> {
-  flatbuffers::size_prefixed_root_with_opts::<MetricsBucket<'b>>(opts, buf)
+) -> Result<MetricsResponse<'b>, flatbuffers::InvalidFlatbuffer> {
+  flatbuffers::size_prefixed_root_with_opts::<MetricsResponse<'b>>(opts, buf)
 }
 #[inline]
-/// Assumes, without verification, that a buffer of bytes contains a MetricsBucket and returns it.
+/// Assumes, without verification, that a buffer of bytes contains a MetricsResponse and returns it.
 /// # Safety
-/// Callers must trust the given bytes do indeed contain a valid `MetricsBucket`.
-pub unsafe fn root_as_metrics_bucket_unchecked(buf: &[u8]) -> MetricsBucket {
-  flatbuffers::root_unchecked::<MetricsBucket>(buf)
+/// Callers must trust the given bytes do indeed contain a valid `MetricsResponse`.
+pub unsafe fn root_as_metrics_response_unchecked(buf: &[u8]) -> MetricsResponse {
+  flatbuffers::root_unchecked::<MetricsResponse>(buf)
 }
 #[inline]
-/// Assumes, without verification, that a buffer of bytes contains a size prefixed MetricsBucket and returns it.
+/// Assumes, without verification, that a buffer of bytes contains a size prefixed MetricsResponse and returns it.
 /// # Safety
-/// Callers must trust the given bytes do indeed contain a valid size prefixed `MetricsBucket`.
-pub unsafe fn size_prefixed_root_as_metrics_bucket_unchecked(buf: &[u8]) -> MetricsBucket {
-  flatbuffers::size_prefixed_root_unchecked::<MetricsBucket>(buf)
+/// Callers must trust the given bytes do indeed contain a valid size prefixed `MetricsResponse`.
+pub unsafe fn size_prefixed_root_as_metrics_response_unchecked(buf: &[u8]) -> MetricsResponse {
+  flatbuffers::size_prefixed_root_unchecked::<MetricsResponse>(buf)
 }
 #[inline]
-pub fn finish_metrics_bucket_buffer<'a, 'b>(
+pub fn finish_metrics_response_buffer<'a, 'b>(
     fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>,
-    root: flatbuffers::WIPOffset<MetricsBucket<'a>>) {
+    root: flatbuffers::WIPOffset<MetricsResponse<'a>>) {
   fbb.finish(root, None);
 }
 
 #[inline]
-pub fn finish_size_prefixed_metrics_bucket_buffer<'a, 'b>(fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, root: flatbuffers::WIPOffset<MetricsBucket<'a>>) {
+pub fn finish_size_prefixed_metrics_response_buffer<'a, 'b>(fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>, root: flatbuffers::WIPOffset<MetricsResponse<'a>>) {
   fbb.finish_size_prefixed(root, None);
 }
 }  // pub mod messaging

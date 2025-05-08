@@ -11,7 +11,7 @@ use std::{
 
 use getrandom::register_custom_getrandom;
 use messaging::messaging::{
-    BuiltInStrategies, ContextMessage, CoreVersion, FeatureDefs, MetricsBucket, Response, Variant,
+    BuiltInStrategies, ContextMessage, CoreVersion, FeatureDefs, MetricsResponse, Response, Variant
 };
 use unleash_yggdrasil::{
     EngineState, ExtendedVariantDef, KNOWN_STRATEGIES, state::EnrichedContext,
@@ -187,7 +187,7 @@ pub extern "C" fn get_metrics(engine_ptr: i32, close_time: i64) -> u64 {
         let engine = &mut *(engine_ptr as *mut EngineState);
         let metrics = engine.get_metrics(DateTime::from_timestamp_millis(close_time).unwrap());
 
-        MetricsBucket::build_response(metrics)
+        MetricsResponse::build_response(metrics)
     }
 }
 

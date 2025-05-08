@@ -7,17 +7,17 @@ import com.dylibso.chicory.runtime.ImportValues;
 import com.dylibso.chicory.runtime.Instance;
 import com.dylibso.chicory.runtime.Memory;
 import com.dylibso.chicory.wasm.types.ValueType;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.flatbuffers.FlatBufferBuilder;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,10 +27,13 @@ import messaging.BuiltInStrategies;
 import messaging.ContextMessage;
 import messaging.CoreVersion;
 import messaging.FeatureDefs;
-import messaging.MetricsBucket;
+import messaging.MetricsResponse;
 import messaging.PropertyEntry;
 import messaging.Response;
+import messaging.ToggleEntry;
+import messaging.ToggleStats;
 import messaging.Variant;
+import messaging.VariantEntry;
 import messaging.VariantPayload;
 import org.example.wasm.YggdrasilModule;
 
@@ -165,7 +168,7 @@ public class UnleashEngine {
     int environmentOffset =
         context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
 
-    int[] propertyOffsets = buildProperties(builder, context.properties);
+    int[] propertyOffsets = buildProperties(builder, context.getProperties());
     int[] customStrategyResultsOffsets = buildCustomStrategyResults(builder, customStrategyResults);
 
     String runtimeHostname = getRuntimeHostname();
@@ -247,7 +250,7 @@ public class UnleashEngine {
     dealloc.apply(ptr, len);
   }
 
-  public List<FeatureDef> listKnownToggles() throws Exception {
+  public List<FeatureDef> listKnownToggles() {
     long packed = (long) listKnownToggles.apply(this.enginePointer)[0];
     FeatureDefs featureDefs = derefWasmPointer(packed, FeatureDefs::getRootAsFeatureDefs);
 
@@ -265,22 +268,14 @@ public class UnleashEngine {
     return defs;
   }
 
-  public Boolean isEnabled(String toggleName, Context context)
-      throws JsonMappingException, JsonProcessingException {
-
+  public Response isEnabled(String toggleName, Context context) {
     Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
     byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
     memory.write(contextPtr, contextBytes);
 
-    Response response =
-        this.<Response>callWasmFunctionWithResponse(
-            contextPtr, contextBytes.length, checkEnabled::apply, Response::getRootAsResponse);
-
-    if (response.hasEnabled()) {
-      return response.enabled();
-    }
-    return null;
+    return this.<Response>callWasmFunctionWithResponse(
+        contextPtr, contextBytes.length, checkEnabled::apply, Response::getRootAsResponse);
   }
 
   private void readLog() {
@@ -291,8 +286,7 @@ public class UnleashEngine {
     }
   }
 
-  public VariantDef getVariant(String toggleName, Context context)
-      throws JsonMappingException, JsonProcessingException {
+  public VariantDef getVariant(String toggleName, Context context) {
     Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
     byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
@@ -319,16 +313,35 @@ public class UnleashEngine {
     }
   }
 
-  public MetricsBucket getMetrics() throws JsonMappingException, JsonProcessingException {
+  public MetricsBucket getMetrics() {
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 
     long packed = (long) getMetrics.apply(this.enginePointer, now.toInstant().toEpochMilli())[0];
-    MetricsBucket bucket = derefWasmPointer(packed, MetricsBucket::getRootAsMetricsBucket);
+    MetricsResponse response = derefWasmPointer(packed, MetricsResponse::getRootAsMetricsResponse);
 
-    if (bucket.togglesVector() == null) {
+    if (response.togglesVector() == null) {
       return null;
     }
-    return bucket;
+
+    Map<String, FeatureCount> toggles = new HashMap<>();
+    for (int i = 0; i < response.togglesLength(); i++) {
+      ToggleEntry toggleEntry = response.toggles(i);
+      ToggleStats stats = toggleEntry.value();
+
+      Map<String, Long> variants = new HashMap<>();
+      for (int j = 0; j < stats.variantsLength(); j++) {
+        VariantEntry variant = stats.variants(j);
+        variants.put(variant.key(), variant.value());
+      }
+      FeatureCount featureCount = new FeatureCount(stats.yes(), stats.no(), variants);
+
+      toggles.put(toggleEntry.key(), featureCount);
+    }
+
+    Instant startInstant = Instant.ofEpochMilli(response.start());
+    Instant stopInstant = Instant.ofEpochMilli(response.stop());
+
+    return new MetricsBucket(startInstant, stopInstant, toggles);
   }
 
   public static String getCoreVersion() {

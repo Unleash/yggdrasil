@@ -9,7 +9,7 @@ use unleash_yggdrasil::{ExtendedVariantDef, ToggleDefinition};
 
 use crate::messaging::messaging::{
     BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
-    FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsBucket, MetricsBucketBuilder,
+    FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsResponse, MetricsResponseBuilder,
     Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
     VariantEntryBuilder, VariantPayloadBuilder,
 };
@@ -140,7 +140,7 @@ impl FlatbufferSerializable<Result<ResponseMessage<ExtendedVariantDef>, WasmErro
     }
 }
 
-impl FlatbufferSerializable<Option<MetricBucket>> for MetricsBucket<'static> {
+impl FlatbufferSerializable<Option<MetricBucket>> for MetricsResponse<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
         metrics: Option<MetricBucket>,
@@ -176,13 +176,13 @@ impl FlatbufferSerializable<Option<MetricBucket>> for MetricsBucket<'static> {
                 })
                 .collect();
             let toggle_vector = builder.create_vector(&items);
-            let mut resp_builder = MetricsBucketBuilder::new(builder);
+            let mut resp_builder = MetricsResponseBuilder::new(builder);
             resp_builder.add_start(metrics.start.timestamp_millis());
             resp_builder.add_stop(metrics.stop.timestamp_millis());
             resp_builder.add_toggles(toggle_vector);
             resp_builder.finish()
         } else {
-            let resp_builder = MetricsBucketBuilder::new(builder);
+            let resp_builder = MetricsResponseBuilder::new(builder);
             resp_builder.finish()
         }
     }

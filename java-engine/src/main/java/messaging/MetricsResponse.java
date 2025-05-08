@@ -10,16 +10,16 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
-public final class MetricsBucket extends Table {
+public final class MetricsResponse extends Table {
   public static void ValidateVersion() {
     Constants.FLATBUFFERS_23_1_21();
   }
 
-  public static MetricsBucket getRootAsMetricsBucket(ByteBuffer _bb) {
-    return getRootAsMetricsBucket(_bb, new MetricsBucket());
+  public static MetricsResponse getRootAsMetricsResponse(ByteBuffer _bb) {
+    return getRootAsMetricsResponse(_bb, new MetricsResponse());
   }
 
-  public static MetricsBucket getRootAsMetricsBucket(ByteBuffer _bb, MetricsBucket obj) {
+  public static MetricsResponse getRootAsMetricsResponse(ByteBuffer _bb, MetricsResponse obj) {
     _bb.order(ByteOrder.LITTLE_ENDIAN);
     return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb));
   }
@@ -28,7 +28,7 @@ public final class MetricsBucket extends Table {
     __reset(_i, _bb);
   }
 
-  public MetricsBucket __assign(int _i, ByteBuffer _bb) {
+  public MetricsResponse __assign(int _i, ByteBuffer _bb) {
     __init(_i, _bb);
     return this;
   }
@@ -66,16 +66,16 @@ public final class MetricsBucket extends Table {
     return o != 0 ? obj.__assign(__vector(o), 4, bb) : null;
   }
 
-  public static int createMetricsBucket(
+  public static int createMetricsResponse(
       FlatBufferBuilder builder, long start, long stop, int togglesOffset) {
     builder.startTable(3);
-    MetricsBucket.addStop(builder, stop);
-    MetricsBucket.addStart(builder, start);
-    MetricsBucket.addToggles(builder, togglesOffset);
-    return MetricsBucket.endMetricsBucket(builder);
+    MetricsResponse.addStop(builder, stop);
+    MetricsResponse.addStart(builder, start);
+    MetricsResponse.addToggles(builder, togglesOffset);
+    return MetricsResponse.endMetricsResponse(builder);
   }
 
-  public static void startMetricsBucket(FlatBufferBuilder builder) {
+  public static void startMetricsResponse(FlatBufferBuilder builder) {
     builder.startTable(3);
   }
 
@@ -101,16 +101,17 @@ public final class MetricsBucket extends Table {
     builder.startVector(4, numElems, 4);
   }
 
-  public static int endMetricsBucket(FlatBufferBuilder builder) {
+  public static int endMetricsResponse(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;
   }
 
-  public static void finishMetricsBucketBuffer(FlatBufferBuilder builder, int offset) {
+  public static void finishMetricsResponseBuffer(FlatBufferBuilder builder, int offset) {
     builder.finish(offset);
   }
 
-  public static void finishSizePrefixedMetricsBucketBuffer(FlatBufferBuilder builder, int offset) {
+  public static void finishSizePrefixedMetricsResponseBuffer(
+      FlatBufferBuilder builder, int offset) {
     builder.finishSizePrefixed(offset);
   }
 
@@ -120,11 +121,11 @@ public final class MetricsBucket extends Table {
       return this;
     }
 
-    public MetricsBucket get(int j) {
-      return get(new MetricsBucket(), j);
+    public MetricsResponse get(int j) {
+      return get(new MetricsResponse(), j);
     }
 
-    public MetricsBucket get(MetricsBucket obj, int j) {
+    public MetricsResponse get(MetricsResponse obj, int j) {
       return obj.__assign(__indirect(__element(j), bb), bb);
     }
   }

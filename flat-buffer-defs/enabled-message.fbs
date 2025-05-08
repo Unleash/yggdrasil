@@ -69,7 +69,7 @@ table ToggleEntry {
   value: ToggleStats;
 }
 
-table MetricsBucket {
+table MetricsResponse {
   // Representing DateTime<Utc> as UNIX timestamp in milliseconds
   start: long;
   stop: long;
@@ -89,4 +89,4 @@ table FeatureDefs {
 
 root_type Response;
 root_type ContextMessage;
-root_type MetricsBucket;
+root_type MetricsResponse;
