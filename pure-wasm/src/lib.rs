@@ -3,18 +3,16 @@ use core::str;
 use flatbuffers::root;
 use random::get_random_source;
 use serialisation::{FlatbufferSerializable, ResponseMessage, WasmError};
-use std::{
-    collections::HashMap,
-    ffi::{CString, c_char, c_void},
-    mem, slice,
-};
+use std::{alloc::Layout, collections::HashMap, ffi::c_void, mem, slice};
+use unleash_types::client_features::{self, ClientFeatures};
 
 use getrandom::register_custom_getrandom;
 use messaging::messaging::{
-    BuiltInStrategies, ContextMessage, CoreVersion, FeatureDefs, MetricsResponse, Response, Variant
+    BuiltInStrategies, ContextMessage, CoreVersion, FeatureDefs, MetricsResponse, Response,
+    TakeStateResponse, Variant,
 };
 use unleash_yggdrasil::{
-    EngineState, ExtendedVariantDef, KNOWN_STRATEGIES, state::EnrichedContext,
+    EngineState, ExtendedVariantDef, KNOWN_STRATEGIES, UpdateMessage, state::EnrichedContext,
 };
 
 mod logging;
@@ -66,23 +64,26 @@ impl TryFrom<ContextMessage<'_>> for EnrichedContext {
 }
 
 #[unsafe(no_mangle)]
-pub fn new_engine(start_time: i64) -> *mut c_void {
+pub fn new_engine(start_time: i64) -> i32 {
     let start_time = DateTime::from_timestamp_millis(start_time).unwrap();
     let engine = EngineState::initial_state(start_time);
-    Box::into_raw(Box::new(engine)) as *mut c_void
+    Box::into_raw(Box::new(engine)) as i32
+}
+
+use std::alloc::{alloc, dealloc};
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn inalloc(len: usize) -> i32 {
+    // allocate raw, uninitialised memory
+    let layout = Layout::from_size_align(len, 1).unwrap();
+    let ptr = alloc(layout);
+    ptr as i32
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn alloc(len: i32) -> *const u8 {
-    let mut buf = Vec::with_capacity(len as usize);
-    let ptr = buf.as_mut_ptr();
-    mem::forget(buf);
-    ptr
-}
-
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn dealloc(ptr: &mut u8, len: i32) {
-    unsafe { Vec::from_raw_parts(ptr, 0, len as usize) };
+pub unsafe extern "C" fn indealloc(ptr: i32, len: usize) {
+    let layout = Layout::from_size_align(len, 1).unwrap();
+    dealloc(ptr as *mut u8, layout);
 }
 
 #[unsafe(no_mangle)]
@@ -95,24 +96,21 @@ pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) -> *mut c_char {
-    unsafe {
-        let engine = &mut *(engine_ptr as *mut EngineState);
+pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) {
+    let engine = unsafe { &mut *(engine_ptr as *mut EngineState) };
+    let json_str = unsafe {
         let json_bytes = slice::from_raw_parts(json_ptr as *const u8, json_len as usize);
-        let json_str = str::from_utf8_unchecked(json_bytes);
+        str::from_utf8(json_bytes)
+        // str::from_utf8_unchecked(json_bytes)
+    };
 
-        match serde_json::from_str(json_str) {
-            Ok(client_features) => {
-                engine.take_state(client_features);
-                CString::new("Updated features successfully")
-                    .unwrap()
-                    .into_raw()
-            }
-            Err(e) => {
-                let err_msg = format!("Failed to parse JSON: {}", e);
-                CString::new(err_msg).unwrap().into_raw()
-            }
-        }
+    let Ok(json_str) = json_str else {
+        return;
+    };
+
+    if let Ok(client_features) = serde_json::from_str::<UpdateMessage>(json_str) {
+        engine.take_state(client_features);
+    } else {
     }
 }
 

@@ -12,6 +12,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -30,6 +31,7 @@ import messaging.FeatureDefs;
 import messaging.MetricsResponse;
 import messaging.PropertyEntry;
 import messaging.Response;
+import messaging.TakeStateResponse;
 import messaging.ToggleEntry;
 import messaging.ToggleStats;
 import messaging.Variant;
@@ -42,6 +44,7 @@ public class UnleashEngine {
   private static Instance instance;
   private static ExportFunction alloc;
   private static ExportFunction dealloc;
+  private static ExportFunction takeState;
   private static ExportFunction checkEnabled;
   private static ExportFunction checkVariant;
   private static ExportFunction getMetrics;
@@ -51,19 +54,26 @@ public class UnleashEngine {
   private static ExportFunction getCoreVersion;
   private static ExportFunction getBuiltInStrategies;
   private static ExportFunction newEngine;
-  private long enginePointer;
+  private int enginePointer;
   private Memory memory;
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
 
   static {
+    List<ValueType> params = new ArrayList<>();
+    params.add(ValueType.I32);
+    params.add(ValueType.I32);
+
+    List<ValueType> results = new ArrayList<>();
+    results.add(ValueType.I32);
+
     ImportValues imports =
         ImportValues.builder()
             .addFunction(
                 new HostFunction(
                     "env",
                     "fill_random",
-                    List.of(ValueType.I32, ValueType.I32),
-                    List.of(ValueType.I32),
+                    params,
+                    results,
                     (Instance instance, long... args) -> {
                       int ptr = (int) args[0];
                       int len = (int) args[1];
@@ -87,8 +97,9 @@ public class UnleashEngine {
             .build();
 
     newEngine = instance.export("new_engine");
-    alloc = instance.export("alloc");
-    dealloc = instance.export("dealloc");
+    alloc = instance.export("inalloc");
+    dealloc = instance.export("indealloc");
+    takeState = instance.export("take_state");
     checkEnabled = instance.export("check_enabled");
     checkVariant = instance.export("check_variant");
     getMetrics = instance.export("get_metrics");
@@ -229,25 +240,41 @@ public class UnleashEngine {
     memory = instance.memory();
 
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-    this.enginePointer = newEngine.apply(now.toInstant().toEpochMilli())[0];
+    this.enginePointer = (int)newEngine.apply(now.toInstant().toEpochMilli())[0];
   }
 
-  public void takeState(String message) {
+  public List<String> takeState(String message) throws YggdrasilInvalidInputException {
 
     customStrategiesEvaluator.loadStrategiesFor(message);
-    int len = message.getBytes().length;
-
+    byte[] messageBytes = message.getBytes();
+    int len = messageBytes.length;
     int ptr = (int) alloc.apply(len)[0];
-    memory.writeString(ptr, message);
 
-    ExportFunction takeState = instance.export("take_state");
+    memory.write(ptr, messageBytes);
+    System.out.println("Current pointer is: " + enginePointer + " " + ptr + " " + len);
+    takeState.apply(this.enginePointer, ptr, len);
 
-    int resultPtr = (int) takeState.apply(this.enginePointer, ptr, len)[0];
-
-    String result = memory.readCString(resultPtr);
-
-    System.out.println(result);
     dealloc.apply(ptr, len);
+
+
+    // readLog();
+    // TakeStateResponse response =
+    //     this.<TakeStateResponse>callWasmFunctionWithResponse(
+    //         ptr, len, takeState::apply, TakeStateResponse::getRootAsTakeStateResponse);
+
+    // if (response.error() != null) {
+    //   String error = response.error();
+    //   throw new YggdrasilInvalidInputException(error);
+    // }
+
+    // if (response.warningsLength() > 0) {
+    //   List<String> warnings = new ArrayList<>(response.warningsLength());
+    //   for (int i = 0; i < response.warningsLength(); i++) {
+    //     warnings.add(response.warnings(i));
+    //   }
+    //   return warnings;
+    // }
+    return null;
   }
 
   public List<FeatureDef> listKnownToggles() {
@@ -268,14 +295,27 @@ public class UnleashEngine {
     return defs;
   }
 
-  public Response isEnabled(String toggleName, Context context) {
+  public WasmResponse<Boolean> isEnabled(String toggleName, Context context)
+      throws YggdrasilInvalidInputException {
     Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
     byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
     memory.write(contextPtr, contextBytes);
 
-    return this.<Response>callWasmFunctionWithResponse(
-        contextPtr, contextBytes.length, checkEnabled::apply, Response::getRootAsResponse);
+    Response response =
+        this.<Response>callWasmFunctionWithResponse(
+            contextPtr, contextBytes.length, checkEnabled::apply, Response::getRootAsResponse);
+
+    if (response.error() != null) {
+      String error = response.error();
+      throw new YggdrasilInvalidInputException(error);
+    }
+
+    if (response.hasEnabled()) {
+      return new WasmResponse<Boolean>(response.impressionData(), response.enabled());
+    } else {
+      return new WasmResponse<Boolean>(response.impressionData(), null);
+    }
   }
 
   private void readLog() {
@@ -286,7 +326,8 @@ public class UnleashEngine {
     }
   }
 
-  public VariantDef getVariant(String toggleName, Context context) {
+  public WasmResponse<VariantDef> getVariant(String toggleName, Context context)
+      throws YggdrasilInvalidInputException {
     Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
     byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
     int contextPtr = (int) alloc.apply(contextBytes.length)[0];
@@ -307,9 +348,16 @@ public class UnleashEngine {
         payload.setValue(variant.payload().value());
       }
 
-      return new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled());
+      if (variant.error() != null) {
+        String error = variant.error();
+        throw new YggdrasilInvalidInputException(error);
+      }
+
+      return new WasmResponse<VariantDef>(
+          variant.impressionData(),
+          new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled()));
     } else {
-      return null;
+      return new WasmResponse<VariantDef>(false, null);
     }
   }
 
@@ -395,7 +443,7 @@ public class UnleashEngine {
   private <T> T callWasmFunctionWithResponse(
       int messagePtr,
       int messageLen,
-      TriFunction<Long, Integer, Integer, long[]> nativeCall,
+      TriFunction<Integer, Integer, Integer, long[]> nativeCall,
       Function<ByteBuffer, T> decoder) {
     long packed = nativeCall.apply(this.enginePointer, messagePtr, messageLen)[0];
     T response = derefWasmPointer(packed, decoder);

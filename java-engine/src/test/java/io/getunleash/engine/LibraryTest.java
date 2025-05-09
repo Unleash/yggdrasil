@@ -30,8 +30,8 @@ public class LibraryTest {
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
     engine.takeState(json);
-    boolean result = engine.isEnabled("Feature.A", new Context());
-    assert (result);
+    WasmResponse<Boolean> result = engine.isEnabled("Feature.A", new Context());
+    assert (result.value == true);
   }
 
   @Test
@@ -40,9 +40,9 @@ public class LibraryTest {
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
     engine.takeState(json);
-    boolean result = engine.isEnabled("Feature.A", new Context());
-    boolean result2 = engine.isEnabled("Feature.C", new Context());
-    boolean result3 = engine.isEnabled("Feature.C", new Context());
+    engine.isEnabled("Feature.A", new Context());
+    engine.isEnabled("Feature.C", new Context());
+    engine.isEnabled("Feature.C", new Context());
     MetricsBucket bucket = engine.getMetrics();
     FeatureCount featA = bucket.getToggles().get("Feature.A");
     FeatureCount featC = bucket.getToggles().get("Feature.C");
@@ -56,7 +56,7 @@ public class LibraryTest {
     String path = "../test-data/simple.json";
     String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
     engine.takeState(json);
-    boolean result = engine.isEnabled("Feature.A", new Context());
+    engine.isEnabled("Feature.A", new Context());
     MetricsBucket bucket = engine.getMetrics();
 
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);

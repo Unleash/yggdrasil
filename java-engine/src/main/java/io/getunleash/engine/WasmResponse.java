@@ -4,10 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class WasmResponse<T> {
   @JsonProperty("status_code")
-  public String statusCode;
+  public boolean impressionData;
 
   public T value;
 
-  @JsonProperty("error_message")
-  public String errorMessage;
+  public WasmResponse(boolean impressionData, T value) {
+    this.impressionData = impressionData;
+    this.value = value;
+  }
 }

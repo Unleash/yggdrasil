@@ -1646,6 +1646,120 @@ impl core::fmt::Debug for MetricsResponse<'_> {
       ds.finish()
   }
 }
+pub enum TakeStateResponseOffset {}
+#[derive(Copy, Clone, PartialEq)]
+
+pub struct TakeStateResponse<'a> {
+  pub _tab: flatbuffers::Table<'a>,
+}
+
+impl<'a> flatbuffers::Follow<'a> for TakeStateResponse<'a> {
+  type Inner = TakeStateResponse<'a>;
+  #[inline]
+  unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+    Self { _tab: flatbuffers::Table::new(buf, loc) }
+  }
+}
+
+impl<'a> TakeStateResponse<'a> {
+  pub const VT_WARNINGS: flatbuffers::VOffsetT = 4;
+  pub const VT_ERROR: flatbuffers::VOffsetT = 6;
+
+  #[inline]
+  pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
+    TakeStateResponse { _tab: table }
+  }
+  #[allow(unused_mut)]
+  pub fn create<'bldr: 'args, 'args: 'mut_bldr, 'mut_bldr>(
+    _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
+    args: &'args TakeStateResponseArgs<'args>
+  ) -> flatbuffers::WIPOffset<TakeStateResponse<'bldr>> {
+    let mut builder = TakeStateResponseBuilder::new(_fbb);
+    if let Some(x) = args.error { builder.add_error(x); }
+    if let Some(x) = args.warnings { builder.add_warnings(x); }
+    builder.finish()
+  }
+
+
+  #[inline]
+  pub fn warnings(&self) -> Option<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>(TakeStateResponse::VT_WARNINGS, None)}
+  }
+  #[inline]
+  pub fn error(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(TakeStateResponse::VT_ERROR, None)}
+  }
+}
+
+impl flatbuffers::Verifiable for TakeStateResponse<'_> {
+  #[inline]
+  fn run_verifier(
+    v: &mut flatbuffers::Verifier, pos: usize
+  ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
+    use self::flatbuffers::Verifiable;
+    v.visit_table(pos)?
+     .visit_field::<flatbuffers::ForwardsUOffset<flatbuffers::Vector<'_, flatbuffers::ForwardsUOffset<&'_ str>>>>("warnings", Self::VT_WARNINGS, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("error", Self::VT_ERROR, false)?
+     .finish();
+    Ok(())
+  }
+}
+pub struct TakeStateResponseArgs<'a> {
+    pub warnings: Option<flatbuffers::WIPOffset<flatbuffers::Vector<'a, flatbuffers::ForwardsUOffset<&'a str>>>>,
+    pub error: Option<flatbuffers::WIPOffset<&'a str>>,
+}
+impl<'a> Default for TakeStateResponseArgs<'a> {
+  #[inline]
+  fn default() -> Self {
+    TakeStateResponseArgs {
+      warnings: None,
+      error: None,
+    }
+  }
+}
+
+pub struct TakeStateResponseBuilder<'a: 'b, 'b> {
+  fbb_: &'b mut flatbuffers::FlatBufferBuilder<'a>,
+  start_: flatbuffers::WIPOffset<flatbuffers::TableUnfinishedWIPOffset>,
+}
+impl<'a: 'b, 'b> TakeStateResponseBuilder<'a, 'b> {
+  #[inline]
+  pub fn add_warnings(&mut self, warnings: flatbuffers::WIPOffset<flatbuffers::Vector<'b , flatbuffers::ForwardsUOffset<&'b  str>>>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(TakeStateResponse::VT_WARNINGS, warnings);
+  }
+  #[inline]
+  pub fn add_error(&mut self, error: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(TakeStateResponse::VT_ERROR, error);
+  }
+  #[inline]
+  pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> TakeStateResponseBuilder<'a, 'b> {
+    let start = _fbb.start_table();
+    TakeStateResponseBuilder {
+      fbb_: _fbb,
+      start_: start,
+    }
+  }
+  #[inline]
+  pub fn finish(self) -> flatbuffers::WIPOffset<TakeStateResponse<'a>> {
+    let o = self.fbb_.end_table(self.start_);
+    flatbuffers::WIPOffset::new(o.value())
+  }
+}
+
+impl core::fmt::Debug for TakeStateResponse<'_> {
+  fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut ds = f.debug_struct("TakeStateResponse");
+      ds.field("warnings", &self.warnings());
+      ds.field("error", &self.error());
+      ds.finish()
+  }
+}
 pub enum FeatureDefOffset {}
 #[derive(Copy, Clone, PartialEq)]
 

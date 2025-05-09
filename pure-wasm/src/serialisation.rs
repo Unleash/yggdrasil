@@ -5,13 +5,13 @@ use std::{
 
 use flatbuffers::{FlatBufferBuilder, Follow, WIPOffset};
 use unleash_types::client_metrics::MetricBucket;
-use unleash_yggdrasil::{ExtendedVariantDef, ToggleDefinition};
+use unleash_yggdrasil::{EvalWarning, ExtendedVariantDef, ToggleDefinition};
 
 use crate::messaging::messaging::{
     BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
     FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsResponse, MetricsResponseBuilder,
-    Response, ResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
-    VariantEntryBuilder, VariantPayloadBuilder,
+    Response, ResponseBuilder, TakeStateResponse, TakeStateResponseBuilder, ToggleEntryBuilder,
+    ToggleStatsBuilder, Variant, VariantBuilder, VariantEntryBuilder, VariantPayloadBuilder,
 };
 
 thread_local! {
@@ -22,6 +22,7 @@ thread_local! {
 #[derive(Debug)]
 pub enum WasmError {
     InvalidContext(String),
+    InvalidState(String),
 }
 
 pub struct ResponseMessage<T> {
@@ -33,6 +34,7 @@ impl Display for WasmError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             WasmError::InvalidContext(msg) => write!(f, "Invalid context: {}", msg),
+            WasmError::InvalidState(msg) => write!(f, "Invalid state: {}", msg),
         }
     }
 }
@@ -247,5 +249,41 @@ impl FlatbufferSerializable<[&'static str; 8]> for BuiltInStrategies<'static> {
         let mut resp_builder = BuiltInStrategiesBuilder::new(builder);
         resp_builder.add_values(strategy_vector);
         resp_builder.finish()
+    }
+}
+
+impl FlatbufferSerializable<Result<Option<Vec<EvalWarning>>, WasmError>>
+    for TakeStateResponse<'static>
+{
+    fn as_flat_buffer(
+        builder: &mut FlatBufferBuilder<'static>,
+        response: Result<Option<Vec<EvalWarning>>, WasmError>,
+    ) -> WIPOffset<Self> {
+        match response {
+            Ok(Some(state)) => {
+                let warnings: Vec<_> = state
+                    .iter()
+                    .map(|warning| {
+                        builder
+                            .create_string(&format!("{}:{}", warning.toggle_name, warning.message))
+                    })
+                    .collect();
+
+                let warning_vector = builder.create_vector(&warnings);
+                let mut resp_builder = TakeStateResponseBuilder::new(builder);
+                resp_builder.add_warnings(warning_vector);
+                resp_builder.finish()
+            }
+            Ok(None) => {
+                let resp_builder = TakeStateResponseBuilder::new(builder);
+                resp_builder.finish()
+            }
+            Err(err) => {
+                let error_offset = builder.create_string(&err.to_string());
+                let mut resp_builder = TakeStateResponseBuilder::new(builder);
+                resp_builder.add_error(error_offset);
+                resp_builder.finish()
+            }
+        }
     }
 }

@@ -12,6 +12,7 @@ import io.getunleash.engine.CustomStrategiesEvaluator.MappedStrategy;
 import io.getunleash.engine.CustomStrategiesEvaluator.StrategyDefinition;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,34 +42,34 @@ class CustomStrategiesEvaluatorTest {
         of(
             alwaysTrue("custom"),
             alwaysTrue("cus-tom"),
-            Map.of("customStrategy1", true, "customStrategy2", true)),
+            mapOf("customStrategy1", true, "customStrategy2", true)),
         of(
             alwaysFails("custom"),
             alwaysFails("cus-tom"),
-            Map.of("customStrategy1", false, "customStrategy2", false)),
+            mapOf("customStrategy1", false, "customStrategy2", false)),
         of(
             alwaysTrue("custom"),
             alwaysFails("cus-tom"),
-            Map.of("customStrategy1", true, "customStrategy2", false)),
+            mapOf("customStrategy1", true, "customStrategy2", false)),
         of(
             alwaysFails("custom"),
             alwaysTrue("cus-tom"),
-            Map.of("customStrategy1", false, "customStrategy2", true)),
+            mapOf("customStrategy1", false, "customStrategy2", true)),
         of(
             alwaysTrue("wrongName"),
             alwaysTrue("wrongName"),
-            Map.of("customStrategy1", false, "customStrategy2", false)),
+            mapOf("customStrategy1", false, "customStrategy2", false)),
         of(
             alwaysTrue("custom"),
             alwaysTrue("custom"),
-            Map.of("customStrategy1", true, "customStrategy2", false)));
+            mapOf("customStrategy1", true, "customStrategy2", false)));
   }
 
   private static Stream<Arguments> singleStrategy() {
     return Stream.of(
-        of("custom", Map.of("customStrategy1", true, "customStrategy2", false)),
-        of("cus-tom", Map.of("customStrategy1", false, "customStrategy2", true)),
-        of("unknown", Map.of("customStrategy1", false, "customStrategy2", false)));
+        of("custom", mapOf("customStrategy1", true, "customStrategy2", false)),
+        of("cus-tom", mapOf("customStrategy1", false, "customStrategy2", true)),
+        of("unknown", mapOf("customStrategy1", false, "customStrategy2", false)));
   }
 
   @ParameterizedTest
@@ -118,20 +119,39 @@ class CustomStrategiesEvaluatorTest {
         new CustomStrategiesEvaluator(Stream.of(alwaysFails("custom")), new HashSet<>());
     customStrategiesEvaluator.loadStrategiesFor(readResource("custom-strategy-tests.json"));
     assertEquals(
-        Map.of("customStrategy1", false, "customStrategy2", false),
+        mapOf("customStrategy1", false, "customStrategy2", false),
         customStrategiesEvaluator.eval("Feature.Custom.Strategies", new Context()));
   }
 
   @Test
   void doesNotLoadCustomStrategyForBuiltinStrategy() throws Exception {
     CustomStrategiesEvaluator customStrategiesEvaluator =
-        new CustomStrategiesEvaluator(Stream.of(alwaysFails("custom")), Set.of("flexibleRollout"));
+        new CustomStrategiesEvaluator(Stream.of(alwaysFails("custom")), setOf("flexibleRollout"));
 
-    StrategyDefinition flexibleRollout = new StrategyDefinition("flexibleRollout", Map.of());
-    FeatureDefinition feature = new FeatureDefinition("feature", List.of(flexibleRollout));
+    StrategyDefinition flexibleRollout = new StrategyDefinition("flexibleRollout", new HashMap<>());
+    FeatureDefinition feature = new FeatureDefinition("feature", listOf(flexibleRollout));
 
     List<MappedStrategy> results = customStrategiesEvaluator.getFeatureStrategies(feature);
 
     assertTrue(results.isEmpty());
+  }
+
+  private static <T, U> Map<T, U> mapOf(T key1, U value1, T key2, U value2) {
+    Map<T, U> map = new HashMap<>();
+    map.put(key1, value1);
+    map.put(key2, value2);
+    return map;
+  }
+
+  private static <T> Set<T> setOf(T value) {
+    Set<T> set = new HashSet<>();
+    set.add(value);
+    return set;
+  }
+
+  private static <T> List<T> listOf(T value) {
+    List<T> list = new java.util.ArrayList<>();
+    list.add(value);
+    return list;
   }
 }

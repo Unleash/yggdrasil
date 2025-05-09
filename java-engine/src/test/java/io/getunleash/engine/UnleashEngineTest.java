@@ -32,8 +32,11 @@ class TestSuite {
 class UnleashEngineTest {
 
   // Assume this is set up to be your feature JSON
-  private final String simpleFeatures =
-      loadFeaturesFromFile("../client-specification/specifications/01-simple-examples.json");
+  private final String simpleFeatures = loadFeaturesFromFile(
+      "../client-specification/specifications/01-simple-examples.json");
+
+  private final String notSimpleFeatures = loadFeaturesFromFile(
+      "../client-specification/specifications/02-user-with-id-strategy.json");
 
   public static String loadFeaturesFromFile(String filePath) {
     ObjectMapper mapper = new ObjectMapper();
@@ -51,12 +54,13 @@ class UnleashEngineTest {
 
   @BeforeEach
   void createEngine() {
-    List<IStrategy> customStrategies = List.of(alwaysTrue("custom"));
+    List<IStrategy> customStrategies = new ArrayList<>();
+    customStrategies.add(alwaysTrue("custom"));
     engine = new UnleashEngine(customStrategies);
   }
 
   @Test
-  void testTakeState() {
+  void testTakeState() throws Exception {
     engine.takeState(simpleFeatures);
   }
 
@@ -65,7 +69,7 @@ class UnleashEngineTest {
     engine.takeState(simpleFeatures);
 
     Context context = new Context();
-    Boolean result = engine.isEnabled("Feature.A", context);
+    Boolean result = engine.isEnabled("Feature.A", context).value;
     assertNotNull(result);
     assertTrue(result);
   }
@@ -75,7 +79,7 @@ class UnleashEngineTest {
     engine.takeState(simpleFeatures);
 
     Context context = new Context();
-    Boolean result = engine.isEnabled("IDoNotExist", context);
+    Boolean result = engine.isEnabled("IDoNotExist", context).value;
     assertNull(result); // not found
   }
 
@@ -84,10 +88,10 @@ class UnleashEngineTest {
     engine.takeState(simpleFeatures);
 
     Context context = new Context();
-    VariantDef variant = engine.getVariant("Feature.A", context);
+    VariantDef variant = engine.getVariant("Feature.A", context).value;
 
     if (variant == null) {
-      variant = new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context));
+      variant = new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context).value);
     }
 
     assertEquals("disabled", variant.getName());
@@ -100,10 +104,10 @@ class UnleashEngineTest {
         "{\"version\":1,\"features\":[{\"name\":\"Feature.D\",\"description\":\"Has a custom strategy\",\"enabled\":true,\"strategies\":[{\"name\":\"custom\",\"constraints\":[],\"parameters\":{\"foo\":\"bar\"}}]}]}");
 
     Context context = new Context();
-    VariantDef variant = engine.getVariant("Feature.D", context);
+    WasmResponse<VariantDef> variant = engine.getVariant("Feature.D", context);
 
-    assertEquals(variant.isFeatureEnabled(), true);
-    assertFalse(variant.isEnabled());
+    assertEquals(variant.value.isFeatureEnabled(), true);
+    assertFalse(variant.value.isEnabled());
   }
 
   @Test
@@ -113,8 +117,7 @@ class UnleashEngineTest {
     List<FeatureDef> features = engine.listKnownToggles();
     assertEquals(1, features.size());
 
-    Optional<FeatureDef> featureA =
-        features.stream().filter(f -> f.getName().equals("Feature.A")).findFirst();
+    Optional<FeatureDef> featureA = features.stream().filter(f -> f.getName().equals("Feature.A")).findFirst();
     assertTrue(featureA.isPresent());
     assertEquals("Feature.A", featureA.get().getName());
     assertEquals("test", featureA.get().getProject());
@@ -129,24 +132,27 @@ class UnleashEngineTest {
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     File basePath = Paths.get("../client-specification/specifications").toFile();
     File indexFile = new File(basePath, "index.json");
-    List<String> testSuites =
-        objectMapper.readValue(indexFile, new TypeReference<List<String>>() {});
+    List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<List<String>>() {
+    });
 
     for (String suite : testSuites) {
       File suiteFile = new File(basePath, suite);
-      TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {});
+      TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {
+      });
 
+      System.out.println("Executing test suite: " + suiteData.name + "\n");
       engine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
       List<Map<String, Object>> tests = suiteData.tests;
       if (tests != null) {
         for (Map<String, Object> test : tests) {
+          System.out.println("Running test: " + test.get("description") + "...");
           String contextJson = objectMapper.writeValueAsString(test.get("context"));
           Context context = objectMapper.readValue(contextJson, Context.class);
           String toggleName = (String) test.get("toggleName");
           boolean expectedResult = (Boolean) test.get("expectedResult");
 
-          Boolean result = engine.isEnabled(toggleName, context);
+          Boolean result = engine.isEnabled(toggleName, context).value;
 
           if (result == null) {
             result = false; // Default should be provided by SDK
@@ -164,16 +170,17 @@ class UnleashEngineTest {
       List<Map<String, Object>> variantTests = suiteData.variantTests;
       if (variantTests != null) {
         for (Map<String, Object> test : variantTests) {
+          System.out.println("Running test: " + test.get("description") + "...");
           String contextJson = objectMapper.writeValueAsString(test.get("context"));
           Context context = objectMapper.readValue(contextJson, Context.class);
           String toggleName = (String) test.get("toggleName");
 
-          VariantDef expectedResult =
-              objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
-          VariantDef result = engine.getVariant(toggleName, context);
+          VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
+          VariantDef result = engine.getVariant(toggleName, context).value;
           if (result == null) {
             // this behavior should be implemented in the SDK
-            result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName, context));
+            result = new VariantDef(
+                "disabled", null, false, engine.isEnabled(toggleName, context).value);
           }
 
           String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
@@ -254,7 +261,7 @@ class UnleashEngineTest {
       throws Exception {
     UnleashEngine customEngine = new UnleashEngine(customStrategies);
     takeFeaturesFromResource(customEngine, "custom-strategy-tests.json");
-    Boolean result = customEngine.isEnabled(featureName, context);
+    Boolean result = customEngine.isEnabled(featureName, context).value;
     assertNotNull(result);
     assertEquals(expectedIsEnabled, result);
   }
@@ -372,8 +379,17 @@ class UnleashEngineTest {
         Files.readAllBytes(
             Paths.get(
                 Objects.requireNonNull(
-                        UnleashEngineTest.class.getClassLoader().getResource(resource))
+                    UnleashEngineTest.class.getClassLoader().getResource(resource))
                     .toURI())),
         StandardCharsets.UTF_8);
+  }
+
+  @Test
+  void testAMillionCreateEngines() throws Exception {
+    UnleashEngine engine = new UnleashEngine();
+    for (int i = 0; i < 1500; i++) {
+      engine.takeState(simpleFeatures);
+    }
+    engine.takeState(notSimpleFeatures);
   }
 }

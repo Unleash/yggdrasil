@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 class CustomStrategiesEvaluator {
   private static final Logger log = LoggerFactory.getLogger(CustomStrategiesEvaluator.class);
-  static final Map<String, Boolean> EMPTY_STRATEGY_RESULTS = Map.of();
+  static final Map<String, Boolean> EMPTY_STRATEGY_RESULTS = new HashMap<>();
   private final Map<String, IStrategy> registeredStrategies;
   private final Set<String> builtinStrategies;
 

@@ -76,6 +76,11 @@ table MetricsResponse {
   toggles: [ToggleEntry];
 }
 
+table TakeStateResponse {
+  warnings: [string];
+  error: string;
+}
+
 table FeatureDef {
   name: string;
   type: string;
