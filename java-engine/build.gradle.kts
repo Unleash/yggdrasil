@@ -36,6 +36,10 @@ repositories {
     mavenCentral()
 }
 
+tasks.test {
+    jvmArgs("-XX:CompileCommand=dontinline,com.dylibso.chicory.runtime.OpcodeImpl::I32_LT_U")
+}
+
 dependencies {
     jmh("org.openjdk.jmh:jmh-core:1.37")
     jmhAnnotationProcessor("org.openjdk.jmh:jmh-generator-annprocess:1.37")
@@ -47,7 +51,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.1")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.2")
-    implementation("com.dylibso.chicory:runtime:1.0.0")
+    implementation("com.dylibso.chicory:runtime:1.3.0")
     implementation("com.google.flatbuffers:flatbuffers-java:23.1.21")
 }
 

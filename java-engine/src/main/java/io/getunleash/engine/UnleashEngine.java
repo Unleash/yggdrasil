@@ -6,6 +6,7 @@ import com.dylibso.chicory.runtime.HostFunction;
 import com.dylibso.chicory.runtime.ImportValues;
 import com.dylibso.chicory.runtime.Instance;
 import com.dylibso.chicory.runtime.Memory;
+import com.dylibso.chicory.runtime.TrapException;
 import com.dylibso.chicory.wasm.types.ValueType;
 import com.google.flatbuffers.FlatBufferBuilder;
 import java.net.InetAddress;
@@ -245,35 +246,23 @@ public class UnleashEngine {
 
   public List<String> takeState(String message) throws YggdrasilInvalidInputException {
 
+    try {
     customStrategiesEvaluator.loadStrategiesFor(message);
     byte[] messageBytes = message.getBytes();
     int len = messageBytes.length;
     int ptr = (int) alloc.apply(len)[0];
 
     memory.write(ptr, messageBytes);
-    System.out.println("Current pointer is: " + enginePointer + " " + ptr + " " + len);
     takeState.apply(this.enginePointer, ptr, len);
 
     dealloc.apply(ptr, len);
 
 
-    // readLog();
-    // TakeStateResponse response =
-    //     this.<TakeStateResponse>callWasmFunctionWithResponse(
-    //         ptr, len, takeState::apply, TakeStateResponse::getRootAsTakeStateResponse);
-
-    // if (response.error() != null) {
-    //   String error = response.error();
-    //   throw new YggdrasilInvalidInputException(error);
-    // }
-
-    // if (response.warningsLength() > 0) {
-    //   List<String> warnings = new ArrayList<>(response.warningsLength());
-    //   for (int i = 0; i < response.warningsLength(); i++) {
-    //     warnings.add(response.warnings(i));
-    //   }
-    //   return warnings;
-    // }
+    readLog();
+    } catch (TrapException e) {
+      readLog();
+      throw e;
+    }
     return null;
   }
 

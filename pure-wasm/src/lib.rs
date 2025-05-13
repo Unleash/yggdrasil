@@ -3,7 +3,7 @@ use core::str;
 use flatbuffers::root;
 use random::get_random_source;
 use serialisation::{FlatbufferSerializable, ResponseMessage, WasmError};
-use std::{alloc::Layout, collections::HashMap, ffi::c_void, mem, slice};
+use std::{alloc::Layout, collections::HashMap, ffi::c_void, mem, panic, slice, sync::Once};
 use unleash_types::client_features::{self, ClientFeatures};
 
 use getrandom::register_custom_getrandom;
@@ -27,6 +27,33 @@ mod messaging {
 }
 
 register_custom_getrandom!(get_random_source);
+
+static SET_PANIC_HOOK: Once = Once::new();
+
+pub fn setup_panic_hook() {
+    SET_PANIC_HOOK.call_once(|| {
+        panic::set_hook(Box::new(|panic_info| {
+            let msg = match panic_info.payload().downcast_ref::<&'static str>() {
+                Some(s) => *s,
+                None => match panic_info.payload().downcast_ref::<String>() {
+                    Some(s) => s.as_str(),
+                    None => "Box<Any>", // Fallback for unknown payload types
+                },
+            };
+
+            let location = panic_info
+                .location()
+                .map(|loc| {
+                    format!(
+                        "Panic occurred in file '{}' at line {}",
+                        loc.file(),
+                        loc.line()
+                    )
+                })
+                .unwrap_or_else(|| "Panic occurred at unknown location".to_string());
+        }));
+    });
+}
 
 impl TryFrom<ContextMessage<'_>> for EnrichedContext {
     type Error = WasmError;
@@ -65,6 +92,7 @@ impl TryFrom<ContextMessage<'_>> for EnrichedContext {
 
 #[unsafe(no_mangle)]
 pub fn new_engine(start_time: i64) -> i32 {
+    setup_panic_hook();
     let start_time = DateTime::from_timestamp_millis(start_time).unwrap();
     let engine = EngineState::initial_state(start_time);
     Box::into_raw(Box::new(engine)) as i32
@@ -90,10 +118,11 @@ pub unsafe extern "C" fn indealloc(ptr: i32, len: usize) {
 pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
     if !ptr.is_null() && len > 0 {
         unsafe {
-            let _ = Vec::from_raw_parts(ptr, 0, len);
+            let _ = Vec::from_raw_parts(ptr, len, len);
         }
     }
 }
+
 
 #[unsafe(no_mangle)]
 pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) {
@@ -111,6 +140,7 @@ pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) {
     if let Ok(client_features) = serde_json::from_str::<UpdateMessage>(json_str) {
         engine.take_state(client_features);
     } else {
+        unsafe { wasm_log!("Oh no that shouldn't have happened") };
     }
 }
 
