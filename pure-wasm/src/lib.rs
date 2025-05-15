@@ -3,13 +3,12 @@ use core::str;
 use flatbuffers::root;
 use random::get_random_source;
 use serialisation::{FlatbufferSerializable, ResponseMessage, WasmError};
-use std::{alloc::Layout, collections::HashMap, ffi::c_void, mem, panic, slice, sync::Once};
-use unleash_types::client_features::{self, ClientFeatures};
+use std::alloc::{alloc, dealloc};
+use std::{alloc::Layout, collections::HashMap, panic, slice, sync::Once};
 
 use getrandom::register_custom_getrandom;
 use messaging::messaging::{
-    BuiltInStrategies, ContextMessage, CoreVersion, FeatureDefs, MetricsResponse, Response,
-    TakeStateResponse, Variant,
+    BuiltInStrategies, ContextMessage, CoreVersion, FeatureDefs, MetricsResponse, Response, Variant,
 };
 use unleash_yggdrasil::{
     EngineState, ExtendedVariantDef, KNOWN_STRATEGIES, UpdateMessage, state::EnrichedContext,
@@ -37,7 +36,7 @@ pub fn setup_panic_hook() {
                 Some(s) => *s,
                 None => match panic_info.payload().downcast_ref::<String>() {
                     Some(s) => s.as_str(),
-                    None => "Box<Any>", // Fallback for unknown payload types
+                    None => "Box<Any>",
                 },
             };
 
@@ -51,6 +50,8 @@ pub fn setup_panic_hook() {
                     )
                 })
                 .unwrap_or_else(|| "Panic occurred at unknown location".to_string());
+
+            unsafe { wasm_log!("Panic: {} at {}", msg, location) };
         }));
     });
 }
@@ -98,20 +99,19 @@ pub fn new_engine(start_time: i64) -> i32 {
     Box::into_raw(Box::new(engine)) as i32
 }
 
-use std::alloc::{alloc, dealloc};
-
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn inalloc(len: usize) -> i32 {
-    // allocate raw, uninitialised memory
     let layout = Layout::from_size_align(len, 1).unwrap();
-    let ptr = alloc(layout);
+    let ptr = unsafe { alloc(layout) };
     ptr as i32
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn indealloc(ptr: i32, len: usize) {
-    let layout = Layout::from_size_align(len, 1).unwrap();
-    dealloc(ptr as *mut u8, layout);
+pub unsafe extern "C" fn indealloc(ptr: *mut u8, len: usize) {
+    if !ptr.is_null() && len > 0 {
+        let layout = Layout::from_size_align(len, 1).unwrap();
+        unsafe { dealloc(ptr as *mut u8, layout) };
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -123,14 +123,12 @@ pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
     }
 }
 
-
 #[unsafe(no_mangle)]
 pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) {
     let engine = unsafe { &mut *(engine_ptr as *mut EngineState) };
     let json_str = unsafe {
         let json_bytes = slice::from_raw_parts(json_ptr as *const u8, json_len as usize);
         str::from_utf8(json_bytes)
-        // str::from_utf8_unchecked(json_bytes)
     };
 
     let Ok(json_str) = json_str else {
@@ -139,8 +137,6 @@ pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) {
 
     if let Ok(client_features) = serde_json::from_str::<UpdateMessage>(json_str) {
         engine.take_state(client_features);
-    } else {
-        unsafe { wasm_log!("Oh no that shouldn't have happened") };
     }
 }
 
