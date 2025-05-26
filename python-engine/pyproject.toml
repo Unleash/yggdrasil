@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yggdrasil-engine"
-version = "0.1.5"
+version = "0.1.6-beta.0"
 description = "Engine for evaluating Unleash feature flags"
 authors = ["Simon Hornby <liquidwicked64@gmail.com>"]
 license = "MIT"
