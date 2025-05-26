@@ -63,8 +63,8 @@ class YggdrasilEngine
   attach_function :get_metrics, [:pointer], :pointer
   attach_function :free_response, [:pointer], :void
 
-  attach_function :count_toggle, %i[pointer string bool], :void
-  attach_function :count_variant, %i[pointer string string], :void
+  attach_function :count_toggle, %i[pointer string bool], :pointer
+  attach_function :count_variant, %i[pointer string string], :pointer
 
   attach_function :list_known_toggles, [:pointer], :pointer
 
