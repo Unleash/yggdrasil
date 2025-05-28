@@ -542,10 +542,7 @@ fn harvest_list(node: Pairs<Rule>) -> CompileResult<Vec<f64>> {
 
 fn harvest_ip_list(node: Pairs<Rule>) -> Vec<IpNetwork> {
     node.into_iter()
-        .filter_map(|n| match ip(n) {
-            Ok(net) => Some(net),
-            Err(_) => None,
-        })
+        .filter_map(|n| ip(n).ok())
         .collect()
 }
 
