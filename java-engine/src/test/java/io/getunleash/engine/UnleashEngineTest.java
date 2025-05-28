@@ -308,7 +308,7 @@ class UnleashEngineTest {
     // memory issues like double frees or segfaults
     // that's fixed now but it'd be cool if it didn't come back
 
-    String features = readResource("stuff.json");
+    String features = readResource("impression-data-tests.json");
     UnleashEngine ygg = new UnleashEngine();
     int threadCount = 2;
     CountDownLatch latch = new CountDownLatch(threadCount);
