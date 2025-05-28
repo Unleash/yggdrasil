@@ -20,6 +20,7 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -298,6 +299,43 @@ class UnleashEngineTest {
     // check that it contains two dots, close enough for a quick and dirty but
     // stable semver check
     assertTrue(coreVersion.split("\\.").length >= 3);
+  }
+
+  @Test
+  void testThreadCollision() throws Exception {
+    // This surfaces an issue where calling takeState on the engine in a tight loop
+    // from multiple threads causes
+    // memory issues like double frees or segfaults
+    // that's fixed now but it'd be cool if it didn't come back
+
+    String features = readResource("stuff.json");
+    UnleashEngine ygg = new UnleashEngine();
+    int threadCount = 2;
+    CountDownLatch latch = new CountDownLatch(threadCount);
+
+    try {
+      for (int i = 0; i < 2; i++) {
+        new Thread(
+                () -> {
+                  try {
+                    for (int j = 0; j < 100; j++) {
+                      ygg.takeState(features);
+                    }
+                    System.out.println("Thread completed successfully.");
+                  } catch (Exception yex) {
+                    yex.printStackTrace();
+                  } finally {
+                    latch.countDown();
+                  }
+                })
+            .start();
+      }
+
+      System.out.println("All threads started.");
+    } catch (Exception ex) {
+      ex.printStackTrace();
+    }
+    latch.await();
   }
 
   private static Stream<Arguments> customStrategiesInput() {
