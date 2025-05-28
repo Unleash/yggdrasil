@@ -541,9 +541,7 @@ fn harvest_list(node: Pairs<Rule>) -> CompileResult<Vec<f64>> {
 }
 
 fn harvest_ip_list(node: Pairs<Rule>) -> Vec<IpNetwork> {
-    node.into_iter()
-        .filter_map(|n| ip(n).ok())
-        .collect()
+    node.into_iter().filter_map(|n| ip(n).ok()).collect()
 }
 
 fn default_strategy_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
