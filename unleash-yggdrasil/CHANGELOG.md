@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.17.5 (2025-05-28)
+
+### Chore
+
+ - <csr-id-00e2fb290e9fa086f72b97a13db431e2e78c9ec5/> apply Clippy
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 50 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#263](https://github.com/Unleash/yggdrasil/issues/263)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#263](https://github.com/Unleash/yggdrasil/issues/263)**
+    - Apply Clippy ([`00e2fb2`](https://github.com/Unleash/yggdrasil/commit/00e2fb290e9fa086f72b97a13db431e2e78c9ec5))
+</details>
+
 ## v0.17.4 (2025-04-08)
+
+<csr-id-877fab047590ae80c8b885e4003e2f57fd3f23d0/>
 
 ### Chore
 
@@ -15,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 1 commit contributed to the release.
+ - 2 commits contributed to the release.
  - 27 days passed between releases.
  - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#235](https://github.com/Unleash/yggdrasil/issues/235)
@@ -28,6 +55,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * **[#235](https://github.com/Unleash/yggdrasil/issues/235)**
     - Bump unleash-types to 0.15.11 ([`877fab0`](https://github.com/Unleash/yggdrasil/commit/877fab047590ae80c8b885e4003e2f57fd3f23d0))
+ * **Uncategorized**
+    - Release unleash-yggdrasil v0.17.4 ([`2ba3a94`](https://github.com/Unleash/yggdrasil/commit/2ba3a94bcc005b0151a6d96f3be8ead011351c6d))
 </details>
 
 ## v0.17.3 (2025-03-11)
