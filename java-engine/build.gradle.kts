@@ -37,7 +37,7 @@ repositories {
 }
 
 tasks.test {
-    jvmArgs("-XX:CompileCommand=dontinline,com.dylibso.chicory.runtime.OpcodeImpl::I32_LT_U")
+    // jvmArgs("-XX:CompileCommand=dontinline,com.dylibso.chicory.runtime.OpcodeImpl::I32_LT_U")
 }
 
 dependencies {

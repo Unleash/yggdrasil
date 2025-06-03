@@ -1,17 +1,22 @@
 use std::{
     cell::RefCell,
     fmt::{Display, Formatter},
+    result,
 };
 
 use flatbuffers::{FlatBufferBuilder, Follow, WIPOffset};
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{EvalWarning, ExtendedVariantDef, ToggleDefinition};
 
-use crate::messaging::messaging::{
-    BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
-    FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsResponse, MetricsResponseBuilder,
-    Response, ResponseBuilder, TakeStateResponse, TakeStateResponseBuilder, ToggleEntryBuilder,
-    ToggleStatsBuilder, Variant, VariantBuilder, VariantEntryBuilder, VariantPayloadBuilder,
+use crate::{
+    indealloc,
+    messaging::messaging::{
+        BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
+        FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsResponse,
+        MetricsResponseBuilder, Response, ResponseBuilder, TakeStateResponse,
+        TakeStateResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
+        VariantEntryBuilder, VariantPayloadBuilder,
+    },
 };
 
 thread_local! {
@@ -23,6 +28,7 @@ thread_local! {
 pub enum WasmError {
     InvalidContext(String),
     InvalidState(String),
+    InvalidPointer,
 }
 
 pub struct ResponseMessage<T> {
@@ -35,15 +41,23 @@ impl Display for WasmError {
         match self {
             WasmError::InvalidContext(msg) => write!(f, "Invalid context: {}", msg),
             WasmError::InvalidState(msg) => write!(f, "Invalid state: {}", msg),
+            WasmError::InvalidPointer => write!(f, "Invalid pointer encountered"),
         }
     }
 }
 
-pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
+pub extern "C" fn allocate(size: usize) -> *mut u8 {
+    let mut buf = Vec::with_capacity(size);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
+}
+
+pub trait WasmMessage<TInput>: Follow<'static> + Sized {
     fn as_flat_buffer(builder: &mut FlatBufferBuilder<'static>, input: TInput) -> WIPOffset<Self>;
 
     fn build_response(input: TInput) -> u64 {
-        let response = BUILDER.with(|cell| {
+        let response_buffer = BUILDER.with(|cell| {
             let mut builder = cell.borrow_mut();
             builder.reset();
 
@@ -53,16 +67,16 @@ pub trait FlatbufferSerializable<TInput>: Follow<'static> + Sized {
             builder.finished_data().to_vec()
         });
 
-        let ptr: u32 = response.as_ptr() as u32;
-        let len: u32 = response.len() as u32;
-        let packed: u64 = ((len as u64) << 32) | ptr as u64;
+        let result_len = response_buffer.len();
+        let result_ptr = allocate(result_len);
 
-        std::mem::forget(response);
-        packed
+        unsafe { std::ptr::copy_nonoverlapping(response_buffer.as_ptr(), result_ptr, result_len) };
+
+        ((result_len as u64) << 32) | (result_ptr as u64)
     }
 }
 
-impl FlatbufferSerializable<Result<ResponseMessage<bool>, WasmError>> for Response<'static> {
+impl WasmMessage<Result<ResponseMessage<bool>, WasmError>> for Response<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
         from: Result<ResponseMessage<bool>, WasmError>,
@@ -93,9 +107,7 @@ impl FlatbufferSerializable<Result<ResponseMessage<bool>, WasmError>> for Respon
     }
 }
 
-impl FlatbufferSerializable<Result<ResponseMessage<ExtendedVariantDef>, WasmError>>
-    for Variant<'static>
-{
+impl WasmMessage<Result<ResponseMessage<ExtendedVariantDef>, WasmError>> for Variant<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
         from: Result<ResponseMessage<ExtendedVariantDef>, WasmError>,
@@ -142,7 +154,7 @@ impl FlatbufferSerializable<Result<ResponseMessage<ExtendedVariantDef>, WasmErro
     }
 }
 
-impl FlatbufferSerializable<Option<MetricBucket>> for MetricsResponse<'static> {
+impl WasmMessage<Option<MetricBucket>> for MetricsResponse<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
         metrics: Option<MetricBucket>,
@@ -190,7 +202,7 @@ impl FlatbufferSerializable<Option<MetricBucket>> for MetricsResponse<'static> {
     }
 }
 
-impl FlatbufferSerializable<Vec<ToggleDefinition>> for FeatureDefs<'static> {
+impl WasmMessage<Vec<ToggleDefinition>> for FeatureDefs<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
         known_toggles: Vec<ToggleDefinition>,
@@ -225,7 +237,7 @@ impl FlatbufferSerializable<Vec<ToggleDefinition>> for FeatureDefs<'static> {
     }
 }
 
-impl FlatbufferSerializable<&str> for CoreVersion<'static> {
+impl WasmMessage<&str> for CoreVersion<'static> {
     fn as_flat_buffer(builder: &mut FlatBufferBuilder<'static>, version: &str) -> WIPOffset<Self> {
         let version_offset = builder.create_string(version);
         let mut resp_builder = CoreVersionBuilder::new(builder);
@@ -234,7 +246,7 @@ impl FlatbufferSerializable<&str> for CoreVersion<'static> {
     }
 }
 
-impl FlatbufferSerializable<[&'static str; 8]> for BuiltInStrategies<'static> {
+impl WasmMessage<[&'static str; 8]> for BuiltInStrategies<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
         strategies: [&'static str; 8],
@@ -252,9 +264,7 @@ impl FlatbufferSerializable<[&'static str; 8]> for BuiltInStrategies<'static> {
     }
 }
 
-impl FlatbufferSerializable<Result<Option<Vec<EvalWarning>>, WasmError>>
-    for TakeStateResponse<'static>
-{
+impl WasmMessage<Result<Option<Vec<EvalWarning>>, WasmError>> for TakeStateResponse<'static> {
     fn as_flat_buffer(
         builder: &mut FlatBufferBuilder<'static>,
         response: Result<Option<Vec<EvalWarning>>, WasmError>,

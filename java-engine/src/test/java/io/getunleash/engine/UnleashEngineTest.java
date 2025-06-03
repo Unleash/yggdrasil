@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,104 @@ class TestSuite {
 }
 
 class UnleashEngineTest {
+
+  String rawState = "{\n" + //
+      "    \"version\": 2,\n" + //
+      "    \"segments\": [\n" + //
+      "        {\n" + //
+      "            \"id\": 1,\n" + //
+      "            \"name\": \"some-name\",\n" + //
+      "            \"description\": null,\n" + //
+      "            \"constraints\": [\n" + //
+      "                {\n" + //
+      "                    \"contextName\": \"some-name\",\n" + //
+      "                    \"operator\": \"IN\",\n" + //
+      "                    \"value\": \"name\",\n" + //
+      "                    \"inverted\": false,\n" + //
+      "                    \"caseInsensitive\": true\n" + //
+      "                }\n" + //
+      "            ]\n" + //
+      "        }\n" + //
+      "    ],\n" + //
+      "    \"features\": [\n" + //
+      "        {\n" + //
+      "            \"name\": \"Test.old\",\n" + //
+      "            \"description\": \"No variants here!\",\n" + //
+      "            \"enabled\": true,\n" + //
+      "            \"strategies\": [\n" + //
+      "                {\n" + //
+      "                    \"name\": \"default\"\n" + //
+      "                }\n" + //
+      "            ],\n" + //
+      "            \"variants\": null,\n" + //
+      "            \"createdAt\": \"2019-01-24T10:38:10.370Z\"\n" + //
+      "        },\n" + //
+      "        {\n" + //
+      "            \"name\": \"Test.variants\",\n" + //
+      "            \"description\": null,\n" + //
+      "            \"enabled\": true,\n" + //
+      "            \"strategies\": [\n" + //
+      "                {\n" + //
+      "                    \"name\": \"default\",\n" + //
+      "                    \"segments\": [\n" + //
+      "                        1\n" + //
+      "                    ]\n" + //
+      "                }\n" + //
+      "            ],\n" + //
+      "            \"variants\": [\n" + //
+      "                {\n" + //
+      "                    \"name\": \"variant1\",\n" + //
+      "                    \"weight\": 50\n" + //
+      "                },\n" + //
+      "                {\n" + //
+      "                    \"name\": \"variant2\",\n" + //
+      "                    \"weight\": 50\n" + //
+      "                }\n" + //
+      "            ],\n" + //
+      "            \"createdAt\": \"2019-01-24T10:41:45.236Z\"\n" + //
+      "        },\n" + //
+      "        {\n" + //
+      "            \"name\": \"featureX\",\n" + //
+      "            \"enabled\": true,\n" + //
+      "            \"strategies\": [\n" + //
+      "                {\n" + //
+      "                    \"name\": \"default\"\n" + //
+      "                }\n" + //
+      "            ]\n" + //
+      "        },\n" + //
+      "        {\n" + //
+      "            \"name\": \"featureY\",\n" + //
+      "            \"enabled\": false,\n" + //
+      "            \"strategies\": [\n" + //
+      "                {\n" + //
+      "                    \"name\": \"baz\",\n" + //
+      "                    \"parameters\": {\n" + //
+      "                        \"foo\": \"bar\"\n" + //
+      "                    }\n" + //
+      "                }\n" + //
+      "            ]\n" + //
+      "        },\n" + //
+      "        {\n" + //
+      "            \"name\": \"featureZ\",\n" + //
+      "            \"enabled\": true,\n" + //
+      "            \"strategies\": [\n" + //
+      "                {\n" + //
+      "                    \"name\": \"default\"\n" + //
+      "                },\n" + //
+      "                {\n" + //
+      "                    \"name\": \"hola\",\n" + //
+      "                    \"parameters\": {\n" + //
+      "                        \"name\": \"val\"\n" + //
+      "                    },\n" + //
+      "                    \"segments\": [\n" + //
+      "                        1\n" + //
+      "                    ]\n" + //
+      "                }\n" + //
+      "            ]\n" + //
+      "        }\n" + //
+      "    ]\n" + //
+      "}\n" + //
+      "";
 
   // Assume this is set up to be your feature JSON
   private final String simpleFeatures = loadFeaturesFromFile(
@@ -365,6 +464,43 @@ class UnleashEngineTest {
     };
   }
 
+  @Test
+  void testThreadCollision() throws Exception {
+    // This surfaces an issue where calling takeState on the engine in a tight loop
+    // from multiple threads causes
+    // memory issues like double frees or segfaults
+    // that's fixed now but it'd be cool if it didn't come back
+
+    String features = readResource("impression-data-tests.json");
+    UnleashEngine ygg = new UnleashEngine();
+    int threadCount = 2;
+    CountDownLatch latch = new CountDownLatch(threadCount);
+
+    // try {
+    for (int i = 0; i < 2; i++) {
+      new Thread(
+          () -> {
+            try {
+              for (int j = 0; j < 1000000; j++) {
+                ygg.takeState(features);
+              }
+              System.out.println("Thread completed successfully.");
+            } catch (Exception yex) {
+              yex.printStackTrace();
+            } finally {
+              latch.countDown();
+            }
+          })
+          .start();
+    }
+
+    System.out.println("All threads started.");
+    // } catch (Exception ex) {
+    // ex.printStackTrace();
+    // }
+    latch.await();
+  }
+
   private void takeFeaturesFromResource(UnleashEngine engine, String resource) {
     try {
       String features = readResource(resource);
@@ -385,9 +521,20 @@ class UnleashEngineTest {
   }
 
   @Test
+  void reproduceSdkCrash() throws Exception {
+    UnleashEngine engine = new UnleashEngine();
+    for (int i = 0; i < 1000; i++) {
+      engine.takeState("doesn't matter for this test");
+    }
+    engine = new UnleashEngine();
+    engine.takeState(rawState);
+    engine.takeState(rawState);
+  }
+
+  @Test
   void testAMillionCreateEngines() throws Exception {
     UnleashEngine engine = new UnleashEngine();
-    for (int i = 0; i < 1500; i++) {
+    for (int i = 0; i < 15000; i++) {
       engine.takeState(simpleFeatures);
     }
     engine.takeState(notSimpleFeatures);

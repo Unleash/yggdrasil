@@ -2,8 +2,10 @@ use chrono::DateTime;
 use core::str;
 use flatbuffers::root;
 use random::get_random_source;
-use serialisation::{FlatbufferSerializable, ResponseMessage, WasmError};
+use serialisation::{ResponseMessage, WasmError, WasmMessage};
 use std::alloc::{alloc, dealloc};
+use std::mem::forget;
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::{alloc::Layout, collections::HashMap, panic, slice, sync::Once};
 
 use getrandom::register_custom_getrandom;
@@ -91,12 +93,35 @@ impl TryFrom<ContextMessage<'_>> for EnrichedContext {
     }
 }
 
+type RawPointerDataType = Mutex<EngineState>;
+type ManagedEngine = Arc<RawPointerDataType>;
+
 #[unsafe(no_mangle)]
-pub fn new_engine(start_time: i64) -> i32 {
+pub fn new_engine() -> u32 {
     setup_panic_hook();
-    let start_time = DateTime::from_timestamp_millis(start_time).unwrap();
+    let start_time = DateTime::from_timestamp_millis(1).unwrap();
     let engine = EngineState::initial_state(start_time);
-    Box::into_raw(Box::new(engine)) as i32
+    let engine_ref = Arc::new(Mutex::new(engine));
+    Arc::into_raw(engine_ref) as u32
+}
+
+unsafe fn get_engine(engine_ptr: *const u32) -> Result<ManagedEngine, WasmError> {
+    if engine_ptr.is_null() {
+        return Err(WasmError::InvalidPointer);
+    }
+    let arc_instance = unsafe { Arc::from_raw(engine_ptr as *const RawPointerDataType) };
+
+    let cloned_arc = arc_instance.clone();
+    forget(arc_instance);
+
+    Ok(cloned_arc)
+}
+
+fn recover_lock<T>(lock: &Mutex<T>) -> MutexGuard<T> {
+    match lock.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -124,8 +149,10 @@ pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn take_state(engine_ptr: i32, json_ptr: i32, json_len: i32) {
-    let engine = unsafe { &mut *(engine_ptr as *mut EngineState) };
+pub extern "C" fn take_state(engine_ptr: u32, json_ptr: u32, json_len: u32) {
+    let lock = unsafe { get_engine(engine_ptr as *const u32).unwrap() };
+    let mut engine = recover_lock(&lock);
+
     let json_str = unsafe {
         let json_bytes = slice::from_raw_parts(json_ptr as *const u8, json_len as usize);
         str::from_utf8(json_bytes)
@@ -152,7 +179,9 @@ pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: 
             .try_into()
             .map_err(|e: WasmError| WasmError::InvalidContext(e.to_string()))?;
 
-        let engine = unsafe { &mut *(engine_ptr as *mut EngineState) };
+        let lock = unsafe { get_engine(engine_ptr as *const u32).unwrap() };
+        let engine = recover_lock(&lock);
+
         let enabled = engine.check_enabled(&context);
         let impression_data = engine.should_emit_impression_event(&context.toggle_name);
         engine.count_toggle(&context.toggle_name, enabled.unwrap_or(false));
@@ -178,7 +207,9 @@ pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: 
             .try_into()
             .map_err(|e: WasmError| WasmError::InvalidContext(e.to_string()))?;
 
-        let engine = unsafe { &mut *(engine_ptr as *mut EngineState) };
+        let lock = unsafe { get_engine(engine_ptr as *const u32).unwrap() };
+        let engine = recover_lock(&lock);
+
         let variant = engine.check_variant(&context);
         let enabled = engine.check_enabled(&context).unwrap_or_default();
 
@@ -207,22 +238,22 @@ pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: 
 
 #[unsafe(no_mangle)]
 pub extern "C" fn get_metrics(engine_ptr: i32, close_time: i64) -> u64 {
-    unsafe {
-        let engine = &mut *(engine_ptr as *mut EngineState);
-        let metrics = engine.get_metrics(DateTime::from_timestamp_millis(close_time).unwrap());
+    let lock = unsafe { get_engine(engine_ptr as *const u32).unwrap() };
+    let mut engine = recover_lock(&lock);
 
-        MetricsResponse::build_response(metrics)
-    }
+    let metrics = engine.get_metrics(DateTime::from_timestamp_millis(close_time).unwrap());
+
+    MetricsResponse::build_response(metrics)
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn list_known_toggles(engine_ptr: i32) -> u64 {
-    unsafe {
-        let engine = &mut *(engine_ptr as *mut EngineState);
-        let known_toggles = engine.list_known_toggles();
+    let lock = unsafe { get_engine(engine_ptr as *const u32).unwrap() };
+    let engine = recover_lock(&lock);
 
-        FeatureDefs::build_response(known_toggles)
-    }
+    let known_toggles = engine.list_known_toggles();
+
+    FeatureDefs::build_response(known_toggles)
 }
 
 #[unsafe(no_mangle)]

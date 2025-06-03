@@ -7,13 +7,15 @@ import com.dylibso.chicory.runtime.ImportValues;
 import com.dylibso.chicory.runtime.Instance;
 import com.dylibso.chicory.runtime.Memory;
 import com.dylibso.chicory.runtime.TrapException;
+import com.dylibso.chicory.wasm.Parser;
+import com.dylibso.chicory.wasm.WasmModule;
 import com.dylibso.chicory.wasm.types.ValueType;
 import com.google.flatbuffers.FlatBufferBuilder;
+import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -32,13 +34,11 @@ import messaging.FeatureDefs;
 import messaging.MetricsResponse;
 import messaging.PropertyEntry;
 import messaging.Response;
-import messaging.TakeStateResponse;
 import messaging.ToggleEntry;
 import messaging.ToggleStats;
 import messaging.Variant;
 import messaging.VariantEntry;
 import messaging.VariantPayload;
-import org.example.wasm.YggdrasilModule;
 
 public class UnleashEngine {
 
@@ -67,35 +67,39 @@ public class UnleashEngine {
     List<ValueType> results = new ArrayList<>();
     results.add(ValueType.I32);
 
-    ImportValues imports =
-        ImportValues.builder()
-            .addFunction(
-                new HostFunction(
-                    "env",
-                    "fill_random",
-                    params,
-                    results,
-                    (Instance instance, long... args) -> {
-                      int ptr = (int) args[0];
-                      int len = (int) args[1];
+    ImportValues imports = ImportValues.builder()
+        .addFunction(
+            new HostFunction(
+                "env",
+                "fill_random",
+                params,
+                results,
+                (Instance instance, long... args) -> {
+                  int ptr = (int) args[0];
+                  int len = (int) args[1];
 
-                      if (len <= 0 || ptr < 0) return new long[] {1};
+                  if (len <= 0 || ptr < 0)
+                    return new long[] { 1 };
 
-                      byte[] randomBytes = new byte[len];
-                      new SecureRandom().nextBytes(randomBytes);
+                  byte[] randomBytes = new byte[len];
+                  new SecureRandom().nextBytes(randomBytes);
 
-                      instance.memory().write(ptr, randomBytes);
+                  instance.memory().write(ptr, randomBytes);
 
-                      return new long[] {0};
-                    }))
-            .build();
+                  return new long[] { 0 };
+                }))
+        .build();
 
-    instance =
-        Instance.builder(YggdrasilModule.load())
-            .withMachineFactory(YggdrasilModule::create)
-            .withImportValues(imports)
-            .withMemoryFactory(limits -> new ByteBufferMemory(limits))
-            .build();
+    WasmModule module = Parser.parse(
+        new File(
+            "/home/simon/dev/yggdrasil/target/wasm32-unknown-unknown/release/pure_wasm.wasm"));
+
+    // instance = Instance.builder(YggdrasilModule.load())
+    // .withMachineFactory(YggdrasilModule::create)
+    instance = Instance.builder(module)
+        .withImportValues(imports)
+        .withMemoryFactory(limits -> new ByteBufferMemory(limits))
+        .build();
 
     newEngine = instance.export("new_engine");
     alloc = instance.export("inalloc");
@@ -147,8 +151,7 @@ public class UnleashEngine {
         continue;
       }
       int keyOffset = builder.createString(entry.getKey());
-      int propOffset =
-          PropertyEntry.createPropertyEntry(builder, keyOffset, entry.getValue() ? 1 : 0);
+      int propOffset = PropertyEntry.createPropertyEntry(builder, keyOffset, entry.getValue() ? 1 : 0);
       offsets.add(propOffset);
     }
     return offsets.stream().mapToInt(Integer::intValue).toArray();
@@ -162,44 +165,43 @@ public class UnleashEngine {
 
     int userIdOffset = context.getUserId() != null ? builder.createString(context.getUserId()) : 0;
 
-    int sessionIdOffset =
-        context.getSessionId() != null ? builder.createString(context.getSessionId()) : 0;
+    int sessionIdOffset = context.getSessionId() != null ? builder.createString(context.getSessionId()) : 0;
 
-    int appNameOffset =
-        context.getAppName() != null ? builder.createString(context.getAppName()) : 0;
+    int appNameOffset = context.getAppName() != null ? builder.createString(context.getAppName()) : 0;
 
-    int remoteAddressOffset =
-        context.getRemoteAddress() != null ? builder.createString(context.getRemoteAddress()) : 0;
+    int remoteAddressOffset = context.getRemoteAddress() != null ? builder.createString(context.getRemoteAddress()) : 0;
 
-    String currentTime =
-        context.getCurrentTime() != null
-            ? context.getCurrentTime()
-            : java.time.Instant.now().toString();
+    String currentTime = context.getCurrentTime() != null
+        ? context.getCurrentTime()
+        : java.time.Instant.now().toString();
     int currentTimeOffset = builder.createString(currentTime);
 
-    int environmentOffset =
-        context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
+    int environmentOffset = context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
 
     int[] propertyOffsets = buildProperties(builder, context.getProperties());
     int[] customStrategyResultsOffsets = buildCustomStrategyResults(builder, customStrategyResults);
 
     String runtimeHostname = getRuntimeHostname();
-    int runtimeHostnameOffset =
-        runtimeHostname != null
-            ? builder.createString(runtimeHostname)
-            : builder.createString(getRuntimeHostname());
+    int runtimeHostnameOffset = runtimeHostname != null
+        ? builder.createString(runtimeHostname)
+        : builder.createString(getRuntimeHostname());
 
     int propsVec = ContextMessage.createPropertiesVector(builder, propertyOffsets);
-    int customStrategyResultsVec =
-        ContextMessage.createCustomStrategiesResultsVector(builder, customStrategyResultsOffsets);
+    int customStrategyResultsVec = ContextMessage.createCustomStrategiesResultsVector(builder,
+        customStrategyResultsOffsets);
 
     ContextMessage.startContextMessage(builder);
 
-    if (userIdOffset != 0) ContextMessage.addUserId(builder, userIdOffset);
-    if (sessionIdOffset != 0) ContextMessage.addSessionId(builder, sessionIdOffset);
-    if (appNameOffset != 0) ContextMessage.addAppName(builder, appNameOffset);
-    if (environmentOffset != 0) ContextMessage.addEnvironment(builder, environmentOffset);
-    if (remoteAddressOffset != 0) ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
+    if (userIdOffset != 0)
+      ContextMessage.addUserId(builder, userIdOffset);
+    if (sessionIdOffset != 0)
+      ContextMessage.addSessionId(builder, sessionIdOffset);
+    if (appNameOffset != 0)
+      ContextMessage.addAppName(builder, appNameOffset);
+    if (environmentOffset != 0)
+      ContextMessage.addEnvironment(builder, environmentOffset);
+    if (remoteAddressOffset != 0)
+      ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
     if (runtimeHostnameOffset != 0)
       ContextMessage.addRuntimeHostname(builder, runtimeHostnameOffset);
 
@@ -228,83 +230,95 @@ public class UnleashEngine {
   }
 
   public UnleashEngine(List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
+    System.out.println("Creating UnleashEngine");
     if (customStrategies != null && !customStrategies.isEmpty()) {
       List<String> builtInStrategies = new ArrayList<>();
-      this.customStrategiesEvaluator =
-          new CustomStrategiesEvaluator(
-              customStrategies.stream(), fallbackStrategy, new HashSet<String>(builtInStrategies));
+      this.customStrategiesEvaluator = new CustomStrategiesEvaluator(
+          customStrategies.stream(), fallbackStrategy, new HashSet<String>(builtInStrategies));
     } else {
-      this.customStrategiesEvaluator =
-          new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy, new HashSet<String>());
+      this.customStrategiesEvaluator = new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy,
+          new HashSet<String>());
     }
 
     memory = instance.memory();
 
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-    this.enginePointer = (int)newEngine.apply(now.toInstant().toEpochMilli())[0];
+    System.out.println("Created Engine pointer" );
+    this.enginePointer = (int) newEngine.apply()[0];
+    System.out.println("Engine pointer: " + this.enginePointer);
+    // this.enginePointer = (int)
+    // newEngine.apply(now.toInstant().toEpochMilli())[0];
   }
 
-  public List<String> takeState(String message) throws YggdrasilInvalidInputException {
+  public List<String> takeState(String clientFeatures) throws YggdrasilInvalidInputException {
 
     try {
-    customStrategiesEvaluator.loadStrategiesFor(message);
-    byte[] messageBytes = message.getBytes();
-    int len = messageBytes.length;
-    int ptr = (int) alloc.apply(len)[0];
+      System.out.println("Taking a state of length " + clientFeatures.length());
+      // customStrategiesEvaluator.loadStrategiesFor(message);
+      // System.out.println("Taking state: " + clientFeatures);
 
-    memory.write(ptr, messageBytes);
-    takeState.apply(this.enginePointer, ptr, len);
+      byte[] messageBytes = clientFeatures.getBytes();
+      int len = messageBytes.length;
+      int ptr = (int) alloc.apply(len)[0];
 
-    dealloc.apply(ptr, len);
+      memory.write(ptr, messageBytes);
+      takeState.apply(this.enginePointer, ptr, len);
 
+      dealloc.apply(ptr, len);
 
-    readLog();
+      // readLog();
     } catch (TrapException e) {
-      readLog();
+      // readLog();
       throw e;
     }
     return null;
   }
 
   public List<FeatureDef> listKnownToggles() {
-    long packed = (long) listKnownToggles.apply(this.enginePointer)[0];
-    FeatureDefs featureDefs = derefWasmPointer(packed, FeatureDefs::getRootAsFeatureDefs);
+    return null;
+    // long packed = (long) listKnownToggles.apply(this.enginePointer)[0];
+    // FeatureDefs featureDefs = derefWasmPointer(packed,
+    // FeatureDefs::getRootAsFeatureDefs);
 
-    List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
-    for (int i = 0; i < featureDefs.itemsLength(); i++) {
-      FeatureDef featureDef =
-          new FeatureDef(
-              featureDefs.items(i).name(),
-              featureDefs.items(i).type(),
-              featureDefs.items(i).project(),
-              featureDefs.items(i).enabled());
-      defs.add(featureDef);
-    }
+    // List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
+    // for (int i = 0; i < featureDefs.itemsLength(); i++) {
+    // FeatureDef featureDef =
+    // new FeatureDef(
+    // featureDefs.items(i).name(),
+    // featureDefs.items(i).type(),
+    // featureDefs.items(i).project(),
+    // featureDefs.items(i).enabled());
+    // defs.add(featureDef);
+    // }
 
-    return defs;
+    // return defs;
   }
 
   public WasmResponse<Boolean> isEnabled(String toggleName, Context context)
       throws YggdrasilInvalidInputException {
-    Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
-    byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
-    int contextPtr = (int) alloc.apply(contextBytes.length)[0];
-    memory.write(contextPtr, contextBytes);
+    return null;
+    // Map<String, Boolean> strategyResults =
+    // customStrategiesEvaluator.eval(toggleName, context);
+    // byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
+    // int contextPtr = (int) alloc.apply(contextBytes.length)[0];
+    // memory.write(contextPtr, contextBytes);
 
-    Response response =
-        this.<Response>callWasmFunctionWithResponse(
-            contextPtr, contextBytes.length, checkEnabled::apply, Response::getRootAsResponse);
+    // Response response =
+    // this.<Response>callWasmFunctionWithResponse(
+    // contextPtr, contextBytes.length, checkEnabled::apply,
+    // Response::getRootAsResponse);
 
-    if (response.error() != null) {
-      String error = response.error();
-      throw new YggdrasilInvalidInputException(error);
-    }
+    // if (response.error() != null) {
+    // String error = response.error();
+    // throw new YggdrasilInvalidInputException(error);
+    // }
 
-    if (response.hasEnabled()) {
-      return new WasmResponse<Boolean>(response.impressionData(), response.enabled());
-    } else {
-      return new WasmResponse<Boolean>(response.impressionData(), null);
-    }
+    // if (response.hasEnabled()) {
+    // return new WasmResponse<Boolean>(response.impressionData(),
+    // response.enabled());
+    // } else {
+    // return new WasmResponse<Boolean>(response.impressionData(), null);
+    // }
   }
 
   private void readLog() {
@@ -317,89 +331,101 @@ public class UnleashEngine {
 
   public WasmResponse<VariantDef> getVariant(String toggleName, Context context)
       throws YggdrasilInvalidInputException {
-    Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
-    byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
-    int contextPtr = (int) alloc.apply(contextBytes.length)[0];
-    memory.write(contextPtr, contextBytes);
+    return null;
+    // Map<String, Boolean> strategyResults =
+    // customStrategiesEvaluator.eval(toggleName, context);
+    // byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
+    // int contextPtr = (int) alloc.apply(contextBytes.length)[0];
+    // memory.write(contextPtr, contextBytes);
 
-    Variant variant =
-        this.<Variant>callWasmFunctionWithResponse(
-            contextPtr, contextBytes.length, checkVariant::apply, Variant::getRootAsVariant);
+    // Variant variant =
+    // this.<Variant>callWasmFunctionWithResponse(
+    // contextPtr, contextBytes.length, checkVariant::apply,
+    // Variant::getRootAsVariant);
 
-    if (variant.name() != null) {
-      Payload payload = null;
+    // if (variant.name() != null) {
+    // Payload payload = null;
 
-      VariantPayload variantPayload = variant.payload();
+    // VariantPayload variantPayload = variant.payload();
 
-      if (variantPayload != null) {
-        payload = new Payload();
-        payload.setType(variant.payload().payloadType());
-        payload.setValue(variant.payload().value());
-      }
+    // if (variantPayload != null) {
+    // payload = new Payload();
+    // payload.setType(variant.payload().payloadType());
+    // payload.setValue(variant.payload().value());
+    // }
 
-      if (variant.error() != null) {
-        String error = variant.error();
-        throw new YggdrasilInvalidInputException(error);
-      }
+    // if (variant.error() != null) {
+    // String error = variant.error();
+    // throw new YggdrasilInvalidInputException(error);
+    // }
 
-      return new WasmResponse<VariantDef>(
-          variant.impressionData(),
-          new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled()));
-    } else {
-      return new WasmResponse<VariantDef>(false, null);
-    }
+    // return new WasmResponse<VariantDef>(
+    // variant.impressionData(),
+    // new VariantDef(variant.name(), payload, variant.enabled(),
+    // variant.featureEnabled()));
+    // } else {
+    // return new WasmResponse<VariantDef>(false, null);
+    // }
   }
 
   public MetricsBucket getMetrics() {
-    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+    return null;
+    // ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 
-    long packed = (long) getMetrics.apply(this.enginePointer, now.toInstant().toEpochMilli())[0];
-    MetricsResponse response = derefWasmPointer(packed, MetricsResponse::getRootAsMetricsResponse);
+    // long packed = (long) getMetrics.apply(this.enginePointer,
+    // now.toInstant().toEpochMilli())[0];
+    // MetricsResponse response = derefWasmPointer(packed,
+    // MetricsResponse::getRootAsMetricsResponse);
 
-    if (response.togglesVector() == null) {
-      return null;
-    }
+    // if (response.togglesVector() == null) {
+    // return null;
+    // }
 
-    Map<String, FeatureCount> toggles = new HashMap<>();
-    for (int i = 0; i < response.togglesLength(); i++) {
-      ToggleEntry toggleEntry = response.toggles(i);
-      ToggleStats stats = toggleEntry.value();
+    // Map<String, FeatureCount> toggles = new HashMap<>();
+    // for (int i = 0; i < response.togglesLength(); i++) {
+    // ToggleEntry toggleEntry = response.toggles(i);
+    // ToggleStats stats = toggleEntry.value();
 
-      Map<String, Long> variants = new HashMap<>();
-      for (int j = 0; j < stats.variantsLength(); j++) {
-        VariantEntry variant = stats.variants(j);
-        variants.put(variant.key(), variant.value());
-      }
-      FeatureCount featureCount = new FeatureCount(stats.yes(), stats.no(), variants);
+    // Map<String, Long> variants = new HashMap<>();
+    // for (int j = 0; j < stats.variantsLength(); j++) {
+    // VariantEntry variant = stats.variants(j);
+    // variants.put(variant.key(), variant.value());
+    // }
+    // FeatureCount featureCount = new FeatureCount(stats.yes(), stats.no(),
+    // variants);
 
-      toggles.put(toggleEntry.key(), featureCount);
-    }
+    // toggles.put(toggleEntry.key(), featureCount);
+    // }
 
-    Instant startInstant = Instant.ofEpochMilli(response.start());
-    Instant stopInstant = Instant.ofEpochMilli(response.stop());
+    // Instant startInstant = Instant.ofEpochMilli(response.start());
+    // Instant stopInstant = Instant.ofEpochMilli(response.stop());
 
-    return new MetricsBucket(startInstant, stopInstant, toggles);
+    // return new MetricsBucket(startInstant, stopInstant, toggles);
   }
 
   public static String getCoreVersion() {
-    long packed = (long) getCoreVersion.apply()[0];
-    CoreVersion version = derefWasmPointer(packed, CoreVersion::getRootAsCoreVersion);
+    return "2.7";
+    // long packed = (long) getCoreVersion.apply()[0];
+    // CoreVersion version = derefWasmPointer(packed,
+    // CoreVersion::getRootAsCoreVersion);
 
-    return version.version();
+    // return version.version();
   }
 
   public static List<String> getBuiltInStrategies() {
-    long packed = (long) getBuiltInStrategies.apply()[0];
-    BuiltInStrategies builtInStrategiesMessage =
-        derefWasmPointer(packed, BuiltInStrategies::getRootAsBuiltInStrategies);
+    return new ArrayList<>();
+    // long packed = (long) getBuiltInStrategies.apply()[0];
+    // BuiltInStrategies builtInStrategiesMessage =
+    // derefWasmPointer(packed, BuiltInStrategies::getRootAsBuiltInStrategies);
 
-    List<String> builtInStrategies = new ArrayList<>(builtInStrategiesMessage.valuesLength());
-    for (int i = 0; i < builtInStrategiesMessage.valuesLength(); i++) {
-      String strategyName = builtInStrategiesMessage.values(i);
-      builtInStrategies.add(strategyName);
-    }
+    // List<String> builtInStrategies = new
+    // ArrayList<>(builtInStrategiesMessage.valuesLength());
+    // for (int i = 0; i < builtInStrategiesMessage.valuesLength(); i++) {
+    // String strategyName = builtInStrategiesMessage.values(i);
+    // builtInStrategies.add(strategyName);
+    // }
 
-    return builtInStrategies;
+    // return builtInStrategies;
   }
 
   private static <T> T derefWasmPointer(long packed, Function<ByteBuffer, T> decoder) {

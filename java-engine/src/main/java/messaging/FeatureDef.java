@@ -3,82 +3,42 @@
 package messaging;
 
 import com.google.flatbuffers.BaseVector;
+import com.google.flatbuffers.BooleanVector;
+import com.google.flatbuffers.ByteVector;
 import com.google.flatbuffers.Constants;
+import com.google.flatbuffers.DoubleVector;
 import com.google.flatbuffers.FlatBufferBuilder;
+import com.google.flatbuffers.FloatVector;
+import com.google.flatbuffers.IntVector;
+import com.google.flatbuffers.LongVector;
+import com.google.flatbuffers.ShortVector;
+import com.google.flatbuffers.StringVector;
+import com.google.flatbuffers.Struct;
 import com.google.flatbuffers.Table;
+import com.google.flatbuffers.UnionVector;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
 public final class FeatureDef extends Table {
-  public static void ValidateVersion() {
-    Constants.FLATBUFFERS_23_1_21();
-  }
+  public static void ValidateVersion() { Constants.FLATBUFFERS_23_1_21(); }
+  public static FeatureDef getRootAsFeatureDef(ByteBuffer _bb) { return getRootAsFeatureDef(_bb, new FeatureDef()); }
+  public static FeatureDef getRootAsFeatureDef(ByteBuffer _bb, FeatureDef obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
+  public void __init(int _i, ByteBuffer _bb) { __reset(_i, _bb); }
+  public FeatureDef __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
 
-  public static FeatureDef getRootAsFeatureDef(ByteBuffer _bb) {
-    return getRootAsFeatureDef(_bb, new FeatureDef());
-  }
+  public String name() { int o = __offset(4); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer nameAsByteBuffer() { return __vector_as_bytebuffer(4, 1); }
+  public ByteBuffer nameInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 4, 1); }
+  public String type() { int o = __offset(6); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer typeAsByteBuffer() { return __vector_as_bytebuffer(6, 1); }
+  public ByteBuffer typeInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 6, 1); }
+  public String project() { int o = __offset(8); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer projectAsByteBuffer() { return __vector_as_bytebuffer(8, 1); }
+  public ByteBuffer projectInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 8, 1); }
+  public boolean enabled() { int o = __offset(10); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
 
-  public static FeatureDef getRootAsFeatureDef(ByteBuffer _bb, FeatureDef obj) {
-    _bb.order(ByteOrder.LITTLE_ENDIAN);
-    return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb));
-  }
-
-  public void __init(int _i, ByteBuffer _bb) {
-    __reset(_i, _bb);
-  }
-
-  public FeatureDef __assign(int _i, ByteBuffer _bb) {
-    __init(_i, _bb);
-    return this;
-  }
-
-  public String name() {
-    int o = __offset(4);
-    return o != 0 ? __string(o + bb_pos) : null;
-  }
-
-  public ByteBuffer nameAsByteBuffer() {
-    return __vector_as_bytebuffer(4, 1);
-  }
-
-  public ByteBuffer nameInByteBuffer(ByteBuffer _bb) {
-    return __vector_in_bytebuffer(_bb, 4, 1);
-  }
-
-  public String type() {
-    int o = __offset(6);
-    return o != 0 ? __string(o + bb_pos) : null;
-  }
-
-  public ByteBuffer typeAsByteBuffer() {
-    return __vector_as_bytebuffer(6, 1);
-  }
-
-  public ByteBuffer typeInByteBuffer(ByteBuffer _bb) {
-    return __vector_in_bytebuffer(_bb, 6, 1);
-  }
-
-  public String project() {
-    int o = __offset(8);
-    return o != 0 ? __string(o + bb_pos) : null;
-  }
-
-  public ByteBuffer projectAsByteBuffer() {
-    return __vector_as_bytebuffer(8, 1);
-  }
-
-  public ByteBuffer projectInByteBuffer(ByteBuffer _bb) {
-    return __vector_in_bytebuffer(_bb, 8, 1);
-  }
-
-  public boolean enabled() {
-    int o = __offset(10);
-    return o != 0 ? 0 != bb.get(o + bb_pos) : false;
-  }
-
-  public static int createFeatureDef(
-      FlatBufferBuilder builder,
+  public static int createFeatureDef(FlatBufferBuilder builder,
       int nameOffset,
       int typeOffset,
       int projectOffset,
@@ -91,43 +51,21 @@ public final class FeatureDef extends Table {
     return FeatureDef.endFeatureDef(builder);
   }
 
-  public static void startFeatureDef(FlatBufferBuilder builder) {
-    builder.startTable(4);
-  }
-
-  public static void addName(FlatBufferBuilder builder, int nameOffset) {
-    builder.addOffset(0, nameOffset, 0);
-  }
-
-  public static void addType(FlatBufferBuilder builder, int typeOffset) {
-    builder.addOffset(1, typeOffset, 0);
-  }
-
-  public static void addProject(FlatBufferBuilder builder, int projectOffset) {
-    builder.addOffset(2, projectOffset, 0);
-  }
-
-  public static void addEnabled(FlatBufferBuilder builder, boolean enabled) {
-    builder.addBoolean(3, enabled, false);
-  }
-
+  public static void startFeatureDef(FlatBufferBuilder builder) { builder.startTable(4); }
+  public static void addName(FlatBufferBuilder builder, int nameOffset) { builder.addOffset(0, nameOffset, 0); }
+  public static void addType(FlatBufferBuilder builder, int typeOffset) { builder.addOffset(1, typeOffset, 0); }
+  public static void addProject(FlatBufferBuilder builder, int projectOffset) { builder.addOffset(2, projectOffset, 0); }
+  public static void addEnabled(FlatBufferBuilder builder, boolean enabled) { builder.addBoolean(3, enabled, false); }
   public static int endFeatureDef(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;
   }
 
   public static final class Vector extends BaseVector {
-    public Vector __assign(int _vector, int _element_size, ByteBuffer _bb) {
-      __reset(_vector, _element_size, _bb);
-      return this;
-    }
+    public Vector __assign(int _vector, int _element_size, ByteBuffer _bb) { __reset(_vector, _element_size, _bb); return this; }
 
-    public FeatureDef get(int j) {
-      return get(new FeatureDef(), j);
-    }
-
-    public FeatureDef get(FeatureDef obj, int j) {
-      return obj.__assign(__indirect(__element(j), bb), bb);
-    }
+    public FeatureDef get(int j) { return get(new FeatureDef(), j); }
+    public FeatureDef get(FeatureDef obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
   }
 }
+
