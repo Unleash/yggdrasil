@@ -137,14 +137,14 @@ class UnleashEngine:
             ctypes.c_char_p,
             ctypes.c_bool,
         ]
-        self.lib.count_toggle.restype = None
+        self.lib.count_toggle.restype = ctypes.POINTER(ctypes.c_char)
 
         self.lib.count_variant.argtypes = [
             ctypes.c_void_p,
             ctypes.c_char_p,
             ctypes.c_char_p,
         ]
-        self.lib.count_variant.restype = None
+        self.lib.count_variant.restype = ctypes.POINTER(ctypes.c_char)
 
         self.lib.should_emit_impression_event.argtypes = [
             ctypes.c_void_p,

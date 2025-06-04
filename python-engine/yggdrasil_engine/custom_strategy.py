@@ -13,6 +13,22 @@ _STANDARD_STRATEGIES = [
 ]
 
 
+def get_features_json(message):
+    if "features" in message:
+        return message["features"]
+    elif "events" in message:
+        features = {}
+        for event in message["events"]:
+            if event["type"] == "feature-updated":
+                feature = event["feature"]
+                features[feature["name"]] = feature
+            elif event["type"] == "feature-removed":
+                features.pop(event["featureName"], None)
+            elif event["type"] == "hydration":
+                features = {feature["name"]: feature for feature in event["features"]}
+        return list(features.values())
+
+
 class CustomStrategyHandler:
 
     def __init__(self):
@@ -23,7 +39,7 @@ class CustomStrategyHandler:
         custom_strategies = {}
         parsed_toggles = json.loads(features_json)
 
-        for toggle in parsed_toggles["features"]:
+        for toggle in get_features_json(parsed_toggles):
             toggle_name = toggle["name"]
             for strategy in toggle["strategies"]:
                 if strategy["name"] not in _STANDARD_STRATEGIES:
