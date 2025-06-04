@@ -5,7 +5,6 @@ import com.dylibso.chicory.runtime.ExportFunction;
 import com.dylibso.chicory.runtime.HostFunction;
 import com.dylibso.chicory.runtime.ImportValues;
 import com.dylibso.chicory.runtime.Instance;
-import com.dylibso.chicory.runtime.Memory;
 import com.dylibso.chicory.runtime.TrapException;
 import com.dylibso.chicory.wasm.Parser;
 import com.dylibso.chicory.wasm.WasmModule;
@@ -27,6 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
+
+import org.example.wasm.YggdrasilModule;
+
 import messaging.BuiltInStrategies;
 import messaging.ContextMessage;
 import messaging.CoreVersion;
@@ -92,13 +94,8 @@ public class UnleashEngine {
                 }))
         .build();
 
-    WasmModule module = Parser.parse(
-        new File(
-            "/home/simon/dev/yggdrasil/target/wasm32-unknown-unknown/release/pure_wasm.wasm"));
-
-    // instance = Instance.builder(YggdrasilModule.load())
-    // .withMachineFactory(YggdrasilModule::create)
-    instance = Instance.builder(module)
+    instance = Instance.builder(YggdrasilModule.load())
+        .withMachineFactory(YggdrasilModule::create)
         .withImportValues(imports)
         .withMemoryFactory(limits -> new ByteBufferMemory(limits))
         .build();
