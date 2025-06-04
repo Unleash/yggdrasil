@@ -125,14 +125,14 @@ fn recover_lock<T>(lock: &Mutex<T>) -> MutexGuard<T> {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn inalloc(len: usize) -> i32 {
+pub unsafe extern "C" fn local_alloc(len: usize) -> i32 {
     let layout = Layout::from_size_align(len, 1).unwrap();
     let ptr = unsafe { alloc(layout) };
     ptr as i32
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn indealloc(ptr: *mut u8, len: usize) {
+pub unsafe extern "C" fn local_dealloc(ptr: *mut u8, len: usize) {
     if !ptr.is_null() && len > 0 {
         let layout = Layout::from_size_align(len, 1).unwrap();
         unsafe { dealloc(ptr as *mut u8, layout) };

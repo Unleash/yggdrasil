@@ -101,8 +101,8 @@ public class UnleashEngine {
         .build();
 
     newEngine = instance.export("new_engine");
-    alloc = instance.export("inalloc");
-    dealloc = instance.export("indealloc");
+    alloc = instance.export("local_alloc");
+    dealloc = instance.export("local_dealloc");
     takeState = instance.export("take_state");
     checkEnabled = instance.export("check_enabled");
     checkVariant = instance.export("check_variant");

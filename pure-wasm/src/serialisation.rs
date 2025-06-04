@@ -1,7 +1,6 @@
 use std::{
     cell::RefCell,
     fmt::{Display, Formatter},
-    result,
 };
 
 use flatbuffers::{FlatBufferBuilder, Follow, WIPOffset};
@@ -9,7 +8,6 @@ use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{EvalWarning, ExtendedVariantDef, ToggleDefinition};
 
 use crate::{
-    indealloc,
     messaging::messaging::{
         BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
         FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsResponse,
