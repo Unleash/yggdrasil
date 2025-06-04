@@ -55,8 +55,8 @@ public class UnleashEngine {
   private static ExportFunction getCoreVersion;
   private static ExportFunction getBuiltInStrategies;
   private static ExportFunction newEngine;
+  private static Object engineLock = new Object();
   private int enginePointer;
-  private Memory memory;
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
 
   static {
@@ -84,7 +84,9 @@ public class UnleashEngine {
                   byte[] randomBytes = new byte[len];
                   new SecureRandom().nextBytes(randomBytes);
 
-                  instance.memory().write(ptr, randomBytes);
+                  synchronized (engineLock) {
+                    instance.memory().write(ptr, randomBytes);
+                  }
 
                   return new long[] { 0 };
                 }))
@@ -240,12 +242,12 @@ public class UnleashEngine {
           new HashSet<String>());
     }
 
-    memory = instance.memory();
-
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-    System.out.println("Created Engine pointer" );
-    this.enginePointer = (int) newEngine.apply()[0];
-    System.out.println("Engine pointer: " + this.enginePointer);
+    // System.out.println("Created Engine pointer");
+    synchronized (engineLock) {
+      this.enginePointer = (int) newEngine.apply()[0];
+    }
+    // System.out.println("Engine pointer: " + this.enginePointer);
     // this.enginePointer = (int)
     // newEngine.apply(now.toInstant().toEpochMilli())[0];
   }
@@ -253,18 +255,18 @@ public class UnleashEngine {
   public List<String> takeState(String clientFeatures) throws YggdrasilInvalidInputException {
 
     try {
-      System.out.println("Taking a state of length " + clientFeatures.length());
-      // customStrategiesEvaluator.loadStrategiesFor(message);
-      // System.out.println("Taking state: " + clientFeatures);
+      customStrategiesEvaluator.loadStrategiesFor(clientFeatures);
 
       byte[] messageBytes = clientFeatures.getBytes();
       int len = messageBytes.length;
-      int ptr = (int) alloc.apply(len)[0];
+      synchronized (engineLock) {
+        int ptr = (int) alloc.apply(len)[0];
 
-      memory.write(ptr, messageBytes);
-      takeState.apply(this.enginePointer, ptr, len);
+        instance.memory().write(ptr, messageBytes);
+        takeState.apply(this.enginePointer, ptr, len);
 
-      dealloc.apply(ptr, len);
+        dealloc.apply(ptr, len);
+      }
 
       // readLog();
     } catch (TrapException e) {
@@ -275,55 +277,57 @@ public class UnleashEngine {
   }
 
   public List<FeatureDef> listKnownToggles() {
-    return null;
-    // long packed = (long) listKnownToggles.apply(this.enginePointer)[0];
-    // FeatureDefs featureDefs = derefWasmPointer(packed,
-    // FeatureDefs::getRootAsFeatureDefs);
+    FeatureDefs featureDefs;
+    synchronized (engineLock) {
+      long packed = (long) listKnownToggles.apply(this.enginePointer)[0];
+      featureDefs = derefWasmPointer(packed,
+          FeatureDefs::getRootAsFeatureDefs);
+    }
 
-    // List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
-    // for (int i = 0; i < featureDefs.itemsLength(); i++) {
-    // FeatureDef featureDef =
-    // new FeatureDef(
-    // featureDefs.items(i).name(),
-    // featureDefs.items(i).type(),
-    // featureDefs.items(i).project(),
-    // featureDefs.items(i).enabled());
-    // defs.add(featureDef);
-    // }
+    List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
+    for (int i = 0; i < featureDefs.itemsLength(); i++) {
+      FeatureDef featureDef = new FeatureDef(
+          featureDefs.items(i).name(),
+          featureDefs.items(i).type(),
+          featureDefs.items(i).project(),
+          featureDefs.items(i).enabled());
+      defs.add(featureDef);
+    }
 
-    // return defs;
+    return defs;
   }
 
   public WasmResponse<Boolean> isEnabled(String toggleName, Context context)
       throws YggdrasilInvalidInputException {
-    return null;
-    // Map<String, Boolean> strategyResults =
-    // customStrategiesEvaluator.eval(toggleName, context);
-    // byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
-    // int contextPtr = (int) alloc.apply(contextBytes.length)[0];
-    // memory.write(contextPtr, contextBytes);
+    Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
+    byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
 
-    // Response response =
-    // this.<Response>callWasmFunctionWithResponse(
-    // contextPtr, contextBytes.length, checkEnabled::apply,
-    // Response::getRootAsResponse);
+    Response response;
+    synchronized (engineLock) {
+      int contextPtr = (int) alloc.apply(contextBytes.length)[0];
+      instance.memory().write(contextPtr, contextBytes);
 
-    // if (response.error() != null) {
-    // String error = response.error();
-    // throw new YggdrasilInvalidInputException(error);
-    // }
+      response = this.<Response>callWasmFunctionWithResponse(
+          contextPtr, contextBytes.length, checkEnabled::apply,
+          Response::getRootAsResponse);
+    }
 
-    // if (response.hasEnabled()) {
-    // return new WasmResponse<Boolean>(response.impressionData(),
-    // response.enabled());
-    // } else {
-    // return new WasmResponse<Boolean>(response.impressionData(), null);
-    // }
+    if (response.error() != null) {
+      String error = response.error();
+      throw new YggdrasilInvalidInputException(error);
+    }
+
+    if (response.hasEnabled()) {
+      return new WasmResponse<Boolean>(response.impressionData(),
+          response.enabled());
+    } else {
+      return new WasmResponse<Boolean>(response.impressionData(), null);
+    }
   }
 
   private void readLog() {
     int start = (int) getLogBufferPtr.apply()[0];
-    String msg = memory.readCString(start);
+    String msg = instance.memory().readCString(start);
     if (msg != null && !msg.isEmpty()) {
       System.out.println("DebugLog: " + msg);
     }
@@ -331,76 +335,78 @@ public class UnleashEngine {
 
   public WasmResponse<VariantDef> getVariant(String toggleName, Context context)
       throws YggdrasilInvalidInputException {
-    return null;
-    // Map<String, Boolean> strategyResults =
-    // customStrategiesEvaluator.eval(toggleName, context);
-    // byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
-    // int contextPtr = (int) alloc.apply(contextBytes.length)[0];
-    // memory.write(contextPtr, contextBytes);
+    Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
+    byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
 
-    // Variant variant =
-    // this.<Variant>callWasmFunctionWithResponse(
-    // contextPtr, contextBytes.length, checkVariant::apply,
-    // Variant::getRootAsVariant);
+    Variant variant;
+    synchronized (engineLock) {
+      int contextPtr = (int) alloc.apply(contextBytes.length)[0];
+      instance.memory().write(contextPtr, contextBytes);
 
-    // if (variant.name() != null) {
-    // Payload payload = null;
+      variant = this.<Variant>callWasmFunctionWithResponse(
+          contextPtr, contextBytes.length, checkVariant::apply,
+          Variant::getRootAsVariant);
 
-    // VariantPayload variantPayload = variant.payload();
+    }
+    if (variant.name() != null) {
+      Payload payload = null;
 
-    // if (variantPayload != null) {
-    // payload = new Payload();
-    // payload.setType(variant.payload().payloadType());
-    // payload.setValue(variant.payload().value());
-    // }
+      VariantPayload variantPayload = variant.payload();
 
-    // if (variant.error() != null) {
-    // String error = variant.error();
-    // throw new YggdrasilInvalidInputException(error);
-    // }
+      if (variantPayload != null) {
+        payload = new Payload();
+        payload.setType(variant.payload().payloadType());
+        payload.setValue(variant.payload().value());
+      }
 
-    // return new WasmResponse<VariantDef>(
-    // variant.impressionData(),
-    // new VariantDef(variant.name(), payload, variant.enabled(),
-    // variant.featureEnabled()));
-    // } else {
-    // return new WasmResponse<VariantDef>(false, null);
-    // }
+      if (variant.error() != null) {
+        String error = variant.error();
+        throw new YggdrasilInvalidInputException(error);
+      }
+
+      return new WasmResponse<VariantDef>(
+          variant.impressionData(),
+          new VariantDef(variant.name(), payload, variant.enabled(),
+              variant.featureEnabled()));
+    } else {
+      return new WasmResponse<VariantDef>(false, null);
+    }
   }
 
   public MetricsBucket getMetrics() {
-    return null;
-    // ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 
-    // long packed = (long) getMetrics.apply(this.enginePointer,
-    // now.toInstant().toEpochMilli())[0];
-    // MetricsResponse response = derefWasmPointer(packed,
-    // MetricsResponse::getRootAsMetricsResponse);
+    MetricsResponse response;
+    synchronized (engineLock) {
+      long packed = (long) getMetrics.apply(this.enginePointer,
+          now.toInstant().toEpochMilli())[0];
+      response = derefWasmPointer(packed,
+          MetricsResponse::getRootAsMetricsResponse);
+    }
+    if (response.togglesVector() == null) {
+      return null;
+    }
 
-    // if (response.togglesVector() == null) {
-    // return null;
-    // }
+    Map<String, FeatureCount> toggles = new HashMap<>();
+    for (int i = 0; i < response.togglesLength(); i++) {
+      ToggleEntry toggleEntry = response.toggles(i);
+      ToggleStats stats = toggleEntry.value();
 
-    // Map<String, FeatureCount> toggles = new HashMap<>();
-    // for (int i = 0; i < response.togglesLength(); i++) {
-    // ToggleEntry toggleEntry = response.toggles(i);
-    // ToggleStats stats = toggleEntry.value();
+      Map<String, Long> variants = new HashMap<>();
+      for (int j = 0; j < stats.variantsLength(); j++) {
+        VariantEntry variant = stats.variants(j);
+        variants.put(variant.key(), variant.value());
+      }
+      FeatureCount featureCount = new FeatureCount(stats.yes(), stats.no(),
+          variants);
 
-    // Map<String, Long> variants = new HashMap<>();
-    // for (int j = 0; j < stats.variantsLength(); j++) {
-    // VariantEntry variant = stats.variants(j);
-    // variants.put(variant.key(), variant.value());
-    // }
-    // FeatureCount featureCount = new FeatureCount(stats.yes(), stats.no(),
-    // variants);
+      toggles.put(toggleEntry.key(), featureCount);
+    }
 
-    // toggles.put(toggleEntry.key(), featureCount);
-    // }
+    Instant startInstant = Instant.ofEpochMilli(response.start());
+    Instant stopInstant = Instant.ofEpochMilli(response.stop());
 
-    // Instant startInstant = Instant.ofEpochMilli(response.start());
-    // Instant stopInstant = Instant.ofEpochMilli(response.stop());
-
-    // return new MetricsBucket(startInstant, stopInstant, toggles);
+    return new MetricsBucket(startInstant, stopInstant, toggles);
   }
 
   public static String getCoreVersion() {
