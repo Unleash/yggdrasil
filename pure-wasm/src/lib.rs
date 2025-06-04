@@ -97,9 +97,9 @@ type RawPointerDataType = Mutex<EngineState>;
 type ManagedEngine = Arc<RawPointerDataType>;
 
 #[unsafe(no_mangle)]
-pub fn new_engine() -> u32 {
+pub fn new_engine(start_time: i64) -> u32 {
     setup_panic_hook();
-    let start_time = DateTime::from_timestamp_millis(1).unwrap();
+    let start_time = DateTime::from_timestamp_millis(start_time).unwrap();
     let engine = EngineState::initial_state(start_time);
     let engine_ref = Arc::new(Mutex::new(engine));
     Arc::into_raw(engine_ref) as u32

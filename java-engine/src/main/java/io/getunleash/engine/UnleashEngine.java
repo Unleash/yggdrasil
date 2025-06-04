@@ -232,7 +232,6 @@ public class UnleashEngine {
   }
 
   public UnleashEngine(List<IStrategy> customStrategies, IStrategy fallbackStrategy) {
-    System.out.println("Creating UnleashEngine");
     if (customStrategies != null && !customStrategies.isEmpty()) {
       List<String> builtInStrategies = new ArrayList<>();
       this.customStrategiesEvaluator = new CustomStrategiesEvaluator(
@@ -243,13 +242,9 @@ public class UnleashEngine {
     }
 
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-    // System.out.println("Created Engine pointer");
     synchronized (engineLock) {
-      this.enginePointer = (int) newEngine.apply()[0];
+      this.enginePointer = (int) newEngine.apply(now.toInstant().toEpochMilli())[0];
     }
-    // System.out.println("Engine pointer: " + this.enginePointer);
-    // this.enginePointer = (int)
-    // newEngine.apply(now.toInstant().toEpochMilli())[0];
   }
 
   public List<String> takeState(String clientFeatures) throws YggdrasilInvalidInputException {
@@ -410,31 +405,34 @@ public class UnleashEngine {
   }
 
   public static String getCoreVersion() {
-    return "2.7";
-    // long packed = (long) getCoreVersion.apply()[0];
-    // CoreVersion version = derefWasmPointer(packed,
-    // CoreVersion::getRootAsCoreVersion);
-
-    // return version.version();
+    CoreVersion version;
+    synchronized (engineLock) {
+      long packed = (long) getCoreVersion.apply()[0];
+      version = derefWasmPointer(packed,
+          CoreVersion::getRootAsCoreVersion);
+    }
+    return version.version();
   }
 
   public static List<String> getBuiltInStrategies() {
-    return new ArrayList<>();
-    // long packed = (long) getBuiltInStrategies.apply()[0];
-    // BuiltInStrategies builtInStrategiesMessage =
-    // derefWasmPointer(packed, BuiltInStrategies::getRootAsBuiltInStrategies);
+    BuiltInStrategies builtInStrategiesMessage;
+    synchronized (engineLock) {
+      long packed = (long) getBuiltInStrategies.apply()[0];
+      builtInStrategiesMessage = derefWasmPointer(packed, BuiltInStrategies::getRootAsBuiltInStrategies);
+    }
 
-    // List<String> builtInStrategies = new
-    // ArrayList<>(builtInStrategiesMessage.valuesLength());
-    // for (int i = 0; i < builtInStrategiesMessage.valuesLength(); i++) {
-    // String strategyName = builtInStrategiesMessage.values(i);
-    // builtInStrategies.add(strategyName);
-    // }
+    List<String> builtInStrategies = new ArrayList<>(builtInStrategiesMessage.valuesLength());
+    for (int i = 0; i < builtInStrategiesMessage.valuesLength(); i++) {
+      String strategyName = builtInStrategiesMessage.values(i);
+      builtInStrategies.add(strategyName);
+    }
 
-    // return builtInStrategies;
+    return builtInStrategies;
   }
 
   private static <T> T derefWasmPointer(long packed, Function<ByteBuffer, T> decoder) {
+    // Warning: This is not thread safe, it should be called as part of a
+    // synchronized block
     // This is not sane. To receive the response we need to two things:
     // 1) a pointer
     // 2) a length so we can read the pointer value to the end but not beyond
@@ -466,6 +464,8 @@ public class UnleashEngine {
       int messageLen,
       TriFunction<Integer, Integer, Integer, long[]> nativeCall,
       Function<ByteBuffer, T> decoder) {
+    // Warning: This is not thread safe, it should be called as part of a
+    // synchronized block
     long packed = nativeCall.apply(this.enginePointer, messagePtr, messageLen)[0];
     T response = derefWasmPointer(packed, decoder);
 

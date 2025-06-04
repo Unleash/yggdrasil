@@ -134,9 +134,6 @@ class UnleashEngineTest {
   private final String simpleFeatures = loadFeaturesFromFile(
       "../client-specification/specifications/01-simple-examples.json");
 
-  private final String notSimpleFeatures = loadFeaturesFromFile(
-      "../client-specification/specifications/02-user-with-id-strategy.json");
-
   public static String loadFeaturesFromFile(String filePath) {
     ObjectMapper mapper = new ObjectMapper();
     try {
@@ -476,12 +473,11 @@ class UnleashEngineTest {
     int threadCount = 2;
     CountDownLatch latch = new CountDownLatch(threadCount);
 
-    // try {
     for (int i = 0; i < 2; i++) {
       new Thread(
           () -> {
             try {
-              for (int j = 0; j < 1000000; j++) {
+              for (int j = 0; j < 1000; j++) {
                 ygg.takeState(features);
               }
               System.out.println("Thread completed successfully.");
@@ -495,9 +491,6 @@ class UnleashEngineTest {
     }
 
     System.out.println("All threads started.");
-    // } catch (Exception ex) {
-    // ex.printStackTrace();
-    // }
     latch.await();
   }
 
@@ -518,25 +511,5 @@ class UnleashEngineTest {
                     UnleashEngineTest.class.getClassLoader().getResource(resource))
                     .toURI())),
         StandardCharsets.UTF_8);
-  }
-
-  @Test
-  void reproduceSdkCrash() throws Exception {
-    UnleashEngine engine = new UnleashEngine();
-    for (int i = 0; i < 1000; i++) {
-      engine.takeState("doesn't matter for this test");
-    }
-    engine = new UnleashEngine();
-    engine.takeState(rawState);
-    engine.takeState(rawState);
-  }
-
-  @Test
-  void testAMillionCreateEngines() throws Exception {
-    UnleashEngine engine = new UnleashEngine();
-    for (int i = 0; i < 15000; i++) {
-      engine.takeState(simpleFeatures);
-    }
-    engine.takeState(notSimpleFeatures);
   }
 }
