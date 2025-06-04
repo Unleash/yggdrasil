@@ -36,10 +36,6 @@ repositories {
     mavenCentral()
 }
 
-tasks.test {
-    // jvmArgs("-XX:CompileCommand=dontinline,com.dylibso.chicory.runtime.OpcodeImpl::I32_LT_U")
-}
-
 dependencies {
     jmh("org.openjdk.jmh:jmh-core:1.37")
     jmhAnnotationProcessor("org.openjdk.jmh:jmh-generator-annprocess:1.37")

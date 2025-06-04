@@ -14,6 +14,10 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
@@ -21,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class TestSuite {
@@ -293,59 +298,59 @@ class UnleashEngineTest {
     }
   }
 
-  // @Test
-  // void testMetrics() throws YggdrasilError {
-  // engine.countVariant("Feature.A", "A");
-  // engine.countToggle("Feature.B", true);
-  // engine.countToggle("Feature.C", false);
-  // engine.countToggle("Feature.C", false);
-  // MetricsBucket bucket = engine.getMetrics();
+  @Test
+  void testMetrics() throws YggdrasilError, YggdrasilInvalidInputException {
+    UnleashEngine engine = new UnleashEngine();
+    String features = loadFeaturesFromFile(
+        "../client-specification/specifications/08-variants.json");
+    engine.takeState(features);
 
-  // assertNotNull(bucket);
+    engine.getVariant("Feature.Variants.A", new Context());
+    engine.getVariant("Feature.Variants.B", new Context());
+    engine.getVariant("Missing.but.checked", new Context());
+    engine.getVariant("Missing.but.checked", new Context());
 
-  // Instant start = bucket.getStart();
-  // Instant stop = bucket.getStop();
-  // assertNotNull(start);
-  // assertNotNull(stop);
-  // assertTrue(stop.isAfter(start)); // unlikely to be equal but could happen
-  // assertTrue(
-  // start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10
-  // seconds of now
+    // engine.countToggle("Feature.C", false);
+    MetricsBucket bucket = engine.getMetrics();
 
-  // assertEquals(3, bucket.getToggles().size());
+    assertNotNull(bucket);
 
-  // assertEquals(1, bucket.getToggles().get("Feature.A").getVariants().get("A"));
-  // // Validate: counting on enabled is up to the SDK or should we also count
-  // // enabled when
-  // // getting a variant?
-  // assertEquals(0, bucket.getToggles().get("Feature.A").getYes());
-  // assertEquals(0, bucket.getToggles().get("Feature.A").getNo());
+    Instant start = bucket.getStart();
+    Instant stop = bucket.getStop();
+    assertNotNull(start);
+    assertNotNull(stop);
+    assertTrue(stop.isAfter(start)); // unlikely to be equal but could happen
+    assertTrue(
+        start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10
+    // seconds of now
 
-  // assertEquals(1, bucket.getToggles().get("Feature.B").getYes());
-  // assertEquals(0, bucket.getToggles().get("Feature.B").getNo());
+    assertEquals(3, bucket.getToggles().size());
 
-  // assertEquals(0, bucket.getToggles().get("Feature.C").getYes());
-  // assertEquals(2, bucket.getToggles().get("Feature.C").getNo());
-  // }
+    assertEquals(1, bucket.getToggles().get("Feature.Variants.A").getVariants().get("variant1"));
+    assertNull(bucket.getToggles().get("Missing.Feature"));
 
-  // @ParameterizedTest
-  // @CsvSource({
-  // "with.impression.data, true",
-  // "with.impression.data.false, false",
-  // "with.impression.data.undefined, false"
-  // })
-  // void impressionData_whenFeature_shouldReturn(String featureName, boolean
-  // expectedImpressionData)
-  // throws Exception {
-  // assertFalse(engine.shouldEmitImpressionEvent(featureName));
+    assertEquals(1, bucket.getToggles().get("Feature.Variants.B").getYes());
+    assertEquals(0, bucket.getToggles().get("Feature.Variants.B").getNo());
 
-  // takeFeaturesFromResource(engine, "impression-data-tests.json");
-  // Boolean result = engine.isEnabled(featureName, new Context());
-  // assertNotNull(result);
-  // assertTrue(result);
-  // assertEquals(expectedImpressionData,
-  // engine.shouldEmitImpressionEvent(featureName));
-  // }
+    assertEquals(0, bucket.getToggles().get("Missing.but.checked").getYes());
+    assertEquals(2, bucket.getToggles().get("Missing.but.checked").getNo());
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      "with.impression.data, true",
+      "with.impression.data.false, false",
+      "with.impression.data.undefined, false"
+  })
+  void impressionData_whenFeature_shouldReturn(String featureName, boolean expectedImpressionData)
+      throws Exception {
+
+    takeFeaturesFromResource(engine, "impression-data-tests.json");
+    WasmResponse<Boolean> result = engine.isEnabled(featureName, new Context());
+    assertNotNull(result);
+    assertEquals(expectedImpressionData,
+        result.impressionData);
+  }
 
   @ParameterizedTest
   @MethodSource("customStrategiesInput")
@@ -459,6 +464,57 @@ class UnleashEngineTest {
         put(key, value);
       }
     };
+  }
+
+  @Test
+  public void getMetricsReturnsCorrectResult() throws Exception {
+    UnleashEngine engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    engine.isEnabled("Feature.A", new Context());
+    engine.isEnabled("Feature.C", new Context());
+    engine.isEnabled("Feature.C", new Context());
+    MetricsBucket bucket = engine.getMetrics();
+    FeatureCount featA = bucket.getToggles().get("Feature.A");
+    FeatureCount featC = bucket.getToggles().get("Feature.C");
+    assert (featA.getYes() == 1);
+    assert (featC.getYes() == 2);
+  }
+
+  @Test
+  public void metricsBucketStartStopAreCorrect() throws Exception {
+    UnleashEngine engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    engine.isEnabled("Feature.A", new Context());
+    MetricsBucket bucket = engine.getMetrics();
+
+    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+
+    Instant start = bucket.getStart();
+    ZonedDateTime utcStart = start.atZone(ZoneOffset.UTC);
+
+    Instant stop = bucket.getStop();
+    ZonedDateTime utcStop = stop.atZone(ZoneOffset.UTC);
+
+    assert (utcStart.isBefore(now))
+        : "start not before now. start: " + utcStart + " - stop: " + utcStop;
+    assert (utcStart.plusMinutes(1).isAfter(now))
+        : "start plus minute not after now. start: " + utcStart + " - stop: " + utcStop;
+    assert (utcStop.isBefore(now)) : "stop not before now";
+    assert (utcStop.plusMinutes(1).isAfter(now)) : "stop plus minute not after now" + utcStop;
+  }
+
+  @Test
+  public void getEmptyMetricsBucketReturnsNull() throws Exception {
+    UnleashEngine engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    MetricsBucket bucket = engine.getMetrics();
+    assert (bucket == null);
   }
 
   @Test
