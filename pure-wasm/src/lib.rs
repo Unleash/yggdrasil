@@ -105,6 +105,16 @@ pub fn new_engine(start_time: i64) -> u32 {
     Arc::into_raw(engine_ref) as u32
 }
 
+#[unsafe(no_mangle)]
+pub fn free_engine(engine_ptr: *const u32) {
+    if engine_ptr.is_null() {
+        return;
+    }
+    // the stack pop here drops the last reference to the Arc,
+    // which will in turn drop the Mutex and the EngineState
+    unsafe { Arc::from_raw(engine_ptr as *const RawPointerDataType) };
+}
+
 unsafe fn get_engine(engine_ptr: *const u32) -> Result<ManagedEngine, WasmError> {
     if engine_ptr.is_null() {
         return Err(WasmError::InvalidPointer);

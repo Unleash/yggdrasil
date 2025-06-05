@@ -370,28 +370,28 @@ class UnleashEngineTest {
   // @SuppressWarnings("unused")
   // @Test
   // void testResourceCleanup() throws InterruptedException {
-  // UnleashFFI ffiMock = Mockito.mock(UnleashFFI.class);
-  // ReferenceQueue<UnleashEngine> queue = new ReferenceQueue<>();
+  //   UnleashFFI ffiMock = Mockito.mock(UnleashFFI.class);
+  //   ReferenceQueue<UnleashEngine> queue = new ReferenceQueue<>();
 
-  // UnleashEngine library = new UnleashEngine(ffiMock, null, null);
-  // PhantomReference<UnleashEngine> reference = new PhantomReference<>(library,
-  // queue);
+  //   UnleashEngine library = new UnleashEngine(ffiMock, null, null);
+  //   PhantomReference<UnleashEngine> reference = new PhantomReference<>(library,
+  //       queue);
 
-  // // Make the object eligible for garbage collection
-  // library = null;
-  // Reference<? extends UnleashEngine> polledReference = null;
+  //   // Make the object eligible for garbage collection
+  //   library = null;
+  //   Reference<? extends UnleashEngine> polledReference = null;
 
-  // for (int i = 0; i < 50; i++) {
-  // System.gc();
-  // polledReference = queue.poll();
-  // if (polledReference != null) {
-  // break;
-  // }
-  // Thread.sleep(10);
-  // }
+  //   for (int i = 0; i < 50; i++) {
+  //     System.gc();
+  //     polledReference = queue.poll();
+  //     if (polledReference != null) {
+  //       break;
+  //     }
+  //     Thread.sleep(10);
+  //   }
 
-  // assertNotNull(polledReference, "Cleaner did not trigger");
-  // Mockito.verify(ffiMock).freeEngine(Mockito.any());
+  //   assertNotNull(polledReference, "Cleaner did not trigger");
+  //   Mockito.verify(ffiMock).freeEngine(Mockito.any());
   // }
 
   @Test
