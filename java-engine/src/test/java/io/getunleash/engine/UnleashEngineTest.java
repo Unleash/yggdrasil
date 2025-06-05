@@ -10,14 +10,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
-import java.lang.ref.PhantomReference;
-import java.lang.ref.Reference;
-import java.lang.ref.ReferenceQueue;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -28,7 +27,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
 
 class TestSuite {
   public String name;
@@ -38,6 +36,201 @@ class TestSuite {
 }
 
 class UnleashEngineTest {
+
+  String rawState =
+      "{\n"
+          + //
+          "    \"version\": 2,\n"
+          + //
+          "    \"segments\": [\n"
+          + //
+          "        {\n"
+          + //
+          "            \"id\": 1,\n"
+          + //
+          "            \"name\": \"some-name\",\n"
+          + //
+          "            \"description\": null,\n"
+          + //
+          "            \"constraints\": [\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"contextName\": \"some-name\",\n"
+          + //
+          "                    \"operator\": \"IN\",\n"
+          + //
+          "                    \"value\": \"name\",\n"
+          + //
+          "                    \"inverted\": false,\n"
+          + //
+          "                    \"caseInsensitive\": true\n"
+          + //
+          "                }\n"
+          + //
+          "            ]\n"
+          + //
+          "        }\n"
+          + //
+          "    ],\n"
+          + //
+          "    \"features\": [\n"
+          + //
+          "        {\n"
+          + //
+          "            \"name\": \"Test.old\",\n"
+          + //
+          "            \"description\": \"No variants here!\",\n"
+          + //
+          "            \"enabled\": true,\n"
+          + //
+          "            \"strategies\": [\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"name\": \"default\"\n"
+          + //
+          "                }\n"
+          + //
+          "            ],\n"
+          + //
+          "            \"variants\": null,\n"
+          + //
+          "            \"createdAt\": \"2019-01-24T10:38:10.370Z\"\n"
+          + //
+          "        },\n"
+          + //
+          "        {\n"
+          + //
+          "            \"name\": \"Test.variants\",\n"
+          + //
+          "            \"description\": null,\n"
+          + //
+          "            \"enabled\": true,\n"
+          + //
+          "            \"strategies\": [\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"name\": \"default\",\n"
+          + //
+          "                    \"segments\": [\n"
+          + //
+          "                        1\n"
+          + //
+          "                    ]\n"
+          + //
+          "                }\n"
+          + //
+          "            ],\n"
+          + //
+          "            \"variants\": [\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"name\": \"variant1\",\n"
+          + //
+          "                    \"weight\": 50\n"
+          + //
+          "                },\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"name\": \"variant2\",\n"
+          + //
+          "                    \"weight\": 50\n"
+          + //
+          "                }\n"
+          + //
+          "            ],\n"
+          + //
+          "            \"createdAt\": \"2019-01-24T10:41:45.236Z\"\n"
+          + //
+          "        },\n"
+          + //
+          "        {\n"
+          + //
+          "            \"name\": \"featureX\",\n"
+          + //
+          "            \"enabled\": true,\n"
+          + //
+          "            \"strategies\": [\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"name\": \"default\"\n"
+          + //
+          "                }\n"
+          + //
+          "            ]\n"
+          + //
+          "        },\n"
+          + //
+          "        {\n"
+          + //
+          "            \"name\": \"featureY\",\n"
+          + //
+          "            \"enabled\": false,\n"
+          + //
+          "            \"strategies\": [\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"name\": \"baz\",\n"
+          + //
+          "                    \"parameters\": {\n"
+          + //
+          "                        \"foo\": \"bar\"\n"
+          + //
+          "                    }\n"
+          + //
+          "                }\n"
+          + //
+          "            ]\n"
+          + //
+          "        },\n"
+          + //
+          "        {\n"
+          + //
+          "            \"name\": \"featureZ\",\n"
+          + //
+          "            \"enabled\": true,\n"
+          + //
+          "            \"strategies\": [\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"name\": \"default\"\n"
+          + //
+          "                },\n"
+          + //
+          "                {\n"
+          + //
+          "                    \"name\": \"hola\",\n"
+          + //
+          "                    \"parameters\": {\n"
+          + //
+          "                        \"name\": \"val\"\n"
+          + //
+          "                    },\n"
+          + //
+          "                    \"segments\": [\n"
+          + //
+          "                        1\n"
+          + //
+          "                    ]\n"
+          + //
+          "                }\n"
+          + //
+          "            ]\n"
+          + //
+          "        }\n"
+          + //
+          "    ]\n"
+          + //
+          "}\n"
+          + //
+          "";
 
   // Assume this is set up to be your feature JSON
   private final String simpleFeatures =
@@ -59,12 +252,13 @@ class UnleashEngineTest {
 
   @BeforeEach
   void createEngine() {
-    List<IStrategy> customStrategies = List.of(alwaysTrue("custom"));
+    List<IStrategy> customStrategies = new ArrayList<>();
+    customStrategies.add(alwaysTrue("custom"));
     engine = new UnleashEngine(customStrategies);
   }
 
   @Test
-  void testTakeState() throws YggdrasilInvalidInputException, YggdrasilError {
+  void testTakeState() throws Exception {
     engine.takeState(simpleFeatures);
   }
 
@@ -73,7 +267,7 @@ class UnleashEngineTest {
     engine.takeState(simpleFeatures);
 
     Context context = new Context();
-    Boolean result = engine.isEnabled("Feature.A", context);
+    Boolean result = engine.isEnabled("Feature.A", context).value;
     assertNotNull(result);
     assertTrue(result);
   }
@@ -83,7 +277,7 @@ class UnleashEngineTest {
     engine.takeState(simpleFeatures);
 
     Context context = new Context();
-    Boolean result = engine.isEnabled("IDoNotExist", context);
+    Boolean result = engine.isEnabled("IDoNotExist", context).value;
     assertNull(result); // not found
   }
 
@@ -92,10 +286,11 @@ class UnleashEngineTest {
     engine.takeState(simpleFeatures);
 
     Context context = new Context();
-    VariantDef variant = engine.getVariant("Feature.A", context);
+    VariantDef variant = engine.getVariant("Feature.A", context).value;
 
     if (variant == null) {
-      variant = new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context));
+      variant =
+          new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context).value);
     }
 
     assertEquals("disabled", variant.getName());
@@ -108,10 +303,10 @@ class UnleashEngineTest {
         "{\"version\":1,\"features\":[{\"name\":\"Feature.D\",\"description\":\"Has a custom strategy\",\"enabled\":true,\"strategies\":[{\"name\":\"custom\",\"constraints\":[],\"parameters\":{\"foo\":\"bar\"}}]}]}");
 
     Context context = new Context();
-    VariantDef variant = engine.getVariant("Feature.D", context);
+    WasmResponse<VariantDef> variant = engine.getVariant("Feature.D", context);
 
-    assertEquals(variant.isFeatureEnabled(), true);
-    assertFalse(variant.isEnabled());
+    assertEquals(variant.value.isFeatureEnabled(), true);
+    assertFalse(variant.value.isEnabled());
   }
 
   @Test
@@ -144,17 +339,19 @@ class UnleashEngineTest {
       File suiteFile = new File(basePath, suite);
       TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {});
 
+      System.out.println("Executing test suite: " + suiteData.name + "\n");
       engine.takeState(objectMapper.writeValueAsString(suiteData.state));
 
       List<Map<String, Object>> tests = suiteData.tests;
       if (tests != null) {
         for (Map<String, Object> test : tests) {
+          System.out.println("Running test: " + test.get("description") + "...");
           String contextJson = objectMapper.writeValueAsString(test.get("context"));
           Context context = objectMapper.readValue(contextJson, Context.class);
           String toggleName = (String) test.get("toggleName");
           boolean expectedResult = (Boolean) test.get("expectedResult");
 
-          Boolean result = engine.isEnabled(toggleName, context);
+          Boolean result = engine.isEnabled(toggleName, context).value;
 
           if (result == null) {
             result = false; // Default should be provided by SDK
@@ -172,16 +369,19 @@ class UnleashEngineTest {
       List<Map<String, Object>> variantTests = suiteData.variantTests;
       if (variantTests != null) {
         for (Map<String, Object> test : variantTests) {
+          System.out.println("Running test: " + test.get("description") + "...");
           String contextJson = objectMapper.writeValueAsString(test.get("context"));
           Context context = objectMapper.readValue(contextJson, Context.class);
           String toggleName = (String) test.get("toggleName");
 
           VariantDef expectedResult =
               objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
-          VariantDef result = engine.getVariant(toggleName, context);
+          VariantDef result = engine.getVariant(toggleName, context).value;
           if (result == null) {
             // this behavior should be implemented in the SDK
-            result = new VariantDef("disabled", null, false, engine.isEnabled(toggleName, context));
+            result =
+                new VariantDef(
+                    "disabled", null, false, engine.isEnabled(toggleName, context).value);
           }
 
           String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
@@ -195,17 +395,22 @@ class UnleashEngineTest {
                   suiteData.name, test.get("description"), expectedResultJson, resultJson));
         }
       }
-
-      System.out.printf("Completed specification '%s'%n", suite);
     }
   }
 
   @Test
-  void testMetrics() throws YggdrasilError {
-    engine.countVariant("Feature.A", "A");
-    engine.countToggle("Feature.B", true);
-    engine.countToggle("Feature.C", false);
-    engine.countToggle("Feature.C", false);
+  void testMetrics() throws YggdrasilError, YggdrasilInvalidInputException {
+    UnleashEngine engine = new UnleashEngine();
+    String features =
+        loadFeaturesFromFile("../client-specification/specifications/08-variants.json");
+    engine.takeState(features);
+
+    engine.getVariant("Feature.Variants.A", new Context());
+    engine.getVariant("Feature.Variants.B", new Context());
+    engine.getVariant("Missing.but.checked", new Context());
+    engine.getVariant("Missing.but.checked", new Context());
+
+    // engine.countToggle("Feature.C", false);
     MetricsBucket bucket = engine.getMetrics();
 
     assertNotNull(bucket);
@@ -215,23 +420,19 @@ class UnleashEngineTest {
     assertNotNull(start);
     assertNotNull(stop);
     assertTrue(stop.isAfter(start)); // unlikely to be equal but could happen
-    assertTrue(
-        start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10 seconds of now
+    assertTrue(start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10
+    // seconds of now
 
     assertEquals(3, bucket.getToggles().size());
 
-    assertEquals(1, bucket.getToggles().get("Feature.A").getVariants().get("A"));
-    // Validate: counting on enabled is up to the SDK or should we also count
-    // enabled when
-    // getting a variant?
-    assertEquals(0, bucket.getToggles().get("Feature.A").getYes());
-    assertEquals(0, bucket.getToggles().get("Feature.A").getNo());
+    assertEquals(1, bucket.getToggles().get("Feature.Variants.A").getVariants().get("variant1"));
+    assertNull(bucket.getToggles().get("Missing.Feature"));
 
-    assertEquals(1, bucket.getToggles().get("Feature.B").getYes());
-    assertEquals(0, bucket.getToggles().get("Feature.B").getNo());
+    assertEquals(1, bucket.getToggles().get("Feature.Variants.B").getYes());
+    assertEquals(0, bucket.getToggles().get("Feature.Variants.B").getNo());
 
-    assertEquals(0, bucket.getToggles().get("Feature.C").getYes());
-    assertEquals(2, bucket.getToggles().get("Feature.C").getNo());
+    assertEquals(0, bucket.getToggles().get("Missing.but.checked").getYes());
+    assertEquals(2, bucket.getToggles().get("Missing.but.checked").getNo());
   }
 
   @ParameterizedTest
@@ -242,13 +443,11 @@ class UnleashEngineTest {
   })
   void impressionData_whenFeature_shouldReturn(String featureName, boolean expectedImpressionData)
       throws Exception {
-    assertFalse(engine.shouldEmitImpressionEvent(featureName));
 
     takeFeaturesFromResource(engine, "impression-data-tests.json");
-    Boolean result = engine.isEnabled(featureName, new Context());
+    WasmResponse<Boolean> result = engine.isEnabled(featureName, new Context());
     assertNotNull(result);
-    assertTrue(result);
-    assertEquals(expectedImpressionData, engine.shouldEmitImpressionEvent(featureName));
+    assertEquals(expectedImpressionData, result.impressionData);
   }
 
   @ParameterizedTest
@@ -261,35 +460,52 @@ class UnleashEngineTest {
       throws Exception {
     UnleashEngine customEngine = new UnleashEngine(customStrategies);
     takeFeaturesFromResource(customEngine, "custom-strategy-tests.json");
-    Boolean result = customEngine.isEnabled(featureName, context);
+    Boolean result = customEngine.isEnabled(featureName, context).value;
     assertNotNull(result);
     assertEquals(expectedIsEnabled, result);
   }
 
-  @SuppressWarnings("unused")
+  // @SuppressWarnings("unused")
+  // @Test
+  // void testResourceCleanup() throws InterruptedException {
+  //   UnleashFFI ffiMock = Mockito.mock(UnleashFFI.class);
+  //   ReferenceQueue<UnleashEngine> queue = new ReferenceQueue<>();
+
+  //   UnleashEngine library = new UnleashEngine(ffiMock, null, null);
+  //   PhantomReference<UnleashEngine> reference = new PhantomReference<>(library,
+  //       queue);
+
+  //   // Make the object eligible for garbage collection
+  //   library = null;
+  //   Reference<? extends UnleashEngine> polledReference = null;
+
+  //   for (int i = 0; i < 50; i++) {
+  //     System.gc();
+  //     polledReference = queue.poll();
+  //     if (polledReference != null) {
+  //       break;
+  //     }
+  //     Thread.sleep(10);
+  //   }
+
+  //   assertNotNull(polledReference, "Cleaner did not trigger");
+  //   Mockito.verify(ffiMock).freeEngine(Mockito.any());
+  // }
+
   @Test
-  void testResourceCleanup() throws InterruptedException {
-    UnleashFFI ffiMock = Mockito.mock(UnleashFFI.class);
-    ReferenceQueue<UnleashEngine> queue = new ReferenceQueue<>();
+  void testBuiltInStrategiesAreRetrieved() {
+    List<String> strategies = UnleashEngine.getBuiltInStrategies();
 
-    UnleashEngine library = new UnleashEngine(ffiMock, null, null);
-    PhantomReference<UnleashEngine> reference = new PhantomReference<>(library, queue);
-
-    // Make the object eligible for garbage collection
-    library = null;
-    Reference<? extends UnleashEngine> polledReference = null;
-
-    for (int i = 0; i < 50; i++) {
-      System.gc();
-      polledReference = queue.poll();
-      if (polledReference != null) {
-        break;
-      }
-      Thread.sleep(10);
-    }
-
-    assertNotNull(polledReference, "Cleaner did not trigger");
-    Mockito.verify(ffiMock).freeEngine(Mockito.any());
+    assertNotNull(strategies);
+    assertFalse(strategies.isEmpty());
+    assertTrue(strategies.contains("default"));
+    assertTrue(strategies.contains("userWithId"));
+    assertTrue(strategies.contains("gradualRolloutUserId"));
+    assertTrue(strategies.contains("gradualRolloutRandom"));
+    assertTrue(strategies.contains("applicationHostname"));
+    assertTrue(strategies.contains("gradualRolloutSessionId"));
+    assertTrue(strategies.contains("remoteAddress"));
+    assertTrue(strategies.contains("flexibleRollout"));
   }
 
   @Test
@@ -299,43 +515,6 @@ class UnleashEngineTest {
     // check that it contains two dots, close enough for a quick and dirty but
     // stable semver check
     assertTrue(coreVersion.split("\\.").length >= 3);
-  }
-
-  @Test
-  void testThreadCollision() throws Exception {
-    // This surfaces an issue where calling takeState on the engine in a tight loop
-    // from multiple threads causes
-    // memory issues like double frees or segfaults
-    // that's fixed now but it'd be cool if it didn't come back
-
-    String features = readResource("impression-data-tests.json");
-    UnleashEngine ygg = new UnleashEngine();
-    int threadCount = 2;
-    CountDownLatch latch = new CountDownLatch(threadCount);
-
-    try {
-      for (int i = 0; i < 2; i++) {
-        new Thread(
-                () -> {
-                  try {
-                    for (int j = 0; j < 100; j++) {
-                      ygg.takeState(features);
-                    }
-                    System.out.println("Thread completed successfully.");
-                  } catch (Exception yex) {
-                    yex.printStackTrace();
-                  } finally {
-                    latch.countDown();
-                  }
-                })
-            .start();
-      }
-
-      System.out.println("All threads started.");
-    } catch (Exception ex) {
-      ex.printStackTrace();
-    }
-    latch.await();
   }
 
   private static Stream<Arguments> customStrategiesInput() {
@@ -383,6 +562,90 @@ class UnleashEngineTest {
         put(key, value);
       }
     };
+  }
+
+  @Test
+  public void getMetricsReturnsCorrectResult() throws Exception {
+    UnleashEngine engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    engine.isEnabled("Feature.A", new Context());
+    engine.isEnabled("Feature.C", new Context());
+    engine.isEnabled("Feature.C", new Context());
+    MetricsBucket bucket = engine.getMetrics();
+    FeatureCount featA = bucket.getToggles().get("Feature.A");
+    FeatureCount featC = bucket.getToggles().get("Feature.C");
+    assert (featA.getYes() == 1);
+    assert (featC.getYes() == 2);
+  }
+
+  @Test
+  public void metricsBucketStartStopAreCorrect() throws Exception {
+    UnleashEngine engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    engine.isEnabled("Feature.A", new Context());
+    MetricsBucket bucket = engine.getMetrics();
+
+    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+
+    Instant start = bucket.getStart();
+    ZonedDateTime utcStart = start.atZone(ZoneOffset.UTC);
+
+    Instant stop = bucket.getStop();
+    ZonedDateTime utcStop = stop.atZone(ZoneOffset.UTC);
+
+    assert (utcStart.isBefore(now))
+        : "start not before now. start: " + utcStart + " - stop: " + utcStop;
+    assert (utcStart.plusMinutes(1).isAfter(now))
+        : "start plus minute not after now. start: " + utcStart + " - stop: " + utcStop;
+    assert (utcStop.isBefore(now)) : "stop not before now";
+    assert (utcStop.plusMinutes(1).isAfter(now)) : "stop plus minute not after now" + utcStop;
+  }
+
+  @Test
+  public void getEmptyMetricsBucketReturnsNull() throws Exception {
+    UnleashEngine engine = new UnleashEngine();
+    String path = "../test-data/simple.json";
+    String json = new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(path)));
+    engine.takeState(json);
+    MetricsBucket bucket = engine.getMetrics();
+    assert (bucket == null);
+  }
+
+  @Test
+  void testThreadCollision() throws Exception {
+    // This surfaces an issue where calling takeState on the engine in a tight loop
+    // from multiple threads causes
+    // memory issues like double frees or segfaults
+    // that's fixed now but it'd be cool if it didn't come back
+
+    String features = readResource("impression-data-tests.json");
+    UnleashEngine ygg = new UnleashEngine();
+    int threadCount = 2;
+    CountDownLatch latch = new CountDownLatch(threadCount);
+
+    for (int i = 0; i < 2; i++) {
+      new Thread(
+              () -> {
+                try {
+                  for (int j = 0; j < 1000; j++) {
+                    ygg.takeState(features);
+                  }
+                  System.out.println("Thread completed successfully.");
+                } catch (Exception yex) {
+                  yex.printStackTrace();
+                } finally {
+                  latch.countDown();
+                }
+              })
+          .start();
+    }
+
+    System.out.println("All threads started.");
+    latch.await();
   }
 
   private void takeFeaturesFromResource(UnleashEngine engine, String resource) {

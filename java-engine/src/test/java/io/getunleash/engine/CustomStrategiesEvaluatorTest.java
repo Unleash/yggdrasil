@@ -7,13 +7,12 @@ import static io.getunleash.engine.UnleashEngineTest.readResource;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.params.provider.Arguments.of;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.getunleash.engine.CustomStrategiesEvaluator.FeatureDefinition;
 import io.getunleash.engine.CustomStrategiesEvaluator.MappedStrategy;
 import io.getunleash.engine.CustomStrategiesEvaluator.StrategyDefinition;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -38,32 +37,39 @@ class CustomStrategiesEvaluatorTest {
         of(Stream.of(testStrategy), "", new Context()));
   }
 
-  public static Stream<Arguments> twoStrategies() {
+  private static Stream<Arguments> twoStrategies() {
     return Stream.of(
         of(
             alwaysTrue("custom"),
             alwaysTrue("cus-tom"),
-            "{\"customStrategy1\":true,\"customStrategy2\":true}"),
+            mapOf("customStrategy1", true, "customStrategy2", true)),
         of(
             alwaysFails("custom"),
             alwaysFails("cus-tom"),
-            "{\"customStrategy1\":false,\"customStrategy2\":false}"),
+            mapOf("customStrategy1", false, "customStrategy2", false)),
         of(
             alwaysTrue("custom"),
             alwaysFails("cus-tom"),
-            "{\"customStrategy1\":true,\"customStrategy2\":false}"),
+            mapOf("customStrategy1", true, "customStrategy2", false)),
         of(
             alwaysFails("custom"),
             alwaysTrue("cus-tom"),
-            "{\"customStrategy1\":false,\"customStrategy2\":true}"),
+            mapOf("customStrategy1", false, "customStrategy2", true)),
         of(
             alwaysTrue("wrongName"),
             alwaysTrue("wrongName"),
-            "{\"customStrategy1\":false,\"customStrategy2\":false}"),
+            mapOf("customStrategy1", false, "customStrategy2", false)),
         of(
             alwaysTrue("custom"),
             alwaysTrue("custom"),
-            "{\"customStrategy1\":true,\"customStrategy2\":false}"));
+            mapOf("customStrategy1", true, "customStrategy2", false)));
+  }
+
+  private static Stream<Arguments> singleStrategy() {
+    return Stream.of(
+        of("custom", mapOf("customStrategy1", true, "customStrategy2", false)),
+        of("cus-tom", mapOf("customStrategy1", false, "customStrategy2", true)),
+        of("unknown", mapOf("customStrategy1", false, "customStrategy2", false)));
   }
 
   @ParameterizedTest
@@ -85,30 +91,25 @@ class CustomStrategiesEvaluatorTest {
   }
 
   @ParameterizedTest
-  @CsvSource(
-      value = {
-        "custom  | {\"customStrategy1\":true,\"customStrategy2\":false}",
-        "cus-tom | {\"customStrategy1\":false,\"customStrategy2\":true}",
-        "unknown | {\"customStrategy1\":false,\"customStrategy2\":false}"
-      },
-      delimiter = '|')
-  void singleAlwaysTrueStrategy_shouldEvalTo(String strategyName, String expected)
+  @MethodSource("singleStrategy")
+  void singleAlwaysTrueStrategy_shouldEvalTo(String strategyName, Map<String, Boolean> expected)
       throws IOException, URISyntaxException {
     CustomStrategiesEvaluator customStrategiesEvaluator =
         new CustomStrategiesEvaluator(Stream.of(alwaysTrue(strategyName)), new HashSet<>());
     customStrategiesEvaluator.loadStrategiesFor(readResource("custom-strategy-tests.json"));
-    assertSameObjects(
+    assertEquals(
         expected, customStrategiesEvaluator.eval("Feature.Custom.Strategies", new Context()));
   }
 
   @ParameterizedTest
   @MethodSource("twoStrategies")
-  void twoExistingStrategy_shouldEvalToBothStrategies(IStrategy one, IStrategy two, String expected)
+  void twoExistingStrategy_shouldEvalToBothStrategies(
+      IStrategy one, IStrategy two, Map<String, Boolean> expected)
       throws IOException, URISyntaxException {
     CustomStrategiesEvaluator customStrategiesEvaluator =
         new CustomStrategiesEvaluator(Stream.of(one, two), new HashSet<>());
     customStrategiesEvaluator.loadStrategiesFor(readResource("custom-strategy-tests.json"));
-    assertSameObjects(
+    assertEquals(
         expected, customStrategiesEvaluator.eval("Feature.Custom.Strategies", new Context()));
   }
 
@@ -117,32 +118,40 @@ class CustomStrategiesEvaluatorTest {
     CustomStrategiesEvaluator customStrategiesEvaluator =
         new CustomStrategiesEvaluator(Stream.of(alwaysFails("custom")), new HashSet<>());
     customStrategiesEvaluator.loadStrategiesFor(readResource("custom-strategy-tests.json"));
-    assertSameObjects(
-        "{\"customStrategy1\":false,\"customStrategy2\":false}",
+    assertEquals(
+        mapOf("customStrategy1", false, "customStrategy2", false),
         customStrategiesEvaluator.eval("Feature.Custom.Strategies", new Context()));
-  }
-
-  private void assertSameObjects(String expected, String result) {
-    ObjectMapper objectMapper = new ObjectMapper();
-    Map<String, Boolean> expectedMap =
-        assertDoesNotThrow(
-            () -> objectMapper.readValue(expected, new TypeReference<Map<String, Boolean>>() {}));
-    Map<String, Boolean> resultMap =
-        assertDoesNotThrow(
-            () -> objectMapper.readValue(result, new TypeReference<Map<String, Boolean>>() {}));
-    assertEquals(expectedMap, resultMap);
   }
 
   @Test
   void doesNotLoadCustomStrategyForBuiltinStrategy() throws Exception {
     CustomStrategiesEvaluator customStrategiesEvaluator =
-        new CustomStrategiesEvaluator(Stream.of(alwaysFails("custom")), Set.of("flexibleRollout"));
+        new CustomStrategiesEvaluator(Stream.of(alwaysFails("custom")), setOf("flexibleRollout"));
 
-    StrategyDefinition flexibleRollout = new StrategyDefinition("flexibleRollout", Map.of());
-    FeatureDefinition feature = new FeatureDefinition("feature", List.of(flexibleRollout));
+    StrategyDefinition flexibleRollout = new StrategyDefinition("flexibleRollout", new HashMap<>());
+    FeatureDefinition feature = new FeatureDefinition("feature", listOf(flexibleRollout));
 
     List<MappedStrategy> results = customStrategiesEvaluator.getFeatureStrategies(feature);
 
     assertTrue(results.isEmpty());
+  }
+
+  private static <T, U> Map<T, U> mapOf(T key1, U value1, T key2, U value2) {
+    Map<T, U> map = new HashMap<>();
+    map.put(key1, value1);
+    map.put(key2, value2);
+    return map;
+  }
+
+  private static <T> Set<T> setOf(T value) {
+    Set<T> set = new HashSet<>();
+    set.add(value);
+    return set;
+  }
+
+  private static <T> List<T> listOf(T value) {
+    List<T> list = new java.util.ArrayList<>();
+    list.add(value);
+    return list;
   }
 }

@@ -2,10 +2,25 @@ plugins {
     `java-library`
     `maven-publish`
     signing
-    id("com.diffplug.spotless") version "6.23.2"
+    id ("com.diffplug.spotless").version("6.23.2")
     id("io.github.gradle-nexus.publish-plugin").version("2.0.0")
     id("pl.allegro.tech.build.axion-release").version("1.16.0")
     id("tech.yanand.maven-central-publish").version("1.3.0")
+    id("me.champeau.jmh").version("0.7.2")
+    id("at.released.wasm2class.plugin").version("0.3")
+}
+
+wasm2class {
+    modules {
+        create("Yggdrasil") {
+            wasm = file("../target/wasm32-unknown-unknown/release/pure_wasm.wasm")
+            targetPackage = "org.example.wasm"
+        }
+    }
+}
+
+sourceSets["main"].java {
+    srcDir("build/generated-sources/chicory-aot")
 }
 
 version = project.findProperty("version") as String
@@ -22,6 +37,8 @@ repositories {
 }
 
 dependencies {
+    jmh("org.openjdk.jmh:jmh-core:1.37")
+    jmhAnnotationProcessor("org.openjdk.jmh:jmh-generator-annprocess:1.37")
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
     testImplementation("org.mockito:mockito-core:4.11.0")
     testImplementation("org.slf4j:slf4j-simple:2.0.5")
@@ -30,6 +47,8 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.1")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.2")
+    implementation("com.dylibso.chicory:runtime:1.3.0")
+    implementation("com.google.flatbuffers:flatbuffers-java:23.1.21")
 }
 
 tasks.jar {
@@ -44,41 +63,7 @@ tasks.jar {
     }
 }
 
-// This is a dirty cheat, it'll always name the binary as a x86_64 binary
-// But in practice this doesn't matter because this is purely for tests
-// and this will use the binary generated on the user's machine
-val copyTestBinary = tasks.register<Copy>("copyTestBinary") {
-    val platform = System.getProperty("os.arch").lowercase()
-    val os = System.getProperty("os.name").lowercase()
-
-    val sourceFileName = when {
-        os.contains("mac") -> "libyggdrasilffi.dylib"
-        os.contains("win") -> "yggdrasilffi.dll"
-        os.contains("linux") -> "libyggdrasilffi.so"
-        else -> throw UnsupportedOperationException("Unsupported OS/architecture combination")
-    }
-
-    val sourcePath = file("../target/release/$sourceFileName")
-    val targetPath = file("build/resources/test/native")
-
-    val binaryName = when {
-        os.contains("mac") && (platform.contains("arm") || platform.contains("aarch64")) -> "libyggdrasilffi_arm64.dylib"
-        os.contains("mac") -> "libyggdrasilffi_x86_64.dylib"
-        os.contains("win") -> "yggdrasilffi_x86_64.dll"
-        os.contains("linux") -> "libyggdrasilffi_x86_64.so"
-        else -> throw UnsupportedOperationException("Unsupported OS/architecture combination")
-    }
-
-    from(sourcePath) {
-        rename { binaryName }
-    }
-    into(targetPath)
-
-    outputs.upToDateWhen { false }
-}
-
 tasks.named<Test>("test") {
-    dependsOn(copyTestBinary)
     useJUnitPlatform()
     testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
 }
