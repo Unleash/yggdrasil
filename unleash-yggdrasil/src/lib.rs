@@ -437,7 +437,7 @@ impl EngineState {
     fn enabled(&self, toggle: &CompiledToggle, context: &EnrichedContext) -> bool {
         toggle.enabled
             && self.is_parent_dependency_satisfied(toggle, context)
-            && (toggle.compiled_strategy)(&context)
+            && (toggle.compiled_strategy)(context)
     }
 
     pub fn resolve_all(
@@ -461,7 +461,7 @@ impl EngineState {
                         ResolvedToggle {
                             enabled,
                             impression_data: toggle.impression_data,
-                            variant: self.get_variant(name, &context, external_values),
+                            variant: self.get_variant(name, context, external_values),
                             project: toggle.project.clone(),
                         },
                     )
@@ -522,7 +522,7 @@ impl EngineState {
 
     pub fn check_enabled(&self, context: &EnrichedContext) -> Option<bool> {
         self.get_toggle(&context.toggle_name)
-            .map(|toggle| self.enabled(toggle, &context))
+            .map(|toggle| self.enabled(toggle, context))
     }
 
     pub fn is_enabled(
@@ -592,7 +592,7 @@ impl EngineState {
                         variant_strategies
                             .iter()
                             .find_map(|(rule, rule_variants, group_id)| {
-                                (rule)(&context).then_some((rule_variants, group_id))
+                                (rule)(context).then_some((rule_variants, group_id))
                             });
                     resolved_strategy_variants
                 });
