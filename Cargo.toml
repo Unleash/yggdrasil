@@ -3,6 +3,6 @@ resolver = "2"
 
 members = [
   "unleash-yggdrasil",
-  "yggdrasilwasm",
   "yggdrasilffi",
 ]
+

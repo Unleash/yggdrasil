@@ -130,12 +130,15 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
         Rule::environment => Box::new(|context: &Context| context.environment.clone()),
         Rule::session_id => Box::new(|context: &Context| context.session_id.clone()),
         Rule::remote_address => Box::new(|context: &Context| context.remote_address.clone()),
+        #[cfg(feature = "wall-clock")]
         Rule::current_time => Box::new(|context: &Context| {
             context
                 .current_time
                 .clone()
                 .or_else(|| Some(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()))
         }),
+        #[cfg(not(feature = "wall-clock"))]
+        Rule::current_time => Box::new(|context: &Context| context.current_time.clone()),
         Rule::random => {
             let value = child
                 .into_inner()
@@ -407,7 +410,7 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 }
 
 #[cfg(feature = "hostname")]
-fn get_hostname() -> CompileResult<String> {
+fn get_hostname(_: &Context) -> CompileResult<String> {
     //This is primarily for testing purposes
     if let Ok(hostname_env) = env::var("hostname") {
         return Ok(hostname_env);
@@ -423,7 +426,10 @@ fn get_hostname() -> CompileResult<String> {
 }
 
 #[cfg(not(feature = "hostname"))]
-fn get_hostname() -> CompileResult<String> {
+fn get_hostname(context: &Context) -> CompileResult<String> {
+    if let Some(hostname) = &context.runtime_hostname {
+        return Ok(hostname.clone());
+    }
     Err(SdkError::StrategyParseError(
         "Hostname is not supported on this platform".into(),
     ))
@@ -437,9 +443,11 @@ fn hostname_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
         .map(|x| x.to_lowercase())
         .collect();
 
-    Ok(Box::new(move |_: &Context| match get_hostname() {
-        Ok(hostname) => target_hostnames.contains(&hostname.to_lowercase()),
-        Err(_) => false,
+    Ok(Box::new(move |context: &Context| {
+        match get_hostname(context) {
+            Ok(hostname) => target_hostnames.contains(&hostname.to_lowercase()),
+            Err(_) => false,
+        }
     }))
 }
 
@@ -664,6 +672,7 @@ mod tests {
             remote_address: None,
             toggle_name: "".into(),
             external_results: None,
+            runtime_hostname: None,
         }
     }
 
@@ -683,6 +692,7 @@ mod tests {
                 properties: Default::default(),
                 toggle_name: Default::default(),
                 external_results: None,
+                runtime_hostname: None,
             }
         }
     }
@@ -822,6 +832,7 @@ mod tests {
             remote_address: None,
             toggle_name: "".into(),
             external_results: None,
+            runtime_hostname: None,
         };
 
         let rule = compile_rule(rule).expect("");

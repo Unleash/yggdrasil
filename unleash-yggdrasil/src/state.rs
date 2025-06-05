@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use unleash_types::client_features::Context;
 
+#[derive(Clone)]
 pub struct EnrichedContext {
     pub user_id: Option<String>,
     pub session_id: Option<String>,
@@ -10,7 +11,8 @@ pub struct EnrichedContext {
     pub remote_address: Option<String>,
     pub properties: Option<HashMap<String, String>>,
     pub external_results: Option<HashMap<String, bool>>,
-    pub(crate) toggle_name: String,
+    pub toggle_name: String,
+    pub runtime_hostname: Option<String>,
 }
 
 impl EnrichedContext {
@@ -29,6 +31,7 @@ impl EnrichedContext {
             properties: context.properties,
             external_results,
             toggle_name,
+            runtime_hostname: None,
         }
     }
 }
