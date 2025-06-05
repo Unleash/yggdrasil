@@ -2077,3 +2077,4 @@ pub fn finish_size_prefixed_metrics_response_buffer<'a, 'b>(fbb: &'b mut flatbuf
   fbb.finish_size_prefixed(root, None);
 }
 }  // pub mod messaging
+
