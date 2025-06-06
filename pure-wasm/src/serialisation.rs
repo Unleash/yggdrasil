@@ -7,14 +7,11 @@ use flatbuffers::{FlatBufferBuilder, Follow, WIPOffset};
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{EvalWarning, ExtendedVariantDef, ToggleDefinition};
 
-use crate::{
-    messaging::messaging::{
-        BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
-        FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsResponse,
-        MetricsResponseBuilder, Response, ResponseBuilder, TakeStateResponse,
-        TakeStateResponseBuilder, ToggleEntryBuilder, ToggleStatsBuilder, Variant, VariantBuilder,
-        VariantEntryBuilder, VariantPayloadBuilder,
-    },
+use crate::messaging::messaging::{
+    BuiltInStrategies, BuiltInStrategiesBuilder, CoreVersion, CoreVersionBuilder,
+    FeatureDefBuilder, FeatureDefs, FeatureDefsBuilder, MetricsResponse, MetricsResponseBuilder,
+    Response, ResponseBuilder, TakeStateResponse, TakeStateResponseBuilder, ToggleEntryBuilder,
+    ToggleStatsBuilder, Variant, VariantBuilder, VariantEntryBuilder, VariantPayloadBuilder,
 };
 
 thread_local! {

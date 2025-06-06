@@ -34,8 +34,11 @@ jobs:
           rustup show
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
-      - name: Build yggdrasil
-        run: cargo build --release
+      - name: Install wasm-target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Build yggdrasil wasm
+        working-directory: pure-wasm
+        run: cargo build --release --target wasm32-unknown-unknown
       ## end build yggdrasil
 
       ## Test requirements
