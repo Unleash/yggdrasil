@@ -63,7 +63,16 @@ tasks.jar {
     }
 }
 
+val buildWasm by tasks.registering(Exec::class) {
+    group = "build"
+    description = "Builds the Rust WASM binary"
+
+    workingDir = file("../pure-wasm")
+    commandLine = listOf("cargo", "build", "--release", "--target", "wasm32-unknown-unknown")
+}
+
 tasks.named<Test>("test") {
+    dependsOn(buildWasm)
     useJUnitPlatform()
     testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
 }
