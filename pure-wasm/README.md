@@ -19,7 +19,13 @@ flatc --rust -o pure-wasm/src flat-buffer-defs/enabled-message.fbs
 
 ### Building
 
-This project uses low-level bit-hacking optimizations that rely on a 32-bit architecture, so the only supported target is wasm32-unknown-unknown. Build configuration is already defined in the root project's config.toml, so you can compile the WASM module with:
+This project uses low-level bit-hacking optimizations that rely on a 32-bit architecture, so the only supported target is wasm32-unknown-unknown. If you don't have the WASM target installed you can do that with rustup:
+
+``` bash
+rustup target add wasm32-unknown-unknown
+```
+
+Build configuration is already defined in the root project's config.toml, so you can compile the WASM module with:
 
 ``` bash
 cargo build --release --target wasm32-unknown-unknown
