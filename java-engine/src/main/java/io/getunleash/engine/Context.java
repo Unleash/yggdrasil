@@ -1,15 +1,16 @@
 package io.getunleash.engine;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class Context {
   private String userId;
   private String sessionId;
-  private String remoteAddress;
   private String environment;
   private String appName;
   private String currentTime;
-  private Map<String, String> properties;
+  private String remoteAddress;
+  private Map<String, String> properties = new HashMap<>();
 
   public String getUserId() {
     return userId;

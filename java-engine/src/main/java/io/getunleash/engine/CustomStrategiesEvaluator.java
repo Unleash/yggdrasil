@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 
 class CustomStrategiesEvaluator {
   private static final Logger log = LoggerFactory.getLogger(CustomStrategiesEvaluator.class);
-  static final String EMPTY_STRATEGY_RESULTS = "{}";
+  static final Map<String, Boolean> EMPTY_STRATEGY_RESULTS = new HashMap<>();
   private final Map<String, IStrategy> registeredStrategies;
   private final Set<String> builtinStrategies;
 
@@ -90,11 +90,11 @@ class CustomStrategiesEvaluator {
     return mappedStrategies;
   }
 
-  public String eval(String name, Context context) {
+  public Map<String, Boolean> eval(String name, Context context) {
 
     List<MappedStrategy> mappedStrategies = featureStrategies.get(name);
     if (mappedStrategies == null || mappedStrategies.isEmpty()) {
-      return EMPTY_STRATEGY_RESULTS;
+      return Collections.emptyMap();
     }
 
     Map<String, Boolean> results =
@@ -104,14 +104,7 @@ class CustomStrategiesEvaluator {
                     mappedStrategy -> mappedStrategy.resultName,
                     mappedStrategy -> tryIsEnabled(context, mappedStrategy).orElse(false)));
 
-    try {
-      return mapper.writeValueAsString(results);
-    } catch (JsonProcessingException e) {
-      log.warn(
-          "Error processing strategy results. This means custom strategies will return false every time they're used",
-          e);
-      return EMPTY_STRATEGY_RESULTS;
-    }
+    return results;
   }
 
   private static Optional<Boolean> tryIsEnabled(Context context, MappedStrategy mappedStrategy) {
