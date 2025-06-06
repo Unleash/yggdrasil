@@ -1,14 +1,12 @@
 use chrono::DateTime;
 use core::str;
 use flatbuffers::root;
-use random::get_random_source;
 use serialisation::{ResponseMessage, WasmError, WasmMessage};
 use std::alloc::{alloc, dealloc};
 use std::mem::forget;
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::{alloc::Layout, collections::HashMap, panic, slice, sync::Once};
 
-use getrandom::register_custom_getrandom;
 use messaging::messaging::{
     BuiltInStrategies, ContextMessage, CoreVersion, FeatureDefs, MetricsResponse, Response, Variant,
 };
@@ -17,7 +15,6 @@ use unleash_yggdrasil::{
 };
 
 mod logging;
-mod random;
 mod serialisation;
 #[allow(clippy::all)]
 mod messaging {
@@ -27,7 +24,24 @@ mod messaging {
     include!("enabled-message_generated.rs");
 }
 
-register_custom_getrandom!(get_random_source);
+// Setup a source of randomness, since WASM doesn't have nice things like access to `/dev/urandom` or similar.
+#[unsafe(no_mangle)]
+unsafe extern "Rust" fn __getrandom_v03_custom(
+    buf: *mut u8,
+    len: usize,
+) -> Result<(), getrandom::Error> {
+    let result = unsafe { fill_random(buf, len) };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(getrandom::Error::UNEXPECTED)
+    }
+}
+
+//This is expected to be defined by the caller and passed to the WASM layer
+unsafe extern "C" {
+    fn fill_random(ptr: *mut u8, len: usize) -> i32;
+}
 
 static SET_PANIC_HOOK: Once = Once::new();
 
