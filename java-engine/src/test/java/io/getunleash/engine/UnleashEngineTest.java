@@ -10,6 +10,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
+import java.lang.ref.PhantomReference;
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -27,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 class TestSuite {
   public String name;
@@ -465,32 +469,36 @@ class UnleashEngineTest {
     assertEquals(expectedIsEnabled, result);
   }
 
-  // @SuppressWarnings("unused")
-  // @Test
-  // void testResourceCleanup() throws InterruptedException {
-  //   UnleashFFI ffiMock = Mockito.mock(UnleashFFI.class);
-  //   ReferenceQueue<UnleashEngine> queue = new ReferenceQueue<>();
+  @SuppressWarnings("unused")
+  @Test
+  void testResourceCleanup() throws InterruptedException {
+    int mockPointer = 1;
 
-  //   UnleashEngine library = new UnleashEngine(ffiMock, null, null);
-  //   PhantomReference<UnleashEngine> reference = new PhantomReference<>(library,
-  //       queue);
+    NativeInterface wasmInterface = Mockito.mock(NativeInterface.class);
 
-  //   // Make the object eligible for garbage collection
-  //   library = null;
-  //   Reference<? extends UnleashEngine> polledReference = null;
+    Mockito.when(wasmInterface.newEngine(Mockito.anyLong())).thenReturn(mockPointer);
 
-  //   for (int i = 0; i < 50; i++) {
-  //     System.gc();
-  //     polledReference = queue.poll();
-  //     if (polledReference != null) {
-  //       break;
-  //     }
-  //     Thread.sleep(10);
-  //   }
+    ReferenceQueue<UnleashEngine> queue = new ReferenceQueue<>();
 
-  //   assertNotNull(polledReference, "Cleaner did not trigger");
-  //   Mockito.verify(ffiMock).freeEngine(Mockito.any());
-  // }
+    UnleashEngine library = new UnleashEngine(null, null, wasmInterface);
+    PhantomReference<UnleashEngine> reference = new PhantomReference<>(library, queue);
+
+    // Make the object eligible for garbage collection
+    library = null;
+    Reference<? extends UnleashEngine> polledReference = null;
+
+    for (int i = 0; i < 50; i++) {
+      System.gc();
+      polledReference = queue.poll();
+      if (polledReference != null) {
+        break;
+      }
+      Thread.sleep(10);
+    }
+
+    assertNotNull(polledReference, "Cleaner did not trigger");
+    Mockito.verify(wasmInterface).freeEngine(mockPointer);
+  }
 
   @Test
   void testBuiltInStrategiesAreRetrieved() {

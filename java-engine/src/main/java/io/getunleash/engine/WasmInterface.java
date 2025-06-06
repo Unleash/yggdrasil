@@ -6,6 +6,7 @@ import com.dylibso.chicory.runtime.HostFunction;
 import com.dylibso.chicory.runtime.ImportValues;
 import com.dylibso.chicory.runtime.Instance;
 import com.dylibso.chicory.wasm.types.ValueType;
+import io.getunleash.wasm.YggdrasilModule;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.SecureRandom;
@@ -19,7 +20,6 @@ import messaging.FeatureDefs;
 import messaging.MetricsResponse;
 import messaging.Response;
 import messaging.Variant;
-import org.example.wasm.YggdrasilModule;
 
 interface NativeInterface {
   int newEngine(long timestamp);

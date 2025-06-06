@@ -356,7 +356,7 @@ public class UnleashEngine {
             nativeInterface.freeEngine(enginePtr);
           };
 
-      registerMethod.invoke(cleaner, nativeInterface, cleanupAction);
+      registerMethod.invoke(cleaner, engine, cleanupAction);
     } catch (Exception e) {
       throw new RuntimeException("Failed to dynamically load Cleaner", e);
     }

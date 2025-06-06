@@ -14,7 +14,7 @@ wasm2class {
     modules {
         create("Yggdrasil") {
             wasm = file("../target/wasm32-unknown-unknown/release/pure_wasm.wasm")
-            targetPackage = "org.example.wasm"
+            targetPackage = "io.getunleash.wasm"
         }
     }
 }
