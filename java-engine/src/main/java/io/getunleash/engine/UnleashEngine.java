@@ -49,7 +49,7 @@ public class UnleashEngine {
       IStrategy fallbackStrategy,
       NativeInterface nativeInterface) {
     if (customStrategies != null && !customStrategies.isEmpty()) {
-      List<String> builtInStrategies = new ArrayList<>();
+      List<String> builtInStrategies = getBuiltInStrategies();
       this.customStrategiesEvaluator =
           new CustomStrategiesEvaluator(
               customStrategies.stream(), fallbackStrategy, new HashSet<String>(builtInStrategies));

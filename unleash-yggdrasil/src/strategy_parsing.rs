@@ -149,7 +149,7 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
                     )
                 })
                 .unwrap_or(100);
-            Box::new(move |_: &Context| Some(rand::thread_rng().gen_range(1..value).to_string()))
+            Box::new(move |_: &Context| Some(rand::rng().random_range(1..value).to_string()))
         }
         Rule::property => context_property(child.into_inner()),
         _ => unreachable!(),
