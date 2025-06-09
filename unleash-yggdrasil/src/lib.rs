@@ -566,7 +566,7 @@ impl EngineState {
             .map(|seed| {
                 normalized_hash(group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
             })
-            .unwrap_or_else(|| rand::thread_rng().gen_range(0..total_weight));
+            .unwrap_or_else(|| rand::rng().random_range(0..total_weight));
 
         let mut total_weight = 0;
         for variant in variants {
