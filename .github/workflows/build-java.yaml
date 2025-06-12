@@ -8,16 +8,20 @@ on:
     paths:
       - 'java-engine/src/**/*.java'
       - 'java-engine/build.gradle.kts'
-      # Build in main if anything changes in yggdrasil or the ffi layer
+      # Build in main if anything changes in yggdrasil or the wasm-layer
       - 'unleash-yggdrasil/src/**/*.rs'
-      - 'yggdrasilffi/src/**/*.rs'
+      - 'pure-wasm/src/**/*.rs'
   pull_request:
     paths:
       - 'java-engine/**/*.java'
+  workflow_dispatch:
 
 jobs:
   build-java:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: read
       security-events: write
