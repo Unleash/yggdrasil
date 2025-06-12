@@ -14,7 +14,7 @@ on:
   pull_request:
     paths:
       - 'java-engine/**/*.java'
-
+  workflow_dispatch:
 
 jobs:
   build-java:
