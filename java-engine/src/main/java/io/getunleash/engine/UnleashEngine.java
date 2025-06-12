@@ -5,6 +5,7 @@ import com.google.flatbuffers.FlatBufferBuilder;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -185,7 +186,7 @@ public class UnleashEngine {
   public List<String> takeState(String clientFeatures) throws YggdrasilInvalidInputException {
     try {
       customStrategiesEvaluator.loadStrategiesFor(clientFeatures);
-      byte[] messageBytes = clientFeatures.getBytes();
+      byte[] messageBytes = clientFeatures.getBytes(Charset.forName("UTF-8"));
       nativeInterface.takeState(this.enginePointer, messageBytes);
     } catch (TrapException e) {
       throw e;
