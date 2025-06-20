@@ -41,204 +41,203 @@ class TestSuite {
 
 class UnleashEngineTest {
 
-  String rawState =
-      "{\n"
-          + //
-          "    \"version\": 2,\n"
-          + //
-          "    \"segments\": [\n"
-          + //
-          "        {\n"
-          + //
-          "            \"id\": 1,\n"
-          + //
-          "            \"name\": \"some-name\",\n"
-          + //
-          "            \"description\": null,\n"
-          + //
-          "            \"constraints\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"contextName\": \"some-name\",\n"
-          + //
-          "                    \"operator\": \"IN\",\n"
-          + //
-          "                    \"value\": \"name\",\n"
-          + //
-          "                    \"inverted\": false,\n"
-          + //
-          "                    \"caseInsensitive\": true\n"
-          + //
-          "                }\n"
-          + //
-          "            ]\n"
-          + //
-          "        }\n"
-          + //
-          "    ],\n"
-          + //
-          "    \"features\": [\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"Test.old\",\n"
-          + //
-          "            \"description\": \"No variants here!\",\n"
-          + //
-          "            \"enabled\": true,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"default\"\n"
-          + //
-          "                }\n"
-          + //
-          "            ],\n"
-          + //
-          "            \"variants\": null,\n"
-          + //
-          "            \"createdAt\": \"2019-01-24T10:38:10.370Z\"\n"
-          + //
-          "        },\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"Test.variants\",\n"
-          + //
-          "            \"description\": null,\n"
-          + //
-          "            \"enabled\": true,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"default\",\n"
-          + //
-          "                    \"segments\": [\n"
-          + //
-          "                        1\n"
-          + //
-          "                    ]\n"
-          + //
-          "                }\n"
-          + //
-          "            ],\n"
-          + //
-          "            \"variants\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"variant1\",\n"
-          + //
-          "                    \"weight\": 50\n"
-          + //
-          "                },\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"variant2\",\n"
-          + //
-          "                    \"weight\": 50\n"
-          + //
-          "                }\n"
-          + //
-          "            ],\n"
-          + //
-          "            \"createdAt\": \"2019-01-24T10:41:45.236Z\"\n"
-          + //
-          "        },\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"featureX\",\n"
-          + //
-          "            \"enabled\": true,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"default\"\n"
-          + //
-          "                }\n"
-          + //
-          "            ]\n"
-          + //
-          "        },\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"featureY\",\n"
-          + //
-          "            \"enabled\": false,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"baz\",\n"
-          + //
-          "                    \"parameters\": {\n"
-          + //
-          "                        \"foo\": \"bar\"\n"
-          + //
-          "                    }\n"
-          + //
-          "                }\n"
-          + //
-          "            ]\n"
-          + //
-          "        },\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"featureZ\",\n"
-          + //
-          "            \"enabled\": true,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"default\"\n"
-          + //
-          "                },\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"hola\",\n"
-          + //
-          "                    \"parameters\": {\n"
-          + //
-          "                        \"name\": \"val\"\n"
-          + //
-          "                    },\n"
-          + //
-          "                    \"segments\": [\n"
-          + //
-          "                        1\n"
-          + //
-          "                    ]\n"
-          + //
-          "                }\n"
-          + //
-          "            ]\n"
-          + //
-          "        }\n"
-          + //
-          "    ]\n"
-          + //
-          "}\n"
-          + //
-          "";
+  String rawState = "{\n"
+      + //
+      "    \"version\": 2,\n"
+      + //
+      "    \"segments\": [\n"
+      + //
+      "        {\n"
+      + //
+      "            \"id\": 1,\n"
+      + //
+      "            \"name\": \"some-name\",\n"
+      + //
+      "            \"description\": null,\n"
+      + //
+      "            \"constraints\": [\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"contextName\": \"some-name\",\n"
+      + //
+      "                    \"operator\": \"IN\",\n"
+      + //
+      "                    \"value\": \"name\",\n"
+      + //
+      "                    \"inverted\": false,\n"
+      + //
+      "                    \"caseInsensitive\": true\n"
+      + //
+      "                }\n"
+      + //
+      "            ]\n"
+      + //
+      "        }\n"
+      + //
+      "    ],\n"
+      + //
+      "    \"features\": [\n"
+      + //
+      "        {\n"
+      + //
+      "            \"name\": \"Test.old\",\n"
+      + //
+      "            \"description\": \"No variants here!\",\n"
+      + //
+      "            \"enabled\": true,\n"
+      + //
+      "            \"strategies\": [\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"name\": \"default\"\n"
+      + //
+      "                }\n"
+      + //
+      "            ],\n"
+      + //
+      "            \"variants\": null,\n"
+      + //
+      "            \"createdAt\": \"2019-01-24T10:38:10.370Z\"\n"
+      + //
+      "        },\n"
+      + //
+      "        {\n"
+      + //
+      "            \"name\": \"Test.variants\",\n"
+      + //
+      "            \"description\": null,\n"
+      + //
+      "            \"enabled\": true,\n"
+      + //
+      "            \"strategies\": [\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"name\": \"default\",\n"
+      + //
+      "                    \"segments\": [\n"
+      + //
+      "                        1\n"
+      + //
+      "                    ]\n"
+      + //
+      "                }\n"
+      + //
+      "            ],\n"
+      + //
+      "            \"variants\": [\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"name\": \"variant1\",\n"
+      + //
+      "                    \"weight\": 50\n"
+      + //
+      "                },\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"name\": \"variant2\",\n"
+      + //
+      "                    \"weight\": 50\n"
+      + //
+      "                }\n"
+      + //
+      "            ],\n"
+      + //
+      "            \"createdAt\": \"2019-01-24T10:41:45.236Z\"\n"
+      + //
+      "        },\n"
+      + //
+      "        {\n"
+      + //
+      "            \"name\": \"featureX\",\n"
+      + //
+      "            \"enabled\": true,\n"
+      + //
+      "            \"strategies\": [\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"name\": \"default\"\n"
+      + //
+      "                }\n"
+      + //
+      "            ]\n"
+      + //
+      "        },\n"
+      + //
+      "        {\n"
+      + //
+      "            \"name\": \"featureY\",\n"
+      + //
+      "            \"enabled\": false,\n"
+      + //
+      "            \"strategies\": [\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"name\": \"baz\",\n"
+      + //
+      "                    \"parameters\": {\n"
+      + //
+      "                        \"foo\": \"bar\"\n"
+      + //
+      "                    }\n"
+      + //
+      "                }\n"
+      + //
+      "            ]\n"
+      + //
+      "        },\n"
+      + //
+      "        {\n"
+      + //
+      "            \"name\": \"featureZ\",\n"
+      + //
+      "            \"enabled\": true,\n"
+      + //
+      "            \"strategies\": [\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"name\": \"default\"\n"
+      + //
+      "                },\n"
+      + //
+      "                {\n"
+      + //
+      "                    \"name\": \"hola\",\n"
+      + //
+      "                    \"parameters\": {\n"
+      + //
+      "                        \"name\": \"val\"\n"
+      + //
+      "                    },\n"
+      + //
+      "                    \"segments\": [\n"
+      + //
+      "                        1\n"
+      + //
+      "                    ]\n"
+      + //
+      "                }\n"
+      + //
+      "            ]\n"
+      + //
+      "        }\n"
+      + //
+      "    ]\n"
+      + //
+      "}\n"
+      + //
+      "";
 
   // Assume this is set up to be your feature JSON
-  private final String simpleFeatures =
-      loadFeaturesFromFile("../client-specification/specifications/01-simple-examples.json");
+  private final String simpleFeatures = loadFeaturesFromFile(
+      "../client-specification/specifications/01-simple-examples.json");
 
   public static String loadFeaturesFromFile(String filePath) {
     ObjectMapper mapper = new ObjectMapper();
@@ -293,8 +292,7 @@ class UnleashEngineTest {
     VariantDef variant = engine.getVariant("Feature.A", context).value;
 
     if (variant == null) {
-      variant =
-          new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context).value);
+      variant = new VariantDef("disabled", null, false, engine.isEnabled("Feature.A", context).value);
     }
 
     assertEquals("disabled", variant.getName());
@@ -320,8 +318,7 @@ class UnleashEngineTest {
     List<FeatureDef> features = engine.listKnownToggles();
     assertEquals(1, features.size());
 
-    Optional<FeatureDef> featureA =
-        features.stream().filter(f -> f.getName().equals("Feature.A")).findFirst();
+    Optional<FeatureDef> featureA = features.stream().filter(f -> f.getName().equals("Feature.A")).findFirst();
     assertTrue(featureA.isPresent());
     assertEquals("Feature.A", featureA.get().getName());
     assertEquals("test", featureA.get().getProject());
@@ -336,12 +333,13 @@ class UnleashEngineTest {
     objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     File basePath = Paths.get("../client-specification/specifications").toFile();
     File indexFile = new File(basePath, "index.json");
-    List<String> testSuites =
-        objectMapper.readValue(indexFile, new TypeReference<List<String>>() {});
+    List<String> testSuites = objectMapper.readValue(indexFile, new TypeReference<List<String>>() {
+    });
 
     for (String suite : testSuites) {
       File suiteFile = new File(basePath, suite);
-      TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {});
+      TestSuite suiteData = objectMapper.readValue(suiteFile, new TypeReference<TestSuite>() {
+      });
 
       System.out.println("Executing test suite: " + suiteData.name + "\n");
       engine.takeState(objectMapper.writeValueAsString(suiteData.state));
@@ -378,14 +376,12 @@ class UnleashEngineTest {
           Context context = objectMapper.readValue(contextJson, Context.class);
           String toggleName = (String) test.get("toggleName");
 
-          VariantDef expectedResult =
-              objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
+          VariantDef expectedResult = objectMapper.convertValue(test.get("expectedResult"), VariantDef.class);
           VariantDef result = engine.getVariant(toggleName, context).value;
           if (result == null) {
             // this behavior should be implemented in the SDK
-            result =
-                new VariantDef(
-                    "disabled", null, false, engine.isEnabled(toggleName, context).value);
+            result = new VariantDef(
+                "disabled", null, false, engine.isEnabled(toggleName, context).value);
           }
 
           String expectedResultJson = objectMapper.writeValueAsString(expectedResult);
@@ -405,8 +401,7 @@ class UnleashEngineTest {
   @Test
   void testMetrics() throws YggdrasilError, YggdrasilInvalidInputException {
     UnleashEngine engine = new UnleashEngine();
-    String features =
-        loadFeaturesFromFile("../client-specification/specifications/08-variants.json");
+    String features = loadFeaturesFromFile("../client-specification/specifications/08-variants.json");
     engine.takeState(features);
 
     engine.getVariant("Feature.Variants.A", new Context());
@@ -441,9 +436,9 @@ class UnleashEngineTest {
 
   @ParameterizedTest
   @CsvSource({
-    "with.impression.data, true",
-    "with.impression.data.false, false",
-    "with.impression.data.undefined, false"
+      "with.impression.data, true",
+      "with.impression.data.false, false",
+      "with.impression.data.undefined, false"
   })
   void impressionData_whenFeature_shouldReturn(String featureName, boolean expectedImpressionData)
       throws Exception {
@@ -637,23 +632,64 @@ class UnleashEngineTest {
 
     for (int i = 0; i < 2; i++) {
       new Thread(
-              () -> {
-                try {
-                  for (int j = 0; j < 1000; j++) {
-                    ygg.takeState(features);
-                  }
-                  System.out.println("Thread completed successfully.");
-                } catch (Exception yex) {
-                  yex.printStackTrace();
-                } finally {
-                  latch.countDown();
-                }
-              })
+          () -> {
+            try {
+              for (int j = 0; j < 1000; j++) {
+                ygg.takeState(features);
+              }
+              System.out.println("Thread completed successfully.");
+            } catch (Exception yex) {
+              yex.printStackTrace();
+            } finally {
+              latch.countDown();
+            }
+          })
           .start();
     }
 
     System.out.println("All threads started.");
     latch.await();
+  }
+
+  @Test
+  void testIsEnabledChaosTest() throws Exception {
+    String features = readResource("impression-data-tests.json");
+
+    Random random = new Random();
+    CountDownLatch latch = new CountDownLatch(10);
+
+    for (int i = 0; i < 10; i++) {
+      new Thread(
+          () -> {
+            try {
+              for (int j = 0; j < 1000000; j++) {
+
+                UnleashEngine ygg = new UnleashEngine();
+                ygg.takeState(features);
+                // if (random.nextBoolean()) {
+
+                // } else {
+                //   ygg.takeState(simpleFeatures);
+                // }
+                Context context = ChaosContextFactory.generateRandomContext();
+                WasmResponse<Boolean> response;
+                response = ygg.isEnabled("with.impression.data", context);
+                System.gc();
+                System.out.println("Yerp");
+              }
+
+            } catch (YggdrasilInvalidInputException e) {
+              e.printStackTrace();
+              throw new RuntimeException("Invalid input", e);
+            } finally {
+              latch.countDown();
+            }
+          })
+          .start();
+    }
+    System.out.println("All threads started.");
+    latch.await();
+    System.out.println("All threads completed.");
   }
 
   private void takeFeaturesFromResource(UnleashEngine engine, String resource) {
@@ -670,8 +706,59 @@ class UnleashEngineTest {
         Files.readAllBytes(
             Paths.get(
                 Objects.requireNonNull(
-                        UnleashEngineTest.class.getClassLoader().getResource(resource))
+                    UnleashEngineTest.class.getClassLoader().getResource(resource))
                     .toURI())),
         StandardCharsets.UTF_8);
+  }
+}
+
+class ChaosContextFactory {
+
+  private static final Random random = new Random();
+
+  public static Context generateRandomContext() {
+    Context ctx = new Context();
+
+    if (random.nextBoolean())
+      ctx.setUserId(randomString(random.nextInt(100)));
+    if (random.nextBoolean())
+      ctx.setSessionId(randomString(random.nextInt(200)));
+    if (random.nextBoolean())
+      ctx.setRemoteAddress(randomIp());
+    if (random.nextBoolean())
+      ctx.setEnvironment(randomString(random.nextInt(50)));
+    if (random.nextBoolean())
+      ctx.setAppName(randomString(random.nextInt(50)));
+    if (random.nextBoolean())
+      ctx.setCurrentTime(new Date().toString());
+
+    Map<String, String> properties = new HashMap<>();
+    int propCount = random.nextInt(20); // up to 20 props
+    for (int i = 0; i < propCount; i++) {
+      String key = randomString(random.nextInt(30));
+      String value = randomString(random.nextInt(300)); // large values
+      properties.put(key, value);
+    }
+    ctx.setProperties(properties);
+
+    return ctx;
+  }
+
+  private static String randomString(int length) {
+    String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < length; i++) {
+      sb.append(chars.charAt(random.nextInt(chars.length())));
+    }
+    return sb.toString();
+  }
+
+  private static String randomIp() {
+    return String.format(
+        "%d.%d.%d.%d",
+        random.nextInt(256),
+        random.nextInt(256),
+        random.nextInt(256),
+        random.nextInt(256));
   }
 }
