@@ -662,15 +662,15 @@ class UnleashEngineTest {
       new Thread(
           () -> {
             try {
-              for (int j = 0; j < 1000000; j++) {
+              for (int j = 0; j < 10000000; j++) {
 
                 UnleashEngine ygg = new UnleashEngine();
-                ygg.takeState(features);
-                // if (random.nextBoolean()) {
 
-                // } else {
-                //   ygg.takeState(simpleFeatures);
-                // }
+                if (random.nextBoolean()) {
+                  ygg.takeState(features);
+                } else {
+                  ygg.takeState(simpleFeatures);
+                }
                 Context context = ChaosContextFactory.generateRandomContext();
                 WasmResponse<Boolean> response;
                 response = ygg.isEnabled("with.impression.data", context);
