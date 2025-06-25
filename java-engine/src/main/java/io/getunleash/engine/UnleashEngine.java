@@ -2,6 +2,7 @@ package io.getunleash.engine;
 
 import com.dylibso.chicory.runtime.TrapException;
 import com.google.flatbuffers.FlatBufferBuilder;
+import java.lang.ref.Cleaner;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
@@ -25,7 +26,6 @@ import messaging.ToggleStats;
 import messaging.Variant;
 import messaging.VariantEntry;
 import messaging.VariantPayload;
-import java.lang.ref.Cleaner;
 
 public class UnleashEngine {
   private NativeInterface nativeInterface;
@@ -51,11 +51,12 @@ public class UnleashEngine {
       NativeInterface nativeInterface) {
     if (customStrategies != null && !customStrategies.isEmpty()) {
       List<String> builtInStrategies = getBuiltInStrategies();
-      this.customStrategiesEvaluator = new CustomStrategiesEvaluator(
-          customStrategies.stream(), fallbackStrategy, new HashSet<String>(builtInStrategies));
+      this.customStrategiesEvaluator =
+          new CustomStrategiesEvaluator(
+              customStrategies.stream(), fallbackStrategy, new HashSet<String>(builtInStrategies));
     } else {
-      this.customStrategiesEvaluator = new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy,
-          new HashSet<String>());
+      this.customStrategiesEvaluator =
+          new CustomStrategiesEvaluator(Stream.empty(), fallbackStrategy, new HashSet<String>());
     }
 
     if (nativeInterface != null) {
@@ -72,9 +73,11 @@ public class UnleashEngine {
 
     NativeInterface wasmHook = this.nativeInterface;
 
-    cleaner.register(this, () -> {
-      wasmHook.freeEngine(enginePtr);
-    });
+    cleaner.register(
+        this,
+        () -> {
+          wasmHook.freeEngine(enginePtr);
+        });
   }
 
   private static String getRuntimeHostname() {
@@ -113,7 +116,8 @@ public class UnleashEngine {
         continue;
       }
       int keyOffset = builder.createString(entry.getKey());
-      int propOffset = PropertyEntry.createPropertyEntry(builder, keyOffset, entry.getValue() ? 1 : 0);
+      int propOffset =
+          PropertyEntry.createPropertyEntry(builder, keyOffset, entry.getValue() ? 1 : 0);
       offsets.add(propOffset);
     }
     return offsets.stream().mapToInt(Integer::intValue).toArray();
@@ -127,43 +131,44 @@ public class UnleashEngine {
 
     int userIdOffset = context.getUserId() != null ? builder.createString(context.getUserId()) : 0;
 
-    int sessionIdOffset = context.getSessionId() != null ? builder.createString(context.getSessionId()) : 0;
+    int sessionIdOffset =
+        context.getSessionId() != null ? builder.createString(context.getSessionId()) : 0;
 
-    int appNameOffset = context.getAppName() != null ? builder.createString(context.getAppName()) : 0;
+    int appNameOffset =
+        context.getAppName() != null ? builder.createString(context.getAppName()) : 0;
 
-    int remoteAddressOffset = context.getRemoteAddress() != null ? builder.createString(context.getRemoteAddress()) : 0;
+    int remoteAddressOffset =
+        context.getRemoteAddress() != null ? builder.createString(context.getRemoteAddress()) : 0;
 
-    String currentTime = context.getCurrentTime() != null
-        ? context.getCurrentTime()
-        : java.time.Instant.now().toString();
+    String currentTime =
+        context.getCurrentTime() != null
+            ? context.getCurrentTime()
+            : java.time.Instant.now().toString();
     int currentTimeOffset = builder.createString(currentTime);
 
-    int environmentOffset = context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
+    int environmentOffset =
+        context.getEnvironment() != null ? builder.createString(context.getEnvironment()) : 0;
 
     int[] propertyOffsets = buildProperties(builder, context.getProperties());
     int[] customStrategyResultsOffsets = buildCustomStrategyResults(builder, customStrategyResults);
 
     String runtimeHostname = getRuntimeHostname();
-    int runtimeHostnameOffset = runtimeHostname != null
-        ? builder.createString(runtimeHostname)
-        : builder.createString(getRuntimeHostname());
+    int runtimeHostnameOffset =
+        runtimeHostname != null
+            ? builder.createString(runtimeHostname)
+            : builder.createString(getRuntimeHostname());
 
     int propsVec = ContextMessage.createPropertiesVector(builder, propertyOffsets);
-    int customStrategyResultsVec = ContextMessage.createCustomStrategiesResultsVector(builder,
-        customStrategyResultsOffsets);
+    int customStrategyResultsVec =
+        ContextMessage.createCustomStrategiesResultsVector(builder, customStrategyResultsOffsets);
 
     ContextMessage.startContextMessage(builder);
 
-    if (userIdOffset != 0)
-      ContextMessage.addUserId(builder, userIdOffset);
-    if (sessionIdOffset != 0)
-      ContextMessage.addSessionId(builder, sessionIdOffset);
-    if (appNameOffset != 0)
-      ContextMessage.addAppName(builder, appNameOffset);
-    if (environmentOffset != 0)
-      ContextMessage.addEnvironment(builder, environmentOffset);
-    if (remoteAddressOffset != 0)
-      ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
+    if (userIdOffset != 0) ContextMessage.addUserId(builder, userIdOffset);
+    if (sessionIdOffset != 0) ContextMessage.addSessionId(builder, sessionIdOffset);
+    if (appNameOffset != 0) ContextMessage.addAppName(builder, appNameOffset);
+    if (environmentOffset != 0) ContextMessage.addEnvironment(builder, environmentOffset);
+    if (remoteAddressOffset != 0) ContextMessage.addRemoteAddress(builder, remoteAddressOffset);
     if (runtimeHostnameOffset != 0)
       ContextMessage.addRuntimeHostname(builder, runtimeHostnameOffset);
 
@@ -199,11 +204,12 @@ public class UnleashEngine {
 
     List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
     for (int i = 0; i < featureDefs.itemsLength(); i++) {
-      FeatureDef featureDef = new FeatureDef(
-          featureDefs.items(i).name(),
-          featureDefs.items(i).type(),
-          featureDefs.items(i).project(),
-          featureDefs.items(i).enabled());
+      FeatureDef featureDef =
+          new FeatureDef(
+              featureDefs.items(i).name(),
+              featureDefs.items(i).type(),
+              featureDefs.items(i).project(),
+              featureDefs.items(i).enabled());
       defs.add(featureDef);
     }
 
