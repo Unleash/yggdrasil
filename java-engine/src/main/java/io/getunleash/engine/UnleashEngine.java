@@ -32,6 +32,7 @@ public class UnleashEngine {
   private int enginePointer;
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
   private static final Cleaner cleaner = Cleaner.create();
+  private final Cleaner.Cleanable cleanable;
 
   public UnleashEngine() {
     this(null, null, null);
@@ -72,9 +73,11 @@ public class UnleashEngine {
 
     NativeInterface wasmHook = this.nativeInterface;
 
-    cleaner.register(this, () -> {
-      wasmHook.freeEngine(enginePtr);
-    });
+    cleanable = cleaner.register(
+        this,
+        () -> {
+          wasmHook.freeEngine(enginePtr);
+        });
   }
 
   private static String getRuntimeHostname() {
