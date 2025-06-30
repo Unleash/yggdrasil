@@ -13,6 +13,7 @@ import java.security.SecureRandom;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import messaging.BuiltInStrategies;
 import messaging.CoreVersion;
@@ -40,21 +41,23 @@ interface NativeInterface {
 }
 
 public class WasmInterface implements NativeInterface {
-  private static Instance instance;
-  private static ExportFunction newEngine;
-  private static ExportFunction freeEngine;
-  private static ExportFunction alloc;
-  private static ExportFunction dealloc;
-  private static ExportFunction takeState;
-  private static ExportFunction checkEnabled;
-  private static ExportFunction checkVariant;
-  private static ExportFunction getMetrics;
-  private static ExportFunction deallocResponseBuffer;
-  private static ExportFunction getLogBufferPtr;
-  private static ExportFunction listKnownToggles;
-  private static ExportFunction getCoreVersion;
-  private static ExportFunction getBuiltInStrategies;
-  private static Object engineLock = new Object();
+  private static final Instance instance;
+  private static final ExportFunction newEngine;
+  private static final ExportFunction freeEngine;
+  private static final ExportFunction alloc;
+  private static final ExportFunction dealloc;
+  private static final ExportFunction takeState;
+  private static final ExportFunction checkEnabled;
+  private static final ExportFunction checkVariant;
+  private static final ExportFunction getMetrics;
+  private static final ExportFunction deallocResponseBuffer;
+  private static final ExportFunction getLogBufferPtr;
+  private static final ExportFunction listKnownToggles;
+  private static final ExportFunction getCoreVersion;
+  private static final ExportFunction getBuiltInStrategies;
+  private static final ReentrantReadWriteLock engineLock = new ReentrantReadWriteLock(true);
+  private static final ReentrantReadWriteLock.ReadLock readLock = engineLock.readLock();
+  private static final ReentrantReadWriteLock.WriteLock writeLock = engineLock.writeLock();
 
   static {
     List<ValueType> params = new ArrayList<>();
@@ -91,7 +94,7 @@ public class WasmInterface implements NativeInterface {
         Instance.builder(YggdrasilModule.load())
             .withMachineFactory(YggdrasilModule::create)
             .withImportValues(imports)
-            .withMemoryFactory(limits -> new ByteBufferMemory(limits))
+            .withMemoryFactory(ByteBufferMemory::new)
             .build();
 
     alloc = instance.export("local_alloc");
@@ -111,21 +114,28 @@ public class WasmInterface implements NativeInterface {
 
   @Override
   public int newEngine(long timestamp) {
-    synchronized (engineLock) {
+    writeLock.lock();
+    try {
       return (int) newEngine.apply(timestamp)[0];
+    } finally {
+      writeLock.unlock();
     }
   }
 
   @Override
   public void freeEngine(int ptr) {
-    synchronized (engineLock) {
+    writeLock.lock();
+    try {
       freeEngine.apply(ptr);
+    } finally {
+      writeLock.unlock();
     }
   }
 
   @Override
   public void takeState(int enginePtr, byte[] messageBytes) {
-    synchronized (engineLock) {
+    writeLock.lock();
+    try {
       int len = messageBytes.length;
       int ptr = (int) alloc.apply(len)[0];
 
@@ -133,12 +143,15 @@ public class WasmInterface implements NativeInterface {
       takeState.apply(enginePtr, ptr, len);
 
       dealloc.apply(ptr, len);
+    } finally {
+      writeLock.unlock();
     }
   }
 
   @Override
   public Response checkEnabled(int enginePtr, byte[] contextBytes) {
-    synchronized (engineLock) {
+    readLock.lock();
+    try {
       int contextPtr = (int) alloc.apply(contextBytes.length)[0];
       instance.memory().write(contextPtr, contextBytes);
 
@@ -146,12 +159,15 @@ public class WasmInterface implements NativeInterface {
       Response responseObj = derefWasmPointer(response, Response::getRootAsResponse);
       dealloc.apply(contextPtr, contextBytes.length);
       return responseObj;
+    } finally {
+      readLock.unlock();
     }
   }
 
   @Override
   public Variant checkVariant(int enginePtr, byte[] contextBytes) {
-    synchronized (engineLock) {
+    readLock.lock();
+    try {
       int contextPtr = (int) alloc.apply(contextBytes.length)[0];
       instance.memory().write(contextPtr, contextBytes);
 
@@ -159,14 +175,19 @@ public class WasmInterface implements NativeInterface {
       Variant variant = derefWasmPointer(response, Variant::getRootAsVariant);
       dealloc.apply(contextPtr, contextBytes.length);
       return variant;
+    } finally {
+      readLock.unlock();
     }
   }
 
   @Override
   public MetricsResponse getMetrics(int enginePtr, ZonedDateTime timestamp) {
-    synchronized (engineLock) {
+    readLock.lock();
+    try {
       long packed = getMetrics.apply(enginePtr, timestamp.toInstant().toEpochMilli())[0];
       return derefWasmPointer(packed, MetricsResponse::getRootAsMetricsResponse);
+    } finally {
+      readLock.unlock();
     }
   }
 
@@ -178,25 +199,34 @@ public class WasmInterface implements NativeInterface {
 
   @Override
   public FeatureDefs listKnownToggles(int enginePtr) {
-    synchronized (engineLock) {
+    readLock.lock();
+    try {
       long packed = listKnownToggles.apply(enginePtr)[0];
       return derefWasmPointer(packed, FeatureDefs::getRootAsFeatureDefs);
+    } finally {
+      readLock.unlock();
     }
   }
   ;
 
   public static String getCoreVersion() {
-    synchronized (engineLock) {
+    readLock.lock();
+    try {
       long packed = WasmInterface.getCoreVersion.apply()[0];
       CoreVersion version = derefWasmPointer(packed, CoreVersion::getRootAsCoreVersion);
       return version.version();
+    } finally {
+      readLock.unlock();
     }
   }
 
   public static BuiltInStrategies getBuiltInStrategies() {
-    synchronized (engineLock) {
+    readLock.lock();
+    try {
       long packed = WasmInterface.getBuiltInStrategies.apply()[0];
       return derefWasmPointer(packed, BuiltInStrategies::getRootAsBuiltInStrategies);
+    } finally {
+      readLock.unlock();
     }
   }
 
