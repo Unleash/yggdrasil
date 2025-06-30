@@ -423,7 +423,7 @@ class UnleashEngineTest {
     Instant stop = bucket.getStop();
     assertNotNull(start);
     assertNotNull(stop);
-    assertTrue(stop.isAfter(start)); // unlikely to be equal but could happen
+    assertTrue(!stop.isBefore(start)); // being equal is fine, being before signals some corruption
     assertTrue(start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10
     // seconds of now
 
