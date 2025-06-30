@@ -5,6 +5,7 @@ import com.google.flatbuffers.FlatBufferBuilder;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -13,6 +14,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import messaging.BuiltInStrategies;
 import messaging.ContextMessage;
@@ -28,8 +30,8 @@ import messaging.VariantPayload;
 import java.lang.ref.Cleaner;
 
 public class UnleashEngine {
-  private NativeInterface nativeInterface;
-  private int enginePointer;
+  private final AtomicReference<NativeInterface> nativeInterface = new AtomicReference<NativeInterface>();
+  private final int enginePointer;
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
   private static final Cleaner cleaner = Cleaner.create();
 
@@ -59,21 +61,22 @@ public class UnleashEngine {
     }
 
     if (nativeInterface != null) {
-      this.nativeInterface = nativeInterface;
+      this.nativeInterface.set(nativeInterface);
     } else {
-      this.nativeInterface = new WasmInterface();
+      this.nativeInterface.set(new WasmInterface());
     }
 
     Instant now = Instant.now();
-    int enginePtr;
-
-    enginePtr = this.nativeInterface.newEngine(now.toEpochMilli());
+    final int enginePtr = this.nativeInterface.get().newEngine(now.toEpochMilli());
+    if (enginePtr < 0){
+      throw new IllegalStateException("Failed to create Unleash engine (invalid pointer): " + enginePtr);
+    }
     this.enginePointer = enginePtr;
 
-    NativeInterface wasmHook = this.nativeInterface;
+    final AtomicReference<NativeInterface> wasmHook = this.nativeInterface;
 
     cleaner.register(this, () -> {
-      wasmHook.freeEngine(enginePtr);
+      wasmHook.getAndSet(null).freeEngine(enginePtr);
     });
   }
 
@@ -186,8 +189,8 @@ public class UnleashEngine {
   public List<String> takeState(String clientFeatures) throws YggdrasilInvalidInputException {
     try {
       customStrategiesEvaluator.loadStrategiesFor(clientFeatures);
-      byte[] messageBytes = clientFeatures.getBytes(Charset.forName("UTF-8"));
-      nativeInterface.takeState(this.enginePointer, messageBytes);
+      byte[] messageBytes = clientFeatures.getBytes(StandardCharsets.UTF_8);
+      nativeInterface.get().takeState(this.enginePointer, messageBytes);
     } catch (TrapException e) {
       throw e;
     }
@@ -195,7 +198,7 @@ public class UnleashEngine {
   }
 
   public List<FeatureDef> listKnownToggles() {
-    FeatureDefs featureDefs = nativeInterface.listKnownToggles(this.enginePointer);
+    FeatureDefs featureDefs = nativeInterface.get().listKnownToggles(this.enginePointer);
 
     List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
     for (int i = 0; i < featureDefs.itemsLength(); i++) {
@@ -215,7 +218,7 @@ public class UnleashEngine {
     Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
     byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
 
-    Response response = nativeInterface.checkEnabled(enginePointer, contextBytes);
+    Response response = nativeInterface.get().checkEnabled(enginePointer, contextBytes);
 
     if (response.error() != null) {
       String error = response.error();
@@ -234,7 +237,7 @@ public class UnleashEngine {
     Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
     byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
 
-    Variant variant = nativeInterface.checkVariant(enginePointer, contextBytes);
+    Variant variant = nativeInterface.get().checkVariant(enginePointer, contextBytes);
     if (variant.name() != null) {
       Payload payload = null;
 
@@ -262,7 +265,7 @@ public class UnleashEngine {
   public MetricsBucket getMetrics() {
     ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 
-    MetricsResponse response = nativeInterface.getMetrics(this.enginePointer, now);
+    MetricsResponse response = nativeInterface.get().getMetrics(this.enginePointer, now);
     if (response.togglesVector() == null) {
       return null;
     }
