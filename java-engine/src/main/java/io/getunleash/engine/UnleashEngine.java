@@ -5,7 +5,7 @@ import com.google.flatbuffers.FlatBufferBuilder;
 import java.lang.ref.Cleaner;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -28,8 +28,8 @@ import messaging.VariantEntry;
 import messaging.VariantPayload;
 
 public class UnleashEngine {
-  private NativeInterface nativeInterface;
-  private int enginePointer;
+  private final NativeInterface nativeInterface;
+  private final int enginePointer;
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
   private static final Cleaner cleaner = Cleaner.create();
   private final Cleaner.Cleanable cleanable;
@@ -67,9 +67,11 @@ public class UnleashEngine {
     }
 
     Instant now = Instant.now();
-    int enginePtr;
-
-    enginePtr = this.nativeInterface.newEngine(now.toEpochMilli());
+    final int enginePtr = this.nativeInterface.newEngine(now.toEpochMilli());
+    if (enginePtr <= 0) {
+      throw new IllegalStateException(
+          "Failed to create Unleash engine (invalid pointer): " + enginePtr);
+    }
     this.enginePointer = enginePtr;
 
     NativeInterface wasmHook = this.nativeInterface;
@@ -193,7 +195,7 @@ public class UnleashEngine {
   public List<String> takeState(String clientFeatures) throws YggdrasilInvalidInputException {
     try {
       customStrategiesEvaluator.loadStrategiesFor(clientFeatures);
-      byte[] messageBytes = clientFeatures.getBytes(Charset.forName("UTF-8"));
+      byte[] messageBytes = clientFeatures.getBytes(StandardCharsets.UTF_8);
       nativeInterface.takeState(this.enginePointer, messageBytes);
     } catch (TrapException e) {
       throw e;
