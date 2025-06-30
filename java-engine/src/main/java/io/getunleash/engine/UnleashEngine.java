@@ -69,7 +69,7 @@ public class UnleashEngine {
 
     Instant now = Instant.now();
     final int enginePtr = this.nativeInterface.get().newEngine(now.toEpochMilli());
-    if (enginePtr < 0){
+    if (enginePtr <= 0){
       throw new IllegalStateException("Failed to create Unleash engine (invalid pointer): " + enginePtr);
     }
     this.enginePointer = enginePtr;
