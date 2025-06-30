@@ -34,6 +34,7 @@ public class UnleashEngine {
   private final int enginePointer;
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
   private static final Cleaner cleaner = Cleaner.create();
+  private final Cleaner.Cleanable cleanable;
 
   public UnleashEngine() {
     this(null, null, null);
@@ -75,8 +76,10 @@ public class UnleashEngine {
 
     final AtomicReference<NativeInterface> wasmHook = this.nativeInterface;
 
-    cleaner.register(this, () -> {
-      wasmHook.getAndSet(null).freeEngine(enginePtr);
+    cleanable = cleaner.register(
+        this,
+        () -> {
+          wasmHook.getAndSet(null).freeEngine(enginePtr);
     });
   }
 
