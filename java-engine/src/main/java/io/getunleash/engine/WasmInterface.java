@@ -13,7 +13,6 @@ import java.security.SecureRandom;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import messaging.BuiltInStrategies;
 import messaging.CoreVersion;
@@ -55,9 +54,7 @@ public class WasmInterface implements NativeInterface {
   private static final ExportFunction listKnownToggles;
   private static final ExportFunction getCoreVersion;
   private static final ExportFunction getBuiltInStrategies;
-  private static final ReentrantReadWriteLock engineLock = new ReentrantReadWriteLock(true);
-  private static final ReentrantReadWriteLock.ReadLock readLock = engineLock.readLock();
-  private static final ReentrantReadWriteLock.WriteLock writeLock = engineLock.writeLock();
+  private static Object engineLock = new Object();
 
   static {
     List<ValueType> params = new ArrayList<>();
@@ -114,28 +111,21 @@ public class WasmInterface implements NativeInterface {
 
   @Override
   public int newEngine(long timestamp) {
-    writeLock.lock();
-    try {
+    synchronized (engineLock) {
       return (int) newEngine.apply(timestamp)[0];
-    } finally {
-      writeLock.unlock();
     }
   }
 
   @Override
   public void freeEngine(int ptr) {
-    writeLock.lock();
-    try {
+    synchronized (engineLock) {
       freeEngine.apply(ptr);
-    } finally {
-      writeLock.unlock();
     }
   }
 
   @Override
   public void takeState(int enginePtr, byte[] messageBytes) {
-    writeLock.lock();
-    try {
+    synchronized (engineLock) {
       int len = messageBytes.length;
       int ptr = (int) alloc.apply(len)[0];
 
@@ -143,15 +133,12 @@ public class WasmInterface implements NativeInterface {
       takeState.apply(enginePtr, ptr, len);
 
       dealloc.apply(ptr, len);
-    } finally {
-      writeLock.unlock();
     }
   }
 
   @Override
   public Response checkEnabled(int enginePtr, byte[] contextBytes) {
-    readLock.lock();
-    try {
+    synchronized (engineLock) {
       int contextPtr = (int) alloc.apply(contextBytes.length)[0];
       instance.memory().write(contextPtr, contextBytes);
 
@@ -159,35 +146,27 @@ public class WasmInterface implements NativeInterface {
       Response responseObj = derefWasmPointer(response, Response::getRootAsResponse);
       dealloc.apply(contextPtr, contextBytes.length);
       return responseObj;
-    } finally {
-      readLock.unlock();
     }
   }
 
   @Override
   public Variant checkVariant(int enginePtr, byte[] contextBytes) {
-    readLock.lock();
-    try {
+    synchronized (engineLock) {
       int contextPtr = (int) alloc.apply(contextBytes.length)[0];
-      instance.memory().write(contextPtr, contextBytes);
+        instance.memory().write(contextPtr, contextBytes);
 
       long response = checkVariant.apply(enginePtr, contextPtr, contextBytes.length)[0];
       Variant variant = derefWasmPointer(response, Variant::getRootAsVariant);
       dealloc.apply(contextPtr, contextBytes.length);
       return variant;
-    } finally {
-      readLock.unlock();
     }
   }
 
   @Override
   public MetricsResponse getMetrics(int enginePtr, ZonedDateTime timestamp) {
-    readLock.lock();
-    try {
+    synchronized (engineLock) {
       long packed = getMetrics.apply(enginePtr, timestamp.toInstant().toEpochMilli())[0];
       return derefWasmPointer(packed, MetricsResponse::getRootAsMetricsResponse);
-    } finally {
-      readLock.unlock();
     }
   }
 
@@ -199,34 +178,25 @@ public class WasmInterface implements NativeInterface {
 
   @Override
   public FeatureDefs listKnownToggles(int enginePtr) {
-    readLock.lock();
-    try {
+    synchronized (engineLock) {
       long packed = listKnownToggles.apply(enginePtr)[0];
       return derefWasmPointer(packed, FeatureDefs::getRootAsFeatureDefs);
-    } finally {
-      readLock.unlock();
     }
   }
   ;
 
   public static String getCoreVersion() {
-    readLock.lock();
-    try {
+    synchronized (engineLock) {
       long packed = WasmInterface.getCoreVersion.apply()[0];
       CoreVersion version = derefWasmPointer(packed, CoreVersion::getRootAsCoreVersion);
       return version.version();
-    } finally {
-      readLock.unlock();
     }
   }
 
   public static BuiltInStrategies getBuiltInStrategies() {
-    readLock.lock();
-    try {
+    synchronized (engineLock) {
       long packed = WasmInterface.getBuiltInStrategies.apply()[0];
       return derefWasmPointer(packed, BuiltInStrategies::getRootAsBuiltInStrategies);
-    } finally {
-      readLock.unlock();
     }
   }
 
