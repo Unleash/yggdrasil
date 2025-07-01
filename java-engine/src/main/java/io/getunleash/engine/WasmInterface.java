@@ -153,7 +153,7 @@ public class WasmInterface implements NativeInterface {
   public Variant checkVariant(int enginePtr, byte[] contextBytes) {
     synchronized (engineLock) {
       int contextPtr = (int) alloc.apply(contextBytes.length)[0];
-        instance.memory().write(contextPtr, contextBytes);
+      instance.memory().write(contextPtr, contextBytes);
 
       long response = checkVariant.apply(enginePtr, contextPtr, contextBytes.length)[0];
       Variant variant = derefWasmPointer(response, Variant::getRootAsVariant);
