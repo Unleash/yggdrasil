@@ -9,4 +9,4 @@ rustflags = [
 ]
 
 [target.wasm32-unknown-unknown]
-rustflags = ['--cfg', 'getrandom_backend="custom"']
+rustflags = ['--cfg', 'getrandom_backend="custom"', "-C", "link-args=-z stack-size=2097152"]
