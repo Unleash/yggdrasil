@@ -209,10 +209,11 @@ class UnleashEngineTest {
 
   @Test
   void testMetrics() throws YggdrasilInvalidInputException {
-    String features = "{\"version\":1,\"features\":[" +
-            "{\"name\":\"Feature.Variants.A\",\"enabled\":true,\"strategies\":[],\"variants\":[{\"name\":\"variant1\",\"weight\":1}]}," +
-            "{\"name\":\"Feature.Variants.B\",\"enabled\":true,\"strategies\":[{\"name\":\"userWithId\",\"parameters\":{\"userIds\":\"123\"}}],\"variants\":[]}" +
-            "]}";
+    String features =
+        "{\"version\":1,\"features\":["
+            + "{\"name\":\"Feature.Variants.A\",\"enabled\":true,\"strategies\":[],\"variants\":[{\"name\":\"variant1\",\"weight\":1}]},"
+            + "{\"name\":\"Feature.Variants.B\",\"enabled\":true,\"strategies\":[{\"name\":\"userWithId\",\"parameters\":{\"userIds\":\"123\"}}],\"variants\":[]}"
+            + "]}";
     engine.takeState(features);
 
     engine.getVariant("Feature.Variants.A", new Context());
