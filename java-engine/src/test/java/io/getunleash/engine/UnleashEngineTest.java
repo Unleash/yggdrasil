@@ -404,9 +404,10 @@ class UnleashEngineTest {
 
   @Test
   void testMetrics() throws YggdrasilError, YggdrasilInvalidInputException {
-    UnleashEngine engine = new UnleashEngine();
-    String features =
-        loadFeaturesFromFile("../client-specification/specifications/08-variants.json");
+    String features = "{\"version\":1,\"features\":[" +
+            "{\"name\":\"Feature.Variants.A\",\"enabled\":true,\"strategies\":[],\"variants\":[{\"name\":\"variant1\",\"weight\":1}]}," +
+            "{\"name\":\"Feature.Variants.B\",\"enabled\":true,\"strategies\":[{\"name\":\"userWithId\",\"parameters\":{\"userIds\":\"123\"}}],\"variants\":[]}" +
+            "]}";
     engine.takeState(features);
 
     engine.getVariant("Feature.Variants.A", new Context());
@@ -432,8 +433,8 @@ class UnleashEngineTest {
     assertEquals(1, bucket.getToggles().get("Feature.Variants.A").getVariants().get("variant1"));
     assertNull(bucket.getToggles().get("Missing.Feature"));
 
-    assertEquals(1, bucket.getToggles().get("Feature.Variants.B").getYes());
-    assertEquals(0, bucket.getToggles().get("Feature.Variants.B").getNo());
+    assertEquals(0, bucket.getToggles().get("Feature.Variants.B").getYes());
+    assertEquals(1, bucket.getToggles().get("Feature.Variants.B").getNo());
 
     assertEquals(0, bucket.getToggles().get("Missing.but.checked").getYes());
     assertEquals(2, bucket.getToggles().get("Missing.but.checked").getNo());
