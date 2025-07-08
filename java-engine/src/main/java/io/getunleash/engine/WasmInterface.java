@@ -40,20 +40,20 @@ interface NativeInterface {
 }
 
 public class WasmInterface implements NativeInterface {
-  private static Instance instance;
-  private static ExportFunction newEngine;
-  private static ExportFunction freeEngine;
-  private static ExportFunction alloc;
-  private static ExportFunction dealloc;
-  private static ExportFunction takeState;
-  private static ExportFunction checkEnabled;
-  private static ExportFunction checkVariant;
-  private static ExportFunction getMetrics;
-  private static ExportFunction deallocResponseBuffer;
-  private static ExportFunction getLogBufferPtr;
-  private static ExportFunction listKnownToggles;
-  private static ExportFunction getCoreVersion;
-  private static ExportFunction getBuiltInStrategies;
+  private static final Instance instance;
+  private static final ExportFunction newEngine;
+  private static final ExportFunction freeEngine;
+  private static final ExportFunction alloc;
+  private static final ExportFunction dealloc;
+  private static final ExportFunction takeState;
+  private static final ExportFunction checkEnabled;
+  private static final ExportFunction checkVariant;
+  private static final ExportFunction getMetrics;
+  private static final ExportFunction deallocResponseBuffer;
+  private static final ExportFunction getLogBufferPtr;
+  private static final ExportFunction listKnownToggles;
+  private static final ExportFunction getCoreVersion;
+  private static final ExportFunction getBuiltInStrategies;
   private static Object engineLock = new Object();
 
   static {
@@ -91,7 +91,7 @@ public class WasmInterface implements NativeInterface {
         Instance.builder(YggdrasilModule.load())
             .withMachineFactory(YggdrasilModule::create)
             .withImportValues(imports)
-            .withMemoryFactory(limits -> new ByteBufferMemory(limits))
+            .withMemoryFactory(ByteBufferMemory::new)
             .build();
 
     alloc = instance.export("local_alloc");

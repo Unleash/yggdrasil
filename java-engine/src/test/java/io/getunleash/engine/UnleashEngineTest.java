@@ -41,201 +41,6 @@ class TestSuite {
 
 class UnleashEngineTest {
 
-  String rawState =
-      "{\n"
-          + //
-          "    \"version\": 2,\n"
-          + //
-          "    \"segments\": [\n"
-          + //
-          "        {\n"
-          + //
-          "            \"id\": 1,\n"
-          + //
-          "            \"name\": \"some-name\",\n"
-          + //
-          "            \"description\": null,\n"
-          + //
-          "            \"constraints\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"contextName\": \"some-name\",\n"
-          + //
-          "                    \"operator\": \"IN\",\n"
-          + //
-          "                    \"value\": \"name\",\n"
-          + //
-          "                    \"inverted\": false,\n"
-          + //
-          "                    \"caseInsensitive\": true\n"
-          + //
-          "                }\n"
-          + //
-          "            ]\n"
-          + //
-          "        }\n"
-          + //
-          "    ],\n"
-          + //
-          "    \"features\": [\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"Test.old\",\n"
-          + //
-          "            \"description\": \"No variants here!\",\n"
-          + //
-          "            \"enabled\": true,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"default\"\n"
-          + //
-          "                }\n"
-          + //
-          "            ],\n"
-          + //
-          "            \"variants\": null,\n"
-          + //
-          "            \"createdAt\": \"2019-01-24T10:38:10.370Z\"\n"
-          + //
-          "        },\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"Test.variants\",\n"
-          + //
-          "            \"description\": null,\n"
-          + //
-          "            \"enabled\": true,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"default\",\n"
-          + //
-          "                    \"segments\": [\n"
-          + //
-          "                        1\n"
-          + //
-          "                    ]\n"
-          + //
-          "                }\n"
-          + //
-          "            ],\n"
-          + //
-          "            \"variants\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"variant1\",\n"
-          + //
-          "                    \"weight\": 50\n"
-          + //
-          "                },\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"variant2\",\n"
-          + //
-          "                    \"weight\": 50\n"
-          + //
-          "                }\n"
-          + //
-          "            ],\n"
-          + //
-          "            \"createdAt\": \"2019-01-24T10:41:45.236Z\"\n"
-          + //
-          "        },\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"featureX\",\n"
-          + //
-          "            \"enabled\": true,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"default\"\n"
-          + //
-          "                }\n"
-          + //
-          "            ]\n"
-          + //
-          "        },\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"featureY\",\n"
-          + //
-          "            \"enabled\": false,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"baz\",\n"
-          + //
-          "                    \"parameters\": {\n"
-          + //
-          "                        \"foo\": \"bar\"\n"
-          + //
-          "                    }\n"
-          + //
-          "                }\n"
-          + //
-          "            ]\n"
-          + //
-          "        },\n"
-          + //
-          "        {\n"
-          + //
-          "            \"name\": \"featureZ\",\n"
-          + //
-          "            \"enabled\": true,\n"
-          + //
-          "            \"strategies\": [\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"default\"\n"
-          + //
-          "                },\n"
-          + //
-          "                {\n"
-          + //
-          "                    \"name\": \"hola\",\n"
-          + //
-          "                    \"parameters\": {\n"
-          + //
-          "                        \"name\": \"val\"\n"
-          + //
-          "                    },\n"
-          + //
-          "                    \"segments\": [\n"
-          + //
-          "                        1\n"
-          + //
-          "                    ]\n"
-          + //
-          "                }\n"
-          + //
-          "            ]\n"
-          + //
-          "        }\n"
-          + //
-          "    ]\n"
-          + //
-          "}\n"
-          + //
-          "";
-
   // Assume this is set up to be your feature JSON
   private final String simpleFeatures =
       loadFeaturesFromFile("../client-specification/specifications/01-simple-examples.json");
@@ -403,10 +208,12 @@ class UnleashEngineTest {
   }
 
   @Test
-  void testMetrics() throws YggdrasilError, YggdrasilInvalidInputException {
-    UnleashEngine engine = new UnleashEngine();
+  void testMetrics() throws YggdrasilInvalidInputException {
     String features =
-        loadFeaturesFromFile("../client-specification/specifications/08-variants.json");
+        "{\"version\":1,\"features\":["
+            + "{\"name\":\"Feature.Variants.A\",\"enabled\":true,\"strategies\":[],\"variants\":[{\"name\":\"variant1\",\"weight\":1}]},"
+            + "{\"name\":\"Feature.Variants.B\",\"enabled\":true,\"strategies\":[{\"name\":\"userWithId\",\"parameters\":{\"userIds\":\"123\"}}],\"variants\":[]}"
+            + "]}";
     engine.takeState(features);
 
     engine.getVariant("Feature.Variants.A", new Context());
@@ -414,7 +221,6 @@ class UnleashEngineTest {
     engine.getVariant("Missing.but.checked", new Context());
     engine.getVariant("Missing.but.checked", new Context());
 
-    // engine.countToggle("Feature.C", false);
     MetricsBucket bucket = engine.getMetrics();
 
     assertNotNull(bucket);
@@ -423,7 +229,7 @@ class UnleashEngineTest {
     Instant stop = bucket.getStop();
     assertNotNull(start);
     assertNotNull(stop);
-    assertTrue(stop.isAfter(start)); // unlikely to be equal but could happen
+    assertFalse(stop.isBefore(start)); // being equal is fine, being before signals some corruption
     assertTrue(start.until(Instant.now(), ChronoUnit.SECONDS) < 10); // should be within 10
     // seconds of now
 
@@ -432,8 +238,8 @@ class UnleashEngineTest {
     assertEquals(1, bucket.getToggles().get("Feature.Variants.A").getVariants().get("variant1"));
     assertNull(bucket.getToggles().get("Missing.Feature"));
 
-    assertEquals(1, bucket.getToggles().get("Feature.Variants.B").getYes());
-    assertEquals(0, bucket.getToggles().get("Feature.Variants.B").getNo());
+    assertEquals(0, bucket.getToggles().get("Feature.Variants.B").getYes());
+    assertEquals(1, bucket.getToggles().get("Feature.Variants.B").getNo());
 
     assertEquals(0, bucket.getToggles().get("Missing.but.checked").getYes());
     assertEquals(2, bucket.getToggles().get("Missing.but.checked").getNo());

@@ -237,7 +237,7 @@ pub extern "C" fn check_variant(engine_ptr: i32, message_ptr: i32, message_len: 
         let variant = engine.check_variant(&context);
         let enabled = engine.check_enabled(&context).unwrap_or_default();
 
-        engine.count_toggle(&context.toggle_name, variant.is_some());
+        engine.count_toggle(&context.toggle_name, enabled);
 
         if let Some(variant) = &variant {
             engine.count_variant(&context.toggle_name, &variant.name);

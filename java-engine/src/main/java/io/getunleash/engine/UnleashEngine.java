@@ -2,10 +2,10 @@ package io.getunleash.engine;
 
 import com.dylibso.chicory.runtime.TrapException;
 import com.google.flatbuffers.FlatBufferBuilder;
-import java.lang.reflect.Method;
+import java.lang.ref.Cleaner;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -28,10 +28,11 @@ import messaging.VariantEntry;
 import messaging.VariantPayload;
 
 public class UnleashEngine {
-  private NativeInterface nativeInterface;
-  private int enginePointer;
+  private final NativeInterface nativeInterface;
+  private final int enginePointer;
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
-  private Object cleaner = setupCleaner();
+  private static final Cleaner cleaner = Cleaner.create();
+  private final Cleaner.Cleanable cleanable;
 
   public UnleashEngine() {
     this(null, null, null);
@@ -66,13 +67,21 @@ public class UnleashEngine {
     }
 
     Instant now = Instant.now();
-    int enginePtr;
-
-    enginePtr = this.nativeInterface.newEngine(now.toEpochMilli());
-    this.enginePointer = enginePtr;
-    if (cleanerIsSupported()) {
-      registerWithCleaner(this, enginePtr);
+    final int enginePtr = this.nativeInterface.newEngine(now.toEpochMilli());
+    if (enginePtr <= 0) {
+      throw new IllegalStateException(
+          "Failed to create Unleash engine (invalid pointer): " + enginePtr);
     }
+    this.enginePointer = enginePtr;
+
+    NativeInterface wasmHook = this.nativeInterface;
+
+    cleanable =
+        cleaner.register(
+            this,
+            () -> {
+              wasmHook.freeEngine(enginePtr);
+            });
   }
 
   private static String getRuntimeHostname() {
@@ -186,7 +195,7 @@ public class UnleashEngine {
   public List<String> takeState(String clientFeatures) throws YggdrasilInvalidInputException {
     try {
       customStrategiesEvaluator.loadStrategiesFor(clientFeatures);
-      byte[] messageBytes = clientFeatures.getBytes(Charset.forName("UTF-8"));
+      byte[] messageBytes = clientFeatures.getBytes(StandardCharsets.UTF_8);
       nativeInterface.takeState(this.enginePointer, messageBytes);
     } catch (TrapException e) {
       throw e;
@@ -306,60 +315,5 @@ public class UnleashEngine {
     }
 
     return builtInStrategies;
-  }
-
-  static boolean cleanerIsSupported() {
-    String version = System.getProperty("java.version");
-    if (version.startsWith("1.")) {
-      int minorVersion = Integer.parseInt(version.substring(2, 3));
-      return minorVersion > 8;
-    }
-    return true;
-  }
-
-  @Override
-  protected void finalize() {
-    if (cleanerIsSupported()) {
-      return;
-    }
-    try {
-
-      nativeInterface.freeEngine(this.enginePointer);
-    } catch (Exception e) {
-      System.err.println("Failed to release native resource: " + e.getMessage());
-    }
-  }
-
-  private static Object setupCleaner() {
-    if (!cleanerIsSupported()) {
-      return null;
-    }
-
-    try {
-      Class<?> cleanerClass = Class.forName("java.lang.ref.Cleaner");
-
-      Method createMethod = cleanerClass.getMethod("create");
-      return createMethod.invoke(null);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to dynamically load Cleaner", e);
-    }
-  }
-
-  private void registerWithCleaner(UnleashEngine engine, int enginePtr) {
-    try {
-      Class<?> cleanerClass = Class.forName("java.lang.ref.Cleaner");
-      Method registerMethod = cleanerClass.getMethod("register", Object.class, Runnable.class);
-
-      // Avoid capturing the engine itself in the lambda, otherwise this prevents GC!
-      NativeInterface nativeInterface = engine.nativeInterface;
-      Runnable cleanupAction =
-          () -> {
-            nativeInterface.freeEngine(enginePtr);
-          };
-
-      registerMethod.invoke(cleaner, engine, cleanupAction);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to dynamically load Cleaner", e);
-    }
   }
 }
