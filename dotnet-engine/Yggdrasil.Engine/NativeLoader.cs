@@ -52,9 +52,16 @@ internal static class NativeLibLoader
         if (os == "linux" && IsMusl())
             libc = "-musl";
 
+        var versionAttribute = Assembly
+            .GetExecutingAssembly()
+            .GetCustomAttribute<YggdrasilCoreVersionAttribute>();
+        if (versionAttribute == null)
+            throw new InvalidOperationException("YggdrasilCoreVersionAttribute was not defined on the assembly.");
+        var versionString = versionAttribute.Version;
+
         string filename = os == "win"
-            ? $"yggdrasilffi_{arch}.dll"
-            : $"libyggdrasilffi_{arch}{libc}.{(os == "osx" ? "dylib" : "so")}";
+            ? $"yggdrasilffi_{arch}_{versionString}.dll"
+            : $"libyggdrasilffi_{arch}{libc}_{versionString}.{(os == "osx" ? "dylib" : "so")}";
 
         return filename;
     }
