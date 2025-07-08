@@ -56,7 +56,7 @@ public class Payload
     public string Type { get; set; }
     public string Value { get; set; }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (obj == this) return true;
         if (obj == null) return false;
