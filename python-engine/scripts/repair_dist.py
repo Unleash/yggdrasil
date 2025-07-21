@@ -17,7 +17,7 @@ for whl in wheels:
     new_path = os.path.join("staging", new_name)
 
     with zipfile.ZipFile(old_path) as old_zip_file:
-        with zipfile.ZipFile(new_path, 'a') as new_zip_file:
+        with zipfile.ZipFile(new_path, "a") as new_zip_file:
             for item in old_zip_file.namelist():
 
                 if item.endswith(".dist-info/WHEEL"):
@@ -35,3 +35,10 @@ for whl in wheels:
                     new_zip_file.writestr(item, old_zip_file.read(item))
 
     print(f"Repaired wheel at {old_path} and moved to {new_path}")
+
+tarballs = glob.glob("dist/*.tar.gz")
+for tarball in tarballs:
+    base_name = os.path.basename(tarball)
+    new_path = os.path.join("staging", base_name)
+    os.rename(tarball, new_path)
+    print(f"Moved tarball {tarball} to {new_path}")
