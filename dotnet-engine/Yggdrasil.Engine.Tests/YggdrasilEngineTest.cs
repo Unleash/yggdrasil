@@ -290,18 +290,18 @@ public class Tests
     public void GetState_AndRoundtrip()
     {
         var engine = new YggdrasilEngine();
-        
+
         // Test empty engine
         var emptyState = engine.GetState();
         StringAssert.Contains("\"features\":[]", emptyState);
-        
+
         // Test roundtrip
         var testState = "{\"version\":1,\"features\":[{\"name\":\"testFeature\",\"enabled\":true,\"strategies\":[{\"name\":\"default\"}]}]}";
         engine.TakeState(testState);
         var retrievedState = engine.GetState();
-        
+
         StringAssert.Contains("testFeature", retrievedState);
-        
+
         // Compare JSON equality
         var originalJson = JObject.Parse(testState);
         var retrievedJson = JObject.Parse(retrievedState);
