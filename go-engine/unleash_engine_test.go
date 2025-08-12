@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"strings"
 	"testing"
 )
 
@@ -15,6 +16,40 @@ func TestTakeState(t *testing.T) {
 
 	engine := NewUnleashEngine()
 	engine.TakeState(string(jsonData))
+}
+
+func TestGetStateAndRoundtrip(t *testing.T) {
+	engine := NewUnleashEngine()
+	
+	// Test empty engine
+	emptyState := engine.GetState()
+	if !strings.Contains(emptyState, `"features":[]`) {
+		t.Fatalf("Empty engine should return features array")
+	}
+	
+	// Test roundtrip
+	testState := `{"version":1,"features":[{"name":"testFeature","enabled":true,"strategies":[{"name":"default"}]}]}`
+	engine.TakeState(testState)
+	retrievedState := engine.GetState()
+	
+	if !strings.Contains(retrievedState, "testFeature") {
+		t.Fatalf("Retrieved state should contain testFeature")
+	}
+	
+	// Compare JSON equality
+	var original, retrieved map[string]interface{}
+	if err := json.Unmarshal([]byte(testState), &original); err != nil {
+		t.Fatalf("Failed to parse original state: %v", err)
+	}
+	if err := json.Unmarshal([]byte(retrievedState), &retrieved); err != nil {
+		t.Fatalf("Failed to parse retrieved state: %v", err)
+	}
+	
+	originalJSON, _ := json.Marshal(original)
+	retrievedJSON, _ := json.Marshal(retrieved)
+	if string(originalJSON) != string(retrievedJSON) {
+		t.Fatalf("Roundtrip failed: original != retrieved")
+	}
 }
 
 func TestIsEnabled(t *testing.T) {

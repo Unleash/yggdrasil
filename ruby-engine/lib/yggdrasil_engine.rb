@@ -58,6 +58,7 @@ class YggdrasilEngine
   attach_function :free_engine, [:pointer], :void
 
   attach_function :take_state, %i[pointer string], :pointer
+  attach_function :get_state, [:pointer], :pointer
   attach_function :check_enabled, %i[pointer string string string], :pointer
   attach_function :check_variant, %i[pointer string string string], :pointer
   attach_function :get_metrics, [:pointer], :pointer
@@ -83,6 +84,13 @@ class YggdrasilEngine
     response_ptr = YggdrasilEngine.take_state(@engine, toggles)
     take_toggles_response = JSON.parse(response_ptr.read_string, symbolize_names: true)
     YggdrasilEngine.free_response(response_ptr)
+  end
+
+  def get_state
+    response_ptr = YggdrasilEngine.get_state(@engine)
+    state_json = response_ptr.read_string
+    YggdrasilEngine.free_response(response_ptr)
+    state_json
   end
 
   def get_variant(name, context)

@@ -50,6 +50,12 @@ public class YggdrasilEngine
         customStrategies.MapFeatures(json);
     }
 
+    public string GetState()
+    {
+        var getStatePtr = FFI.GetState(state);
+        return FFIReader.ReadComplex<string>(getStatePtr) ?? "{\"version\":2,\"features\":[]}";
+    }
+
     public bool? IsEnabled(string toggleName, Context context)
     {
         var customStrategyPayload = customStrategies.GetCustomStrategyPayload(toggleName, context);

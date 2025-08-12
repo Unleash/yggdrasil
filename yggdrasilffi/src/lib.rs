@@ -10,6 +10,7 @@ use std::{
 use chrono::Utc;
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use unleash_types::client_features::ClientFeatures;
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{
     state::EnrichedContext, Context, EngineState, EvalWarning, ExtendedVariantDef,
@@ -189,6 +190,23 @@ pub unsafe extern "C" fn take_state(
         } else {
             Ok(Some(()))
         }
+    })();
+
+    result_to_json_ptr(result)
+}
+
+/// Gets the current state of the engine as a JSON encoded `ClientFeatures` structure.
+///
+/// # Safety
+///
+/// This function dereferences the engine_ptr argument, and so this function should not
+/// be called with a null pointer.
+#[no_mangle]
+pub unsafe extern "C" fn get_state(engine_ptr: *mut c_void) -> *const c_char {
+    let result: Result<Option<ClientFeatures>, FFIError> = (|| {
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+        Ok(Some(engine.get_state()))
     })();
 
     result_to_json_ptr(result)
