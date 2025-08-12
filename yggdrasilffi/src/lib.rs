@@ -203,10 +203,10 @@ pub unsafe extern "C" fn take_state(
 /// be called with a null pointer.
 #[no_mangle]
 pub unsafe extern "C" fn get_state(engine_ptr: *mut c_void) -> *const c_char {
-    let result: Result<ClientFeatures, FFIError> = (|| {
+    let result: Result<Option<ClientFeatures>, FFIError> = (|| {
         let guard = get_engine(engine_ptr)?;
         let engine = recover_lock(&guard);
-        Ok(engine.get_state())
+        Ok(Some(engine.get_state()))
     })();
 
     result_to_json_ptr(result)
