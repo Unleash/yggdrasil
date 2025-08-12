@@ -50,6 +50,18 @@ class UnleashEngine
         return $this->ffi->engine_take_state($this->state, $json);
     }
 
+    public function getState(): string
+    {
+        $result = $this->ffi->get_state($this->state);
+        if ($result == null) {
+            // Shouldn't happen anymore, but return empty state as fallback
+            return '{"version":2,"features":[]}';
+        }
+        $state_json = FFI::string($result);
+        $this->ffi->free_response($result);
+        return $state_json;
+    }
+
     public function getVariant(string $toggle_name, Context $context): ?stdClass
     {
         $context_json = json_encode($context);

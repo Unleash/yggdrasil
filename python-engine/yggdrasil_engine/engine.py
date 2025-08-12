@@ -132,6 +132,9 @@ class UnleashEngine:
         self.lib.get_metrics.argtypes = [ctypes.c_void_p]
         self.lib.get_metrics.restype = ctypes.POINTER(ctypes.c_char)
 
+        self.lib.get_state.argtypes = [ctypes.c_void_p]
+        self.lib.get_state.restype = ctypes.POINTER(ctypes.c_char)
+
         self.lib.count_toggle.argtypes = [
             ctypes.c_void_p,
             ctypes.c_char_p,
@@ -181,6 +184,11 @@ class UnleashEngine:
                 )
                 return warnings
             return None
+
+    def get_state(self) -> str:
+        response_ptr = self.lib.get_state(self.state)
+        with self.materialize_pointer(response_ptr, str) as result:
+            return result.value
 
     def is_enabled(self, toggle_name: str, context: dict) -> Optional[bool]:
         serialized_context = json.dumps(context or {})

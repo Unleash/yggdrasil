@@ -32,6 +32,23 @@ final class UnleashEngineTest extends TestCase
         $this->assertNotNull($result);
     }
 
+    public function testGetStateAndRoundtrip()
+    {
+        $engine = new UnleashEngine();
+        
+        // Test empty engine
+        $emptyState = $engine->getState();
+        $this->assertStringContainsString('"features":[]', $emptyState);
+        
+        // Test roundtrip
+        $testState = '{"version":1,"features":[{"name":"testFeature","enabled":true,"strategies":[{"name":"default"}]}]}';
+        $engine->takeState($testState);
+        $retrievedState = $engine->getState();
+        
+        $this->assertStringContainsString('testFeature', $retrievedState);
+        $this->assertEquals(json_decode($testState, true), json_decode($retrievedState, true));
+    }
+
     public function testIsEnabled()
     {
         $engine = new UnleashEngine();

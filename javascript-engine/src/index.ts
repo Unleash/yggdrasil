@@ -43,6 +43,12 @@ export class UnleashEngine {
     this.strategies.mapFeatures(state)
   }
 
+  public getState(): string {
+    const response = this.engine.getState()
+    checkResponse(response)
+    return JSON.stringify(response.value)
+  }
+
   public isEnabled(toggleName: string, context: Context): boolean | undefined {
     const customStrategyPayload = this.strategies.getCustomStrategyPayload(
       toggleName,

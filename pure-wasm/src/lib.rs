@@ -192,6 +192,22 @@ pub extern "C" fn take_state(engine_ptr: u32, json_ptr: u32, json_len: u32) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn get_state(engine_ptr: u32) -> u32 {
+    let lock = unsafe { get_engine(engine_ptr as *const u32).unwrap() };
+    let engine = recover_lock(&lock);
+
+    let state = engine.get_state();
+    if let Ok(json_str) = serde_json::to_string(&state) {
+        let json_bytes = json_str.as_bytes();
+        let json_ptr = json_bytes.as_ptr() as u32;
+        std::mem::forget(json_str); // Prevent automatic deallocation
+        return json_ptr;
+    }
+    
+    0 // Return null pointer only if serialization failed (shouldn't happen)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn check_enabled(engine_ptr: i32, message_ptr: i32, message_len: i32) -> u64 {
     let enabled: Result<ResponseMessage<bool>, WasmError> = (|| {
         let bytes =

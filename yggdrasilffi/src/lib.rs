@@ -15,6 +15,7 @@ use unleash_yggdrasil::{
     state::EnrichedContext, Context, EngineState, EvalWarning, ExtendedVariantDef,
     ToggleDefinition, UpdateMessage, CORE_VERSION, KNOWN_STRATEGIES,
 };
+use unleash_types::client_features::ClientFeatures;
 
 static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
     std::sync::LazyLock::new(|| CString::new(CORE_VERSION).expect("CString::new failed"));
@@ -189,6 +190,23 @@ pub unsafe extern "C" fn take_state(
         } else {
             Ok(Some(()))
         }
+    })();
+
+    result_to_json_ptr(result)
+}
+
+/// Gets the current state of the engine as a JSON encoded `ClientFeatures` structure.
+///
+/// # Safety
+///
+/// This function dereferences the engine_ptr argument, and so this function should not
+/// be called with a null pointer.
+#[no_mangle]
+pub unsafe extern "C" fn get_state(engine_ptr: *mut c_void) -> *const c_char {
+    let result: Result<ClientFeatures, FFIError> = (|| {
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+        Ok(engine.get_state())
     })();
 
     result_to_json_ptr(result)

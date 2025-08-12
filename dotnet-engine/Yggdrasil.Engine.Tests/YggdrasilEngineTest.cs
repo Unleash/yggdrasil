@@ -285,4 +285,26 @@ public class Tests
         var knownFeatures = engine.ListKnownToggles();
         Assert.AreEqual(1, knownFeatures.Count);
     }
+
+    [Test]
+    public void GetState_AndRoundtrip()
+    {
+        var engine = new YggdrasilEngine();
+        
+        // Test empty engine
+        var emptyState = engine.GetState();
+        StringAssert.Contains("\"features\":[]", emptyState);
+        
+        // Test roundtrip
+        var testState = "{\"version\":1,\"features\":[{\"name\":\"testFeature\",\"enabled\":true,\"strategies\":[{\"name\":\"default\"}]}]}";
+        engine.TakeState(testState);
+        var retrievedState = engine.GetState();
+        
+        StringAssert.Contains("testFeature", retrievedState);
+        
+        // Compare JSON equality
+        var originalJson = JObject.Parse(testState);
+        var retrievedJson = JObject.Parse(retrievedState);
+        Assert.AreEqual(originalJson.ToString(), retrievedJson.ToString());
+    }
 }

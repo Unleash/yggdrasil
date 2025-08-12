@@ -70,6 +70,17 @@ impl Engine {
         serde_wasm_bindgen::to_value(&response).unwrap()
     }
 
+    #[wasm_bindgen(js_name = getState)]
+    pub fn get_state(&self) -> JsValue {
+        let state = self.engine.get_state();
+        let response = Response {
+            status_code: ResponseCode::Ok,
+            value: Some(state),
+            error_message: None,
+        };
+        serde_wasm_bindgen::to_value(&response).unwrap()
+    }
+
     #[wasm_bindgen(js_name = checkEnabled)]
     pub fn check_enabled(
         &self,

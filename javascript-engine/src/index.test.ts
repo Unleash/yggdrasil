@@ -31,6 +31,30 @@ const getDisabledVariant = (featureEnabled: boolean) => ({
   featureEnabled
 })
 
+describe('Get State Tests', () => {
+  test('getState and roundtrip', () => {
+    const engine = new UnleashEngine()
+    
+    // Test empty engine
+    const emptyState = engine.getState()
+    expect(emptyState).toContain('"features":[]')
+    
+    // Test roundtrip
+    const testState: State = {
+      version: 1,
+      features: [
+        { name: 'testFeature', enabled: true, strategies: [{ name: 'default' }] }
+      ]
+    }
+    
+    engine.takeState(testState)
+    const retrievedState = engine.getState()
+    
+    expect(retrievedState).toContain('testFeature')
+    expect(JSON.parse(retrievedState)).toEqual(testState)
+  })
+})
+
 describe('Client Spec Tests', () => {
   test('Client Spec', async () => {
     const basePath = '../client-specification/specifications'
