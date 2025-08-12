@@ -53,7 +53,7 @@ public class YggdrasilEngine
     public string GetState()
     {
         var getStatePtr = FFI.GetState(state);
-        return FFIReader.ReadString(getStatePtr) ?? "{\"version\":2,\"features\":[]}";
+        return FFIReader.ReadComplex<string>(getStatePtr) ?? "{\"version\":2,\"features\":[]}";
     }
 
     public bool? IsEnabled(string toggleName, Context context)
