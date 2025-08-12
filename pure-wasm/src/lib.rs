@@ -203,7 +203,7 @@ pub extern "C" fn get_state(engine_ptr: u32) -> u32 {
         std::mem::forget(json_str); // Prevent automatic deallocation
         return json_ptr;
     }
-    
+
     0 // Return null pointer only if serialization failed (shouldn't happen)
 }
 

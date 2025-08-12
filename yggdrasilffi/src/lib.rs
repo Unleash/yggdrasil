@@ -10,12 +10,12 @@ use std::{
 use chrono::Utc;
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use unleash_types::client_features::ClientFeatures;
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{
     state::EnrichedContext, Context, EngineState, EvalWarning, ExtendedVariantDef,
     ToggleDefinition, UpdateMessage, CORE_VERSION, KNOWN_STRATEGIES,
 };
-use unleash_types::client_features::ClientFeatures;
 
 static CORE_VERSION_CSTRING: std::sync::LazyLock<CString> =
     std::sync::LazyLock::new(|| CString::new(CORE_VERSION).expect("CString::new failed"));
