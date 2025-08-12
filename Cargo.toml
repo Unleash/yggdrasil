@@ -5,5 +5,5 @@ members = [
   "pure-wasm",
   "unleash-yggdrasil",
   "yggdrasilffi",
+  "yggdrasilwasm",
 ]
-
