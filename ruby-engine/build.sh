@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cargo build --release
+cargo build --release -p yggdrasilffi
 
 ## Start copy the correct binary to the correct name
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
