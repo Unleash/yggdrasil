@@ -31,7 +31,7 @@ type RawPointerDataType = Mutex<EngineState>;
 type ManagedEngine = Arc<RawPointerDataType>;
 type CustomStrategyResults = HashMap<String, bool>;
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 enum ResponseCode {
     Error = -2,
     NotFound = -1,
@@ -730,6 +730,77 @@ mod tests {
             assert_eq!(known_features.len(), 2);
             assert!(known_features.iter().any(|t| t.name == "toggle1"));
             assert!(known_features.iter().any(|t| t.name == "toggle2"));
+        }
+    }
+
+    #[test]
+    fn get_state_returns_default_when_no_features_loaded() {
+        let engine_ptr = new_engine();
+
+        unsafe {
+            let string_response = get_state(engine_ptr);
+            let response = CStr::from_ptr(string_response).to_str().unwrap();
+            let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
+
+            assert_eq!(state_response.status_code, ResponseCode::Ok);
+            let state = state_response.value.expect("Expected state");
+            assert!(state.features.is_empty());
+            assert_eq!(state.version, 2);
+        }
+    }
+
+    #[test]
+    fn get_state_returns_loaded_features() {
+        let engine_ptr = new_engine();
+        let client_features = ClientFeatures {
+            features: vec![ClientFeature {
+                name: "test-toggle".into(),
+                enabled: true,
+                strategies: Some(vec![Strategy {
+                    name: "default".into(),
+                    constraints: None,
+                    parameters: None,
+                    segments: None,
+                    sort_order: None,
+                    variants: None,
+                }]),
+                ..Default::default()
+            }],
+            query: None,
+            segments: None,
+            version: 2,
+            meta: None,
+        };
+
+        unsafe {
+            let engine_guard = get_engine(engine_ptr).expect("Expected a valid engine pointer");
+            let mut engine = engine_guard.lock().expect("Failed to lock engine mutex");
+            engine.take_state(UpdateMessage::FullResponse(client_features));
+            drop(engine);
+
+            let string_response = get_state(engine_ptr);
+            let response = CStr::from_ptr(string_response).to_str().unwrap();
+            let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
+
+            assert_eq!(state_response.status_code, ResponseCode::Ok);
+            let state = state_response.value.expect("Expected state");
+            assert_eq!(state.features.len(), 1);
+            assert_eq!(state.features[0].name, "test-toggle");
+            assert_eq!(state.version, 2);
+        }
+    }
+
+    #[test]
+    fn get_state_handles_null_engine_pointer() {
+        let engine_ptr = std::ptr::null_mut();
+
+        unsafe {
+            let string_response = get_state(engine_ptr);
+            let response = CStr::from_ptr(string_response).to_str().unwrap();
+            let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
+
+            assert_eq!(state_response.status_code, ResponseCode::Error);
+            assert!(state_response.error_message.is_some());
         }
     }
 }
