@@ -2119,15 +2119,15 @@ mod test {
     fn get_state_returns_default_when_empty() {
         let engine = EngineState::default();
         let state = engine.get_state();
-        
+
         assert!(state.features.is_empty());
         assert_eq!(state.version, 2);
     }
 
     #[test]
     fn get_state_returns_previous_state_when_loaded() {
-        use unleash_types::client_features::{ClientFeatures, ClientFeature, Strategy};
-        
+        use unleash_types::client_features::{ClientFeature, ClientFeatures, Strategy};
+
         let mut engine = EngineState::default();
         let client_features = ClientFeatures {
             features: vec![ClientFeature {
@@ -2146,10 +2146,10 @@ mod test {
             version: 3,
             ..Default::default()
         };
-        
+
         engine.take_state(UpdateMessage::FullResponse(client_features));
         let state = engine.get_state();
-        
+
         assert_eq!(state.version, 3);
         assert_eq!(state.features.len(), 1);
         assert_eq!(state.features[0].name, "test-feature");
