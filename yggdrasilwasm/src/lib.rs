@@ -3,8 +3,10 @@
 use serde::{Deserialize, Serialize};
 use serde_wasm_bindgen::from_value;
 use std::collections::HashMap;
+use chrono::{DateTime, Utc};
 use unleash_yggdrasil::{
     Context, EngineState, ExtendedVariantDef, UpdateMessage, KNOWN_STRATEGIES,
+    state::EnrichedContext,
 };
 use wasm_bindgen::prelude::*;
 
@@ -117,9 +119,8 @@ impl Engine {
                 }
             };
 
-        let check_enabled =
-            self.engine
-                .check_enabled(toggle_name, &context, &custom_strategy_results);
+        let enriched_context = EnrichedContext::from(context, toggle_name.to_string(), custom_strategy_results);
+        let check_enabled = self.engine.check_enabled(&enriched_context);
 
         let response = Response {
             status_code: ResponseCode::Ok,
@@ -166,12 +167,9 @@ impl Engine {
                 }
             };
 
-        let base_variant =
-            self.engine
-                .check_variant(toggle_name, &context, &custom_strategy_results);
-        let toggle_enabled =
-            self.engine
-                .is_enabled(toggle_name, &context, &custom_strategy_results);
+        let enriched_context = EnrichedContext::from(context, toggle_name.to_string(), custom_strategy_results);
+        let base_variant = self.engine.check_variant(&enriched_context);
+        let toggle_enabled = self.engine.check_enabled(&enriched_context).unwrap_or_default();
 
         let enriched_variant =
             base_variant.map(|variant| variant.to_enriched_response(toggle_enabled));
@@ -187,7 +185,8 @@ impl Engine {
 
     #[wasm_bindgen(js_name = getMetrics)]
     pub fn get_metrics(&mut self) -> JsValue {
-        if let Some(metrics) = self.engine.get_metrics() {
+        let close_time = Utc::now();
+        if let Some(metrics) = self.engine.get_metrics(close_time) {
             serde_wasm_bindgen::to_value(&metrics).unwrap()
         } else {
             let response = Response::<()> {
