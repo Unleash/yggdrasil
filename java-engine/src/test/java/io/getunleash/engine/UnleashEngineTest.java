@@ -72,6 +72,22 @@ class UnleashEngineTest {
   }
 
   @Test
+  void testGetStateAndRoundtrip() throws Exception {
+    String emptyState = engine.getState();
+    assertNotNull(emptyState);
+    assertTrue(emptyState.contains("\"features\":[]"));
+
+    engine.takeState(simpleFeatures);
+    String retrievedState = engine.getState();
+    assertNotNull(retrievedState);
+
+    assertTrue(retrievedState.contains("Feature.A"));
+    assertTrue(retrievedState.contains("Feature.B"));
+    assertTrue(retrievedState.contains("Feature.C"));
+    assertTrue(retrievedState.contains("\"version\":1"));
+  }
+
+  @Test
   void testIsEnabled() throws Exception {
     engine.takeState(simpleFeatures);
 
