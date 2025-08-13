@@ -305,4 +305,3 @@ pub unsafe extern "C" fn get_core_version() -> u64 {
 pub unsafe extern "C" fn get_built_in_strategies() -> u64 {
     BuiltInStrategies::build_response(KNOWN_STRATEGIES)
 }
-
