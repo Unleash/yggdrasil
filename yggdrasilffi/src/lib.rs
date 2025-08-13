@@ -31,7 +31,7 @@ type RawPointerDataType = Mutex<EngineState>;
 type ManagedEngine = Arc<RawPointerDataType>;
 type CustomStrategyResults = HashMap<String, bool>;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 enum ResponseCode {
     Error = -2,
     NotFound = -1,
@@ -742,7 +742,7 @@ mod tests {
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
 
-            assert_eq!(state_response.status_code, ResponseCode::Ok);
+            assert!(state_response.status_code == ResponseCode::Ok);
             let state = state_response.value.expect("Expected state");
             assert!(state.features.is_empty());
             assert_eq!(state.version, 2);
@@ -782,7 +782,7 @@ mod tests {
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
 
-            assert_eq!(state_response.status_code, ResponseCode::Ok);
+            assert!(state_response.status_code == ResponseCode::Ok);
             let state = state_response.value.expect("Expected state");
             assert_eq!(state.features.len(), 1);
             assert_eq!(state.features[0].name, "test-toggle");
@@ -799,7 +799,7 @@ mod tests {
             let response = CStr::from_ptr(string_response).to_str().unwrap();
             let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
 
-            assert_eq!(state_response.status_code, ResponseCode::Error);
+            assert!(state_response.status_code == ResponseCode::Error);
             assert!(state_response.error_message.is_some());
         }
     }
