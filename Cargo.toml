@@ -4,5 +4,6 @@ resolver = "2"
 members = [
   "pure-wasm",
   "unleash-yggdrasil",
-  "yggdrasilffi"
+  "yggdrasilffi",
+  "yggdrasilwasm"
 ]
