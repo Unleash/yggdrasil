@@ -241,4 +241,9 @@ impl Engine {
     pub fn built_in_strategies(&self) -> JsValue {
         serde_wasm_bindgen::to_value(&KNOWN_STRATEGIES).unwrap()
     }
+
+    #[wasm_bindgen(js_name = getCoreVersion)]
+    pub fn get_core_version(&self) -> JsValue {
+        serde_wasm_bindgen::to_value(&env!("CARGO_PKG_VERSION")).unwrap()
+    }
 }
