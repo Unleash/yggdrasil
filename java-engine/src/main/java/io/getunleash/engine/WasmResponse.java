@@ -1,6 +1,6 @@
 package io.getunleash.engine;
 
-class WasmResponse<T> {
+abstract class WasmResponse<T> {
   public boolean impressionData;
 
   public T value;
