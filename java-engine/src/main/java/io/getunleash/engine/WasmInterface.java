@@ -7,7 +7,7 @@ import com.dylibso.chicory.runtime.ImportValues;
 import com.dylibso.chicory.runtime.Instance;
 import com.dylibso.chicory.wasm.types.FunctionType;
 import com.dylibso.chicory.wasm.types.ValType;
-import io.getunleash.wasm.YggdrasilModule;
+import io.getunleash.wasm.Yggdrasil;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.SecureRandom;
@@ -83,8 +83,8 @@ public class WasmInterface implements NativeInterface {
             .build();
 
     instance =
-        Instance.builder(YggdrasilModule.load())
-            .withMachineFactory(YggdrasilModule::create)
+        Instance.builder(Yggdrasil.load())
+            .withMachineFactory(Yggdrasil::create)
             .withImportValues(imports)
             .withMemoryFactory(ByteBufferMemory::new)
             .build();

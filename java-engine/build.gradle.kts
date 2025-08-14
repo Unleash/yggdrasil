@@ -7,7 +7,7 @@ plugins {
     id("pl.allegro.tech.build.axion-release").version("1.16.0")
     id("tech.yanand.maven-central-publish").version("1.3.0")
     id("me.champeau.jmh").version("0.7.2")
-    id("at.released.wasm2class.plugin").version("0.3")
+    id("at.released.wasm2class.plugin").version("0.5.0")
 }
 
 wasm2class {
@@ -20,7 +20,7 @@ wasm2class {
 }
 
 sourceSets["main"].java {
-    srcDir("build/generated-sources/chicory-aot")
+    srcDir("build/generated-chicory")
 }
 
 version = project.findProperty("version") as String
