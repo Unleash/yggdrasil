@@ -77,6 +77,14 @@ tasks.named<Test>("test") {
     testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
 }
 
+tasks.named("jmh") {
+    dependsOn(buildWasm)
+}
+
+tasks.named("jmhJar") {
+    dependsOn(buildWasm)
+}
+
 spotless {
     java {
         googleJavaFormat("1.17.0")
