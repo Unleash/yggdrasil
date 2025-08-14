@@ -37,10 +37,6 @@
       cargo build --release" />
   </Target>
 
-  <Target Name="CopyMultiArchLibs" BeforeTargets="Build" Condition="Exists('../../target/release/libyggdrasilffi.dylib')">
-    <Copy SourceFiles="../../target/release/libyggdrasilffi.dylib" DestinationFiles="../../target/release/libyggdrasilffi_arm64.dylib" />
-  </Target>
-
   <ItemGroup>
       <None Include="../../worldtree_icon.png" Pack="true" PackagePath="\"/>
       <None Include="../README.md" Pack="true" PackagePath="\"/>
@@ -51,12 +47,9 @@
       <LogicalName>Yggdrasil.Engine.libyggdrasilffi_x86_64_$(YggdrasilCoreVersion).so</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="../../target/release/yggdrasilffi.dll" Condition="Exists('../../target/release/yggdrasilffi.dll')">
-      <LogicalName>Yggdrasil.Engine.libyggdrasilffi_arm64_$(YggdrasilCoreVersion).dylib</LogicalName>
+      <LogicalName>Yggdrasil.Engine.yggdrasilffi_x86_64_$(YggdrasilCoreVersion).dll</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="../../target/release/libyggdrasilffi.dylib" Condition="Exists('../../target/release/libyggdrasilffi.dylib')">
-      <LogicalName>Yggdrasil.Engine.libyggdrasilffi_x86_64_$(YggdrasilCoreVersion).dylib</LogicalName>
-    </EmbeddedResource>
-    <EmbeddedResource Include="../../target/release/libyggdrasilffi_arm64.dylib" Condition="Exists('../../target/release/libyggdrasilffi_arm64.dylib')">
       <LogicalName>Yggdrasil.Engine.libyggdrasilffi_arm64_$(YggdrasilCoreVersion).dylib</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
