@@ -71,13 +71,13 @@ public class UnleashEngineBenchmark {
       // - Feature.UserWithId: userIds strategy requiring userId=123
       // - Feature.CustomStrategy: enabled and uses custom strategy alwaysTrue
       // - Feature.Variants.A: one variant with weight 1
-      return "{" +
-          "\"version\":1,\"features\":[" +
-          "{\"name\":\"Feature.Default\",\"enabled\":true,\"strategies\":[{\"name\":\"default\"}]}," +
-          "{\"name\":\"Feature.UserWithId\",\"enabled\":true,\"strategies\":[{\"name\":\"userWithId\",\"parameters\":{\"userIds\":\"123\"}}]}," +
-          "{\"name\":\"Feature.CustomStrategy\",\"enabled\":true,\"strategies\":[{\"name\":\"alwaysTrue\"}]}," +
-          "{\"name\":\"Feature.Variants.A\",\"enabled\":true,\"strategies\":[],\"variants\":[{\"name\":\"variant1\",\"weight\":1}]}" +
-          "]}";
+      return "{"
+          + "\"version\":1,\"features\":["
+          + "{\"name\":\"Feature.Default\",\"enabled\":true,\"strategies\":[{\"name\":\"default\"}]},"
+          + "{\"name\":\"Feature.UserWithId\",\"enabled\":true,\"strategies\":[{\"name\":\"userWithId\",\"parameters\":{\"userIds\":\"123\"}}]},"
+          + "{\"name\":\"Feature.CustomStrategy\",\"enabled\":true,\"strategies\":[{\"name\":\"alwaysTrue\"}]},"
+          + "{\"name\":\"Feature.Variants.A\",\"enabled\":true,\"strategies\":[],\"variants\":[{\"name\":\"variant1\",\"weight\":1}]}"
+          + "]}";
     }
   }
 
