@@ -5,13 +5,13 @@ import com.dylibso.chicory.runtime.ExportFunction;
 import com.dylibso.chicory.runtime.HostFunction;
 import com.dylibso.chicory.runtime.ImportValues;
 import com.dylibso.chicory.runtime.Instance;
-import com.dylibso.chicory.wasm.types.ValueType;
+import com.dylibso.chicory.wasm.types.FunctionType;
+import com.dylibso.chicory.wasm.types.ValType;
 import io.getunleash.wasm.YggdrasilModule;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.SecureRandom;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import messaging.BuiltInStrategies;
@@ -57,12 +57,10 @@ public class WasmInterface implements NativeInterface {
   private static final Object engineLock = new Object();
 
   static {
-    List<ValueType> params = new ArrayList<>();
-    params.add(ValueType.I32);
-    params.add(ValueType.I32);
-
-    List<ValueType> results = new ArrayList<>();
-    results.add(ValueType.I32);
+    FunctionType fillRandomFunctionType =
+        FunctionType.of(
+            List.of(ValType.I32, ValType.I32),
+            List.of(ValType.I32));
 
     ImportValues imports =
         ImportValues.builder()
@@ -70,8 +68,7 @@ public class WasmInterface implements NativeInterface {
                 new HostFunction(
                     "env",
                     "fill_random",
-                    params,
-                    results,
+                        fillRandomFunctionType,
                     (Instance instance, long... args) -> {
                       int ptr = (int) args[0];
                       int len = (int) args[1];

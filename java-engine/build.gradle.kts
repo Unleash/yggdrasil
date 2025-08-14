@@ -47,8 +47,8 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.1")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.2")
-    implementation("com.dylibso.chicory:runtime:1.3.0")
-    implementation("com.google.flatbuffers:flatbuffers-java:23.1.21")
+    implementation("com.dylibso.chicory:runtime:1.5.1")
+    implementation("com.google.flatbuffers:flatbuffers-java:25.2.10")
 }
 
 tasks.jar {
