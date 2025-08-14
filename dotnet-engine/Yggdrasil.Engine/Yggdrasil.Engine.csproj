@@ -34,7 +34,7 @@
   <Target Name="YggdrasilPreBuild" BeforeTargets="Build" Condition="'$(Configuration)' == 'Debug'">
     <Exec Command="
       cd ../../
-      cargo build --release" />
+      cargo build --release -p yggdrasilffi" />
   </Target>
 
   <ItemGroup>
@@ -50,7 +50,7 @@
       <LogicalName>Yggdrasil.Engine.yggdrasilffi_x86_64_$(YggdrasilCoreVersion).dll</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="../../target/release/libyggdrasilffi.dylib" Condition="Exists('../../target/release/libyggdrasilffi.dylib')">
-      <LogicalName>Yggdrasil.Engine.libyggdrasilffi_arm64_$(YggdrasilCoreVersion).dylib</LogicalName>
+      <LogicalName>Yggdrasil.Engine.libyggdrasilffi_x86_64_$(YggdrasilCoreVersion).dylib</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 
