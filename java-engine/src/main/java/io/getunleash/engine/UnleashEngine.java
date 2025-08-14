@@ -240,7 +240,7 @@ public class UnleashEngine {
         return new WasmIsEnabledResponse(response.impressionData(), null);
       }
     } catch (RuntimeException e) {
-      log.warn("Error checking if toggle is enabled: {}", e.getMessage(), e);
+      log.warn("Could not check if toggle is enabled: {}", e.getMessage(), e);
       return new WasmIsEnabledResponse(false, null);
     }
   }
@@ -275,7 +275,7 @@ public class UnleashEngine {
         return new WasmVariantResponse(false, null);
       }
     } catch (RuntimeException e) {
-      log.warn("Error getting variant for toggle '{}': {}", toggleName, e.getMessage(), e);
+      log.warn("Could not get variant for toggle '{}': {}", toggleName, e.getMessage(), e);
       return new WasmVariantResponse(false, null);
     }
   }
