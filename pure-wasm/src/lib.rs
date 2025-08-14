@@ -200,7 +200,7 @@ pub extern "C" fn get_state(engine_ptr: u32) -> u32 {
     if let Ok(json_str) = serde_json::to_string(&state) {
         let json_bytes = json_str.as_bytes();
         let json_ptr = json_bytes.as_ptr() as u32;
-        std::mem::forget(json_str); // Prevent automatic deallocation
+        forget(json_str); // Prevent automatic deallocation
         return json_ptr;
     }
 

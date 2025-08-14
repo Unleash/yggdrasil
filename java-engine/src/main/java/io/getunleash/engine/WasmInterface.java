@@ -144,10 +144,6 @@ public class WasmInterface implements NativeInterface {
   public String getState(int enginePtr) {
     synchronized (engineLock) {
       int ptr = (int) getState.apply(enginePtr)[0];
-      if (ptr == 0) {
-        // Shouldn't happen, but return empty state as fallback
-        return "{\"version\":2,\"features\":[]}";
-      }
       return instance.memory().readCString(ptr);
     }
   }
