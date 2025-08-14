@@ -1,18 +1,6 @@
 package io.getunleash.engine;
 
 import com.google.flatbuffers.FlatBufferBuilder;
-import messaging.BuiltInStrategies;
-import messaging.ContextMessage;
-import messaging.FeatureDefs;
-import messaging.MetricsResponse;
-import messaging.PropertyEntry;
-import messaging.Response;
-import messaging.ToggleEntry;
-import messaging.ToggleStats;
-import messaging.Variant;
-import messaging.VariantEntry;
-import messaging.VariantPayload;
-
 import java.lang.ref.Cleaner;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -26,8 +14,22 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import messaging.BuiltInStrategies;
+import messaging.ContextMessage;
+import messaging.FeatureDefs;
+import messaging.MetricsResponse;
+import messaging.PropertyEntry;
+import messaging.Response;
+import messaging.ToggleEntry;
+import messaging.ToggleStats;
+import messaging.Variant;
+import messaging.VariantEntry;
+import messaging.VariantPayload;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class UnleashEngine {
+  private static final Logger log = LoggerFactory.getLogger(UnleashEngine.class);
   private static final Cleaner cleaner = Cleaner.create();
   private final NativeInterface nativeInterface;
   private final int enginePointer;
@@ -199,112 +201,112 @@ public class UnleashEngine {
 
   public List<FeatureDef> listKnownToggles() {
     try {
-    FeatureDefs featureDefs = nativeInterface.listKnownToggles(this.enginePointer);
+      FeatureDefs featureDefs = nativeInterface.listKnownToggles(this.enginePointer);
 
-    List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
-    for (int i = 0; i < featureDefs.itemsLength(); i++) {
-      FeatureDef featureDef =
-          new FeatureDef(
-              featureDefs.items(i).name(),
-              featureDefs.items(i).type(),
-              featureDefs.items(i).project(),
-              featureDefs.items(i).enabled());
-      defs.add(featureDef);
-    }
+      List<FeatureDef> defs = new ArrayList<>(featureDefs.itemsLength());
+      for (int i = 0; i < featureDefs.itemsLength(); i++) {
+        FeatureDef featureDef =
+            new FeatureDef(
+                featureDefs.items(i).name(),
+                featureDefs.items(i).type(),
+                featureDefs.items(i).project(),
+                featureDefs.items(i).enabled());
+        defs.add(featureDef);
+      }
 
-    return defs;
+      return defs;
     } catch (RuntimeException e) {
       log.warn("Unable to list known toggles, will return empty list", e);
       return new ArrayList<>();
     }
   }
 
-  public WasmResponse<Boolean> isEnabled(String toggleName, Context context)
+  public WasmIsEnabledResponse isEnabled(String toggleName, Context context)
       throws YggdrasilInvalidInputException {
     try {
-		Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
-		byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
+      Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
+      byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
 
-		Response response = nativeInterface.checkEnabled(enginePointer, contextBytes);
+      Response response = nativeInterface.checkEnabled(enginePointer, contextBytes);
 
-		if (response.error() != null) {
-		  String error = response.error();
-		  throw new YggdrasilInvalidInputException(error);
-		}
-
-		if (response.hasEnabled()) {
-		  return new WasmResponse<Boolean>(response.impressionData(), response.enabled());
-		} else {
-		  return new WasmResponse<Boolean>(response.impressionData(), null);
-		}
-    } catch (RuntimeException e) {
-      log.warn("Could not check if toggle is enabled: {}", e.getMessage(), e);
-      return new WasmResponse<Boolean>(false, null);
-    }
-  }
-
-  public WasmResponse<VariantDef> getVariant(String toggleName, Context context)
-      throws YggdrasilInvalidInputException {
-    try {
-    Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
-    byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
-
-    Variant variant = nativeInterface.checkVariant(enginePointer, contextBytes);
-    if (variant.name() != null) {
-      Payload payload = null;
-
-      VariantPayload variantPayload = variant.payload();
-
-      if (variantPayload != null) {
-        payload = new Payload();
-        payload.setType(variant.payload().payloadType());
-        payload.setValue(variant.payload().value());
-      }
-
-      if (variant.error() != null) {
-        String error = variant.error();
+      if (response.error() != null) {
+        String error = response.error();
         throw new YggdrasilInvalidInputException(error);
       }
 
-      return new WasmResponse<VariantDef>(
-          variant.impressionData(),
-          new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled()));
-    } else {
-      return new WasmResponse<VariantDef>(false, null);
+      if (response.hasEnabled()) {
+        return new WasmIsEnabledResponse(response.impressionData(), response.enabled());
+      } else {
+        return new WasmIsEnabledResponse(response.impressionData(), null);
+      }
+    } catch (RuntimeException e) {
+      log.warn("Could not check if toggle is enabled: {}", e.getMessage(), e);
+      return new WasmIsEnabledResponse(false, null);
     }
+  }
+
+  public WasmVariantResponse getVariant(String toggleName, Context context)
+      throws YggdrasilInvalidInputException {
+    try {
+      Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
+      byte[] contextBytes = buildMessage(toggleName, context, strategyResults);
+
+      Variant variant = nativeInterface.checkVariant(enginePointer, contextBytes);
+      if (variant.name() != null) {
+        Payload payload = null;
+
+        VariantPayload variantPayload = variant.payload();
+
+        if (variantPayload != null) {
+          payload = new Payload();
+          payload.setType(variant.payload().payloadType());
+          payload.setValue(variant.payload().value());
+        }
+
+        if (variant.error() != null) {
+          String error = variant.error();
+          throw new YggdrasilInvalidInputException(error);
+        }
+
+        return new WasmVariantResponse(
+            variant.impressionData(),
+            new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled()));
+      } else {
+        return new WasmVariantResponse(false, null);
+      }
     } catch (RuntimeException e) {
       log.warn("Could not get variant for toggle '{}': {}", toggleName, e.getMessage(), e);
-      return new WasmResponse<VariantDef>(false, null);
+      return new WasmVariantResponse(false, null);
     }
   }
 
   public MetricsBucket getMetrics() {
     try {
-    ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-    MetricsResponse response = nativeInterface.getMetrics(this.enginePointer, now);
-    if (response.togglesVector() == null) {
-      return null;
-    }
-
-    Map<String, FeatureCount> toggles = new HashMap<>();
-    for (int i = 0; i < response.togglesLength(); i++) {
-      ToggleEntry toggleEntry = response.toggles(i);
-      ToggleStats stats = toggleEntry.value();
-
-      Map<String, Long> variants = new HashMap<>();
-      for (int j = 0; j < stats.variantsLength(); j++) {
-        VariantEntry variant = stats.variants(j);
-        variants.put(variant.key(), variant.value());
+      ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+      MetricsResponse response = nativeInterface.getMetrics(this.enginePointer, now);
+      if (response.togglesVector() == null) {
+        return null;
       }
-      FeatureCount featureCount = new FeatureCount(stats.yes(), stats.no(), variants);
 
-      toggles.put(toggleEntry.key(), featureCount);
-    }
+      Map<String, FeatureCount> toggles = new HashMap<>();
+      for (int i = 0; i < response.togglesLength(); i++) {
+        ToggleEntry toggleEntry = response.toggles(i);
+        ToggleStats stats = toggleEntry.value();
 
-    Instant startInstant = Instant.ofEpochMilli(response.start());
-    Instant stopInstant = Instant.ofEpochMilli(response.stop());
+        Map<String, Long> variants = new HashMap<>();
+        for (int j = 0; j < stats.variantsLength(); j++) {
+          VariantEntry variant = stats.variants(j);
+          variants.put(variant.key(), variant.value());
+        }
+        FeatureCount featureCount = new FeatureCount(stats.yes(), stats.no(), variants);
 
-    return new MetricsBucket(startInstant, stopInstant, toggles);
+        toggles.put(toggleEntry.key(), featureCount);
+      }
+
+      Instant startInstant = Instant.ofEpochMilli(response.start());
+      Instant stopInstant = Instant.ofEpochMilli(response.stop());
+
+      return new MetricsBucket(startInstant, stopInstant, toggles);
     } catch (RuntimeException e) {
       log.warn("Error retrieving metrics: {}", e.getMessage(), e);
       return null;
