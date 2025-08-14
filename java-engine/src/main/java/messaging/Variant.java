@@ -3,43 +3,88 @@
 package messaging;
 
 import com.google.flatbuffers.BaseVector;
-import com.google.flatbuffers.BooleanVector;
-import com.google.flatbuffers.ByteVector;
 import com.google.flatbuffers.Constants;
-import com.google.flatbuffers.DoubleVector;
 import com.google.flatbuffers.FlatBufferBuilder;
-import com.google.flatbuffers.FloatVector;
-import com.google.flatbuffers.IntVector;
-import com.google.flatbuffers.LongVector;
-import com.google.flatbuffers.ShortVector;
-import com.google.flatbuffers.StringVector;
-import com.google.flatbuffers.Struct;
 import com.google.flatbuffers.Table;
-import com.google.flatbuffers.UnionVector;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
 public final class Variant extends Table {
-  public static void ValidateVersion() { Constants.FLATBUFFERS_25_2_10(); }
-  public static Variant getRootAsVariant(ByteBuffer _bb) { return getRootAsVariant(_bb, new Variant()); }
-  public static Variant getRootAsVariant(ByteBuffer _bb, Variant obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __reset(_i, _bb); }
-  public Variant __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
+  public static void ValidateVersion() {
+    Constants.FLATBUFFERS_25_2_10();
+  }
 
-  public boolean enabled() { int o = __offset(4); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
-  public boolean impressionData() { int o = __offset(6); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
-  public boolean featureEnabled() { int o = __offset(8); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
-  public String name() { int o = __offset(10); return o != 0 ? __string(o + bb_pos) : null; }
-  public ByteBuffer nameAsByteBuffer() { return __vector_as_bytebuffer(10, 1); }
-  public ByteBuffer nameInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 10, 1); }
-  public messaging.VariantPayload payload() { return payload(new messaging.VariantPayload()); }
-  public messaging.VariantPayload payload(messaging.VariantPayload obj) { int o = __offset(12); return o != 0 ? obj.__assign(__indirect(o + bb_pos), bb) : null; }
-  public String error() { int o = __offset(14); return o != 0 ? __string(o + bb_pos) : null; }
-  public ByteBuffer errorAsByteBuffer() { return __vector_as_bytebuffer(14, 1); }
-  public ByteBuffer errorInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 14, 1); }
+  public static Variant getRootAsVariant(ByteBuffer _bb) {
+    return getRootAsVariant(_bb, new Variant());
+  }
 
-  public static int createVariant(FlatBufferBuilder builder,
+  public static Variant getRootAsVariant(ByteBuffer _bb, Variant obj) {
+    _bb.order(ByteOrder.LITTLE_ENDIAN);
+    return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb));
+  }
+
+  public void __init(int _i, ByteBuffer _bb) {
+    __reset(_i, _bb);
+  }
+
+  public Variant __assign(int _i, ByteBuffer _bb) {
+    __init(_i, _bb);
+    return this;
+  }
+
+  public boolean enabled() {
+    int o = __offset(4);
+    return o != 0 ? 0 != bb.get(o + bb_pos) : false;
+  }
+
+  public boolean impressionData() {
+    int o = __offset(6);
+    return o != 0 ? 0 != bb.get(o + bb_pos) : false;
+  }
+
+  public boolean featureEnabled() {
+    int o = __offset(8);
+    return o != 0 ? 0 != bb.get(o + bb_pos) : false;
+  }
+
+  public String name() {
+    int o = __offset(10);
+    return o != 0 ? __string(o + bb_pos) : null;
+  }
+
+  public ByteBuffer nameAsByteBuffer() {
+    return __vector_as_bytebuffer(10, 1);
+  }
+
+  public ByteBuffer nameInByteBuffer(ByteBuffer _bb) {
+    return __vector_in_bytebuffer(_bb, 10, 1);
+  }
+
+  public messaging.VariantPayload payload() {
+    return payload(new messaging.VariantPayload());
+  }
+
+  public messaging.VariantPayload payload(messaging.VariantPayload obj) {
+    int o = __offset(12);
+    return o != 0 ? obj.__assign(__indirect(o + bb_pos), bb) : null;
+  }
+
+  public String error() {
+    int o = __offset(14);
+    return o != 0 ? __string(o + bb_pos) : null;
+  }
+
+  public ByteBuffer errorAsByteBuffer() {
+    return __vector_as_bytebuffer(14, 1);
+  }
+
+  public ByteBuffer errorInByteBuffer(ByteBuffer _bb) {
+    return __vector_in_bytebuffer(_bb, 14, 1);
+  }
+
+  public static int createVariant(
+      FlatBufferBuilder builder,
       boolean enabled,
       boolean impressionData,
       boolean featureEnabled,
@@ -56,23 +101,51 @@ public final class Variant extends Table {
     return Variant.endVariant(builder);
   }
 
-  public static void startVariant(FlatBufferBuilder builder) { builder.startTable(6); }
-  public static void addEnabled(FlatBufferBuilder builder, boolean enabled) { builder.addBoolean(0, enabled, false); }
-  public static void addImpressionData(FlatBufferBuilder builder, boolean impressionData) { builder.addBoolean(1, impressionData, false); }
-  public static void addFeatureEnabled(FlatBufferBuilder builder, boolean featureEnabled) { builder.addBoolean(2, featureEnabled, false); }
-  public static void addName(FlatBufferBuilder builder, int nameOffset) { builder.addOffset(3, nameOffset, 0); }
-  public static void addPayload(FlatBufferBuilder builder, int payloadOffset) { builder.addOffset(4, payloadOffset, 0); }
-  public static void addError(FlatBufferBuilder builder, int errorOffset) { builder.addOffset(5, errorOffset, 0); }
+  public static void startVariant(FlatBufferBuilder builder) {
+    builder.startTable(6);
+  }
+
+  public static void addEnabled(FlatBufferBuilder builder, boolean enabled) {
+    builder.addBoolean(0, enabled, false);
+  }
+
+  public static void addImpressionData(FlatBufferBuilder builder, boolean impressionData) {
+    builder.addBoolean(1, impressionData, false);
+  }
+
+  public static void addFeatureEnabled(FlatBufferBuilder builder, boolean featureEnabled) {
+    builder.addBoolean(2, featureEnabled, false);
+  }
+
+  public static void addName(FlatBufferBuilder builder, int nameOffset) {
+    builder.addOffset(3, nameOffset, 0);
+  }
+
+  public static void addPayload(FlatBufferBuilder builder, int payloadOffset) {
+    builder.addOffset(4, payloadOffset, 0);
+  }
+
+  public static void addError(FlatBufferBuilder builder, int errorOffset) {
+    builder.addOffset(5, errorOffset, 0);
+  }
+
   public static int endVariant(FlatBufferBuilder builder) {
     int o = builder.endTable();
     return o;
   }
 
   public static final class Vector extends BaseVector {
-    public Vector __assign(int _vector, int _element_size, ByteBuffer _bb) { __reset(_vector, _element_size, _bb); return this; }
+    public Vector __assign(int _vector, int _element_size, ByteBuffer _bb) {
+      __reset(_vector, _element_size, _bb);
+      return this;
+    }
 
-    public Variant get(int j) { return get(new Variant(), j); }
-    public Variant get(Variant obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
+    public Variant get(int j) {
+      return get(new Variant(), j);
+    }
+
+    public Variant get(Variant obj, int j) {
+      return obj.__assign(__indirect(__element(j), bb), bb);
+    }
   }
 }
-

@@ -58,9 +58,7 @@ public class WasmInterface implements NativeInterface {
 
   static {
     FunctionType fillRandomFunctionType =
-        FunctionType.of(
-            List.of(ValType.I32, ValType.I32),
-            List.of(ValType.I32));
+        FunctionType.of(List.of(ValType.I32, ValType.I32), List.of(ValType.I32));
 
     ImportValues imports =
         ImportValues.builder()
@@ -68,7 +66,7 @@ public class WasmInterface implements NativeInterface {
                 new HostFunction(
                     "env",
                     "fill_random",
-                        fillRandomFunctionType,
+                    fillRandomFunctionType,
                     (Instance instance, long... args) -> {
                       int ptr = (int) args[0];
                       int len = (int) args[1];
