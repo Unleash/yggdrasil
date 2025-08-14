@@ -1,7 +1,18 @@
 package io.getunleash.engine;
 
-import com.dylibso.chicory.runtime.TrapException;
 import com.google.flatbuffers.FlatBufferBuilder;
+import messaging.BuiltInStrategies;
+import messaging.ContextMessage;
+import messaging.FeatureDefs;
+import messaging.MetricsResponse;
+import messaging.PropertyEntry;
+import messaging.Response;
+import messaging.ToggleEntry;
+import messaging.ToggleStats;
+import messaging.Variant;
+import messaging.VariantEntry;
+import messaging.VariantPayload;
+
 import java.lang.ref.Cleaner;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -15,24 +26,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import messaging.BuiltInStrategies;
-import messaging.ContextMessage;
-import messaging.FeatureDefs;
-import messaging.MetricsResponse;
-import messaging.PropertyEntry;
-import messaging.Response;
-import messaging.ToggleEntry;
-import messaging.ToggleStats;
-import messaging.Variant;
-import messaging.VariantEntry;
-import messaging.VariantPayload;
 
 public class UnleashEngine {
+  private static final Cleaner cleaner = Cleaner.create();
   private final NativeInterface nativeInterface;
   private final int enginePointer;
   private final CustomStrategiesEvaluator customStrategiesEvaluator;
-  private static final Cleaner cleaner = Cleaner.create();
-  private final Cleaner.Cleanable cleanable;
 
   public UnleashEngine() {
     this(null, null, null);
@@ -46,7 +45,8 @@ public class UnleashEngine {
     this(customStrategies, fallbackStrategy, null);
   }
 
-  public UnleashEngine(
+  // Only visible for testing
+  UnleashEngine(
       List<IStrategy> customStrategies,
       IStrategy fallbackStrategy,
       NativeInterface nativeInterface) {
@@ -74,14 +74,8 @@ public class UnleashEngine {
     }
     this.enginePointer = enginePtr;
 
-    NativeInterface wasmHook = this.nativeInterface;
-
-    cleanable =
-        cleaner.register(
-            this,
-            () -> {
-              wasmHook.freeEngine(enginePtr);
-            });
+    final NativeInterface wasmHook = this.nativeInterface;
+    cleaner.register(this, () -> wasmHook.freeEngine(enginePtr));
   }
 
   private static String getRuntimeHostname() {
@@ -192,15 +186,15 @@ public class UnleashEngine {
     return builder.sizedByteArray();
   }
 
-  public List<String> takeState(String clientFeatures) throws YggdrasilInvalidInputException {
+  public void takeState(String clientFeatures) throws YggdrasilInvalidInputException {
     try {
       customStrategiesEvaluator.loadStrategiesFor(clientFeatures);
       byte[] messageBytes = clientFeatures.getBytes(StandardCharsets.UTF_8);
       nativeInterface.takeState(this.enginePointer, messageBytes);
-    } catch (TrapException e) {
-      throw e;
+    } catch (RuntimeException e) {
+      throw new YggdrasilInvalidInputException(
+          "Failed to take state, ensure the input is a valid Yggdrasil state file", e);
     }
-    return null;
   }
 
   public List<FeatureDef> listKnownToggles() {

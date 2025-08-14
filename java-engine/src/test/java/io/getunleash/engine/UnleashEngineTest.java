@@ -1,13 +1,18 @@
 package io.getunleash.engine;
 
-import static io.getunleash.engine.TestStrategies.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.params.provider.Arguments.of;
-
+import com.dylibso.chicory.wasm.ChicoryException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.PhantomReference;
@@ -21,16 +26,31 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mockito;
+
+import static io.getunleash.engine.TestStrategies.alwaysFails;
+import static io.getunleash.engine.TestStrategies.alwaysTrue;
+import static io.getunleash.engine.TestStrategies.onlyTrueIfAllParametersInContext;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.provider.Arguments.of;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestSuite {
   public String name;
@@ -44,6 +64,7 @@ class UnleashEngineTest {
   // Assume this is set up to be your feature JSON
   private final String simpleFeatures =
       loadFeaturesFromFile("../client-specification/specifications/01-simple-examples.json");
+  private UnleashEngine engine;
 
   public static String loadFeaturesFromFile(String filePath) {
     ObjectMapper mapper = new ObjectMapper();
@@ -57,7 +78,15 @@ class UnleashEngineTest {
     }
   }
 
-  private UnleashEngine engine;
+  public static String readResource(String resource) throws IOException, URISyntaxException {
+    return new String(
+        Files.readAllBytes(
+            Paths.get(
+                Objects.requireNonNull(
+                        UnleashEngineTest.class.getClassLoader().getResource(resource))
+                    .toURI())),
+        StandardCharsets.UTF_8);
+  }
 
   @BeforeEach
   void createEngine() {
@@ -280,9 +309,9 @@ class UnleashEngineTest {
   void testResourceCleanup() throws InterruptedException {
     int mockPointer = 1;
 
-    NativeInterface wasmInterface = Mockito.mock(NativeInterface.class);
+    NativeInterface wasmInterface = mock(NativeInterface.class);
 
-    Mockito.when(wasmInterface.newEngine(Mockito.anyLong())).thenReturn(mockPointer);
+    when(wasmInterface.newEngine(anyLong())).thenReturn(mockPointer);
 
     ReferenceQueue<UnleashEngine> queue = new ReferenceQueue<>();
 
@@ -331,52 +360,52 @@ class UnleashEngineTest {
     assertTrue(coreVersion.split("\\.").length >= 3);
   }
 
-  private static Stream<Arguments> customStrategiesInput() {
-    Context oneYesContext = new Context();
-    oneYesContext.setProperties(mapOf("one", "yes"));
-    return Stream.of(
-        of(null, "Feature.Custom.Strategies", new Context(), false),
-        of(Collections.emptyList(), "Feature.Custom.Strategies", new Context(), false),
-        of(
-            Collections.singletonList(alwaysTrue("custom")),
-            "Feature.Custom.Strategies",
-            new Context(),
-            true),
-        of(
-            Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
-            "Feature.Custom.Strategies",
-            new Context(),
-            false),
-        of(
-            Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
-            "Feature.Custom.Strategies",
-            oneYesContext,
-            true),
-        of(
-            Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
-            "Feature.Mixed.Strategies",
-            oneYesContext,
-            true),
-        of(
-            Collections.singletonList(alwaysTrue("custom")),
-            "Feature.Mixed.Strategies",
-            oneYesContext,
-            true),
-        of(Collections.emptyList(), "Feature.Mixed.Strategies", oneYesContext, true),
-        of(
-            Collections.singletonList(alwaysFails("custom")),
-            "Feature.Mixed.Strategies",
-            oneYesContext,
-            true));
-  }
+    private static Stream<Arguments> customStrategiesInput() {
+        Context oneYesContext = new Context();
+        oneYesContext.setProperties(mapOf("one", "yes"));
+        return Stream.of(
+                of(null, "Feature.Custom.Strategies", new Context(), false),
+                of(Collections.emptyList(), "Feature.Custom.Strategies", new Context(), false),
+                of(
+                        Collections.singletonList(alwaysTrue("custom")),
+                        "Feature.Custom.Strategies",
+                        new Context(),
+                        true),
+                of(
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+                        "Feature.Custom.Strategies",
+                        new Context(),
+                        false),
+                of(
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+                        "Feature.Custom.Strategies",
+                        oneYesContext,
+                        true),
+                of(
+                        Collections.singletonList(onlyTrueIfAllParametersInContext("custom")),
+                        "Feature.Mixed.Strategies",
+                        oneYesContext,
+                        true),
+                of(
+                        Collections.singletonList(alwaysTrue("custom")),
+                        "Feature.Mixed.Strategies",
+                        oneYesContext,
+                        true),
+                of(Collections.emptyList(), "Feature.Mixed.Strategies", oneYesContext, true),
+                of(
+                        Collections.singletonList(alwaysFails("custom")),
+                        "Feature.Mixed.Strategies",
+                        oneYesContext,
+                        true));
+    }
 
-  static Map<String, String> mapOf(String key, String value) {
-    return new HashMap<String, String>() {
-      {
-        put(key, value);
-      }
-    };
-  }
+    static Map<String, String> mapOf(String key, String value) {
+        return new HashMap<String, String>() {
+            {
+                put(key, value);
+            }
+        };
+    }
 
   @Test
   public void getMetricsReturnsCorrectResult() throws Exception {
@@ -471,13 +500,70 @@ class UnleashEngineTest {
     }
   }
 
-  public static String readResource(String resource) throws IOException, URISyntaxException {
-    return new String(
-        Files.readAllBytes(
-            Paths.get(
-                Objects.requireNonNull(
-                        UnleashEngineTest.class.getClassLoader().getResource(resource))
-                    .toURI())),
-        StandardCharsets.UTF_8);
+  @Test
+  public void testIsEnabledHandlesNativeException() throws Exception {
+    NativeInterface mockNativeInterface = mock(NativeInterface.class);
+    when(mockNativeInterface.newEngine(anyLong())).thenReturn(1);
+    when(mockNativeInterface.checkEnabled(anyInt(), any(byte[].class)))
+        .thenThrow(new ChicoryException("Native exception occurred"));
+
+    UnleashEngine engine = new UnleashEngine(null, null, mockNativeInterface);
+
+    Context context = new Context();
+    context.setUserId("test-user");
+
+    engine.isEnabled("test-toggle", context);
+  }
+
+  @Test
+  public void testGetVariantHandlesNativeException() throws Exception {
+    NativeInterface mockNativeInterface = mock(NativeInterface.class);
+    when(mockNativeInterface.newEngine(anyLong())).thenReturn(1);
+    when(mockNativeInterface.checkVariant(anyInt(), any(byte[].class)))
+        .thenThrow(new ChicoryException("Native exception occurred"));
+
+    UnleashEngine engine = new UnleashEngine(null, null, mockNativeInterface);
+
+    Context context = new Context();
+    context.setUserId("test-user");
+
+    engine.getVariant("test-toggle", context);
+  }
+
+  @Test
+  public void testTakeStateHandlesNativeException() throws Exception {
+    NativeInterface mockNativeInterface = mock(NativeInterface.class);
+    when(mockNativeInterface.newEngine(anyLong())).thenReturn(1);
+    doThrow(new ChicoryException("Native exception occurred"))
+        .when(mockNativeInterface)
+        .takeState(anyInt(), any(byte[].class));
+
+    UnleashEngine engine = new UnleashEngine(null, null, mockNativeInterface);
+
+    engine.takeState("test-state");
+  }
+
+  @Test
+  public void testListKnownTogglesHandlesNativeException() {
+    NativeInterface mockNativeInterface = mock(NativeInterface.class);
+    when(mockNativeInterface.newEngine(anyLong())).thenReturn(1);
+    when(mockNativeInterface.listKnownToggles(anyInt()))
+        .thenThrow(new ChicoryException("Native exception occurred"));
+
+    UnleashEngine engine = new UnleashEngine(null, null, mockNativeInterface);
+
+    engine.listKnownToggles();
+  }
+
+  @Test
+  public void testGetMetricsHandlesNativeException() {
+    NativeInterface mockNativeInterface = mock(NativeInterface.class);
+    when(mockNativeInterface.newEngine(anyLong())).thenReturn(1);
+    when(mockNativeInterface.getMetrics(anyInt(), any()))
+        .thenThrow(new ChicoryException("Native exception occurred"));
+
+    UnleashEngine engine = new UnleashEngine(null, null, mockNativeInterface);
+
+    engine.getMetrics();
   }
 }
