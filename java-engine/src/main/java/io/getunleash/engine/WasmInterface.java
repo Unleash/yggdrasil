@@ -180,7 +180,6 @@ public class WasmInterface implements NativeInterface {
       return derefWasmPointer(packed, FeatureDefs::getRootAsFeatureDefs);
     }
   }
-  ;
 
   public static String getCoreVersion() {
     synchronized (engineLock) {
