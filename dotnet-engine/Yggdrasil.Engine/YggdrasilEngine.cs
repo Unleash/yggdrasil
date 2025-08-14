@@ -52,9 +52,9 @@ public class YggdrasilEngine
 
     public string GetState()
     {
-         var getStatePtr = FFI.GetState(state);
-         var stateObject = FFIReader.ReadComplex<object>(getStatePtr);
-         return stateObject != null ? JsonSerializer.Serialize(stateObject, options) : "{\"version\":2,\"features\":[]}";
+        var getStatePtr = FFI.GetState(state);
+        var stateObject = FFIReader.ReadComplex<object>(getStatePtr);
+        return stateObject != null ? JsonSerializer.Serialize(stateObject, options) : "{\"version\":2,\"features\":[]}";
     }
 
     public bool? IsEnabled(string toggleName, Context context)
