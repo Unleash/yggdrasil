@@ -118,9 +118,14 @@ The WASM library is automatically built on running tests but you'll need to make
 
 The Java engine uses FlatBuffers for communication with the WASM core. If you make changes to the data interchange format, regenerate the bindings like this:
 
-``` bash
-flatc --java -o java-engine/src/main/java flat-buffer-defs/enabled-message.fbs
+**Note:** assume flatc is available in your PATH, if not, you can specify the full path to flatc in the command below.
 
+``` bash
+cd .. # go to yggdrasil root directory
+rustup target add wasm32-unknown-unknown
+cargo build --release --target wasm32-unknown-unknown
+flatc --java -o java-engine/src/main/java flat-buffer-defs/enabled-message.fbs
+cd pure-wasm && cargo build --release --target wasm32-unknown-unknown
 ```
 
 You'll need to update the [WASM](../pure-wasm/) code as well to handle any changes you make to the FlatBuffer definitions.
