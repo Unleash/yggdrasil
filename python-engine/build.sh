@@ -1,4 +1,4 @@
-cargo build --release
+cargo build --release -p yggdrasilffi
 mkdir -p yggdrasil_engine/lib
 
 [ -f ../target/release/yggdrasilffi.dll ] && cp ../target/release/yggdrasilffi.dll ./yggdrasil_engine/lib
