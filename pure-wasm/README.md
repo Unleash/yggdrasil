@@ -9,7 +9,7 @@ See the [Yggdrasil Java Engine](../java-engine) for an example integration.
 ### Working with Data Exchange Code
 
 > [!IMPORTANT]
-> Requires [flatc version 23.1.21](https://github.com/google/flatbuffers/releases/tag/v23.1.21)
+> Requires [flatc version 25.2.10](https://github.com/google/flatbuffers/releases/tag/v25.2.10)
 
 We use [FlatBuffers](https://flatbuffers.dev/) for efficient data exchange over the WASM boundary. If you're modifying the data models, you’ll need to regenerate the FlatBuffer bindings:
 
