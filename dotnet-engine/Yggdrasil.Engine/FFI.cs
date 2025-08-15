@@ -15,6 +15,7 @@ internal static class FFI
         free_engine = Marshal.GetDelegateForFunctionPointer<FreeEngineDelegate>(NativeLibLoader.LoadFunctionPointer(_libHandle, "free_engine"));
         get_metrics = Marshal.GetDelegateForFunctionPointer<GetMetricsDelegate>(NativeLibLoader.LoadFunctionPointer(_libHandle, "get_metrics"));
         take_state = Marshal.GetDelegateForFunctionPointer<TakeStateDelegate>(NativeLibLoader.LoadFunctionPointer(_libHandle, "take_state"));
+        get_state = Marshal.GetDelegateForFunctionPointer<GetStateDelegate>(NativeLibLoader.LoadFunctionPointer(_libHandle, "get_state"));
         check_enabled = Marshal.GetDelegateForFunctionPointer<CheckEnabledDelegate>(NativeLibLoader.LoadFunctionPointer(_libHandle, "check_enabled"));
         check_variant = Marshal.GetDelegateForFunctionPointer<CheckVariantDelegate>(NativeLibLoader.LoadFunctionPointer(_libHandle, "check_variant"));
         free_response = Marshal.GetDelegateForFunctionPointer<FreeResponseDelegate>(NativeLibLoader.LoadFunctionPointer(_libHandle, "free_response"));
@@ -29,6 +30,7 @@ internal static class FFI
     private delegate void FreeEngineDelegate(IntPtr ptr);
     private delegate IntPtr GetMetricsDelegate(IntPtr ptr);
     private delegate IntPtr TakeStateDelegate(IntPtr ptr, byte[] json);
+    private delegate IntPtr GetStateDelegate(IntPtr ptr);
     private delegate IntPtr CheckEnabledDelegate(IntPtr ptr, byte[] toggle_name, byte[] context, byte[] customStrategyResults);
     private delegate IntPtr CheckVariantDelegate(IntPtr ptr, byte[] toggle_name, byte[] context, byte[] customStrategyResults);
     private delegate void FreeResponseDelegate(IntPtr ptr);
@@ -41,6 +43,7 @@ internal static class FFI
     private static readonly FreeEngineDelegate free_engine;
     private static readonly GetMetricsDelegate get_metrics;
     private static readonly TakeStateDelegate take_state;
+    private static readonly GetStateDelegate get_state;
     private static readonly CheckEnabledDelegate check_enabled;
     private static readonly CheckVariantDelegate check_variant;
     private static readonly FreeResponseDelegate free_response;
@@ -68,6 +71,11 @@ internal static class FFI
     public static IntPtr TakeState(IntPtr ptr, string json)
     {
         return take_state(ptr, ToUtf8Bytes(json));
+    }
+
+    public static IntPtr GetState(IntPtr ptr)
+    {
+        return get_state(ptr);
     }
 
     public static IntPtr CheckEnabled(IntPtr ptr, string toggle_name, string context, string customStrategyResults)

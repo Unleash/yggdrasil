@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace Yggdrasil;
 
@@ -48,6 +49,13 @@ public class YggdrasilEngine
         FFIReader.CheckResponse(takeStatePtr);
 
         customStrategies.MapFeatures(json);
+    }
+
+    public string GetState()
+    {
+        var getStatePtr = FFI.GetState(state);
+        var stateObject = FFIReader.ReadComplex<object>(getStatePtr);
+        return JsonSerializer.Serialize(stateObject, options);
     }
 
     public bool? IsEnabled(string toggleName, Context context)

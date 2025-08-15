@@ -198,6 +198,10 @@ public class UnleashEngine {
     }
   }
 
+  public String getState() {
+    return nativeInterface.getState(this.enginePointer);
+  }
+
   public List<FeatureDef> listKnownToggles() {
     try {
       FeatureDefs featureDefs = nativeInterface.listKnownToggles(this.enginePointer);
