@@ -194,8 +194,7 @@ public class UnleashEngine {
       byte[] messageBytes = clientFeatures.getBytes(StandardCharsets.UTF_8);
       nativeInterface.takeState(this.enginePointer, messageBytes);
     } catch (RuntimeException e) {
-      throw new YggdrasilInvalidInputException(
-          "Failed to take state:", e);
+      throw new YggdrasilInvalidInputException("Failed to take state:", e);
     }
   }
 
