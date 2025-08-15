@@ -195,7 +195,7 @@ public class UnleashEngine {
       nativeInterface.takeState(this.enginePointer, messageBytes);
     } catch (RuntimeException e) {
       throw new YggdrasilInvalidInputException(
-          "Failed to take state, ensure the input is a valid Yggdrasil state file", e);
+          "Failed to take state:", e);
     }
   }
 
