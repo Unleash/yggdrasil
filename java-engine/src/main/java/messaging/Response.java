@@ -12,7 +12,7 @@ import java.nio.ByteOrder;
 @SuppressWarnings("unused")
 public final class Response extends Table {
   public static void ValidateVersion() {
-    Constants.FLATBUFFERS_23_1_21();
+    Constants.FLATBUFFERS_25_2_10();
   }
 
   public static Response getRootAsResponse(ByteBuffer _bb) {
