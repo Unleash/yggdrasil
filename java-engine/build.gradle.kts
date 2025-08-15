@@ -7,7 +7,7 @@ plugins {
     id("pl.allegro.tech.build.axion-release").version("1.16.0")
     id("tech.yanand.maven-central-publish").version("1.3.0")
     id("me.champeau.jmh").version("0.7.2")
-    id("at.released.wasm2class.plugin").version("0.3")
+    id("at.released.wasm2class.plugin").version("0.5.0")
 }
 
 wasm2class {
@@ -20,7 +20,7 @@ wasm2class {
 }
 
 sourceSets["main"].java {
-    srcDir("build/generated-sources/chicory-aot")
+    srcDir("build/generated-chicory")
 }
 
 version = project.findProperty("version") as String
@@ -47,7 +47,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:2.15.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.1")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.2")
-    implementation("com.dylibso.chicory:runtime:1.3.0")
+    implementation("com.dylibso.chicory:runtime:1.5.1")
     implementation("com.google.flatbuffers:flatbuffers-java:25.2.10")
 }
 
@@ -75,6 +75,14 @@ tasks.named<Test>("test") {
     dependsOn(buildWasm)
     useJUnitPlatform()
     testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+}
+
+tasks.named("jmh") {
+    dependsOn(buildWasm)
+}
+
+tasks.named("jmhJar") {
+    dependsOn(buildWasm)
 }
 
 spotless {
