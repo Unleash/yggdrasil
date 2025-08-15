@@ -98,7 +98,7 @@ List<String> strategies = UnleashEngine.getBuiltInStrategies();
 To work with this project, you’ll need:
 
 - The Yggdrasil WASM binary (compiled with Rust)
-- [flatc version 23.1.21](https://github.com/google/flatbuffers/releases/tag/v23.1.21) for regenerating the Java FlatBuffer bindings
+- [flatc version 25.2.10](https://github.com/google/flatbuffers/releases/tag/v25.2.10) for regenerating the Java FlatBuffer bindings
 
 ### Linting
 

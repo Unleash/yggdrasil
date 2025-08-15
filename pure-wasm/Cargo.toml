@@ -17,4 +17,4 @@ serde_json = "1.0.135"
 serde = { version = "1.0.217", features = ["derive"] }
 unleash-types = {version = "0.15.11", default-features = false}
 rand = "0.9.1"
-flatbuffers = "23.5.26"
+flatbuffers = "25.2.10"
