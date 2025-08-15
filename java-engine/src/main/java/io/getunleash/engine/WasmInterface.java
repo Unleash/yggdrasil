@@ -54,7 +54,7 @@ public class WasmInterface implements NativeInterface {
   private static final ExportFunction listKnownToggles;
   private static final ExportFunction getCoreVersion;
   private static final ExportFunction getBuiltInStrategies;
-  private static Object engineLock = new Object();
+  private static final Object engineLock = new Object();
 
   static {
     FunctionType fillRandomFunctionType =
