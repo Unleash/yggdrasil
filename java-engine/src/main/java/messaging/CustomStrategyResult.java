@@ -3,57 +3,89 @@
 package messaging;
 
 import com.google.flatbuffers.BaseVector;
-import com.google.flatbuffers.BooleanVector;
-import com.google.flatbuffers.ByteVector;
 import com.google.flatbuffers.Constants;
-import com.google.flatbuffers.DoubleVector;
 import com.google.flatbuffers.FlatBufferBuilder;
-import com.google.flatbuffers.FloatVector;
-import com.google.flatbuffers.IntVector;
-import com.google.flatbuffers.LongVector;
-import com.google.flatbuffers.ShortVector;
-import com.google.flatbuffers.StringVector;
-import com.google.flatbuffers.Struct;
 import com.google.flatbuffers.Table;
-import com.google.flatbuffers.UnionVector;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 @SuppressWarnings("unused")
 public final class CustomStrategyResult extends Table {
-  public static void ValidateVersion() { Constants.FLATBUFFERS_25_2_10(); }
-  public static CustomStrategyResult getRootAsCustomStrategyResult(ByteBuffer _bb) { return getRootAsCustomStrategyResult(_bb, new CustomStrategyResult()); }
-  public static CustomStrategyResult getRootAsCustomStrategyResult(ByteBuffer _bb, CustomStrategyResult obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
-  public void __init(int _i, ByteBuffer _bb) { __reset(_i, _bb); }
-  public CustomStrategyResult __assign(int _i, ByteBuffer _bb) { __init(_i, _bb); return this; }
+  public static void ValidateVersion() {
+    Constants.FLATBUFFERS_25_2_10();
+  }
 
-  public String key() { int o = __offset(4); return o != 0 ? __string(o + bb_pos) : null; }
-  public ByteBuffer keyAsByteBuffer() { return __vector_as_bytebuffer(4, 1); }
-  public ByteBuffer keyInByteBuffer(ByteBuffer _bb) { return __vector_in_bytebuffer(_bb, 4, 1); }
-  public boolean value() { int o = __offset(6); return o != 0 ? 0!=bb.get(o + bb_pos) : false; }
+  public static CustomStrategyResult getRootAsCustomStrategyResult(ByteBuffer _bb) {
+    return getRootAsCustomStrategyResult(_bb, new CustomStrategyResult());
+  }
 
-  public static int createCustomStrategyResult(FlatBufferBuilder builder,
-      int keyOffset,
-      boolean value) {
+  public static CustomStrategyResult getRootAsCustomStrategyResult(
+      ByteBuffer _bb, CustomStrategyResult obj) {
+    _bb.order(ByteOrder.LITTLE_ENDIAN);
+    return (obj.__assign(_bb.getInt(_bb.position()) + _bb.position(), _bb));
+  }
+
+  public void __init(int _i, ByteBuffer _bb) {
+    __reset(_i, _bb);
+  }
+
+  public CustomStrategyResult __assign(int _i, ByteBuffer _bb) {
+    __init(_i, _bb);
+    return this;
+  }
+
+  public String key() {
+    int o = __offset(4);
+    return o != 0 ? __string(o + bb_pos) : null;
+  }
+
+  public ByteBuffer keyAsByteBuffer() {
+    return __vector_as_bytebuffer(4, 1);
+  }
+
+  public ByteBuffer keyInByteBuffer(ByteBuffer _bb) {
+    return __vector_in_bytebuffer(_bb, 4, 1);
+  }
+
+  public boolean value() {
+    int o = __offset(6);
+    return o != 0 ? 0 != bb.get(o + bb_pos) : false;
+  }
+
+  public static int createCustomStrategyResult(
+      FlatBufferBuilder builder, int keyOffset, boolean value) {
     builder.startTable(2);
     CustomStrategyResult.addKey(builder, keyOffset);
     CustomStrategyResult.addValue(builder, value);
     return CustomStrategyResult.endCustomStrategyResult(builder);
   }
 
-  public static void startCustomStrategyResult(FlatBufferBuilder builder) { builder.startTable(2); }
-  public static void addKey(FlatBufferBuilder builder, int keyOffset) { builder.addOffset(keyOffset); builder.slot(0); }
-  public static void addValue(FlatBufferBuilder builder, boolean value) { builder.addBoolean(1, value, false); }
+  public static void startCustomStrategyResult(FlatBufferBuilder builder) {
+    builder.startTable(2);
+  }
+
+  public static void addKey(FlatBufferBuilder builder, int keyOffset) {
+    builder.addOffset(keyOffset);
+    builder.slot(0);
+  }
+
+  public static void addValue(FlatBufferBuilder builder, boolean value) {
+    builder.addBoolean(1, value, false);
+  }
+
   public static int endCustomStrategyResult(FlatBufferBuilder builder) {
     int o = builder.endTable();
-    builder.required(o, 4);  // key
+    builder.required(o, 4); // key
     return o;
   }
 
   @Override
-  protected int keysCompare(Integer o1, Integer o2, ByteBuffer _bb) { return compareStrings(__offset(4, o1, _bb), __offset(4, o2, _bb), _bb); }
+  protected int keysCompare(Integer o1, Integer o2, ByteBuffer _bb) {
+    return compareStrings(__offset(4, o1, _bb), __offset(4, o2, _bb), _bb);
+  }
 
-  public static CustomStrategyResult __lookup_by_key(CustomStrategyResult obj, int vectorLocation, String key, ByteBuffer bb) {
+  public static CustomStrategyResult __lookup_by_key(
+      CustomStrategyResult obj, int vectorLocation, String key, ByteBuffer bb) {
     byte[] byteKey = key.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     int span = bb.getInt(vectorLocation - 4);
     int start = 0;
@@ -75,12 +107,25 @@ public final class CustomStrategyResult extends Table {
   }
 
   public static final class Vector extends BaseVector {
-    public Vector __assign(int _vector, int _element_size, ByteBuffer _bb) { __reset(_vector, _element_size, _bb); return this; }
+    public Vector __assign(int _vector, int _element_size, ByteBuffer _bb) {
+      __reset(_vector, _element_size, _bb);
+      return this;
+    }
 
-    public CustomStrategyResult get(int j) { return get(new CustomStrategyResult(), j); }
-    public CustomStrategyResult get(CustomStrategyResult obj, int j) {  return obj.__assign(__indirect(__element(j), bb), bb); }
-    public CustomStrategyResult getByKey(String key) {  return __lookup_by_key(null, __vector(), key, bb); }
-    public CustomStrategyResult getByKey(CustomStrategyResult obj, String key) {  return __lookup_by_key(obj, __vector(), key, bb); }
+    public CustomStrategyResult get(int j) {
+      return get(new CustomStrategyResult(), j);
+    }
+
+    public CustomStrategyResult get(CustomStrategyResult obj, int j) {
+      return obj.__assign(__indirect(__element(j), bb), bb);
+    }
+
+    public CustomStrategyResult getByKey(String key) {
+      return __lookup_by_key(null, __vector(), key, bb);
+    }
+
+    public CustomStrategyResult getByKey(CustomStrategyResult obj, String key) {
+      return __lookup_by_key(obj, __vector(), key, bb);
+    }
   }
 }
-
