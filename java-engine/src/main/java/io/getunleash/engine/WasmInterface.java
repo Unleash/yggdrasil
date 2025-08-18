@@ -57,6 +57,7 @@ public class WasmInterface implements NativeInterface {
   private static final ExportFunction listKnownToggles;
   private static final ExportFunction getCoreVersion;
   private static final ExportFunction getBuiltInStrategies;
+  private static final ExportFunction freeCString;
   private static final Object engineLock = new Object();
 
   static {
@@ -106,6 +107,7 @@ public class WasmInterface implements NativeInterface {
     getBuiltInStrategies = instance.export("get_built_in_strategies");
     newEngine = instance.export("new_engine");
     freeEngine = instance.export("free_engine");
+    freeCString = instance.export("free_cstring");
   }
 
   @Override
@@ -139,7 +141,12 @@ public class WasmInterface implements NativeInterface {
   public String getState(int enginePtr) {
     synchronized (engineLock) {
       int ptr = (int) getState.apply(enginePtr)[0];
-      return instance.memory().readCString(ptr);
+      if (ptr == 0) {
+        return null;
+      }
+      String result = instance.memory().readCString(ptr);
+      freeCString.apply(ptr);
+      return result;
     }
   }
 
