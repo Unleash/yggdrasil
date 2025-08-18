@@ -144,8 +144,12 @@ public class WasmInterface implements NativeInterface {
       if (ptr == 0) {
         return null;
       }
-      String result = instance.memory().readCString(ptr);
-      freeCString.apply(ptr);
+      String result;
+      try {
+        result = instance.memory().readCString(ptr);
+      } finally {
+        freeCString.apply(ptr);
+      }
       return result;
     }
   }
