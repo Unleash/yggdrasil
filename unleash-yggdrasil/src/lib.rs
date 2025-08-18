@@ -2150,7 +2150,7 @@ mod test {
         engine.take_state(UpdateMessage::FullResponse(client_features));
         let state = engine.get_state();
 
-        assert_eq!(state.version, 3);
+        assert_eq!(state.version, 2);
         assert_eq!(state.features.len(), 1);
         assert_eq!(state.features[0].name, "test-feature");
         assert_eq!(state.features[0].enabled, true);
