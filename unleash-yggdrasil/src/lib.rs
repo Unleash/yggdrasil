@@ -2143,7 +2143,7 @@ mod test {
                 }]),
                 ..Default::default()
             }],
-            version: 3,
+            version: 2,
             ..Default::default()
         };
 
