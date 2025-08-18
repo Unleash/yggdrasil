@@ -177,7 +177,7 @@ pub extern "C" fn free_cstring(ptr: u32) {
     if ptr == 0 {
         return;
     }
-    
+
     unsafe {
         use std::ffi::CString;
         let _ = CString::from_raw(ptr as *mut i8);
@@ -211,11 +211,8 @@ pub extern "C" fn get_state(engine_ptr: u32) -> u32 {
     let state = engine.get_state();
     if let Ok(json_str) = serde_json::to_string(&state) {
         use std::ffi::CString;
-        // Convert to CString which adds null terminator
-        if let Ok(c_str) = CString::new(json_str) {
-            let ptr = c_str.into_raw() as u32;
-            return ptr;
-        }
+        let c_string = CString::new(json_str).unwrap();
+        return c_string.into_raw() as u32;
     }
 
     0 // Return null pointer only if serialization failed (shouldn't happen)
