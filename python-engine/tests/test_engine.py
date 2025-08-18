@@ -197,7 +197,9 @@ def test_get_state_and_roundtrip():
 
     empty_state = engine.get_state()
     assert '"features": []' in empty_state
-
+    assert 'status_code' not in empty_state
+    assert 'error_message' not in empty_state
+    
     test_state = {
         "version": 1,
         "features": [{"name": "testFeature", "enabled": True, "strategies": [{"name": "default"}]}]
@@ -210,3 +212,5 @@ def test_get_state_and_roundtrip():
     assert '"version": 1' in retrieved_state
     assert '"name": "testFeature"' in retrieved_state
     assert '"name": "default"' in retrieved_state
+    assert 'status_code' not in retrieved_state
+    assert 'error_message' not in retrieved_state
