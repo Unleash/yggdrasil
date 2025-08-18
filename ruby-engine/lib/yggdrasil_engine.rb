@@ -88,9 +88,13 @@ class YggdrasilEngine
 
   def get_state
      response_ptr = YggdrasilEngine.get_state(@engine)
-     state_json = response_ptr.read_string
+     response_json = response_ptr.read_string
      YggdrasilEngine.free_response(response_ptr)
-     state_json
+     response = JSON.parse(response_json, symbolize_names: true)
+
+     raise "Error: #{response[:error_message]}" if response[:status_code] == ERROR_RESPONSE
+     
+     response[:value].to_json
   end
 
   def get_variant(name, context)
