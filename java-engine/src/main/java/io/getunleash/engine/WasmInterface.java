@@ -28,6 +28,8 @@ interface NativeInterface {
 
   void takeState(int ptr, byte[] messageBytes);
 
+  String getState(int ptr);
+
   Response checkEnabled(int enginePtr, byte[] contextBytes);
 
   Variant checkVariant(int enginePtr, byte[] contextBytes);
@@ -46,6 +48,7 @@ public class WasmInterface implements NativeInterface {
   private static final ExportFunction alloc;
   private static final ExportFunction dealloc;
   private static final ExportFunction takeState;
+  private static final ExportFunction getState;
   private static final ExportFunction checkEnabled;
   private static final ExportFunction checkVariant;
   private static final ExportFunction getMetrics;
@@ -92,6 +95,7 @@ public class WasmInterface implements NativeInterface {
     alloc = instance.export("local_alloc");
     dealloc = instance.export("local_dealloc");
     takeState = instance.export("take_state");
+    getState = instance.export("get_state");
     checkEnabled = instance.export("check_enabled");
     checkVariant = instance.export("check_variant");
     getMetrics = instance.export("get_metrics");
@@ -128,6 +132,18 @@ public class WasmInterface implements NativeInterface {
       takeState.apply(enginePtr, ptr, len);
 
       dealloc.apply(ptr, len);
+    }
+  }
+
+  @Override
+  public String getState(int enginePtr) {
+    synchronized (engineLock) {
+      int ptr = (int) getState.apply(enginePtr)[0];
+      if (ptr == 0) {
+        // Shouldn't happen anymore, but return empty state as fallback
+        return "{\"version\":2,\"features\":[]}";
+      }
+      return instance.memory().readCString(ptr);
     }
   }
 

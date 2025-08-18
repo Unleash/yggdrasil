@@ -658,6 +658,14 @@ impl EngineState {
         }
     }
 
+    pub fn get_state(&self) -> ClientFeatures {
+        if self.compiled_state.is_some() {
+            self.previous_state.clone()
+        } else {
+            ClientFeatures::default()
+        }
+    }
+
     pub fn apply_client_features(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
         self.previous_state = toggles;

@@ -33,6 +33,16 @@ func (e *UnleashEngine) TakeState(json string) {
 	C.take_state(e.ptr, C.CString(json))
 }
 
+func (e *UnleashEngine) GetState() string {
+	result := C.get_state(e.ptr)
+	if result == nil {
+		// Shouldn't happen anymore, but return empty state as fallback
+		return "{\"version\":2,\"features\":[]}"
+	}
+	defer C.free_response(result)
+	return C.GoString(result)
+}
+
 func (e *UnleashEngine) IsEnabled(toggleName string, context *Context) bool {
 	ctoggleName := C.CString(toggleName)
 

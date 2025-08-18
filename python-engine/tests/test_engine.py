@@ -36,6 +36,27 @@ def variant_to_dict(variant) -> dict:
     return {k: v for k, v in asdict(variant).items() if v is not None}
 
 
+def test_get_state_and_roundtrip():
+    """Test get_state returns valid JSON and supports roundtrip"""
+    engine = UnleashEngine()
+    
+    # Test empty engine
+    empty_state = engine.get_state()
+    assert '"features":[]' in empty_state
+    
+    # Test roundtrip
+    test_state = {
+        "version": 1,
+        "features": [{"name": "testFeature", "enabled": True, "strategies": [{"name": "default"}]}]
+    }
+    
+    engine.take_state(json.dumps(test_state))
+    retrieved_state = engine.get_state()
+    
+    assert "testFeature" in retrieved_state
+    assert json.loads(retrieved_state) == test_state
+
+
 def test_get_variant_does_not_crash():
     unleash_engine = UnleashEngine()
 

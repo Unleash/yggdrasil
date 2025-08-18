@@ -101,6 +101,24 @@ class UnleashEngineTest {
   }
 
   @Test
+  void testGetStateAndRoundtrip() throws Exception {
+    // Test empty engine returns valid JSON
+    String emptyState = engine.getState();
+    assertNotNull(emptyState);
+    assertTrue(emptyState.contains("\"features\":[]"));
+    // Test roundtrip: take_state -> get_state should return equivalent JSON
+    engine.takeState(simpleFeatures);
+    String retrievedState = engine.getState();
+    assertNotNull(retrievedState);
+    assertTrue(retrievedState.contains("Feature.A"));
+    // Verify roundtrip by comparing parsed JSON
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode original = mapper.readTree(simpleFeatures);
+    JsonNode retrieved = mapper.readTree(retrievedState);
+    assertEquals(original, retrieved);
+  }
+
+  @Test
   void testIsEnabled() throws Exception {
     engine.takeState(simpleFeatures);
 

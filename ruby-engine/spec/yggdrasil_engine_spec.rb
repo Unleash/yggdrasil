@@ -18,6 +18,22 @@ end
 RSpec.describe YggdrasilEngine do
   let(:yggdrasil_engine) { YggdrasilEngine.new }
 
+  describe '#get_state' do
+    it 'should return JSON and support roundtrip' do
+      # Test empty engine
+      empty_state = yggdrasil_engine.get_state
+      expect(empty_state).to include('"features":[]')
+      
+      # Test roundtrip
+      test_state = '{"version":1,"features":[{"name":"testFeature","enabled":true,"strategies":[{"name":"default"}]}]}'
+      yggdrasil_engine.take_state(test_state)
+      retrieved_state = yggdrasil_engine.get_state
+      
+      expect(retrieved_state).to include('testFeature')
+      expect(JSON.parse(retrieved_state)).to eq(JSON.parse(test_state))
+    end
+  end
+
   describe '#checking a toggle' do
     it 'that does not exist should yield a not found' do
       is_enabled = yggdrasil_engine.enabled?('missing-toggle', {})
