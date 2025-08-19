@@ -1,5 +1,6 @@
 require 'ffi'
 require 'json'
+require 'logger'
 require 'custom_strategy'
 
 TOGGLE_MISSING_RESPONSE = 'NotFound'.freeze
@@ -69,6 +70,12 @@ class YggdrasilEngine
 
   attach_function :list_known_toggles, [:pointer], :pointer
 
+  class << self
+    attr_accessor :logger
+  end
+
+  self.logger = Logger.new($stderr, level: Logger::WARN)
+
   def initialize
     @engine = YggdrasilEngine.new_engine
     @custom_strategy_handler = CustomStrategyHandler.new
@@ -83,6 +90,9 @@ class YggdrasilEngine
     @custom_strategy_handler.update_strategies(toggles)
     response_ptr = YggdrasilEngine.take_state(@engine, toggles)
     take_toggles_response = JSON.parse(response_ptr.read_string, symbolize_names: true)
+    if take_toggles_response[:status_code] == ERROR_RESPONSE
+      self.class.logger.error("Error taking state, flags were not updated: #{take_toggles_response[:error_message]}")
+    end
     YggdrasilEngine.free_response(response_ptr)
   end
 
@@ -93,7 +103,7 @@ class YggdrasilEngine
        response = JSON.parse(response_json, symbolize_names: true)
 
        raise "Error: #{response[:error_message]}" if response[:status_code] == ERROR_RESPONSE
-       
+
        response[:value].to_json
      ensure
        YggdrasilEngine.free_response(response_ptr)
