@@ -658,6 +658,14 @@ impl EngineState {
         }
     }
 
+    pub fn get_state(&self) -> ClientFeatures {
+        if self.compiled_state.is_some() {
+            self.previous_state.clone()
+        } else {
+            ClientFeatures::default()
+        }
+    }
+
     pub fn apply_client_features(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
         self.previous_state = toggles;
@@ -2105,5 +2113,46 @@ mod test {
         assert!(engine.is_enabled("This_should_be_okay", &context, &None));
         println!("{:?}", warnings);
         assert!(warnings.is_none());
+    }
+
+    #[test]
+    fn get_state_returns_default_when_empty() {
+        let engine = EngineState::default();
+        let state = engine.get_state();
+
+        assert!(state.features.is_empty());
+        assert_eq!(state.version, 2);
+    }
+
+    #[test]
+    fn get_state_returns_previous_state_when_loaded() {
+        use unleash_types::client_features::{ClientFeature, ClientFeatures, Strategy};
+
+        let mut engine = EngineState::default();
+        let client_features = ClientFeatures {
+            features: vec![ClientFeature {
+                name: "test-feature".into(),
+                enabled: true,
+                strategies: Some(vec![Strategy {
+                    name: "default".into(),
+                    constraints: None,
+                    parameters: None,
+                    segments: None,
+                    sort_order: None,
+                    variants: None,
+                }]),
+                ..Default::default()
+            }],
+            version: 2,
+            ..Default::default()
+        };
+
+        engine.take_state(UpdateMessage::FullResponse(client_features));
+        let state = engine.get_state();
+
+        assert_eq!(state.version, 2);
+        assert_eq!(state.features.len(), 1);
+        assert_eq!(state.features[0].name, "test-feature");
+        assert_eq!(state.features[0].enabled, true);
     }
 }

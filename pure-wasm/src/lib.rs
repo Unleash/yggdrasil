@@ -173,6 +173,18 @@ pub extern "C" fn dealloc_response_buffer(ptr: *mut u8, len: usize) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn free_cstring(ptr: u32) {
+    if ptr == 0 {
+        return;
+    }
+
+    unsafe {
+        use std::ffi::CString;
+        let _ = CString::from_raw(ptr as *mut i8);
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn take_state(engine_ptr: u32, json_ptr: u32, json_len: u32) {
     let lock = unsafe { get_engine(engine_ptr as *const u32).unwrap() };
     let mut engine = recover_lock(&lock);
@@ -189,6 +201,21 @@ pub extern "C" fn take_state(engine_ptr: u32, json_ptr: u32, json_len: u32) {
     if let Ok(client_features) = serde_json::from_str::<UpdateMessage>(json_str) {
         engine.take_state(client_features);
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn get_state(engine_ptr: u32) -> u32 {
+    let lock = unsafe { get_engine(engine_ptr as *const u32).unwrap() };
+    let engine = recover_lock(&lock);
+
+    let state = engine.get_state();
+    if let Ok(json_str) = serde_json::to_string(&state) {
+        use std::ffi::CString;
+        let c_string = CString::new(json_str).unwrap();
+        return c_string.into_raw() as u32;
+    }
+
+    0 // Return null pointer only if serialization failed (shouldn't happen)
 }
 
 #[unsafe(no_mangle)]

@@ -190,3 +190,27 @@ def test_list_empty_toggles_yields_empty_list():
     engine = UnleashEngine()
 
     assert engine.list_known_toggles() == []
+
+def test_get_state_and_roundtrip():
+    """Test get_state returns valid JSON and supports roundtrip"""
+    engine = UnleashEngine()
+
+    empty_state = engine.get_state()
+    assert '"features": []' in empty_state
+    assert 'status_code' not in empty_state
+    assert 'error_message' not in empty_state
+    
+    test_state = {
+        "version": 1,
+        "features": [{"name": "testFeature", "enabled": True, "strategies": [{"name": "default"}]}]
+    }
+
+    engine.take_state(json.dumps(test_state))
+    retrieved_state = engine.get_state()
+
+    assert "testFeature" in retrieved_state
+    assert '"version": 1' in retrieved_state
+    assert '"name": "testFeature"' in retrieved_state
+    assert '"name": "default"' in retrieved_state
+    assert 'status_code' not in retrieved_state
+    assert 'error_message' not in retrieved_state

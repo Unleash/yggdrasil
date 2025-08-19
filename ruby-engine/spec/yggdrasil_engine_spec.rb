@@ -25,6 +25,27 @@ RSpec.describe YggdrasilEngine do
     end
   end
 
+  describe '#getting state' do
+    it 'should return JSON string of state value (not wrapped response) and support roundtrip' do
+       empty_state = yggdrasil_engine.get_state
+       
+       expect(empty_state).to include('"features":[]')
+       expect(empty_state).not_to include('status_code')
+       expect(empty_state).not_to include('error_message')
+
+       test_state = '{"version":1,"features":[{"name":"testFeature","enabled":true,"strategies":[{"name":"default"}]}]}'
+       yggdrasil_engine.take_state(test_state)
+       retrieved_state = yggdrasil_engine.get_state
+
+       expect(retrieved_state).to include('testFeature')
+       expect(retrieved_state).to include('"version":1')
+       expect(retrieved_state).to include('"name":"testFeature"')
+       expect(retrieved_state).to include('"name":"default"')
+       expect(retrieved_state).not_to include('status_code')
+       expect(retrieved_state).not_to include('error_message')
+      end
+  end
+
   describe '#metrics' do
     it 'should clear metrics when get_metrics is called' do
       feature_name = 'Feature.A'

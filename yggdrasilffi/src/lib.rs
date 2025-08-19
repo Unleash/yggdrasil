@@ -10,6 +10,7 @@ use std::{
 use chrono::Utc;
 use libc::c_void;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use unleash_types::client_features::ClientFeatures;
 use unleash_types::client_metrics::MetricBucket;
 use unleash_yggdrasil::{
     state::EnrichedContext, Context, EngineState, EvalWarning, ExtendedVariantDef,
@@ -189,6 +190,23 @@ pub unsafe extern "C" fn take_state(
         } else {
             Ok(Some(()))
         }
+    })();
+
+    result_to_json_ptr(result)
+}
+
+/// Gets the current state of the engine as a JSON encoded `ClientFeatures` structure.
+///
+/// # Safety
+///
+/// This function dereferences the engine_ptr argument, and so this function should not
+/// be called with a null pointer.
+#[no_mangle]
+pub unsafe extern "C" fn get_state(engine_ptr: *mut c_void) -> *const c_char {
+    let result: Result<Option<ClientFeatures>, FFIError> = (|| {
+        let guard = get_engine(engine_ptr)?;
+        let engine = recover_lock(&guard);
+        Ok(Some(engine.get_state()))
     })();
 
     result_to_json_ptr(result)
@@ -712,6 +730,77 @@ mod tests {
             assert_eq!(known_features.len(), 2);
             assert!(known_features.iter().any(|t| t.name == "toggle1"));
             assert!(known_features.iter().any(|t| t.name == "toggle2"));
+        }
+    }
+
+    #[test]
+    fn get_state_returns_default_when_no_features_loaded() {
+        let engine_ptr = new_engine();
+
+        unsafe {
+            let string_response = get_state(engine_ptr);
+            let response = CStr::from_ptr(string_response).to_str().unwrap();
+            let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
+
+            assert!(state_response.status_code == ResponseCode::Ok);
+            let state = state_response.value.expect("Expected state");
+            assert!(state.features.is_empty());
+            assert_eq!(state.version, 2);
+        }
+    }
+
+    #[test]
+    fn get_state_returns_loaded_features() {
+        let engine_ptr = new_engine();
+        let client_features = ClientFeatures {
+            features: vec![ClientFeature {
+                name: "test-toggle".into(),
+                enabled: true,
+                strategies: Some(vec![Strategy {
+                    name: "default".into(),
+                    constraints: None,
+                    parameters: None,
+                    segments: None,
+                    sort_order: None,
+                    variants: None,
+                }]),
+                ..Default::default()
+            }],
+            query: None,
+            segments: None,
+            version: 2,
+            meta: None,
+        };
+
+        unsafe {
+            let engine_guard = get_engine(engine_ptr).expect("Expected a valid engine pointer");
+            let mut engine = engine_guard.lock().expect("Failed to lock engine mutex");
+            engine.take_state(UpdateMessage::FullResponse(client_features));
+            drop(engine);
+
+            let string_response = get_state(engine_ptr);
+            let response = CStr::from_ptr(string_response).to_str().unwrap();
+            let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
+
+            assert!(state_response.status_code == ResponseCode::Ok);
+            let state = state_response.value.expect("Expected state");
+            assert_eq!(state.features.len(), 1);
+            assert_eq!(state.features[0].name, "test-toggle");
+            assert_eq!(state.version, 2);
+        }
+    }
+
+    #[test]
+    fn get_state_handles_null_engine_pointer() {
+        let engine_ptr = std::ptr::null_mut();
+
+        unsafe {
+            let string_response = get_state(engine_ptr);
+            let response = CStr::from_ptr(string_response).to_str().unwrap();
+            let state_response: Response<ClientFeatures> = serde_json::from_str(response).unwrap();
+
+            assert!(state_response.status_code == ResponseCode::Error);
+            assert!(state_response.error_message.is_some());
         }
     }
 }

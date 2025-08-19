@@ -285,4 +285,22 @@ public class Tests
         var knownFeatures = engine.ListKnownToggles();
         Assert.AreEqual(1, knownFeatures.Count);
     }
+
+    [Test]
+    public void GetState_AndRoundtrip()
+    {
+        var engine = new YggdrasilEngine();
+
+        var emptyState = engine.GetState();
+        StringAssert.Contains("\"features\":[]", emptyState);
+
+        var testState = "{\"version\":1,\"features\":[{\"name\":\"testFeature\",\"enabled\":true,\"strategies\":[{\"name\":\"default\"}]}]}";
+        engine.TakeState(testState);
+        var retrievedState = engine.GetState();
+
+        StringAssert.Contains("testFeature", retrievedState);
+        StringAssert.Contains("\"version\":1", retrievedState);
+        StringAssert.Contains("\"name\":\"testFeature\"", retrievedState);
+        StringAssert.Contains("\"name\":\"default\"", retrievedState);
+    }
 }
