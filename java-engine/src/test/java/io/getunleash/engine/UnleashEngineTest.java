@@ -157,7 +157,7 @@ class UnleashEngineTest {
         "{\"version\":1,\"features\":[{\"name\":\"Feature.D\",\"description\":\"Has a custom strategy\",\"enabled\":true,\"strategies\":[{\"name\":\"custom\",\"constraints\":[],\"parameters\":{\"foo\":\"bar\"}}]}]}");
 
     Context context = new Context();
-    WasmResponse<VariantDef> variant = engine.getVariant("Feature.D", context);
+    WasmVariantResponse variant = engine.getVariant("Feature.D", context);
 
     assertEquals(true, variant.value.isFeatureEnabled());
     assertFalse(variant.value.isEnabled());
@@ -300,7 +300,7 @@ class UnleashEngineTest {
       throws Exception {
 
     takeFeaturesFromResource(engine, "impression-data-tests.json");
-    WasmResponse<Boolean> result = engine.isEnabled(featureName, new Context());
+    WasmIsEnabledResponse result = engine.isEnabled(featureName, new Context());
     assertNotNull(result);
     assertEquals(expectedImpressionData, result.impressionData);
   }

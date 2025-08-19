@@ -194,7 +194,8 @@ public class UnleashEngine {
       byte[] messageBytes = clientFeatures.getBytes(StandardCharsets.UTF_8);
       nativeInterface.takeState(this.enginePointer, messageBytes);
     } catch (RuntimeException e) {
-      throw new YggdrasilInvalidInputException("Failed to take state:", e);
+      throw new YggdrasilInvalidInputException(
+          "Failed to take state, ensure the input is a valid Yggdrasil state file", e);
     }
   }
 
@@ -224,7 +225,7 @@ public class UnleashEngine {
     }
   }
 
-  public WasmResponse<Boolean> isEnabled(String toggleName, Context context)
+  public WasmIsEnabledResponse isEnabled(String toggleName, Context context)
       throws YggdrasilInvalidInputException {
     try {
       Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
@@ -238,17 +239,17 @@ public class UnleashEngine {
       }
 
       if (response.hasEnabled()) {
-        return new WasmResponse<Boolean>(response.impressionData(), response.enabled());
+        return new WasmIsEnabledResponse(response.impressionData(), response.enabled());
       } else {
-        return new WasmResponse<Boolean>(response.impressionData(), null);
+        return new WasmIsEnabledResponse(response.impressionData(), null);
       }
     } catch (RuntimeException e) {
       log.warn("Could not check if toggle is enabled: {}", e.getMessage(), e);
-      return new WasmResponse<Boolean>(false, null);
+      return new WasmIsEnabledResponse(false, null);
     }
   }
 
-  public WasmResponse<VariantDef> getVariant(String toggleName, Context context)
+  public WasmVariantResponse getVariant(String toggleName, Context context)
       throws YggdrasilInvalidInputException {
     try {
       Map<String, Boolean> strategyResults = customStrategiesEvaluator.eval(toggleName, context);
@@ -271,15 +272,15 @@ public class UnleashEngine {
           throw new YggdrasilInvalidInputException(error);
         }
 
-        return new WasmResponse<VariantDef>(
+        return new WasmVariantResponse(
             variant.impressionData(),
             new VariantDef(variant.name(), payload, variant.enabled(), variant.featureEnabled()));
       } else {
-        return new WasmResponse<VariantDef>(false, null);
+        return new WasmVariantResponse(false, null);
       }
     } catch (RuntimeException e) {
       log.warn("Could not get variant for toggle '{}': {}", toggleName, e.getMessage(), e);
-      return new WasmResponse<VariantDef>(false, null);
+      return new WasmVariantResponse(false, null);
     }
   }
 
