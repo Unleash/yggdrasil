@@ -5,7 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.18.1 (2025-08-19)
+
+### New Features
+
+ - <csr-id-c2ca8d1123512471f1c29a753338745903b120e8/> expose get_state method in core binaries
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 1 commit contributed to the release.
+ - 26 days passed between releases.
+ - 1 commit was understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#295](https://github.com/Unleash/yggdrasil/issues/295)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#295](https://github.com/Unleash/yggdrasil/issues/295)**
+    - Expose get_state method in core binaries ([`c2ca8d1`](https://github.com/Unleash/yggdrasil/commit/c2ca8d1123512471f1c29a753338745903b120e8))
+</details>
+
 ## v0.18.0 (2025-07-23)
+
+<csr-id-ff972f5b647732ad1ccf975519c387d3c6816c78/>
+<csr-id-c4079ebcc45c9978576520852aec88d187edd001/>
+<csr-id-3231e8635a7235b1d95319f21227d519c2dd4951/>
+<csr-id-3232c0bf831dac5f6a49f24f9cde76df04979a8e/>
 
 ### Chore
 
@@ -22,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 5 commits contributed to the release over the course of 47 calendar days.
+ - 6 commits contributed to the release over the course of 47 calendar days.
  - 55 days passed between releases.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 3 unique issues were worked on: [#269](https://github.com/Unleash/yggdrasil/issues/269), [#274](https://github.com/Unleash/yggdrasil/issues/274), [#293](https://github.com/Unleash/yggdrasil/issues/293)
@@ -40,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#293](https://github.com/Unleash/yggdrasil/issues/293)**
     - Bump version to 0.18.0 ([`ff972f5`](https://github.com/Unleash/yggdrasil/commit/ff972f5b647732ad1ccf975519c387d3c6816c78))
  * **Uncategorized**
+    - Release unleash-yggdrasil v0.18.0 ([`f03c5bf`](https://github.com/Unleash/yggdrasil/commit/f03c5bf2d7ae595b75d8754fac9401e03fafe2d0))
     - Thank you clippy ([`3231e86`](https://github.com/Unleash/yggdrasil/commit/3231e8635a7235b1d95319f21227d519c2dd4951))
     - Internal refactor to free yggdrasil from random/sys clock, move to ahash and allow the internal functions to receive an EnrichedContext directly ([`3232c0b`](https://github.com/Unleash/yggdrasil/commit/3232c0bf831dac5f6a49f24f9cde76df04979a8e))
 </details>
