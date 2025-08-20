@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.authors = ['Unleash']
   s.email = 'liquidwicked64@gmail.com'
   s.files = Dir.glob("{lib,spec}/**/*") + ["README.md"] + Dir["lib/**/*"]
-  s.homepage = 'http://github.com/username/my_gem'
+  s.homepage = 'https://github.com/Unleash/yggdrasil'
   s.license = 'MIT'
   s.add_dependency "ffi", "~> 1.16.3"
   s.platform = target_platform.call
