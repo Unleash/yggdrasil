@@ -99,8 +99,7 @@ jobs:
             x86_64-linux-musl-gcc -shared -fPIC -static-libgcc \
               -Wl,--no-undefined -Wl,-soname,libyggdrasilffi.so \
               -Wl,--whole-archive target/${{ matrix.target }}/release/libyggdrasilffi.a -Wl,--no-whole-archive \
-              -o target/${{ matrix.target }}/release/libyggdrasilffi.so &&
-            readelf -d target/${{ matrix.target }}/release/libyggdrasilffi.so | grep NEEDED || true
+              -o target/${{ matrix.target }}/release/libyggdrasilffi.so
           '
 
     - name: Rename Output Binary
