@@ -82,9 +82,9 @@ jobs:
         rustup target add ${{ matrix.target }}
         cross build -p yggdrasilffi --release --target ${{ matrix.target }};
 
-    - name: Build Rust Library (Cargo)
-      if: ${{ matrix.cross == false }}
-      run: cargo build -p yggdrasilffi --release --target ${{ matrix.target }};
+    # - name: Build Rust Library (Cargo)
+    #   if: ${{ matrix.cross == false }}
+    #   run: cargo build -p yggdrasilffi --release --target ${{ matrix.target }};
 
     - name: Build Rust Library (Musl Cross)
       if: ${{ matrix.target == 'aarch64-unknown-linux-musl' || matrix.target == 'x86_64-unknown-linux-musl' }}
