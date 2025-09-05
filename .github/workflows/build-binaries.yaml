@@ -36,6 +36,7 @@ jobs:
             target: aarch64-unknown-linux-musl
             output: libyggdrasilffi.so
             name: libyggdrasilffi_arm64-musl.so
+            cross: true
           # - os: windows-latest
           #   target: x86_64-pc-windows-gnu
           #   output: yggdrasilffi.dll
