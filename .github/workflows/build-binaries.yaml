@@ -90,6 +90,7 @@ jobs:
     - name: Link into SO (Musl builds)
       if: ${{ matrix.target == 'aarch64-unknown-linux-musl' || matrix.target == 'x86_64-unknown-linux-musl' }}
       run: |
+        rm target/${{ matrix.target }}/release/${{ matrix.output }}
         docker run --rm -v "$PWD":/project -w /project \
           ghcr.io/cross-rs/${{ matrix.target }}:latest \
           sh -c "x86_64-linux-musl-gcc -shared -fPIC -static-libgcc \
