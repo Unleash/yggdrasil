@@ -27,15 +27,17 @@ jobs:
           #   output: libyggdrasilffi.so
           #   name: libyggdrasilffi_arm64.so
           #   cross: true
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            output: libyggdrasilffi.so
-            name: libyggdrasilffi_x86_64-musl.so
-            cross: true
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-linux-musl
+          #   output: libyggdrasilffi.so
+          #   name: libyggdrasilffi_x86_64-musl.so
+          #   compiler: x86_64-linux-musl-gcc
+          #   cross: true
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             output: libyggdrasilffi.so
             name: libyggdrasilffi_arm64-musl.so
+            compiler: aarch64-linux-musl-gcc
             cross: true
           # - os: windows-latest
           #   target: x86_64-pc-windows-gnu
@@ -94,7 +96,7 @@ jobs:
         rm target/${{ matrix.target }}/release/${{ matrix.output }}
         docker run --rm -v "$PWD":/project -w /project \
           ghcr.io/cross-rs/${{ matrix.target }}:latest \
-          sh -c "x86_64-linux-musl-gcc -shared -fPIC -static-libgcc \
+          sh -c "${{ matrix.compiler }} -shared -fPIC -static-libgcc \
             -Wl,--no-undefined -Wl,-soname,libyggdrasilffi.so \
             -Wl,--whole-archive target/${{ matrix.target }}/release/libyggdrasilffi.a -Wl,--no-whole-archive \
             -o target/${{ matrix.target }}/release/libyggdrasilffi.so"
