@@ -93,14 +93,12 @@ jobs:
         rustup target add ${{ matrix.target }}
         cross build -p yggdrasilffi --release --target ${{ matrix.target }};
 
-        docker run --rm -it -v "$PWD":/project -w /project \
+        docker run --rm -v "$PWD":/project -w /project \
           ghcr.io/cross-rs/${{ matrix.target }}:latest \
-          /bin/sh -lc '
-            x86_64-linux-musl-gcc -shared -fPIC -static-libgcc \
-              -Wl,--no-undefined -Wl,-soname,libyggdrasilffi.so \
-              -Wl,--whole-archive target/${{ matrix.target }}/release/libyggdrasilffi.a -Wl,--no-whole-archive \
-              -o target/${{ matrix.target }}/release/libyggdrasilffi.so
-          '
+          sh -c "x86_64-linux-musl-gcc -shared -fPIC -static-libgcc \
+            -Wl,--no-undefined -Wl,-soname,libyggdrasilffi.so \
+            -Wl,--whole-archive target/${{ matrix.target }}/release/libyggdrasilffi.a -Wl,--no-whole-archive \
+            -o target/${{ matrix.target }}/release/libyggdrasilffi.so"
 
     - name: Rename Output Binary
       run: |
