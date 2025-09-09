@@ -16,6 +16,8 @@ publish_allow_dirty = false
 
 semver_check = true
 
+publish = true
+
 [changelog]
 
 commit_parsers = [
