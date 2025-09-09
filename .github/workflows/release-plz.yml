@@ -1,83 +1,81 @@
-# 'borrowed' from https://release-plz.ieni.dev/docs/github/quickstart
+  # 'borrowed' from https://release-plz.ieni.dev/docs/github/quickstart
 
-name: Release-plz
+  name: Release-plz
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  on:
+    push:
+      branches: [ main ]
 
-concurrency:
-  # keep different workflows from interleaving on the same ref.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  concurrency:
+    # keep different workflows from interleaving on the same ref.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
 
-jobs:
-  # create/update the Release PR
-  release-plz-pr:
-    if: ${{ github.repository_owner == 'Unleash' && (github.event_name == 'push' || github.event_name == 'pull_request') }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    concurrency:
-      group: release-plz-pr-${{ github.ref }}
-      cancel-in-progress: false
-    steps:
-      - name: Generate GitHub App token
-        id: app
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.UNLEASH_BOT_APP_ID }}
-          private-key: ${{ secrets.UNLEASH_BOT_PRIVATE_KEY }}
+  jobs:
+    # create/update the Release PR
+    release-plz-pr:
+      if: ${{ github.repository_owner == 'Unleash' }} # just a bit of politeness - we don't execute on forks so we don't ruin a forkee's day
+      runs-on: ubuntu-latest
+      permissions:
+        contents: write
+        pull-requests: write
+      concurrency:
+        group: release-plz-pr-${{ github.ref }}
+        cancel-in-progress: false
+      steps:
+        - name: Generate GitHub App token
+          id: app
+          uses: actions/create-github-app-token@v2
+          with:
+            app-id: ${{ secrets.UNLEASH_BOT_APP_ID }}
+            private-key: ${{ secrets.UNLEASH_BOT_PRIVATE_KEY }}
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ steps.app.outputs.token }}
+        - name: Checkout
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+            token: ${{ steps.app.outputs.token }}
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        - name: Install Rust
+          uses: dtolnay/rust-toolchain@stable
 
-      - name: release-plz (release-pr)
-        uses: release-plz/action@v0.5
-        with:
-          command: release-pr
-        env:
-          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+        - name: release-plz (release-pr)
+          uses: release-plz/action@v0.5
+          with:
+            command: release-pr
+          env:
+            GITHUB_TOKEN: ${{ steps.app.outputs.token }}
 
-  # publish/tag/create GitHub release when the Release PR is merged
-  release-plz-release:
-    if: ${{ github.repository_owner == 'Unleash' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_PUBLISH_KEY }}
-    steps:
-      - name: Generate GitHub App token
-        id: app
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.UNLEASH_BOT_APP_ID }}
-          private-key: ${{ secrets.UNLEASH_BOT_PRIVATE_KEY }}
+    # publish/tag/create GitHub release when the Release PR is merged
+    release-plz-release:
+      if: ${{ github.repository_owner == 'Unleash' }}
+      runs-on: ubuntu-latest
+      permissions:
+        contents: write
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_PUBLISH_KEY }}
+      steps:
+        - name: Generate GitHub App token
+          id: app
+          uses: actions/create-github-app-token@v2
+          with:
+            app-id: ${{ secrets.UNLEASH_BOT_APP_ID }}
+            private-key: ${{ secrets.UNLEASH_BOT_PRIVATE_KEY }}
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.ref }}
-          token: ${{ steps.app.outputs.token }}
+        - name: Checkout
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+            ref: ${{ github.ref }}
+            token: ${{ steps.app.outputs.token }}
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        - name: Install Rust
+          uses: dtolnay/rust-toolchain@stable
 
-      - name: release-plz (release)
-        uses: release-plz/action@v0.5
-        with:
-          command: release
-        env:
-          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_PUBLISH_KEY }}
+        - name: release-plz (release)
+          uses: release-plz/action@v0.5
+          with:
+            command: release
+          env:
+            GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+            CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_PUBLISH_KEY }}
