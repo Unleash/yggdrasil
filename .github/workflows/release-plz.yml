@@ -45,6 +45,8 @@ jobs:
         uses: release-plz/action@v0.5
         with:
           command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
 
   # publish/tag/create GitHub release when the Release PR is merged
   release-plz-release:
