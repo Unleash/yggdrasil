@@ -12,22 +12,22 @@ default = ["wall-clock"]
 wall-clock = ["chrono/clock", "chrono/wasmbind"]
 
 [dependencies]
-serde_json = "1.0.135"
+serde_json = "1.0.145"
 murmur3 = "0.5.2"
-ipnet = "2.10.1"
-rand = "0.9.1"
-pest = "2.7.15"
-pest_derive = "2.7.15"
+ipnet = "2.11.0"
+rand = "0.9.2"
+pest = "2.8.3"
+pest_derive = "2.8.3"
 lazy_static = "1.5.0"
-semver = "1.0.24"
-convert_case = "0.6.0"
-unleash-types = {version = "0.15.11", default-features = false}
-chrono = { version = "0.4.40", default-features = false, features = ["serde", "std"] }
+semver = "1.0.27"
+convert_case = "0.8.0"
+unleash-types = {version = "0.15.21", default-features = false}
+chrono = { version = "0.4.42", default-features = false, features = ["serde", "std"] }
 dashmap = "6.1.0"
-hostname = { version = "0.4.0", optional = true }
+hostname = { version = "0.4.1", optional = true }
 ipnetwork = "0.21.0"
 ahash = "0.8.12"
-hashbrown = "0.15.2"
+hashbrown = "0.16.0"
 
 [dependencies.serde]
 features = ["derive"]
@@ -35,10 +35,10 @@ version = "1.0"
 
 [dev-dependencies]
 test-case = "3.3.1"
-async-std = "1.13.0"
+async-std = "1.13.2"
 async-std-test = "0.0.4"
-criterion = "0.5.1"
-proptest = "1.6.0"
+criterion = "0.7.0"
+proptest = "1.8.0"
 serial_test = "3.2.0"
 
 [[bench]]
