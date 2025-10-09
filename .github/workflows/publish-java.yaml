@@ -1,0 +1,11 @@
+name: Publish Java
+on:
+  workflow_dispatch:
+
+jobs:
+
+  publish_jars:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: echo "No op, just to be able to trigger from branch"
