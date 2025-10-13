@@ -104,11 +104,53 @@ function parseEvaluation(value: unknown): EvaluationResult | null {
   };
 }
 
-function ensureRecordOfStrings(value: unknown): value is GrammarMap {
-  if (typeof value !== 'object' || value === null) {
-    return false;
+function toPlainGrammarMap(value: unknown): GrammarMap {
+  if (!value || typeof value !== 'object') {
+    return {};
   }
-  return Object.entries(value).every(([, v]) => typeof v === 'string');
+
+  const entries: GrammarMap = {};
+
+  if (value instanceof Map) {
+    value.forEach((maybeGrammar, maybeToggle) => {
+      if (typeof maybeToggle === 'string' && typeof maybeGrammar === 'string') {
+        entries[maybeToggle] = maybeGrammar;
+      }
+    });
+    return entries;
+  }
+
+  if (Array.isArray(value)) {
+    for (const pair of value) {
+      if (Array.isArray(pair) && typeof pair[0] === 'string' && typeof pair[1] === 'string') {
+        entries[pair[0]] = pair[1];
+      }
+    }
+    if (Object.keys(entries).length > 0) {
+      return entries;
+    }
+  }
+
+  // Some environments expose wasm HashMap as an iterable of [key, value] pairs.
+  const maybeIterable = value as { [Symbol.iterator]?: () => Iterator<unknown> };
+  if (typeof maybeIterable[Symbol.iterator] === 'function') {
+    for (const pair of maybeIterable as Iterable<unknown>) {
+      if (Array.isArray(pair) && typeof pair[0] === 'string' && typeof pair[1] === 'string') {
+        entries[pair[0]] = pair[1];
+      }
+    }
+    if (Object.keys(entries).length > 0) {
+      return entries;
+    }
+  }
+
+  for (const [key, maybeGrammar] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof maybeGrammar === 'string') {
+      entries[key] = maybeGrammar;
+    }
+  }
+
+  return entries;
 }
 
 const sectionStyle: React.CSSProperties = {
@@ -188,9 +230,11 @@ function App() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<EvalWarning[]>([]);
 
+  const [baseGrammars, setBaseGrammars] = useState<GrammarMap>({});
   const [grammars, setGrammars] = useState<GrammarMap>({});
-  const [grammarText, setGrammarText] = useState('');
+  const [grammarDraft, setGrammarDraft] = useState('');
   const [grammarError, setGrammarError] = useState<string | null>(null);
+  const [grammarStatus, setGrammarStatus] = useState<string | null>(null);
 
   const [toggles, setToggles] = useState<ToggleSummary[]>([]);
   const [selectedToggle, setSelectedToggle] = useState('');
@@ -233,6 +277,16 @@ function App() {
     }
   }, [sortedToggleNames, selectedToggle]);
 
+  useEffect(() => {
+    if (!selectedToggle) {
+      setGrammarDraft('');
+      return;
+    }
+
+    const nextDraft = grammars[selectedToggle] ?? baseGrammars[selectedToggle] ?? '';
+    setGrammarDraft(nextDraft);
+  }, [selectedToggle, grammars, baseGrammars]);
+
   const handleFetchFeatures = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!engine || !unleashUrl) {
@@ -241,6 +295,7 @@ function App() {
     setFetching(true);
     setFetchError(null);
     setGrammarError(null);
+    setGrammarStatus(null);
     setEvaluationError(null);
     setStatusMessage(null);
 
@@ -260,14 +315,16 @@ function App() {
       const payload = await response.text();
       const warningList = parseWarnings(engine.loadClientFeatures(payload));
       const grammarValue = engine.getGrammars();
-      const grammarMap = ensureRecordOfStrings(grammarValue) ? grammarValue : {};
+      const grammarMap = toPlainGrammarMap(grammarValue);
       const toggleList = parseToggles(engine.listToggles());
 
       setWarnings(warningList);
+      setBaseGrammars(grammarMap);
       setGrammars(grammarMap);
-      setGrammarText(JSON.stringify(grammarMap, null, 2));
       setToggles(toggleList);
-      setSelectedToggle(toggleList[0]?.name ?? '');
+      const initialToggle = toggleList[0]?.name ?? '';
+      setSelectedToggle(initialToggle);
+      setGrammarDraft(initialToggle ? grammarMap[initialToggle] ?? '' : '');
       setStatusMessage(`Loaded ${toggleList.length} toggles`);
       setEvaluationResult(null);
     } catch (err) {
@@ -278,23 +335,57 @@ function App() {
   };
 
   const handleApplyGrammar = () => {
-    if (!engine) {
+    if (!engine || !selectedToggle) {
       return;
     }
     setGrammarError(null);
-    setStatusMessage(null);
+    setGrammarStatus(null);
 
     try {
-      const parsed = JSON.parse(grammarText);
-      if (!ensureRecordOfStrings(parsed)) {
-        throw new Error('Grammar payload must be an object whose values are strings.');
-      }
-      engine.setGrammars(parsed);
-      setGrammars(parsed);
-      setStatusMessage('Updated grammar overrides.');
+      engine.setToggleGrammar(selectedToggle, grammarDraft);
+      setGrammars((previous) => ({
+        ...previous,
+        [selectedToggle]: grammarDraft,
+      }));
+      setGrammarStatus(`Updated grammar for ${selectedToggle}.`);
     } catch (err) {
       setGrammarError(err instanceof Error ? err.message : String(err));
     }
+  };
+
+  const handleRestoreGrammar = () => {
+    if (!engine || !selectedToggle) {
+      return;
+    }
+    setGrammarError(null);
+    setGrammarStatus(null);
+
+    const original = baseGrammars[selectedToggle];
+    if (typeof original !== 'string') {
+      setGrammarError('No original grammar available. Fetch features again to restore defaults.');
+      return;
+    }
+
+    try {
+      engine.setToggleGrammar(selectedToggle, original);
+      setGrammars((previous) => ({
+        ...previous,
+        [selectedToggle]: original,
+      }));
+      setGrammarStatus(`Restored original grammar for ${selectedToggle}.`);
+    } catch (err) {
+      setGrammarError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleRevertDraft = () => {
+    if (!selectedToggle) {
+      return;
+    }
+    setGrammarError(null);
+    setGrammarStatus(null);
+    const saved = grammars[selectedToggle] ?? baseGrammars[selectedToggle] ?? '';
+    setGrammarDraft(saved);
   };
 
   const handleEvaluate = () => {
@@ -396,30 +487,83 @@ function App() {
         </section>
       )}
 
-      {Object.keys(grammars).length > 0 && (
+      {sortedToggleNames.length > 0 && (
         <section style={sectionStyle}>
-          <h2 style={{ marginTop: 0, color: '#0f172a' }}>Grammar Overrides</h2>
+          <h2 style={{ marginTop: 0, color: '#0f172a' }}>Compiled Grammar</h2>
           <p style={{ color: '#475569' }}>
-            Edit the grammar map (JSON) and apply to recompile strategies inside the WebAssembly engine.
+            Inspect the grammar generated by Yggdrasil for each toggle and tweak it without refetching features.
           </p>
-          <textarea
-            style={{ ...textareaStyle, minHeight: '280px' }}
-            value={grammarText}
-            onChange={(event) => setGrammarText(event.target.value)}
-          />
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
-            <button style={secondaryButton} type="button" onClick={handleApplyGrammar}>
-              Apply grammar overrides
+          <div style={{ display: 'grid', gap: '1rem', marginBottom: '1rem' }}>
+            <div>
+              <label style={labelStyle} htmlFor="grammar-toggle">Toggle</label>
+              <select
+                id="grammar-toggle"
+                style={inputStyle}
+                value={selectedToggle}
+                onChange={(event) => setSelectedToggle(event.target.value)}
+              >
+                {sortedToggleNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={labelStyle} htmlFor="grammar-editor">Grammar</label>
+              <textarea
+                id="grammar-editor"
+                style={{ ...textareaStyle, minHeight: '260px' }}
+                value={grammarDraft}
+                onChange={(event) => setGrammarDraft(event.target.value)}
+                disabled={!selectedToggle}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <button
+              style={secondaryButton}
+              type="button"
+              onClick={handleApplyGrammar}
+              disabled={!selectedToggle}
+            >
+              Apply grammar override
             </button>
             <button
               style={secondaryButton}
               type="button"
-              onClick={() => setGrammarText(JSON.stringify(grammars, null, 2))}
+              onClick={handleRevertDraft}
+              disabled={!selectedToggle}
             >
-              Reset editor
+              Revert unsaved changes
+            </button>
+            <button
+              style={secondaryButton}
+              type="button"
+              onClick={handleRestoreGrammar}
+              disabled={!selectedToggle || !baseGrammars[selectedToggle]}
+            >
+              Restore original grammar
             </button>
           </div>
+          {grammarStatus && <p style={{ color: '#15803d', marginTop: '0.75rem' }}>{grammarStatus}</p>}
           {grammarError && <p style={{ color: '#b91c1c', marginTop: '0.75rem' }}>{grammarError}</p>}
+          <details style={{ marginTop: '1rem' }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#0f172a' }}>View current grammar map (JSON)</summary>
+            <pre
+              style={{
+                marginTop: '0.75rem',
+                padding: '0.75rem',
+                background: '#f1f5f9',
+                borderRadius: 6,
+                fontSize: '0.85rem',
+                overflowX: 'auto',
+              }}
+            >
+              {JSON.stringify(grammars, null, 2)}
+            </pre>
+          </details>
         </section>
       )}
 
