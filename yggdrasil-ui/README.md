@@ -36,7 +36,7 @@ If you regenerate the wasm bindings while `npm run dev` is running, Vite will ho
 
 ## Using the playground
 
-1. Enter the Unleash client features endpoint and an optional API token, then fetch the configuration.
+1. Enter the Unleash client features endpoint and an optional API token, then fetch the configuration. When using the public Unleash sandbox, point the URL field at `http://localhost:5173/unleash-sandbox/enterprise/api/client/features` so the built-in proxy can relay the request.
 2. Inspect the grammar map (JSON) returned from the Yggdrasil upgrade step. Edit it and apply your overrides to recompile the rules inside the wasm engine.
 3. Select any toggle, provide a context JSON payload, and evaluate to see the enabled state plus variant information.
 4. Any compilation warnings from Yggdrasil are surfaced above the editor.
