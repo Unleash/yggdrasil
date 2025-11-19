@@ -2156,7 +2156,6 @@ mod test {
         assert_eq!(state.features[0].enabled, true);
     }
 
-
     #[test]
     fn a_variant_with_zero_weight_can_never_be_selected() {
         let mut compiled_state = AHashMap::new();
