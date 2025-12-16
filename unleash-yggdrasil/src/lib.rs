@@ -562,7 +562,7 @@ impl EngineState {
             .first()
             .and_then(|variant| variant.stickiness.clone());
 
-        let target = get_seed(stickiness, context)
+        let target = get_seed(stickiness, context, group_id)
             .map(|seed| {
                 normalized_hash(group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
             })
@@ -678,12 +678,17 @@ impl EngineState {
     }
 }
 
-fn get_seed(stickiness: Option<String>, context: &EnrichedContext) -> Option<String> {
+fn get_seed(
+    stickiness: Option<String>,
+    context: &EnrichedContext,
+    group_id: &str,
+) -> Option<String> {
     match stickiness.as_deref() {
         Some("default") | None => context
             .user_id
             .clone()
-            .or_else(|| context.session_id.clone()),
+            .or_else(|| context.session_id.clone())
+            .or_else(|| Some(group_id.to_string())),
         Some(custom_stickiness) => match custom_stickiness {
             "userId" => context.user_id.clone(),
             "sessionId" => context.session_id.clone(),
@@ -1335,6 +1340,7 @@ mod test {
 
     #[test_case(Some("default"), Some("sessionId"), Some("userId"), Some("userId"); "should return userId for default stickiness")]
     #[test_case(None, Some("sessionId"), Some("userId"), Some("userId"); "should use default stickiness if none is defined")]
+    #[test_case(Some("default"), None, None, Some("group-id"); "should fall back to group id for default stickiness when no ids present")]
     #[test_case(Some("userId"), Some("sessionId"), None, None; "should use custom userId stickiness")]
     #[test_case(Some("sessionId"), Some("sessionId"), Some("userId"), Some("sessionId"); "should use custom sessionId stickiness")]
     #[test_case(Some("random"), Some("sessionId"), Some("userId"), None; "should return no seed for random stickiness")]
@@ -1361,7 +1367,11 @@ mod test {
             EnrichedContext::from(context.clone(), "some-toggle".to_string(), None);
 
         assert_eq!(
-            get_seed(stickiness.map(String::from), &enriched_context),
+            get_seed(
+                stickiness.map(String::from),
+                &enriched_context,
+                "group-id"
+            ),
             expected.map(String::from)
         );
     }
