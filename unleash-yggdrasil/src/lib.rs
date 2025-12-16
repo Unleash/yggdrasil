@@ -1367,11 +1367,7 @@ mod test {
             EnrichedContext::from(context.clone(), "some-toggle".to_string(), None);
 
         assert_eq!(
-            get_seed(
-                stickiness.map(String::from),
-                &enriched_context,
-                "group-id"
-            ),
+            get_seed(stickiness.map(String::from), &enriched_context, "group-id"),
             expected.map(String::from)
         );
     }
