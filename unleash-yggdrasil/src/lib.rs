@@ -787,8 +787,7 @@ mod test {
     };
 
     use crate::{
-        check_for_variant_override, get_seed, state::EnrichedContext, CompiledToggle,
-        CompiledVariant, Context, EngineState, UpdateMessage, VariantDef,
+        CompiledToggle, CompiledVariant, Context, EngineState, UpdateMessage, VariantDef, check_for_variant_override, get_seed, state::EnrichedContext, strategy_parsing::normalized_hash
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -1366,6 +1365,98 @@ mod test {
         );
     }
 
+    #[test]
+    pub fn default_stickiness_uses_group_id_for_dependents() {
+        use unleash_types::client_features::{ClientFeature, ClientFeatures, Strategy};
+        let rollout_percentage = 25;
+
+        let group_hit = "A";
+
+        let base_params = |group_id: &str, rollout: u8| {
+            let mut params = HashMap::new();
+            params.insert("groupId".to_string(), group_id.to_string());
+            params.insert("rollout".to_string(), rollout.to_string());
+            params.insert("stickiness".to_string(), "default".to_string());
+            params
+        };
+
+        let features = ClientFeatures {
+            version: 1,
+            features: vec![
+                // Group that should evaluate true
+                ClientFeature {
+                    name: "A".into(),
+                    enabled: true,
+                    strategies: Some(vec![Strategy {
+                        name: "flexibleRollout".into(),
+                        parameters: Some(base_params(&group_hit, rollout_percentage)),
+                        constraints: None,
+                        segments: None,
+                        sort_order: None,
+                        variants: None,
+                    }]),
+                    ..ClientFeature::default()
+                },
+                ClientFeature {
+                    name: "B".into(),
+                    enabled: true,
+                    dependencies: Some(vec![FeatureDependency {
+                        feature: "A".into(),
+                        enabled: Some(true),
+                        variants: None,
+                    }]),
+                    strategies: Some(vec![Strategy {
+                        name: "flexibleRollout".into(),
+                        parameters: Some(base_params(&group_hit, 100)),
+                        constraints: None,
+                        segments: None,
+                        sort_order: None,
+                        variants: None,
+                    }]),
+                    ..ClientFeature::default()
+                },
+                ClientFeature {
+                    name: "C".into(),
+                    enabled: true,
+                    dependencies: Some(vec![FeatureDependency {
+                        feature: "A".into(),
+                        enabled: Some(true),
+                        variants: None,
+                    }]),
+                    strategies: Some(vec![Strategy {
+                        name: "flexibleRollout".into(),
+                        parameters: Some(base_params(&group_hit, 100)),
+                        constraints: None,
+                        segments: None,
+                        sort_order: None,
+                        variants: None,
+                    }]),
+                    ..ClientFeature::default()
+                },
+            ],
+            query: None,
+            segments: None,
+            meta: None,
+        };
+
+        let mut engine = EngineState::default();
+        let warnings = engine.apply_client_features(features);
+        assert!(warnings.is_none());
+
+        let ctx = Context {
+            //user_id: Some("7".into()), adding this makes it consistent
+            ..Default::default()
+        };
+
+        // Hit group: A should be on, and B/C should mirror it through dependency + shared groupId.
+        let expected_hit =
+            dbg!(normalized_hash(&group_hit, &group_hit, 100, 0).unwrap()) <= rollout_percentage as u32;
+            assert!(expected_hit);
+            let parent_evaluation = engine.is_enabled("A", &ctx, &None);
+            assert_eq!(engine.is_enabled("B", &ctx, &None), parent_evaluation);
+            assert_eq!(engine.is_enabled("C", &ctx, &None), parent_evaluation);
+    }
+    
     #[test]
     fn resolves_all_toggles() {
         let mut compiled_state = AHashMap::new();
