@@ -787,7 +787,9 @@ mod test {
     };
 
     use crate::{
-        CompiledToggle, CompiledVariant, Context, EngineState, UpdateMessage, VariantDef, check_for_variant_override, get_seed, state::EnrichedContext, strategy_parsing::normalized_hash
+        check_for_variant_override, get_seed, state::EnrichedContext,
+        strategy_parsing::normalized_hash, CompiledToggle, CompiledVariant, Context, EngineState,
+        UpdateMessage, VariantDef,
     };
 
     const SPEC_FOLDER: &str = "../client-specification/specifications";
@@ -1449,14 +1451,14 @@ mod test {
         };
 
         // Hit group: A should be on, and B/C should mirror it through dependency + shared groupId.
-        let expected_hit =
-            dbg!(normalized_hash(&group_hit, &group_hit, 100, 0).unwrap()) <= rollout_percentage as u32;
-            assert!(expected_hit);
-            let parent_evaluation = engine.is_enabled("A", &ctx, &None);
-            assert_eq!(engine.is_enabled("B", &ctx, &None), parent_evaluation);
-            assert_eq!(engine.is_enabled("C", &ctx, &None), parent_evaluation);
+        let expected_hit = dbg!(normalized_hash(&group_hit, &group_hit, 100, 0).unwrap())
+            <= rollout_percentage as u32;
+        assert!(expected_hit);
+        let parent_evaluation = engine.is_enabled("A", &ctx, &None);
+        assert_eq!(engine.is_enabled("B", &ctx, &None), parent_evaluation);
+        assert_eq!(engine.is_enabled("C", &ctx, &None), parent_evaluation);
     }
-    
+
     #[test]
     fn resolves_all_toggles() {
         let mut compiled_state = AHashMap::new();
