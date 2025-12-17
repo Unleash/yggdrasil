@@ -566,7 +566,7 @@ impl EngineState {
             .map(|seed| {
                 normalized_hash(group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
             })
-            .unwrap_or_else(|| rand::rng().random_range(0..total_weight));
+            .unwrap_or_else(|| rand::rng().random_range(1..=total_weight));
 
         let mut total_weight = 0;
         for variant in variants {
@@ -2154,5 +2154,45 @@ mod test {
         assert_eq!(state.features.len(), 1);
         assert_eq!(state.features[0].name, "test-feature");
         assert_eq!(state.features[0].enabled, true);
+    }
+
+    #[test]
+    fn a_variant_with_zero_weight_can_never_be_selected() {
+        let mut compiled_state = AHashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new(|_| true),
+                variants: vec![
+                    CompiledVariant {
+                        name: "zero-weight-variant".into(),
+                        weight: 0,
+                        stickiness: None,
+                        payload: None,
+                        overrides: None,
+                    },
+                    CompiledVariant {
+                        name: "full-weight-variant".into(),
+                        weight: 1,
+                        stickiness: None,
+                        payload: None,
+                        overrides: None,
+                    },
+                ],
+                ..CompiledToggle::default()
+            },
+        );
+
+        let state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        for _ in 0..10 {
+            let variant = state.get_variant("some-toggle", &Context::default(), &None);
+            assert_eq!(variant.name, "full-weight-variant".to_string());
+        }
     }
 }
