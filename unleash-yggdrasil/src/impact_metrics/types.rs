@@ -122,5 +122,3 @@ pub(crate) fn parse_label_key(key: &str) -> MetricLabels {
         })
         .collect()
 }
-
-

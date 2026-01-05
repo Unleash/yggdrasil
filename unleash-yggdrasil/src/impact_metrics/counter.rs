@@ -63,4 +63,3 @@ impl Counter for CounterImpl {
             .fetch_add(value, Ordering::Relaxed);
     }
 }
-

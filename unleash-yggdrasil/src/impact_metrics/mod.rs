@@ -15,4 +15,3 @@ pub trait ImpactMetricsDataSource: Send + Sync {
     fn collect(&self) -> Vec<CollectedMetric>;
     fn restore(&self, metrics: Vec<CollectedMetric>);
 }
-

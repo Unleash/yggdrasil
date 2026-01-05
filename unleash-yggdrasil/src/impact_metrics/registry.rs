@@ -32,7 +32,9 @@ impl ImpactMetricRegistry for InMemoryMetricRegistry {
     }
 
     fn get_counter(&self, name: &str) -> Option<Arc<dyn Counter>> {
-        self.counters.get(name).map(|c| c.clone() as Arc<dyn Counter>)
+        self.counters
+            .get(name)
+            .map(|c| c.clone() as Arc<dyn Counter>)
     }
 }
 
@@ -85,8 +87,12 @@ mod tests {
         counter.inc();
 
         let metrics = registry.collect();
-        let expected =
-            CollectedMetric::new("test_counter", "testing", MetricType::Counter, vec![sample(1)]);
+        let expected = CollectedMetric::new(
+            "test_counter",
+            "testing",
+            MetricType::Counter,
+            vec![sample(1)],
+        );
 
         assert_eq!(metrics, vec![expected]);
     }
@@ -129,8 +135,14 @@ mod tests {
         let mut samples_sorted: Vec<_> = result.samples.iter().collect();
         samples_sorted.sort_by_key(|s| s.value);
 
-        assert_eq!(samples_sorted[0], &sample_with_labels(labels(&[("a", "x")]), 1));
-        assert_eq!(samples_sorted[1], &sample_with_labels(labels(&[("b", "y")]), 2));
+        assert_eq!(
+            samples_sorted[0],
+            &sample_with_labels(labels(&[("a", "x")]), 1)
+        );
+        assert_eq!(
+            samples_sorted[1],
+            &sample_with_labels(labels(&[("b", "y")]), 2)
+        );
         assert_eq!(samples_sorted[2], &sample(3));
     }
 
@@ -183,7 +195,13 @@ mod tests {
         let mut samples_sorted: Vec<_> = restored[0].samples.iter().collect();
         samples_sorted.sort_by_key(|s| s.value);
 
-        assert_eq!(samples_sorted[0], &sample_with_labels(labels(&[("tag", "b")]), 2));
-        assert_eq!(samples_sorted[1], &sample_with_labels(labels(&[("tag", "a")]), 5));
+        assert_eq!(
+            samples_sorted[0],
+            &sample_with_labels(labels(&[("tag", "b")]), 2)
+        );
+        assert_eq!(
+            samples_sorted[1],
+            &sample_with_labels(labels(&[("tag", "a")]), 5)
+        );
     }
 }
