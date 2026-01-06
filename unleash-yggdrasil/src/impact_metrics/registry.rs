@@ -24,10 +24,11 @@ impl Default for InMemoryMetricRegistry {
 
 impl ImpactMetricRegistry for InMemoryMetricRegistry {
     fn counter(&self, opts: MetricOptions) -> Arc<dyn Counter> {
+        let name = opts.name.clone();
         let counter = self
             .counters
-            .entry(opts.name.clone())
-            .or_insert_with(|| Arc::new(CounterImpl::new(&opts.name, &opts.help)));
+            .entry(name)
+            .or_insert_with(|| Arc::new(CounterImpl::new(opts)));
         counter.clone()
     }
 
