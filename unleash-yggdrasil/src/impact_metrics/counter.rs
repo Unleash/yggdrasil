@@ -27,15 +27,15 @@ impl CounterImpl {
     pub fn collect(&self) -> CollectedMetric {
         let mut samples = Vec::new();
 
-        let keys: Vec<String> = self.values.iter().map(|e| e.key().clone()).collect();
-        for key in keys {
-            if let Some((_, atomic_value)) = self.values.remove(&key) {
-                let value = atomic_value.into_inner();
-                if value != 0 {
-                    samples.push(NumericMetricSample::new(parse_label_key(&key), value));
-                }
+        for entry in self.values.iter() {
+            let key = entry.key();
+            let value = entry.value().swap(0, Ordering::Relaxed);
+            if value != 0 {
+                samples.push(NumericMetricSample::new(parse_label_key(key), value));
             }
         }
+
+        self.values.retain(|_, v| v.load(Ordering::Relaxed) != 0);
 
         if samples.is_empty() {
             samples.push(NumericMetricSample::zero());
