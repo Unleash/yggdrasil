@@ -57,13 +57,6 @@ impl NumericMetricSample {
             value: 0,
         }
     }
-
-    pub fn zero_with_value(value: i64) -> Self {
-        Self {
-            labels: HashMap::new(),
-            value,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

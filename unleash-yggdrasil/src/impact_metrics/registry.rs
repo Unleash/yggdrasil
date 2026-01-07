@@ -66,7 +66,7 @@ mod tests {
     use std::collections::HashMap;
 
     fn sample(value: i64) -> NumericMetricSample {
-        NumericMetricSample::zero_with_value(value)
+        NumericMetricSample::new(HashMap::new(), value)
     }
 
     fn sample_with_labels(labels: HashMap<String, String>, value: i64) -> NumericMetricSample {
