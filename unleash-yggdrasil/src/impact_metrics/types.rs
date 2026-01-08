@@ -47,11 +47,11 @@ pub struct NumericMetricSample {
 }
 
 impl NumericMetricSample {
-    pub fn new(labels: MetricLabels, value: i64) -> Self {
+    pub(crate) fn new(labels: MetricLabels, value: i64) -> Self {
         Self { labels, value }
     }
 
-    pub fn zero() -> Self {
+    pub(crate) fn zero() -> Self {
         Self {
             labels: HashMap::new(),
             value: 0,
@@ -69,7 +69,7 @@ pub struct CollectedMetric {
 }
 
 impl CollectedMetric {
-    pub fn new(
+    pub(crate) fn new(
         name: impl Into<String>,
         help: impl Into<String>,
         metric_type: MetricType,

@@ -19,14 +19,18 @@ impl Counter {
     }
 
     pub fn inc(&self) {
-        self.inc_with_labels(1, None);
+        self.inc_internal(1, None);
     }
 
     pub fn inc_by(&self, value: i64) {
-        self.inc_with_labels(value, None);
+        self.inc_internal(value, None);
     }
 
-    pub fn inc_with_labels(&self, value: i64, labels: Option<&MetricLabels>) {
+    pub fn inc_with_labels(&self, value: i64, labels: &MetricLabels) {
+        self.inc_internal(value, Some(labels));
+    }
+
+    fn inc_internal(&self, value: i64, labels: Option<&MetricLabels>) {
         let key = get_label_key(labels);
         self.values
             .entry(key)

@@ -1,38 +1,37 @@
-use crate::impact_metrics::types::{CollectedMetric, MetricOptions, MetricType};
+use crate::impact_metrics::types::{CollectedMetric, MetricLabels, MetricOptions, MetricType};
 use crate::impact_metrics::{Counter, ImpactMetricRegistry, ImpactMetricsDataSource};
 use dashmap::DashMap;
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct InMemoryMetricRegistry {
     counters: DashMap<String, Arc<Counter>>,
 }
 
-impl InMemoryMetricRegistry {
-    pub fn new() -> Self {
-        Self {
-            counters: DashMap::new(),
-        }
-    }
-}
-
-impl Default for InMemoryMetricRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl ImpactMetricRegistry for InMemoryMetricRegistry {
-    fn counter(&self, opts: MetricOptions) -> Arc<Counter> {
+    fn define_counter(&self, opts: MetricOptions) {
         let name = opts.name.clone();
-        let counter = self
-            .counters
+        self.counters
             .entry(name)
             .or_insert_with(|| Arc::new(Counter::new(opts)));
-        counter.clone()
     }
 
-    fn get_counter(&self, name: &str) -> Option<Arc<Counter>> {
-        self.counters.get(name).map(|c| c.clone())
+    fn inc_counter(&self, name: &str) {
+        if let Some(counter) = self.counters.get(name) {
+            counter.inc();
+        }
+    }
+
+    fn inc_counter_by(&self, name: &str, value: i64) {
+        if let Some(counter) = self.counters.get(name) {
+            counter.inc_by(value);
+        }
+    }
+
+    fn inc_counter_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+        if let Some(counter) = self.counters.get(name) {
+            counter.inc_with_labels(value, labels);
+        }
     }
 }
 
@@ -47,9 +46,9 @@ impl ImpactMetricsDataSource for InMemoryMetricRegistry {
     fn restore(&self, metrics: Vec<CollectedMetric>) {
         for metric in metrics {
             if metric.metric_type == MetricType::Counter {
-                let counter = self.counter(MetricOptions::new(&metric.name, &metric.help));
+                self.define_counter(MetricOptions::new(&metric.name, &metric.help));
                 for sample in metric.samples {
-                    counter.inc_with_labels(sample.value, Some(&sample.labels));
+                    self.inc_counter_with_labels(&metric.name, sample.value, &sample.labels);
                 }
             }
         }
@@ -79,10 +78,10 @@ mod tests {
 
     #[test]
     fn should_increment_by_default_value() {
-        let registry = InMemoryMetricRegistry::new();
-        let counter = registry.counter(MetricOptions::new("test_counter", "testing"));
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_counter(MetricOptions::new("test_counter", "testing"));
 
-        counter.inc();
+        registry.inc_counter("test_counter");
 
         let metrics = registry.collect();
         let expected = CollectedMetric::new(
@@ -97,12 +96,12 @@ mod tests {
 
     #[test]
     fn should_increment_with_custom_value_and_labels() {
-        let registry = InMemoryMetricRegistry::new();
-        let counter = registry.counter(MetricOptions::new("labeled_counter", "with labels"));
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_counter(MetricOptions::new("labeled_counter", "with labels"));
 
         let lbls = labels(&[("foo", "bar")]);
-        counter.inc_with_labels(3, Some(&lbls));
-        counter.inc_with_labels(2, Some(&lbls));
+        registry.inc_counter_with_labels("labeled_counter", 3, &lbls);
+        registry.inc_counter_with_labels("labeled_counter", 2, &lbls);
 
         let metrics = registry.collect();
         let expected = CollectedMetric::new(
@@ -117,12 +116,12 @@ mod tests {
 
     #[test]
     fn should_store_different_label_combinations_separately() {
-        let registry = InMemoryMetricRegistry::new();
-        let counter = registry.counter(MetricOptions::new("multi_label", "label test"));
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_counter(MetricOptions::new("multi_label", "label test"));
 
-        counter.inc_with_labels(1, Some(&labels(&[("a", "x")])));
-        counter.inc_with_labels(2, Some(&labels(&[("b", "y")])));
-        counter.inc_by(3);
+        registry.inc_counter_with_labels("multi_label", 1, &labels(&[("a", "x")]));
+        registry.inc_counter_with_labels("multi_label", 2, &labels(&[("b", "y")]));
+        registry.inc_counter_by("multi_label", 3);
 
         let metrics = registry.collect();
         let result = &metrics[0];
@@ -146,8 +145,8 @@ mod tests {
 
     #[test]
     fn should_return_zero_value_when_empty() {
-        let registry = InMemoryMetricRegistry::new();
-        registry.counter(MetricOptions::new("noop_counter", "noop"));
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_counter(MetricOptions::new("noop_counter", "noop"));
 
         let metrics = registry.collect();
         let expected =
@@ -158,10 +157,10 @@ mod tests {
 
     #[test]
     fn should_return_zero_value_after_flushing() {
-        let registry = InMemoryMetricRegistry::new();
-        let counter = registry.counter(MetricOptions::new("flush_test", "flush"));
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_counter(MetricOptions::new("flush_test", "flush"));
 
-        counter.inc();
+        registry.inc_counter("flush_test");
 
         let first_batch = registry.collect();
         let expected1 =
@@ -176,11 +175,11 @@ mod tests {
 
     #[test]
     fn should_restore_collected_metrics() {
-        let registry = InMemoryMetricRegistry::new();
-        let counter = registry.counter(MetricOptions::new("restore_test", "testing restore"));
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_counter(MetricOptions::new("restore_test", "testing restore"));
 
-        counter.inc_with_labels(5, Some(&labels(&[("tag", "a")])));
-        counter.inc_with_labels(2, Some(&labels(&[("tag", "b")])));
+        registry.inc_counter_with_labels("restore_test", 5, &labels(&[("tag", "a")]));
+        registry.inc_counter_with_labels("restore_test", 2, &labels(&[("tag", "b")]));
 
         let flushed = registry.collect();
 
