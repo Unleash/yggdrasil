@@ -1,11 +1,10 @@
-use crate::impact_metrics::counter::CounterImpl;
 use crate::impact_metrics::types::{CollectedMetric, MetricOptions, MetricType};
 use crate::impact_metrics::{Counter, ImpactMetricRegistry, ImpactMetricsDataSource};
 use dashmap::DashMap;
 use std::sync::Arc;
 
 pub struct InMemoryMetricRegistry {
-    counters: DashMap<String, Arc<CounterImpl>>,
+    counters: DashMap<String, Arc<Counter>>,
 }
 
 impl InMemoryMetricRegistry {
@@ -23,19 +22,17 @@ impl Default for InMemoryMetricRegistry {
 }
 
 impl ImpactMetricRegistry for InMemoryMetricRegistry {
-    fn counter(&self, opts: MetricOptions) -> Arc<dyn Counter> {
+    fn counter(&self, opts: MetricOptions) -> Arc<Counter> {
         let name = opts.name.clone();
         let counter = self
             .counters
             .entry(name)
-            .or_insert_with(|| Arc::new(CounterImpl::new(opts)));
+            .or_insert_with(|| Arc::new(Counter::new(opts)));
         counter.clone()
     }
 
-    fn get_counter(&self, name: &str) -> Option<Arc<dyn Counter>> {
-        self.counters
-            .get(name)
-            .map(|c| c.clone() as Arc<dyn Counter>)
+    fn get_counter(&self, name: &str) -> Option<Arc<Counter>> {
+        self.counters.get(name).map(|c| c.clone())
     }
 }
 

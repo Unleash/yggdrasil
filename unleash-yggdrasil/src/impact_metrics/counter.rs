@@ -5,26 +5,36 @@ use crate::impact_metrics::types::{
 use dashmap::DashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 
-pub trait Counter: Send + Sync {
-    fn inc(&self);
-    fn inc_by(&self, value: i64);
-    fn inc_with_labels(&self, value: i64, labels: Option<&MetricLabels>);
-}
-
-pub(crate) struct CounterImpl {
+pub struct Counter {
     opts: MetricOptions,
     values: DashMap<String, AtomicI64>,
 }
 
-impl CounterImpl {
-    pub fn new(opts: MetricOptions) -> Self {
+impl Counter {
+    pub(crate) fn new(opts: MetricOptions) -> Self {
         Self {
             opts,
             values: DashMap::new(),
         }
     }
 
-    pub fn collect(&self) -> CollectedMetric {
+    pub fn inc(&self) {
+        self.inc_with_labels(1, None);
+    }
+
+    pub fn inc_by(&self, value: i64) {
+        self.inc_with_labels(value, None);
+    }
+
+    pub fn inc_with_labels(&self, value: i64, labels: Option<&MetricLabels>) {
+        let key = get_label_key(labels);
+        self.values
+            .entry(key)
+            .or_insert_with(|| AtomicI64::new(0))
+            .fetch_add(value, Ordering::Relaxed);
+    }
+
+    pub(crate) fn collect(&self) -> CollectedMetric {
         let mut samples = Vec::new();
 
         for entry in self.values.iter() {
@@ -47,23 +57,5 @@ impl CounterImpl {
             MetricType::Counter,
             samples,
         )
-    }
-}
-
-impl Counter for CounterImpl {
-    fn inc(&self) {
-        self.inc_with_labels(1, None);
-    }
-
-    fn inc_by(&self, value: i64) {
-        self.inc_with_labels(value, None);
-    }
-
-    fn inc_with_labels(&self, value: i64, labels: Option<&MetricLabels>) {
-        let key = get_label_key(labels);
-        self.values
-            .entry(key)
-            .or_insert_with(|| AtomicI64::new(0))
-            .fetch_add(value, Ordering::Relaxed);
     }
 }
