@@ -11,7 +11,7 @@ pub enum MetricType {
     Histogram,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MetricOptions {
     pub name: String,
     pub help: String,
@@ -40,6 +40,39 @@ impl MetricOptions {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct BucketMetricOptions {
+    pub name: String,
+    pub help: String,
+    pub label_names: Vec<String>,
+    pub buckets: Vec<f64>,
+}
+
+impl BucketMetricOptions {
+    pub fn new(name: impl Into<String>, help: impl Into<String>, buckets: Vec<f64>) -> Self {
+        Self {
+            name: name.into(),
+            help: help.into(),
+            label_names: Vec::new(),
+            buckets,
+        }
+    }
+
+    pub fn with_label_names(
+        name: impl Into<String>,
+        help: impl Into<String>,
+        label_names: Vec<String>,
+        buckets: Vec<f64>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            help: help.into(),
+            label_names,
+            buckets,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NumericMetricSample {
     pub labels: MetricLabels,
@@ -60,16 +93,68 @@ impl NumericMetricSample {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HistogramBucket {
+    pub le: f64,
+    pub count: i64,
+}
+
+impl HistogramBucket {
+    pub fn new(le: f64, count: i64) -> Self {
+        Self { le, count }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BucketMetricSample {
+    pub labels: MetricLabels,
+    pub count: i64,
+    pub sum: f64,
+    pub buckets: Vec<HistogramBucket>,
+}
+
+impl BucketMetricSample {
+    pub fn new(labels: MetricLabels, count: i64, sum: f64, buckets: Vec<HistogramBucket>) -> Self {
+        Self {
+            labels,
+            count,
+            sum,
+            buckets,
+        }
+    }
+
+    pub(crate) fn zero(bucket_boundaries: &[f64]) -> Self {
+        let buckets = bucket_boundaries
+            .iter()
+            .map(|&le| HistogramBucket::new(le, 0))
+            .collect();
+        Self {
+            labels: HashMap::new(),
+            count: 0,
+            sum: 0.0,
+            buckets,
+        }
+    }
+}
+
+/// A metric sample - either numeric (Counter/Gauge) or bucket (Histogram)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum MetricSample {
+    Numeric(NumericMetricSample),
+    Bucket(BucketMetricSample),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CollectedMetric {
     pub name: String,
     pub help: String,
     #[serde(rename = "type")]
     pub metric_type: MetricType,
-    pub samples: Vec<NumericMetricSample>,
+    pub samples: Vec<MetricSample>,
 }
 
 impl CollectedMetric {
-    pub(crate) fn new(
+    pub(crate) fn new_numeric(
         name: impl Into<String>,
         help: impl Into<String>,
         metric_type: MetricType,
@@ -79,8 +164,43 @@ impl CollectedMetric {
             name: name.into(),
             help: help.into(),
             metric_type,
-            samples,
+            samples: samples.into_iter().map(MetricSample::Numeric).collect(),
         }
+    }
+
+    pub(crate) fn new_bucket(
+        name: impl Into<String>,
+        help: impl Into<String>,
+        samples: Vec<BucketMetricSample>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            help: help.into(),
+            metric_type: MetricType::Histogram,
+            samples: samples.into_iter().map(MetricSample::Bucket).collect(),
+        }
+    }
+
+    /// Helper to get numeric samples (for Counter/Gauge)
+    pub fn numeric_samples(&self) -> Vec<&NumericMetricSample> {
+        self.samples
+            .iter()
+            .filter_map(|s| match s {
+                MetricSample::Numeric(n) => Some(n),
+                MetricSample::Bucket(_) => None,
+            })
+            .collect()
+    }
+
+    /// Helper to get bucket samples (for Histogram)
+    pub fn bucket_samples(&self) -> Vec<&BucketMetricSample> {
+        self.samples
+            .iter()
+            .filter_map(|s| match s {
+                MetricSample::Numeric(_) => None,
+                MetricSample::Bucket(b) => Some(b),
+            })
+            .collect()
     }
 }
 
