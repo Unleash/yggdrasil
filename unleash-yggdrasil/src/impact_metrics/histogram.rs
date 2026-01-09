@@ -15,7 +15,7 @@ const DEFAULT_BUCKETS: &[f64] = &[
 struct HistogramData {
     count: i64,
     sum: f64,
-    buckets: HashMap<u64, i64>, // bucket boundary (as bits) -> count
+    buckets: HashMap<u64, i64>,
 }
 
 impl HistogramData {
@@ -34,20 +34,18 @@ impl HistogramData {
 
 pub struct Histogram {
     opts: BucketMetricOptions,
-    buckets: Vec<f64>, // sorted bucket boundaries including +Inf
+    buckets: Vec<f64>,
     values: DashMap<String, Mutex<HistogramData>>,
 }
 
 impl Histogram {
     pub(crate) fn new(opts: BucketMetricOptions) -> Self {
-        // Use default buckets if none provided
         let input_buckets = if opts.buckets.is_empty() {
             DEFAULT_BUCKETS.to_vec()
         } else {
             opts.buckets.clone()
         };
 
-        // Sort, dedupe, filter out infinity, then add infinity at the end
         let mut sorted: Vec<f64> = input_buckets
             .into_iter()
             .filter(|&b| !b.is_infinite())
@@ -83,7 +81,6 @@ impl Histogram {
         data.count += 1;
         data.sum += value;
 
-        // Increment all buckets where value <= bucket boundary (cumulative)
         for &le in &self.buckets {
             if value <= le {
                 let bucket_key = le.to_bits();
@@ -130,10 +127,8 @@ impl Histogram {
             ));
         }
 
-        // Clear after collection
         self.values.clear();
 
-        // If empty, return zero sample with all bucket boundaries
         if samples.is_empty() {
             samples.push(BucketMetricSample::zero(&self.buckets));
         }

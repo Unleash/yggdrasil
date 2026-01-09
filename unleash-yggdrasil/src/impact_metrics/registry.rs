@@ -146,7 +146,6 @@ impl ImpactMetricsDataSource for InMemoryMetricRegistry {
                     }
                 }
                 MetricType::Histogram => {
-                    // Get bucket boundaries from first sample
                     let buckets: Vec<f64> = metric
                         .bucket_samples()
                         .first()
@@ -371,8 +370,6 @@ mod tests {
         assert_eq!(samples_sorted[2].labels, labels(&[("env", "test")]));
     }
 
-    // Histogram tests (matching Java SDK)
-
     #[test]
     fn should_observe_histogram_values() {
         let registry = InMemoryMetricRegistry::default();
@@ -383,9 +380,9 @@ mod tests {
         ));
 
         let env_labels = labels(&[("env", "prod")]);
-        registry.observe_histogram_with_labels("test_histogram", 0.05, &env_labels); // <= 0.1, 0.5, 1, 2.5, 5, +Inf
-        registry.observe_histogram_with_labels("test_histogram", 0.75, &env_labels); // <= 1, 2.5, 5, +Inf
-        registry.observe_histogram_with_labels("test_histogram", 3.0, &env_labels); // <= 5, +Inf
+        registry.observe_histogram_with_labels("test_histogram", 0.05, &env_labels);
+        registry.observe_histogram_with_labels("test_histogram", 0.75, &env_labels);
+        registry.observe_histogram_with_labels("test_histogram", 3.0, &env_labels);
 
         let metrics = registry.collect();
         let expected = CollectedMetric::new_bucket(
@@ -428,7 +425,7 @@ mod tests {
             5.0,
             &labels(&[("method", "POST")]),
         );
-        registry.observe_histogram("multi_label_histogram", 15.0); // No labels
+        registry.observe_histogram("multi_label_histogram", 15.0);
 
         let metrics = registry.collect();
         let result = &metrics[0];
@@ -439,7 +436,6 @@ mod tests {
         let mut samples: Vec<_> = result.bucket_samples().into_iter().cloned().collect();
         samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
 
-        // GET: 0.5 <= 1, 10, +Inf
         assert_eq!(samples[0].labels, labels(&[("method", "GET")]));
         assert_eq!(samples[0].count, 1);
         assert_eq!(samples[0].sum, 0.5);
@@ -448,7 +444,6 @@ mod tests {
             vec![bucket(1.0, 1), bucket(10.0, 1), bucket(f64::INFINITY, 1)]
         );
 
-        // POST: 5.0 <= 10, +Inf
         assert_eq!(samples[1].labels, labels(&[("method", "POST")]));
         assert_eq!(samples[1].count, 1);
         assert_eq!(samples[1].sum, 5.0);
@@ -457,7 +452,6 @@ mod tests {
             vec![bucket(1.0, 0), bucket(10.0, 1), bucket(f64::INFINITY, 1)]
         );
 
-        // No labels: 15.0 <= +Inf
         assert_eq!(samples[2].labels, HashMap::new());
         assert_eq!(samples[2].count, 1);
         assert_eq!(samples[2].sum, 15.0);
@@ -501,9 +495,22 @@ mod tests {
         assert_eq!(first_collect.len(), 1);
 
         let empty_collect = registry.collect();
-        let empty_sample = &empty_collect[0].bucket_samples()[0];
-        assert_eq!(empty_sample.count, 0);
-        assert_eq!(empty_sample.sum, 0.0);
+        let expected_empty = CollectedMetric::new_bucket(
+            "restore_histogram",
+            "testing histogram restore",
+            vec![BucketMetricSample::new(
+                HashMap::new(),
+                0,
+                0.0,
+                vec![
+                    bucket(0.1, 0),
+                    bucket(1.0, 0),
+                    bucket(10.0, 0),
+                    bucket(f64::INFINITY, 0),
+                ],
+            )],
+        );
+        assert_eq!(empty_collect, vec![expected_empty]);
 
         registry.restore(first_collect.clone());
 
@@ -511,17 +518,13 @@ mod tests {
         assert_eq!(restored_collect.len(), 1);
         assert_eq!(restored_collect[0].name, "restore_histogram");
 
-        // Compare samples (order may differ)
         let mut restored_samples: Vec<_> = restored_collect[0]
             .bucket_samples()
-            .into_iter()
+            .iter()
             .cloned()
             .collect();
-        let mut original_samples: Vec<_> = first_collect[0]
-            .bucket_samples()
-            .into_iter()
-            .cloned()
-            .collect();
+        let mut original_samples: Vec<_> =
+            first_collect[0].bucket_samples().iter().cloned().collect();
         restored_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
         original_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
 
