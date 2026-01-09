@@ -131,18 +131,14 @@ impl ImpactMetricsDataSource for InMemoryMetricRegistry {
             match metric.metric_type {
                 MetricType::Counter => {
                     self.define_counter(MetricOptions::new(&metric.name, &metric.help));
-                    for sample in &metric.samples {
-                        if let MetricSample::Numeric(s) = sample {
-                            self.inc_counter_with_labels(&metric.name, s.value, &s.labels);
-                        }
+                    for sample in metric.numeric_samples() {
+                        self.inc_counter_with_labels(&metric.name, sample.value, &sample.labels);
                     }
                 }
                 MetricType::Gauge => {
                     self.define_gauge(MetricOptions::new(&metric.name, &metric.help));
-                    for sample in &metric.samples {
-                        if let MetricSample::Numeric(s) = sample {
-                            self.set_gauge_with_labels(&metric.name, s.value, &s.labels);
-                        }
+                    for sample in metric.numeric_samples() {
+                        self.set_gauge_with_labels(&metric.name, sample.value, &sample.labels);
                     }
                 }
                 MetricType::Histogram => {

@@ -11,7 +11,7 @@ pub enum MetricType {
     Histogram,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricOptions {
     pub name: String,
     pub help: String,
