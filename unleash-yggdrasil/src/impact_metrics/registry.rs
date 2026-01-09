@@ -418,8 +418,16 @@ mod tests {
             vec![1.0, 10.0],
         ));
 
-        registry.observe_histogram_with_labels("multi_label_histogram", 0.5, &labels(&[("method", "GET")]));
-        registry.observe_histogram_with_labels("multi_label_histogram", 5.0, &labels(&[("method", "POST")]));
+        registry.observe_histogram_with_labels(
+            "multi_label_histogram",
+            0.5,
+            &labels(&[("method", "GET")]),
+        );
+        registry.observe_histogram_with_labels(
+            "multi_label_histogram",
+            5.0,
+            &labels(&[("method", "POST")]),
+        );
         registry.observe_histogram("multi_label_histogram", 15.0); // No labels
 
         let metrics = registry.collect();
@@ -435,19 +443,28 @@ mod tests {
         assert_eq!(samples[0].labels, labels(&[("method", "GET")]));
         assert_eq!(samples[0].count, 1);
         assert_eq!(samples[0].sum, 0.5);
-        assert_eq!(samples[0].buckets, vec![bucket(1.0, 1), bucket(10.0, 1), bucket(f64::INFINITY, 1)]);
+        assert_eq!(
+            samples[0].buckets,
+            vec![bucket(1.0, 1), bucket(10.0, 1), bucket(f64::INFINITY, 1)]
+        );
 
         // POST: 5.0 <= 10, +Inf
         assert_eq!(samples[1].labels, labels(&[("method", "POST")]));
         assert_eq!(samples[1].count, 1);
         assert_eq!(samples[1].sum, 5.0);
-        assert_eq!(samples[1].buckets, vec![bucket(1.0, 0), bucket(10.0, 1), bucket(f64::INFINITY, 1)]);
+        assert_eq!(
+            samples[1].buckets,
+            vec![bucket(1.0, 0), bucket(10.0, 1), bucket(f64::INFINITY, 1)]
+        );
 
         // No labels: 15.0 <= +Inf
         assert_eq!(samples[2].labels, HashMap::new());
         assert_eq!(samples[2].count, 1);
         assert_eq!(samples[2].sum, 15.0);
-        assert_eq!(samples[2].buckets, vec![bucket(1.0, 0), bucket(10.0, 0), bucket(f64::INFINITY, 1)]);
+        assert_eq!(
+            samples[2].buckets,
+            vec![bucket(1.0, 0), bucket(10.0, 0), bucket(f64::INFINITY, 1)]
+        );
     }
 
     #[test]
@@ -459,10 +476,26 @@ mod tests {
             vec![0.1, 1.0, 10.0],
         ));
 
-        registry.observe_histogram_with_labels("restore_histogram", 0.05, &labels(&[("method", "GET")]));
-        registry.observe_histogram_with_labels("restore_histogram", 0.5, &labels(&[("method", "GET")]));
-        registry.observe_histogram_with_labels("restore_histogram", 5.0, &labels(&[("method", "POST")]));
-        registry.observe_histogram_with_labels("restore_histogram", 15.0, &labels(&[("method", "POST")]));
+        registry.observe_histogram_with_labels(
+            "restore_histogram",
+            0.05,
+            &labels(&[("method", "GET")]),
+        );
+        registry.observe_histogram_with_labels(
+            "restore_histogram",
+            0.5,
+            &labels(&[("method", "GET")]),
+        );
+        registry.observe_histogram_with_labels(
+            "restore_histogram",
+            5.0,
+            &labels(&[("method", "POST")]),
+        );
+        registry.observe_histogram_with_labels(
+            "restore_histogram",
+            15.0,
+            &labels(&[("method", "POST")]),
+        );
 
         let first_collect = registry.collect();
         assert_eq!(first_collect.len(), 1);
@@ -479,8 +512,16 @@ mod tests {
         assert_eq!(restored_collect[0].name, "restore_histogram");
 
         // Compare samples (order may differ)
-        let mut restored_samples: Vec<_> = restored_collect[0].bucket_samples().into_iter().cloned().collect();
-        let mut original_samples: Vec<_> = first_collect[0].bucket_samples().into_iter().cloned().collect();
+        let mut restored_samples: Vec<_> = restored_collect[0]
+            .bucket_samples()
+            .into_iter()
+            .cloned()
+            .collect();
+        let mut original_samples: Vec<_> = first_collect[0]
+            .bucket_samples()
+            .into_iter()
+            .cloned()
+            .collect();
         restored_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
         original_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
 
