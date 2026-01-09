@@ -1,5 +1,5 @@
 use crate::impact_metrics::types::{
-    BucketMetricOptions, CollectedMetric, MetricLabels, MetricOptions, MetricSample, MetricType,
+    BucketMetricOptions, CollectedMetric, MetricLabels, MetricOptions, MetricType,
 };
 use crate::impact_metrics::{
     Counter, Gauge, Histogram, ImpactMetricRegistry, ImpactMetricsDataSource,
@@ -171,8 +171,12 @@ mod tests {
     use crate::impact_metrics::types::{BucketMetricSample, HistogramBucket, NumericMetricSample};
     use std::collections::HashMap;
 
-    fn sample(value: i64) -> MetricSample {
-        MetricSample::Numeric(NumericMetricSample::new(HashMap::new(), value))
+    fn sample(value: i64) -> NumericMetricSample {
+        NumericMetricSample::new(HashMap::new(), value)
+    }
+
+    fn sample_with_labels(labels: HashMap<String, String>, value: i64) -> NumericMetricSample {
+        NumericMetricSample::new(labels, value)
     }
 
     fn labels(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -242,11 +246,15 @@ mod tests {
         let mut samples_sorted: Vec<_> = result.numeric_samples();
         samples_sorted.sort_by_key(|s| s.value);
 
-        assert_eq!(samples_sorted[0].value, 1);
-        assert_eq!(samples_sorted[0].labels, labels(&[("a", "x")]));
-        assert_eq!(samples_sorted[1].value, 2);
-        assert_eq!(samples_sorted[1].labels, labels(&[("b", "y")]));
-        assert_eq!(samples_sorted[2].value, 3);
+        assert_eq!(
+            samples_sorted[0],
+            &sample_with_labels(labels(&[("a", "x")]), 1)
+        );
+        assert_eq!(
+            samples_sorted[1],
+            &sample_with_labels(labels(&[("b", "y")]), 2)
+        );
+        assert_eq!(samples_sorted[2], &sample(3));
     }
 
     #[test]
@@ -302,7 +310,7 @@ mod tests {
         let flushed = registry.collect();
 
         let after_flush = registry.collect();
-        assert_eq!(after_flush[0].samples, vec![sample(0)]);
+        assert_eq!(after_flush[0].numeric_samples(), vec![&sample(0)]);
 
         registry.restore(flushed);
 
@@ -310,10 +318,14 @@ mod tests {
         let mut samples_sorted: Vec<_> = restored[0].numeric_samples();
         samples_sorted.sort_by_key(|s| s.value);
 
-        assert_eq!(samples_sorted[0].value, 2);
-        assert_eq!(samples_sorted[0].labels, labels(&[("tag", "b")]));
-        assert_eq!(samples_sorted[1].value, 5);
-        assert_eq!(samples_sorted[1].labels, labels(&[("tag", "a")]));
+        assert_eq!(
+            samples_sorted[0],
+            &sample_with_labels(labels(&[("tag", "b")]), 2)
+        );
+        assert_eq!(
+            samples_sorted[1],
+            &sample_with_labels(labels(&[("tag", "a")]), 5)
+        );
     }
 
     #[test]
@@ -358,12 +370,18 @@ mod tests {
         let mut samples_sorted: Vec<_> = result.numeric_samples();
         samples_sorted.sort_by_key(|s| s.value);
 
-        assert_eq!(samples_sorted[0].value, -2);
-        assert_eq!(samples_sorted[0].labels, labels(&[("env", "dev")]));
-        assert_eq!(samples_sorted[1].value, 5);
-        assert_eq!(samples_sorted[1].labels, labels(&[("env", "prod")]));
-        assert_eq!(samples_sorted[2].value, 10);
-        assert_eq!(samples_sorted[2].labels, labels(&[("env", "test")]));
+        assert_eq!(
+            samples_sorted[0],
+            &sample_with_labels(labels(&[("env", "dev")]), -2)
+        );
+        assert_eq!(
+            samples_sorted[1],
+            &sample_with_labels(labels(&[("env", "prod")]), 5)
+        );
+        assert_eq!(
+            samples_sorted[2],
+            &sample_with_labels(labels(&[("env", "test")]), 10)
+        );
     }
 
     #[test]
