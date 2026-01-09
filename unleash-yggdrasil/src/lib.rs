@@ -7,6 +7,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate pest_derive;
 
+pub mod impact_metrics;
 mod sendable_closures;
 pub mod state;
 pub mod strategy_parsing;
