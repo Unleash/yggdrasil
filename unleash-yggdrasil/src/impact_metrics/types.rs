@@ -136,7 +136,6 @@ impl BucketMetricSample {
     }
 }
 
-/// A metric sample - either numeric (Counter/Gauge) or bucket (Histogram)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MetricSample {
@@ -181,7 +180,6 @@ impl CollectedMetric {
         }
     }
 
-    /// Helper to get numeric samples (for Counter/Gauge)
     pub fn numeric_samples(&self) -> Vec<&NumericMetricSample> {
         self.samples
             .iter()
@@ -192,7 +190,6 @@ impl CollectedMetric {
             .collect()
     }
 
-    /// Helper to get bucket samples (for Histogram)
     pub fn bucket_samples(&self) -> Vec<&BucketMetricSample> {
         self.samples
             .iter()
