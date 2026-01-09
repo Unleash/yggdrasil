@@ -1,11 +1,12 @@
 use crate::impact_metrics::types::{CollectedMetric, MetricLabels, MetricOptions, MetricType};
-use crate::impact_metrics::{Counter, ImpactMetricRegistry, ImpactMetricsDataSource};
+use crate::impact_metrics::{Counter, Gauge, ImpactMetricRegistry, ImpactMetricsDataSource};
 use dashmap::DashMap;
 use std::sync::Arc;
 
 #[derive(Default)]
 pub struct InMemoryMetricRegistry {
     counters: DashMap<String, Arc<Counter>>,
+    gauges: DashMap<String, Arc<Gauge>>,
 }
 
 impl ImpactMetricRegistry for InMemoryMetricRegistry {
@@ -33,23 +34,86 @@ impl ImpactMetricRegistry for InMemoryMetricRegistry {
             counter.inc_with_labels(value, labels);
         }
     }
+
+    fn define_gauge(&self, opts: MetricOptions) {
+        let name = opts.name.clone();
+        self.gauges
+            .entry(name)
+            .or_insert_with(|| Arc::new(Gauge::new(opts)));
+    }
+
+    fn set_gauge(&self, name: &str, value: i64) {
+        if let Some(gauge) = self.gauges.get(name) {
+            gauge.set(value);
+        }
+    }
+
+    fn set_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+        if let Some(gauge) = self.gauges.get(name) {
+            gauge.set_with_labels(value, labels);
+        }
+    }
+
+    fn inc_gauge(&self, name: &str) {
+        if let Some(gauge) = self.gauges.get(name) {
+            gauge.inc();
+        }
+    }
+
+    fn inc_gauge_by(&self, name: &str, value: i64) {
+        if let Some(gauge) = self.gauges.get(name) {
+            gauge.inc_by(value);
+        }
+    }
+
+    fn inc_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+        if let Some(gauge) = self.gauges.get(name) {
+            gauge.inc_with_labels(value, labels);
+        }
+    }
+
+    fn dec_gauge(&self, name: &str) {
+        if let Some(gauge) = self.gauges.get(name) {
+            gauge.dec();
+        }
+    }
+
+    fn dec_gauge_by(&self, name: &str, value: i64) {
+        if let Some(gauge) = self.gauges.get(name) {
+            gauge.dec_by(value);
+        }
+    }
+
+    fn dec_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+        if let Some(gauge) = self.gauges.get(name) {
+            gauge.dec_with_labels(value, labels);
+        }
+    }
 }
 
 impl ImpactMetricsDataSource for InMemoryMetricRegistry {
     fn collect(&self) -> Vec<CollectedMetric> {
-        self.counters
-            .iter()
-            .map(|entry| entry.value().collect())
-            .collect()
+        let counter_metrics = self.counters.iter().map(|entry| entry.value().collect());
+        let gauge_metrics = self.gauges.iter().map(|entry| entry.value().collect());
+        counter_metrics.chain(gauge_metrics).collect()
     }
 
     fn restore(&self, metrics: Vec<CollectedMetric>) {
         for metric in metrics {
-            if metric.metric_type == MetricType::Counter {
-                self.define_counter(MetricOptions::new(&metric.name, &metric.help));
-                for sample in metric.samples {
-                    self.inc_counter_with_labels(&metric.name, sample.value, &sample.labels);
+            match metric.metric_type {
+                MetricType::Counter => {
+                    self.define_counter(MetricOptions::new(&metric.name, &metric.help));
+                    for sample in metric.samples {
+                        self.inc_counter_with_labels(&metric.name, sample.value, &sample.labels);
+                    }
                 }
+                MetricType::Gauge => {
+                    self.define_gauge(MetricOptions::new(&metric.name, &metric.help));
+                    for sample in metric.samples {
+                        self.set_gauge_with_labels(&metric.name, sample.value, &sample.labels);
+                    }
+                }
+                MetricType::Histogram => {}
             }
         }
     }
@@ -199,6 +263,59 @@ mod tests {
         assert_eq!(
             samples_sorted[1],
             &sample_with_labels(labels(&[("tag", "a")]), 5)
+        );
+    }
+
+    #[test]
+    fn should_support_gauge_inc_dec_and_set() {
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_gauge(MetricOptions::new("test_gauge", "gauge test"));
+
+        let env_labels = labels(&[("env", "prod")]);
+        registry.inc_gauge_with_labels("test_gauge", 5, &env_labels);
+        registry.dec_gauge_with_labels("test_gauge", 2, &env_labels);
+        registry.set_gauge_with_labels("test_gauge", 10, &env_labels);
+
+        let metrics = registry.collect();
+        let expected = CollectedMetric::new(
+            "test_gauge",
+            "gauge test",
+            MetricType::Gauge,
+            vec![sample_with_labels(labels(&[("env", "prod")]), 10)],
+        );
+
+        assert_eq!(metrics, vec![expected]);
+    }
+
+    #[test]
+    fn should_track_gauge_values_separately_per_label_set() {
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_gauge(MetricOptions::new("multi_env_gauge", "tracks multiple envs"));
+
+        registry.inc_gauge_with_labels("multi_env_gauge", 5, &labels(&[("env", "prod")]));
+        registry.dec_gauge_with_labels("multi_env_gauge", 2, &labels(&[("env", "dev")]));
+        registry.set_gauge_with_labels("multi_env_gauge", 10, &labels(&[("env", "test")]));
+
+        let metrics = registry.collect();
+        let result = &metrics[0];
+
+        assert_eq!(result.name, "multi_env_gauge");
+        assert_eq!(result.samples.len(), 3);
+
+        let mut samples_sorted: Vec<_> = result.samples.iter().collect();
+        samples_sorted.sort_by_key(|s| s.value);
+
+        assert_eq!(
+            samples_sorted[0],
+            &sample_with_labels(labels(&[("env", "dev")]), -2)
+        );
+        assert_eq!(
+            samples_sorted[1],
+            &sample_with_labels(labels(&[("env", "prod")]), 5)
+        );
+        assert_eq!(
+            samples_sorted[2],
+            &sample_with_labels(labels(&[("env", "test")]), 10)
         );
     }
 }
