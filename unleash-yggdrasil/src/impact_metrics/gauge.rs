@@ -87,12 +87,6 @@ impl Gauge {
 
         self.values.retain(|_, v| v.load(Ordering::Relaxed) != 0);
 
-        CollectedMetric::new(
-            &self.opts.name,
-            &self.opts.help,
-            MetricType::Gauge,
-            samples,
-        )
+        CollectedMetric::new(&self.opts.name, &self.opts.help, MetricType::Gauge, samples)
     }
 }
-

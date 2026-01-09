@@ -290,7 +290,10 @@ mod tests {
     #[test]
     fn should_track_gauge_values_separately_per_label_set() {
         let registry = InMemoryMetricRegistry::default();
-        registry.define_gauge(MetricOptions::new("multi_env_gauge", "tracks multiple envs"));
+        registry.define_gauge(MetricOptions::new(
+            "multi_env_gauge",
+            "tracks multiple envs",
+        ));
 
         registry.inc_gauge_with_labels("multi_env_gauge", 5, &labels(&[("env", "prod")]));
         registry.dec_gauge_with_labels("multi_env_gauge", 2, &labels(&[("env", "dev")]));
