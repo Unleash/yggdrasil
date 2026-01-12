@@ -443,36 +443,36 @@ mod tests {
 
         let metrics = registry.collect();
         let result = &metrics[0];
-
         assert_eq!(result.name, "multi_label_histogram");
-        assert_eq!(result.bucket_samples().len(), 3);
+        assert_eq!(result.help, "histogram with multiple labels");
+        assert_eq!(result.metric_type, MetricType::Histogram);
 
-        let mut samples: Vec<_> = result.bucket_samples().into_iter().cloned().collect();
-        samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
+        let mut actual_samples: Vec<_> = result.bucket_samples().iter().cloned().cloned().collect();
+        actual_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
 
-        assert_eq!(samples[0].labels, labels(&[("method", "GET")]));
-        assert_eq!(samples[0].count, 1);
-        assert_eq!(samples[0].sum, 0.5);
-        assert_eq!(
-            samples[0].buckets,
-            vec![bucket(1.0, 1), bucket(10.0, 1), bucket(f64::INFINITY, 1)]
-        );
+        let mut expected_samples = vec![
+            BucketMetricSample::new(
+                labels(&[("method", "GET")]),
+                1,
+                0.5,
+                vec![bucket(1.0, 1), bucket(10.0, 1), bucket(f64::INFINITY, 1)],
+            ),
+            BucketMetricSample::new(
+                labels(&[("method", "POST")]),
+                1,
+                5.0,
+                vec![bucket(1.0, 0), bucket(10.0, 1), bucket(f64::INFINITY, 1)],
+            ),
+            BucketMetricSample::new(
+                HashMap::new(),
+                1,
+                15.0,
+                vec![bucket(1.0, 0), bucket(10.0, 0), bucket(f64::INFINITY, 1)],
+            ),
+        ];
+        expected_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
 
-        assert_eq!(samples[1].labels, labels(&[("method", "POST")]));
-        assert_eq!(samples[1].count, 1);
-        assert_eq!(samples[1].sum, 5.0);
-        assert_eq!(
-            samples[1].buckets,
-            vec![bucket(1.0, 0), bucket(10.0, 1), bucket(f64::INFINITY, 1)]
-        );
-
-        assert_eq!(samples[2].labels, HashMap::new());
-        assert_eq!(samples[2].count, 1);
-        assert_eq!(samples[2].sum, 15.0);
-        assert_eq!(
-            samples[2].buckets,
-            vec![bucket(1.0, 0), bucket(10.0, 0), bucket(f64::INFINITY, 1)]
-        );
+        assert_eq!(actual_samples, expected_samples);
     }
 
     #[test]
