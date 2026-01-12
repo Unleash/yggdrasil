@@ -46,7 +46,7 @@ impl Histogram {
 
         let mut sorted: Vec<f64> = input_buckets
             .into_iter()
-            .filter(|&b| !b.is_infinite())
+            .filter(|&b| !b.is_infinite() && !b.is_nan())
             .collect();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
         sorted.dedup();
@@ -75,7 +75,7 @@ impl Histogram {
             .entry(key)
             .or_insert_with(|| Mutex::new(HistogramData::new(0, 0.0, &self.buckets)));
 
-        let mut data = entry.lock().unwrap();
+        let mut data = entry.lock().unwrap_or_else(|e| e.into_inner());
         data.count += 1;
         data.sum += value;
 
@@ -104,7 +104,7 @@ impl Histogram {
 
         for entry in self.values.iter() {
             let key = entry.key();
-            let data = entry.value().lock().unwrap();
+            let mut data = entry.value().lock().unwrap_or_else(|e| e.into_inner());
 
             let bucket_samples: Vec<HistogramBucket> = self
                 .buckets
@@ -115,15 +115,28 @@ impl Histogram {
                 })
                 .collect();
 
+            let count_snapshot = data.count;
+            let sum_snapshot = data.sum;
+
+            data.count = 0;
+            data.sum = 0.0;
+            for &le in &self.buckets {
+                let bucket_key = le.to_bits();
+                data.buckets.insert(bucket_key, 0);
+            }
+
             samples.push(BucketMetricSample::new(
                 parse_label_key(key),
-                data.count,
-                data.sum,
+                count_snapshot,
+                sum_snapshot,
                 bucket_samples,
             ));
         }
 
-        self.values.clear();
+        self.values.retain(|_, v| {
+            let data = v.lock().unwrap_or_else(|e| e.into_inner());
+            data.count != 0 || data.sum != 0.0
+        });
 
         if samples.is_empty() {
             samples.push(BucketMetricSample::zero(&self.buckets));
