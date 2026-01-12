@@ -28,6 +28,22 @@ impl HistogramData {
             buckets,
         }
     }
+
+    fn from_sample(sample: &BucketMetricSample, bucket_boundaries: &[f64]) -> Self {
+        let mut buckets = HashMap::new();
+        for &le in bucket_boundaries {
+            buckets.insert(le.to_bits(), 0);
+        }
+        let mut data = Self {
+            count: sample.count,
+            sum: sample.sum,
+            buckets,
+        };
+        for bucket in &sample.buckets {
+            data.buckets.insert(bucket.le.to_bits(), bucket.count);
+        }
+        data
+    }
 }
 
 pub struct Histogram {
@@ -90,11 +106,7 @@ impl Histogram {
     pub fn restore(&self, sample: &BucketMetricSample) {
         let key = get_label_key(Some(&sample.labels));
 
-        let mut data = HistogramData::new(sample.count, sample.sum, &self.buckets);
-
-        for bucket in &sample.buckets {
-            data.buckets.insert(bucket.le.to_bits(), bucket.count);
-        }
+        let data = HistogramData::from_sample(sample, &self.buckets);
 
         self.values.insert(key, Mutex::new(data));
     }
@@ -134,7 +146,7 @@ impl Histogram {
         }
 
         self.values.retain(|_, v| {
-            let data = v.lock().unwrap_or_else(|e| e.into_inner());
+            let data = v.get_mut().unwrap_or_else(|e| e.into_inner());
             data.count != 0 || data.sum != 0.0
         });
 
