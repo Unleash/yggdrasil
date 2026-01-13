@@ -112,7 +112,7 @@ impl Histogram {
     }
 
     pub(crate) fn collect(&self) -> CollectedMetric {
-        let mut samples = Vec::new();
+        let mut samples = vec![];
 
         for entry in self.values.iter() {
             let key = entry.key();
