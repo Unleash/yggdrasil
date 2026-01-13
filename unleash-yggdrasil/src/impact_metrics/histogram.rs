@@ -4,7 +4,6 @@ use crate::impact_metrics::types::{
 };
 use dashmap::DashMap;
 use std::collections::HashMap;
-use std::sync::Mutex;
 
 const DEFAULT_BUCKETS: &[f64] = &[
     0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
@@ -49,7 +48,7 @@ impl HistogramData {
 pub struct Histogram {
     opts: BucketMetricOptions,
     buckets: Vec<f64>,
-    values: DashMap<String, Mutex<HistogramData>>,
+    values: DashMap<String, HistogramData>,
 }
 
 impl Histogram {
@@ -84,21 +83,24 @@ impl Histogram {
     }
 
     fn observe_internal(&self, value: f64, labels: Option<&MetricLabels>) {
+        if value.is_nan() || value.is_infinite() {
+            return;
+        }
+
         let key = get_label_key(labels);
 
-        let entry = self
+        let mut entry = self
             .values
             .entry(key)
-            .or_insert_with(|| Mutex::new(HistogramData::new(0, 0.0, &self.buckets)));
+            .or_insert_with(|| HistogramData::new(0, 0.0, &self.buckets));
 
-        let mut data = entry.lock().unwrap_or_else(|e| e.into_inner());
-        data.count += 1;
-        data.sum += value;
+        entry.count += 1;
+        entry.sum += value;
 
         for &le in &self.buckets {
             if value <= le {
                 let bucket_key = le.to_bits();
-                *data.buckets.entry(bucket_key).or_insert(0) += 1;
+                *entry.buckets.entry(bucket_key).or_insert(0) += 1;
             }
         }
     }
@@ -108,22 +110,22 @@ impl Histogram {
 
         let data = HistogramData::from_sample(sample, &self.buckets);
 
-        self.values.insert(key, Mutex::new(data));
+        self.values.insert(key, data);
     }
 
     pub(crate) fn collect(&self) -> CollectedMetric {
         let mut samples = Vec::new();
 
-        for entry in self.values.iter() {
-            let key = entry.key();
-            let mut data = entry.value().lock().unwrap_or_else(|e| e.into_inner());
+        for mut entry in self.values.iter_mut() {
+            let key = entry.key().to_string();
+            let data = entry.value_mut();
 
             let bucket_samples: Vec<HistogramBucket> = self
                 .buckets
                 .iter()
                 .map(|&le| {
                     let count = *data.buckets.get(&le.to_bits()).unwrap_or(&0);
-                    HistogramBucket::new(le, count)
+                    HistogramBucket { le, count }
                 })
                 .collect();
 
@@ -137,18 +139,15 @@ impl Histogram {
                 data.buckets.insert(bucket_key, 0);
             }
 
-            samples.push(BucketMetricSample::new(
-                parse_label_key(key),
-                count_snapshot,
-                sum_snapshot,
-                bucket_samples,
-            ));
+            samples.push(BucketMetricSample {
+                labels: parse_label_key(&key),
+                count: count_snapshot,
+                sum: sum_snapshot,
+                buckets: bucket_samples,
+            });
         }
 
-        self.values.retain(|_, v| {
-            let data = v.get_mut().unwrap_or_else(|e| e.into_inner());
-            data.count != 0 || data.sum != 0.0
-        });
+        self.values.retain(|_, v| v.count != 0 || v.sum != 0.0);
 
         if samples.is_empty() {
             samples.push(BucketMetricSample::zero(&self.buckets));

@@ -187,7 +187,7 @@ mod tests {
     }
 
     fn bucket(le: f64, count: i64) -> HistogramBucket {
-        HistogramBucket::new(le, count)
+        HistogramBucket { le, count }
     }
 
     #[test]
@@ -402,11 +402,11 @@ mod tests {
         let expected = CollectedMetric::new_bucket(
             "test_histogram",
             "testing histogram",
-            vec![BucketMetricSample::new(
-                labels(&[("env", "prod")]),
-                3,
-                3.8,
-                vec![
+            vec![BucketMetricSample {
+                labels: labels(&[("env", "prod")]),
+                count: 3,
+                sum: 3.8,
+                buckets: vec![
                     bucket(0.1, 1),
                     bucket(0.5, 1),
                     bucket(1.0, 2),
@@ -414,7 +414,7 @@ mod tests {
                     bucket(5.0, 3),
                     bucket(f64::INFINITY, 3),
                 ],
-            )],
+            }],
         );
 
         assert_eq!(metrics, vec![expected]);
@@ -451,24 +451,24 @@ mod tests {
         actual_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
 
         let mut expected_samples = vec![
-            BucketMetricSample::new(
-                labels(&[("method", "GET")]),
-                1,
-                0.5,
-                vec![bucket(1.0, 1), bucket(10.0, 1), bucket(f64::INFINITY, 1)],
-            ),
-            BucketMetricSample::new(
-                labels(&[("method", "POST")]),
-                1,
-                5.0,
-                vec![bucket(1.0, 0), bucket(10.0, 1), bucket(f64::INFINITY, 1)],
-            ),
-            BucketMetricSample::new(
-                HashMap::new(),
-                1,
-                15.0,
-                vec![bucket(1.0, 0), bucket(10.0, 0), bucket(f64::INFINITY, 1)],
-            ),
+            BucketMetricSample {
+                labels: labels(&[("method", "GET")]),
+                count: 1,
+                sum: 0.5,
+                buckets: vec![bucket(1.0, 1), bucket(10.0, 1), bucket(f64::INFINITY, 1)],
+            },
+            BucketMetricSample {
+                labels: labels(&[("method", "POST")]),
+                count: 1,
+                sum: 5.0,
+                buckets: vec![bucket(1.0, 0), bucket(10.0, 1), bucket(f64::INFINITY, 1)],
+            },
+            BucketMetricSample {
+                labels: HashMap::new(),
+                count: 1,
+                sum: 15.0,
+                buckets: vec![bucket(1.0, 0), bucket(10.0, 0), bucket(f64::INFINITY, 1)],
+            },
         ];
         expected_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
 
@@ -512,17 +512,17 @@ mod tests {
         let expected_empty = CollectedMetric::new_bucket(
             "restore_histogram",
             "testing histogram restore",
-            vec![BucketMetricSample::new(
-                HashMap::new(),
-                0,
-                0.0,
-                vec![
+            vec![BucketMetricSample {
+                labels: HashMap::new(),
+                count: 0,
+                sum: 0.0,
+                buckets: vec![
                     bucket(0.1, 0),
                     bucket(1.0, 0),
                     bucket(10.0, 0),
                     bucket(f64::INFINITY, 0),
                 ],
-            )],
+            }],
         );
         assert_eq!(empty_collect, vec![expected_empty]);
 

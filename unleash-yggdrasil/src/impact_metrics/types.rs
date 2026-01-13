@@ -26,18 +26,6 @@ impl MetricOptions {
             label_names: Vec::new(),
         }
     }
-
-    pub fn with_label_names(
-        name: impl Into<String>,
-        help: impl Into<String>,
-        label_names: Vec<String>,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            help: help.into(),
-            label_names,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,20 +42,6 @@ impl BucketMetricOptions {
             name: name.into(),
             help: help.into(),
             label_names: Vec::new(),
-            buckets,
-        }
-    }
-
-    pub fn with_label_names(
-        name: impl Into<String>,
-        help: impl Into<String>,
-        label_names: Vec<String>,
-        buckets: Vec<f64>,
-    ) -> Self {
-        Self {
-            name: name.into(),
-            help: help.into(),
-            label_names,
             buckets,
         }
     }
@@ -98,12 +72,6 @@ pub struct HistogramBucket {
     pub count: i64,
 }
 
-impl HistogramBucket {
-    pub fn new(le: f64, count: i64) -> Self {
-        Self { le, count }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BucketMetricSample {
     pub labels: MetricLabels,
@@ -113,19 +81,10 @@ pub struct BucketMetricSample {
 }
 
 impl BucketMetricSample {
-    pub fn new(labels: MetricLabels, count: i64, sum: f64, buckets: Vec<HistogramBucket>) -> Self {
-        Self {
-            labels,
-            count,
-            sum,
-            buckets,
-        }
-    }
-
     pub(crate) fn zero(bucket_boundaries: &[f64]) -> Self {
         let buckets = bucket_boundaries
             .iter()
-            .map(|&le| HistogramBucket::new(le, 0))
+            .map(|&le| HistogramBucket { le, count: 0 })
             .collect();
         Self {
             labels: HashMap::new(),
