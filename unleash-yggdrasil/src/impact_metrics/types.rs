@@ -68,10 +68,7 @@ impl NumericMetricSample {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HistogramBucket {
-    #[serde(
-        serialize_with = "serialize_le",
-        deserialize_with = "deserialize_le"
-    )]
+    #[serde(serialize_with = "serialize_le", deserialize_with = "deserialize_le")]
     pub le: f64,
     pub count: i64,
 }
