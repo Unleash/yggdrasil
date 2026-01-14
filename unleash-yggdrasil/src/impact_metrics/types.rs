@@ -255,3 +255,115 @@ pub(crate) fn parse_label_key(key: &str) -> MetricLabels {
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_serialize_infinity_to_plus_inf() {
+        let bucket = HistogramBucket {
+            le: f64::INFINITY,
+            count: 5,
+        };
+        let json = serde_json::to_string(&bucket).unwrap();
+        assert!(json.contains("\"le\":\"+Inf\""));
+        assert!(json.contains("\"count\":5"));
+    }
+
+    #[test]
+    fn test_serialize_regular_number() {
+        let bucket = HistogramBucket { le: 0.5, count: 10 };
+        let json = serde_json::to_string(&bucket).unwrap();
+        assert!(json.contains("\"le\":0.5"));
+        assert!(json.contains("\"count\":10"));
+    }
+
+    #[test]
+    fn test_deserialize_plus_inf_to_infinity() {
+        let json = r#"{"le":"+Inf","count":5}"#;
+        let bucket: HistogramBucket = serde_json::from_str(json).unwrap();
+        assert_eq!(bucket.le, f64::INFINITY);
+        assert_eq!(bucket.count, 5);
+    }
+
+    #[test]
+    fn test_deserialize_regular_number() {
+        let json = r#"{"le":0.5,"count":10}"#;
+        let bucket: HistogramBucket = serde_json::from_str(json).unwrap();
+        assert_eq!(bucket.le, 0.5);
+        assert_eq!(bucket.count, 10);
+    }
+
+    #[test]
+    fn test_deserialize_integer_as_f64() {
+        let json = r#"{"le":5,"count":10}"#;
+        let bucket: HistogramBucket = serde_json::from_str(json).unwrap();
+        assert_eq!(bucket.le, 5.0);
+        assert_eq!(bucket.count, 10);
+    }
+
+    #[test]
+    fn test_deserialize_invalid_string() {
+        let json = r#"{"le":"invalid","count":5}"#;
+        let result: Result<HistogramBucket, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_round_trip_serialization_infinity() {
+        let original = HistogramBucket {
+            le: f64::INFINITY,
+            count: 42,
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: HistogramBucket = serde_json::from_str(&json).unwrap();
+        assert_eq!(original.le, deserialized.le);
+        assert_eq!(original.count, deserialized.count);
+    }
+
+    #[test]
+    fn test_round_trip_serialization_regular_number() {
+        let original = HistogramBucket {
+            le: 1.5,
+            count: 100,
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: HistogramBucket = serde_json::from_str(&json).unwrap();
+        assert_eq!(original.le, deserialized.le);
+        assert_eq!(original.count, deserialized.count);
+    }
+
+    #[test]
+    fn test_serialize_deserialize_in_collected_metric() {
+        let buckets = vec![
+            HistogramBucket { le: 0.1, count: 1 },
+            HistogramBucket { le: 0.5, count: 2 },
+            HistogramBucket {
+                le: f64::INFINITY,
+                count: 3,
+            },
+        ];
+        let sample = BucketMetricSample {
+            labels: HashMap::new(),
+            count: 3,
+            sum: 0.7,
+            buckets,
+        };
+        let metric = CollectedMetric::new_bucket("test_histogram", "test help", vec![sample]);
+
+        let json = serde_json::to_string(&metric).unwrap();
+        assert!(json.contains("\"le\":\"+Inf\""));
+
+        let deserialized: CollectedMetric = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.name, "test_histogram");
+        let bucket_samples = deserialized.bucket_samples();
+        assert_eq!(bucket_samples.len(), 1);
+        let buckets = &bucket_samples[0].buckets;
+        assert_eq!(buckets.len(), 3);
+        assert_eq!(buckets[2].le, f64::INFINITY);
+        assert_eq!(buckets[2].count, 3);
+    }
+}
