@@ -68,8 +68,75 @@ impl NumericMetricSample {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HistogramBucket {
+    #[serde(
+        serialize_with = "serialize_le",
+        deserialize_with = "deserialize_le"
+    )]
     pub le: f64,
     pub count: i64,
+}
+
+fn serialize_le<S>(le: &f64, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    if le.is_infinite() {
+        serializer.serialize_str("+Inf")
+    } else {
+        serializer.serialize_f64(*le)
+    }
+}
+
+fn deserialize_le<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::{self, Visitor};
+    use std::fmt;
+
+    struct LeVisitor;
+
+    impl<'de> Visitor<'de> for LeVisitor {
+        type Value = f64;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a number or '+Inf' string")
+        }
+
+        fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(v)
+        }
+
+        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(v as f64)
+        }
+
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(v as f64)
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            if v == "+Inf" {
+                Ok(f64::INFINITY)
+            } else {
+                v.parse::<f64>().map_err(de::Error::custom)
+            }
+        }
+    }
+
+    deserializer.deserialize_any(LeVisitor)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
