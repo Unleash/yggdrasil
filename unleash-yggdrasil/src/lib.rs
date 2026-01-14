@@ -16,6 +16,10 @@ pub mod strategy_upgrade;
 use ahash::AHashMap;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
+use impact_metrics::{
+    BucketMetricOptions, CollectedMetric, ImpactMetricRegistry, ImpactMetricsDataSource,
+    MetricLabels, MetricOptions,
+};
 use rand::Rng;
 use serde::{de, Deserialize, Serialize};
 use state::EnrichedContext;
@@ -28,10 +32,6 @@ use unleash_types::client_features::{
     Segment, Variant,
 };
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
-use impact_metrics::{
-    BucketMetricOptions, CollectedMetric, ImpactMetricRegistry, ImpactMetricsDataSource,
-    MetricLabels, MetricOptions,
-};
 
 pub type CompiledState = AHashMap<String, CompiledToggle>;
 
@@ -367,7 +367,8 @@ impl EngineState {
     }
 
     pub fn inc_counter_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
-        self.impact_metrics.inc_counter_with_labels(name, value, labels);
+        self.impact_metrics
+            .inc_counter_with_labels(name, value, labels);
     }
 
     pub fn define_gauge(&self, opts: MetricOptions) {
@@ -379,7 +380,8 @@ impl EngineState {
     }
 
     pub fn set_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
-        self.impact_metrics.set_gauge_with_labels(name, value, labels);
+        self.impact_metrics
+            .set_gauge_with_labels(name, value, labels);
     }
 
     pub fn inc_gauge(&self, name: &str) {
@@ -391,7 +393,8 @@ impl EngineState {
     }
 
     pub fn inc_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
-        self.impact_metrics.inc_gauge_with_labels(name, value, labels);
+        self.impact_metrics
+            .inc_gauge_with_labels(name, value, labels);
     }
 
     pub fn dec_gauge(&self, name: &str) {
@@ -403,7 +406,8 @@ impl EngineState {
     }
 
     pub fn dec_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
-        self.impact_metrics.dec_gauge_with_labels(name, value, labels);
+        self.impact_metrics
+            .dec_gauge_with_labels(name, value, labels);
     }
 
     pub fn define_histogram(&self, opts: BucketMetricOptions) {
@@ -415,7 +419,8 @@ impl EngineState {
     }
 
     pub fn observe_histogram_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
-        self.impact_metrics.observe_histogram_with_labels(name, value, labels);
+        self.impact_metrics
+            .observe_histogram_with_labels(name, value, labels);
     }
 
     pub fn collect_impact_metrics(&self) -> Vec<CollectedMetric> {
