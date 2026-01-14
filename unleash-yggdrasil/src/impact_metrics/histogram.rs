@@ -16,22 +16,22 @@ struct HistogramData {
 }
 
 impl HistogramData {
-    fn new(count: i64, sum: f64, bucket_boundaries: &[f64]) -> Self {
+    fn empty_for(bucket_boundaries: &[f64]) -> Self {
         let mut buckets = HashMap::new();
-        for &le in bucket_boundaries {
-            buckets.insert(le.to_bits(), 0);
+        for &upper_bound in bucket_boundaries {
+            buckets.insert(upper_bound.to_bits(), 0);
         }
         Self {
-            count,
-            sum,
+            count: 0,
+            sum: 0.0,
             buckets,
         }
     }
 
     fn from_sample(sample: &BucketMetricSample, bucket_boundaries: &[f64]) -> Self {
         let mut buckets = HashMap::new();
-        for &le in bucket_boundaries {
-            buckets.insert(le.to_bits(), 0);
+        for &upper_bound in bucket_boundaries {
+            buckets.insert(upper_bound.to_bits(), 0);
         }
         let mut data = Self {
             count: sample.count,
@@ -61,7 +61,14 @@ impl Histogram {
 
         let mut sorted: Vec<f64> = input_buckets
             .into_iter()
-            .filter(|&b| !b.is_infinite() && !b.is_nan())
+            .filter(|&b| !b.is_infinite())
+            .map(|b| {
+                if b.to_bits() == (-0.0f64).to_bits() {
+                    0.0
+                } else {
+                    b
+                }
+            })
             .collect();
         sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
         sorted.dedup();
@@ -92,14 +99,14 @@ impl Histogram {
         let mut entry = self
             .values
             .entry(key)
-            .or_insert_with(|| HistogramData::new(0, 0.0, &self.buckets));
+            .or_insert_with(|| HistogramData::empty_for(&self.buckets));
 
         entry.count += 1;
         entry.sum += value;
 
-        for &le in &self.buckets {
-            if value <= le {
-                let bucket_key = le.to_bits();
+        for &upper_bound in &self.buckets {
+            if value <= upper_bound {
+                let bucket_key = upper_bound.to_bits();
                 *entry.buckets.entry(bucket_key).or_insert(0) += 1;
             }
         }
@@ -123,9 +130,12 @@ impl Histogram {
             let bucket_samples: Vec<HistogramBucket> = self
                 .buckets
                 .iter()
-                .map(|&le| {
-                    let count = *data.buckets.get(&le.to_bits()).unwrap_or(&0);
-                    HistogramBucket { le, count }
+                .map(|&upper_bound| {
+                    let count = *data.buckets.get(&upper_bound.to_bits()).unwrap_or(&0);
+                    HistogramBucket {
+                        le: upper_bound,
+                        count,
+                    }
                 })
                 .collect();
 
@@ -134,8 +144,8 @@ impl Histogram {
 
             data.count = 0;
             data.sum = 0.0;
-            for &le in &self.buckets {
-                let bucket_key = le.to_bits();
+            for &upper_bound in &self.buckets {
+                let bucket_key = upper_bound.to_bits();
                 data.buckets.insert(bucket_key, 0);
             }
 

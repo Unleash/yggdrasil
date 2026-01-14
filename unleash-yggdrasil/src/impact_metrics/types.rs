@@ -47,7 +47,7 @@ impl BucketMetricOptions {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct NumericMetricSample {
     pub labels: MetricLabels,
     pub value: i64,
@@ -66,13 +66,13 @@ impl NumericMetricSample {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct HistogramBucket {
     pub le: f64,
     pub count: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct BucketMetricSample {
     pub labels: MetricLabels,
     pub count: i64,
@@ -95,14 +95,14 @@ impl BucketMetricSample {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum MetricSample {
     Numeric(NumericMetricSample),
     Bucket(BucketMetricSample),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CollectedMetric {
     pub name: String,
     pub help: String,
