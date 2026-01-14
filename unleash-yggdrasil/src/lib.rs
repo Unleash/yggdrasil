@@ -28,6 +28,10 @@ use unleash_types::client_features::{
     Segment, Variant,
 };
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
+use impact_metrics::{
+    BucketMetricOptions, CollectedMetric, ImpactMetricRegistry, ImpactMetricsDataSource,
+    MetricLabels, MetricOptions,
+};
 
 pub type CompiledState = AHashMap<String, CompiledToggle>;
 
@@ -241,6 +245,7 @@ pub struct EngineState {
     toggle_metrics: DashMap<String, Metric>,
     toggle_metrics_start: DateTime<Utc>,
     pub started: DateTime<Utc>,
+    impact_metrics: impact_metrics::InMemoryMetricRegistry,
 }
 
 impl EngineState {
@@ -251,6 +256,7 @@ impl EngineState {
             toggle_metrics_start: started,
             previous_state: Default::default(),
             started,
+            impact_metrics: Default::default(),
         }
     }
 }
@@ -264,6 +270,7 @@ impl Default for EngineState {
             toggle_metrics_start: Utc::now(),
             previous_state: Default::default(),
             started: Utc::now(),
+            impact_metrics: Default::default(),
         }
     }
 }
@@ -345,6 +352,78 @@ impl EngineState {
                     variants,
                 }
             });
+    }
+
+    pub fn define_counter(&self, opts: MetricOptions) {
+        self.impact_metrics.define_counter(opts);
+    }
+
+    pub fn inc_counter(&self, name: &str) {
+        self.impact_metrics.inc_counter(name);
+    }
+
+    pub fn inc_counter_by(&self, name: &str, value: i64) {
+        self.impact_metrics.inc_counter_by(name, value);
+    }
+
+    pub fn inc_counter_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+        self.impact_metrics.inc_counter_with_labels(name, value, labels);
+    }
+
+    pub fn define_gauge(&self, opts: MetricOptions) {
+        self.impact_metrics.define_gauge(opts);
+    }
+
+    pub fn set_gauge(&self, name: &str, value: i64) {
+        self.impact_metrics.set_gauge(name, value);
+    }
+
+    pub fn set_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+        self.impact_metrics.set_gauge_with_labels(name, value, labels);
+    }
+
+    pub fn inc_gauge(&self, name: &str) {
+        self.impact_metrics.inc_gauge(name);
+    }
+
+    pub fn inc_gauge_by(&self, name: &str, value: i64) {
+        self.impact_metrics.inc_gauge_by(name, value);
+    }
+
+    pub fn inc_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+        self.impact_metrics.inc_gauge_with_labels(name, value, labels);
+    }
+
+    pub fn dec_gauge(&self, name: &str) {
+        self.impact_metrics.dec_gauge(name);
+    }
+
+    pub fn dec_gauge_by(&self, name: &str, value: i64) {
+        self.impact_metrics.dec_gauge_by(name, value);
+    }
+
+    pub fn dec_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+        self.impact_metrics.dec_gauge_with_labels(name, value, labels);
+    }
+
+    pub fn define_histogram(&self, opts: BucketMetricOptions) {
+        self.impact_metrics.define_histogram(opts);
+    }
+
+    pub fn observe_histogram(&self, name: &str, value: f64) {
+        self.impact_metrics.observe_histogram(name, value);
+    }
+
+    pub fn observe_histogram_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
+        self.impact_metrics.observe_histogram_with_labels(name, value, labels);
+    }
+
+    pub fn collect_impact_metrics(&self) -> Vec<CollectedMetric> {
+        self.impact_metrics.collect()
+    }
+
+    pub fn restore_impact_metrics(&self, metrics: Vec<CollectedMetric>) {
+        self.impact_metrics.restore(metrics);
     }
 
     pub fn get_metrics(&mut self, close_time: DateTime<Utc>) -> Option<MetricBucket> {
