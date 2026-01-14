@@ -55,7 +55,7 @@ impl Counter {
             samples.push(NumericMetricSample::zero());
         }
 
-        CollectedMetric::new(
+        CollectedMetric::new_numeric(
             &self.opts.name,
             &self.opts.help,
             MetricType::Counter,

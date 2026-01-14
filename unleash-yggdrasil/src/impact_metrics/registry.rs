@@ -1,5 +1,9 @@
-use crate::impact_metrics::types::{CollectedMetric, MetricLabels, MetricOptions, MetricType};
-use crate::impact_metrics::{Counter, Gauge, ImpactMetricRegistry, ImpactMetricsDataSource};
+use crate::impact_metrics::types::{
+    BucketMetricOptions, CollectedMetric, MetricLabels, MetricOptions, MetricType,
+};
+use crate::impact_metrics::{
+    Counter, Gauge, Histogram, ImpactMetricRegistry, ImpactMetricsDataSource,
+};
 use dashmap::DashMap;
 use std::sync::Arc;
 
@@ -7,6 +11,7 @@ use std::sync::Arc;
 pub struct InMemoryMetricRegistry {
     counters: DashMap<String, Arc<Counter>>,
     gauges: DashMap<String, Arc<Gauge>>,
+    histograms: DashMap<String, Arc<Histogram>>,
 }
 
 impl ImpactMetricRegistry for InMemoryMetricRegistry {
@@ -89,13 +94,36 @@ impl ImpactMetricRegistry for InMemoryMetricRegistry {
             gauge.dec_with_labels(value, labels);
         }
     }
+
+    fn define_histogram(&self, opts: BucketMetricOptions) {
+        let name = opts.name.clone();
+        self.histograms
+            .entry(name)
+            .or_insert_with(|| Arc::new(Histogram::new(opts)));
+    }
+
+    fn observe_histogram(&self, name: &str, value: f64) {
+        if let Some(histogram) = self.histograms.get(name) {
+            histogram.observe(value);
+        }
+    }
+
+    fn observe_histogram_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
+        if let Some(histogram) = self.histograms.get(name) {
+            histogram.observe_with_labels(value, labels);
+        }
+    }
 }
 
 impl ImpactMetricsDataSource for InMemoryMetricRegistry {
     fn collect(&self) -> Vec<CollectedMetric> {
         let counter_metrics = self.counters.iter().map(|entry| entry.value().collect());
         let gauge_metrics = self.gauges.iter().map(|entry| entry.value().collect());
-        counter_metrics.chain(gauge_metrics).collect()
+        let histogram_metrics = self.histograms.iter().map(|entry| entry.value().collect());
+        counter_metrics
+            .chain(gauge_metrics)
+            .chain(histogram_metrics)
+            .collect()
     }
 
     fn restore(&self, metrics: Vec<CollectedMetric>) {
@@ -103,17 +131,35 @@ impl ImpactMetricsDataSource for InMemoryMetricRegistry {
             match metric.metric_type {
                 MetricType::Counter => {
                     self.define_counter(MetricOptions::new(&metric.name, &metric.help));
-                    for sample in metric.samples {
+                    for sample in metric.numeric_samples() {
                         self.inc_counter_with_labels(&metric.name, sample.value, &sample.labels);
                     }
                 }
                 MetricType::Gauge => {
                     self.define_gauge(MetricOptions::new(&metric.name, &metric.help));
-                    for sample in metric.samples {
+                    for sample in metric.numeric_samples() {
                         self.set_gauge_with_labels(&metric.name, sample.value, &sample.labels);
                     }
                 }
-                MetricType::Histogram => {}
+                MetricType::Histogram => {
+                    let buckets: Vec<f64> = metric
+                        .bucket_samples()
+                        .first()
+                        .map(|s| s.buckets.iter().map(|b| b.le).collect())
+                        .unwrap_or_default();
+
+                    self.define_histogram(BucketMetricOptions::new(
+                        &metric.name,
+                        &metric.help,
+                        buckets,
+                    ));
+
+                    if let Some(histogram) = self.histograms.get(&metric.name) {
+                        for sample in metric.bucket_samples() {
+                            histogram.restore(sample);
+                        }
+                    }
+                }
             }
         }
     }
@@ -122,7 +168,7 @@ impl ImpactMetricsDataSource for InMemoryMetricRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::impact_metrics::types::NumericMetricSample;
+    use crate::impact_metrics::types::{BucketMetricSample, HistogramBucket, NumericMetricSample};
     use std::collections::HashMap;
 
     fn sample(value: i64) -> NumericMetricSample {
@@ -140,6 +186,10 @@ mod tests {
             .collect()
     }
 
+    fn bucket(le: f64, count: i64) -> HistogramBucket {
+        HistogramBucket { le, count }
+    }
+
     #[test]
     fn should_increment_by_default_value() {
         let registry = InMemoryMetricRegistry::default();
@@ -148,11 +198,11 @@ mod tests {
         registry.inc_counter("test_counter");
 
         let metrics = registry.collect();
-        let expected = CollectedMetric::new(
+        let expected = CollectedMetric::new_numeric(
             "test_counter",
             "testing",
             MetricType::Counter,
-            vec![sample(1)],
+            vec![NumericMetricSample::new(HashMap::new(), 1)],
         );
 
         assert_eq!(metrics, vec![expected]);
@@ -168,11 +218,11 @@ mod tests {
         registry.inc_counter_with_labels("labeled_counter", 2, &lbls);
 
         let metrics = registry.collect();
-        let expected = CollectedMetric::new(
+        let expected = CollectedMetric::new_numeric(
             "labeled_counter",
             "with labels",
             MetricType::Counter,
-            vec![sample_with_labels(lbls, 5)],
+            vec![NumericMetricSample::new(lbls, 5)],
         );
 
         assert_eq!(metrics, vec![expected]);
@@ -193,7 +243,7 @@ mod tests {
         assert_eq!(result.name, "multi_label");
         assert_eq!(result.samples.len(), 3);
 
-        let mut samples_sorted: Vec<_> = result.samples.iter().collect();
+        let mut samples_sorted: Vec<_> = result.numeric_samples();
         samples_sorted.sort_by_key(|s| s.value);
 
         assert_eq!(
@@ -213,8 +263,12 @@ mod tests {
         registry.define_counter(MetricOptions::new("noop_counter", "noop"));
 
         let metrics = registry.collect();
-        let expected =
-            CollectedMetric::new("noop_counter", "noop", MetricType::Counter, vec![sample(0)]);
+        let expected = CollectedMetric::new_numeric(
+            "noop_counter",
+            "noop",
+            MetricType::Counter,
+            vec![NumericMetricSample::zero()],
+        );
 
         assert_eq!(metrics, vec![expected]);
     }
@@ -227,13 +281,21 @@ mod tests {
         registry.inc_counter("flush_test");
 
         let first_batch = registry.collect();
-        let expected1 =
-            CollectedMetric::new("flush_test", "flush", MetricType::Counter, vec![sample(1)]);
+        let expected1 = CollectedMetric::new_numeric(
+            "flush_test",
+            "flush",
+            MetricType::Counter,
+            vec![NumericMetricSample::new(HashMap::new(), 1)],
+        );
         assert_eq!(first_batch, vec![expected1]);
 
         let second_batch = registry.collect();
-        let expected2 =
-            CollectedMetric::new("flush_test", "flush", MetricType::Counter, vec![sample(0)]);
+        let expected2 = CollectedMetric::new_numeric(
+            "flush_test",
+            "flush",
+            MetricType::Counter,
+            vec![NumericMetricSample::zero()],
+        );
         assert_eq!(second_batch, vec![expected2]);
     }
 
@@ -248,12 +310,12 @@ mod tests {
         let flushed = registry.collect();
 
         let after_flush = registry.collect();
-        assert_eq!(after_flush[0].samples, vec![sample(0)]);
+        assert_eq!(after_flush[0].numeric_samples(), vec![&sample(0)]);
 
         registry.restore(flushed);
 
         let restored = registry.collect();
-        let mut samples_sorted: Vec<_> = restored[0].samples.iter().collect();
+        let mut samples_sorted: Vec<_> = restored[0].numeric_samples();
         samples_sorted.sort_by_key(|s| s.value);
 
         assert_eq!(
@@ -277,11 +339,11 @@ mod tests {
         registry.set_gauge_with_labels("test_gauge", 10, &env_labels);
 
         let metrics = registry.collect();
-        let expected = CollectedMetric::new(
+        let expected = CollectedMetric::new_numeric(
             "test_gauge",
             "gauge test",
             MetricType::Gauge,
-            vec![sample_with_labels(labels(&[("env", "prod")]), 10)],
+            vec![NumericMetricSample::new(labels(&[("env", "prod")]), 10)],
         );
 
         assert_eq!(metrics, vec![expected]);
@@ -305,7 +367,7 @@ mod tests {
         assert_eq!(result.name, "multi_env_gauge");
         assert_eq!(result.samples.len(), 3);
 
-        let mut samples_sorted: Vec<_> = result.samples.iter().collect();
+        let mut samples_sorted: Vec<_> = result.numeric_samples();
         samples_sorted.sort_by_key(|s| s.value);
 
         assert_eq!(
@@ -320,5 +382,166 @@ mod tests {
             samples_sorted[2],
             &sample_with_labels(labels(&[("env", "test")]), 10)
         );
+    }
+
+    #[test]
+    fn should_observe_histogram_values() {
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_histogram(BucketMetricOptions::new(
+            "test_histogram",
+            "testing histogram",
+            vec![0.1, 0.5, 1.0, 2.5, 5.0],
+        ));
+
+        let env_labels = labels(&[("env", "prod")]);
+        registry.observe_histogram_with_labels("test_histogram", 0.05, &env_labels);
+        registry.observe_histogram_with_labels("test_histogram", 0.75, &env_labels);
+        registry.observe_histogram_with_labels("test_histogram", 3.0, &env_labels);
+
+        let metrics = registry.collect();
+        let expected = CollectedMetric::new_bucket(
+            "test_histogram",
+            "testing histogram",
+            vec![BucketMetricSample {
+                labels: labels(&[("env", "prod")]),
+                count: 3,
+                sum: 3.8,
+                buckets: vec![
+                    bucket(0.1, 1),
+                    bucket(0.5, 1),
+                    bucket(1.0, 2),
+                    bucket(2.5, 2),
+                    bucket(5.0, 3),
+                    bucket(f64::INFINITY, 3),
+                ],
+            }],
+        );
+
+        assert_eq!(metrics, vec![expected]);
+    }
+
+    #[test]
+    fn should_track_different_label_combinations_separately_in_histogram() {
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_histogram(BucketMetricOptions::new(
+            "multi_label_histogram",
+            "histogram with multiple labels",
+            vec![1.0, 10.0],
+        ));
+
+        registry.observe_histogram_with_labels(
+            "multi_label_histogram",
+            0.5,
+            &labels(&[("method", "GET")]),
+        );
+        registry.observe_histogram_with_labels(
+            "multi_label_histogram",
+            5.0,
+            &labels(&[("method", "POST")]),
+        );
+        registry.observe_histogram("multi_label_histogram", 15.0);
+
+        let metrics = registry.collect();
+        let result = &metrics[0];
+        assert_eq!(result.name, "multi_label_histogram");
+        assert_eq!(result.help, "histogram with multiple labels");
+        assert_eq!(result.metric_type, MetricType::Histogram);
+
+        let mut actual_samples: Vec<_> = result.bucket_samples().iter().cloned().cloned().collect();
+        actual_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
+
+        let mut expected_samples = vec![
+            BucketMetricSample {
+                labels: labels(&[("method", "GET")]),
+                count: 1,
+                sum: 0.5,
+                buckets: vec![bucket(1.0, 1), bucket(10.0, 1), bucket(f64::INFINITY, 1)],
+            },
+            BucketMetricSample {
+                labels: labels(&[("method", "POST")]),
+                count: 1,
+                sum: 5.0,
+                buckets: vec![bucket(1.0, 0), bucket(10.0, 1), bucket(f64::INFINITY, 1)],
+            },
+            BucketMetricSample {
+                labels: HashMap::new(),
+                count: 1,
+                sum: 15.0,
+                buckets: vec![bucket(1.0, 0), bucket(10.0, 0), bucket(f64::INFINITY, 1)],
+            },
+        ];
+        expected_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
+
+        assert_eq!(actual_samples, expected_samples);
+    }
+
+    #[test]
+    fn should_preserve_exact_data_when_restoring_histogram() {
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_histogram(BucketMetricOptions::new(
+            "restore_histogram",
+            "testing histogram restore",
+            vec![0.1, 1.0, 10.0],
+        ));
+
+        registry.observe_histogram_with_labels(
+            "restore_histogram",
+            0.05,
+            &labels(&[("method", "GET")]),
+        );
+        registry.observe_histogram_with_labels(
+            "restore_histogram",
+            0.5,
+            &labels(&[("method", "GET")]),
+        );
+        registry.observe_histogram_with_labels(
+            "restore_histogram",
+            5.0,
+            &labels(&[("method", "POST")]),
+        );
+        registry.observe_histogram_with_labels(
+            "restore_histogram",
+            15.0,
+            &labels(&[("method", "POST")]),
+        );
+
+        let first_collect = registry.collect();
+        assert_eq!(first_collect.len(), 1);
+
+        let empty_collect = registry.collect();
+        let expected_empty = CollectedMetric::new_bucket(
+            "restore_histogram",
+            "testing histogram restore",
+            vec![BucketMetricSample {
+                labels: HashMap::new(),
+                count: 0,
+                sum: 0.0,
+                buckets: vec![
+                    bucket(0.1, 0),
+                    bucket(1.0, 0),
+                    bucket(10.0, 0),
+                    bucket(f64::INFINITY, 0),
+                ],
+            }],
+        );
+        assert_eq!(empty_collect, vec![expected_empty]);
+
+        registry.restore(first_collect.clone());
+
+        let restored_collect = registry.collect();
+        assert_eq!(restored_collect.len(), 1);
+        assert_eq!(restored_collect[0].name, "restore_histogram");
+
+        let mut restored_samples: Vec<_> = restored_collect[0]
+            .bucket_samples()
+            .iter()
+            .cloned()
+            .collect();
+        let mut original_samples: Vec<_> =
+            first_collect[0].bucket_samples().iter().cloned().collect();
+        restored_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
+        original_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
+
+        assert_eq!(restored_samples, original_samples);
     }
 }

@@ -1,12 +1,17 @@
 mod counter;
 mod gauge;
+mod histogram;
 mod registry;
 mod types;
 
 pub use counter::Counter;
 pub use gauge::Gauge;
+pub use histogram::Histogram;
 pub use registry::InMemoryMetricRegistry;
-pub use types::{CollectedMetric, MetricLabels, MetricOptions, MetricType, NumericMetricSample};
+pub use types::{
+    BucketMetricOptions, BucketMetricSample, CollectedMetric, HistogramBucket, MetricLabels,
+    MetricOptions, MetricSample, MetricType, NumericMetricSample,
+};
 
 pub trait ImpactMetricRegistry {
     fn define_counter(&self, opts: MetricOptions);
@@ -23,6 +28,10 @@ pub trait ImpactMetricRegistry {
     fn dec_gauge(&self, name: &str);
     fn dec_gauge_by(&self, name: &str, value: i64);
     fn dec_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels);
+
+    fn define_histogram(&self, opts: BucketMetricOptions);
+    fn observe_histogram(&self, name: &str, value: f64);
+    fn observe_histogram_with_labels(&self, name: &str, value: f64, labels: &MetricLabels);
 }
 
 pub trait ImpactMetricsDataSource {
