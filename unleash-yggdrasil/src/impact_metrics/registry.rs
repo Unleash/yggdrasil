@@ -448,7 +448,7 @@ mod tests {
         assert_eq!(result.metric_type, MetricType::Histogram);
 
         let mut actual_samples: Vec<_> = result.bucket_samples().iter().cloned().cloned().collect();
-        actual_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
+        actual_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
 
         let mut expected_samples = vec![
             BucketMetricSample {
@@ -470,7 +470,7 @@ mod tests {
                 buckets: vec![bucket(1.0, 0), bucket(10.0, 0), bucket(f64::INFINITY, 1)],
             },
         ];
-        expected_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
+        expected_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
 
         assert_eq!(actual_samples, expected_samples);
     }
@@ -539,8 +539,8 @@ mod tests {
             .collect();
         let mut original_samples: Vec<_> =
             first_collect[0].bucket_samples().iter().cloned().collect();
-        restored_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
-        original_samples.sort_by(|a, b| a.sum.partial_cmp(&b.sum).unwrap());
+        restored_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
+        original_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
 
         assert_eq!(restored_samples, original_samples);
     }

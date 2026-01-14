@@ -70,7 +70,7 @@ impl Histogram {
                 }
             })
             .collect();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.total_cmp(b));
         sorted.dedup();
         sorted.push(f64::INFINITY);
 
