@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.2](https://github.com/Unleash/yggdrasil/compare/v0.18.1...v0.18.2) - 2026-01-15
+
+### 🚀 Features
+- add rust infinity serializer ([#326](https://github.com/Unleash/yggdrasil/issues/326)) (by @sjaanus) - #326
+- expose ygg proxy methods ([#324](https://github.com/Unleash/yggdrasil/issues/324)) (by @sjaanus) - #324
+- impact metric histogram ([#323](https://github.com/Unleash/yggdrasil/issues/323)) (by @sjaanus) - #323
+- impact metrics gauge ([#322](https://github.com/Unleash/yggdrasil/issues/322)) (by @sjaanus) - #322
+- impact metric counter ([#321](https://github.com/Unleash/yggdrasil/issues/321)) (by @sjaanus) - #321
+
+### 🐛 Bug Fixes
+- make zero weight varaints unselectable ([#318](https://github.com/Unleash/yggdrasil/issues/318)) (by @sighphyre) - #318
+
+### ⚙️ Miscellaneous Tasks
+- add deserialize for get_json() ([#325](https://github.com/Unleash/yggdrasil/issues/325)) (by @sjaanus) - #325
+- *(dependencies)* Updated to latest version of pest etc. ([#312](https://github.com/Unleash/yggdrasil/issues/312)) (by @chriswk)
+
+### Contributors
+
+* @sjaanus
+* @sighphyre
+* @chriswk
+
 ## v0.18.1 (2025-08-19)
 
 ### New Features
