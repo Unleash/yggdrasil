@@ -128,7 +128,10 @@ where
             if v == "+Inf" {
                 Ok(f64::INFINITY)
             } else {
-                v.parse::<f64>().map_err(de::Error::custom)
+                Err(de::Error::invalid_value(
+                    de::Unexpected::Str(v),
+                    &"a number or '+Inf' string",
+                ))
             }
         }
     }
