@@ -624,7 +624,7 @@ impl EngineState {
 
     fn resolve_variant<'a>(
         &self,
-        variants: &'a Vec<CompiledVariant>,
+        variants: &'a [CompiledVariant],
         group_id: &str,
         context: &EnrichedContext,
     ) -> Option<&'a CompiledVariant> {
@@ -636,13 +636,11 @@ impl EngineState {
         }
         let total_weight: u32 = variants.iter().map(|var| var.weight as u32).sum();
 
-        let stickiness = variants
-            .first()
-            .and_then(|variant| variant.stickiness.clone());
+        let stickiness = variants.first().and_then(|v| v.stickiness.as_deref());
 
         let target = get_seed(stickiness, context)
             .map(|seed| {
-                normalized_hash(group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
+                normalized_hash(group_id, seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
             })
             .unwrap_or_else(|| rand::rng().random_range(1..=total_weight));
 
@@ -755,23 +753,18 @@ impl EngineState {
     }
 }
 
-fn get_seed(stickiness: Option<String>, context: &EnrichedContext) -> Option<String> {
-    match stickiness.as_deref() {
-        Some("default") | None => context
-            .user_id
-            .map(str::to_owned)
-            .or_else(|| context.session_id.map(str::to_owned)),
-        Some(custom_stickiness) => match custom_stickiness {
-            "userId" => context.user_id.map(str::to_owned),
-            "sessionId" => context.session_id.map(str::to_owned),
-            "environment" => context.environment.map(str::to_owned),
-            "appName" => context.app_name.map(str::to_owned),
-            "remoteAddress" => context.remote_address.map(str::to_owned),
+fn get_seed<'a>(stickiness: Option<&str>, context: &'a EnrichedContext<'a>) -> Option<&'a str> {
+    match stickiness {
+        Some("default") | None => context.user_id.or_else(|| context.session_id),
+        Some(custom) => match custom {
+            "userId" => context.user_id,
+            "sessionId" => context.session_id,
+            "environment" => context.environment,
+            "appName" => context.app_name,
+            "remoteAddress" => context.remote_address,
             _ => context
                 .properties
-                .as_ref()
-                .and_then(|props| props.get(custom_stickiness))
-                .cloned(),
+                .and_then(|props| props.get(custom).map(|v| v.as_str())),
         },
     }
 }
@@ -1436,10 +1429,7 @@ mod test {
 
         let enriched_context = EnrichedContext::from(&context, "some-toggle", None);
 
-        assert_eq!(
-            get_seed(stickiness.map(String::from), &enriched_context),
-            expected.map(String::from)
-        );
+        assert_eq!(get_seed(stickiness, &enriched_context), expected);
     }
 
     #[test]

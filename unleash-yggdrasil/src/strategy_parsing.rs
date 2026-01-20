@@ -663,7 +663,7 @@ mod tests {
     use std::collections::HashMap;
     use test_case::test_case;
 
-    fn context_from_user_id(user_id: &str) -> Context {
+    fn context_from_user_id(user_id: &str) -> Context<'_> {
         Context {
             user_id: Some(user_id.into()),
             current_time: None,
