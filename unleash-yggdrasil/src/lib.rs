@@ -532,7 +532,7 @@ impl EngineState {
                 .iter()
                 .map(|(name, toggle)| {
                     let enriched_context =
-                        EnrichedContext::from(&context, &name, external_values.as_ref());
+                        EnrichedContext::from(context, name, external_values.as_ref());
 
                     let enabled = self.enabled(toggle, &enriched_context);
                     (
@@ -559,7 +559,7 @@ impl EngineState {
             state.get(name).map(|compiled_toggle| ResolvedToggle {
                 enabled: self.enabled(
                     compiled_toggle,
-                    &EnrichedContext::from(&context, &name, external_values.as_ref()),
+                    &EnrichedContext::from(context, name, external_values.as_ref()),
                 ),
                 impression_data: compiled_toggle.impression_data,
                 variant: self.get_variant(name, context, external_values),
@@ -600,7 +600,7 @@ impl EngineState {
     }
 
     pub fn check_enabled(&self, context: &EnrichedContext) -> Option<bool> {
-        self.get_toggle(&context.toggle_name)
+        self.get_toggle(context.toggle_name)
             .map(|toggle| self.enabled(toggle, context))
     }
 
@@ -610,7 +610,7 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> bool {
-        let enriched_context = EnrichedContext::from(&context, &name, external_values.as_ref());
+        let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
         let is_enabled = self
             .get_toggle(name)
@@ -691,7 +691,7 @@ impl EngineState {
     }
 
     pub fn check_variant(&self, context: &EnrichedContext) -> Option<VariantDef> {
-        self.get_toggle(&context.toggle_name).map(|toggle| {
+        self.get_toggle(context.toggle_name).map(|toggle| {
             if self.enabled(toggle, context) {
                 self.check_variant_by_toggle(toggle, context)
                     .unwrap_or_default()
@@ -708,7 +708,7 @@ impl EngineState {
         external_values: &Option<HashMap<String, bool>>,
     ) -> ExtendedVariantDef {
         let toggle = self.get_toggle(name);
-        let enriched_context = EnrichedContext::from(&context, &name, external_values.as_ref());
+        let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
         let enabled = toggle
             .map(|t| self.enabled(t, &enriched_context))
@@ -755,7 +755,7 @@ impl EngineState {
 
 fn get_seed<'a>(stickiness: Option<&str>, context: &'a EnrichedContext<'a>) -> Option<&'a str> {
     match stickiness {
-        Some("default") | None => context.user_id.or_else(|| context.session_id),
+        Some("default") | None => context.user_id.or(context.session_id),
         Some(custom) => match custom {
             "userId" => context.user_id,
             "sessionId" => context.session_id,
