@@ -1,12 +1,14 @@
 extern crate pest;
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::io::Cursor;
 use std::net::IpAddr;
 use std::num::ParseFloatError;
 use std::str::FromStr;
+use std::sync::Arc;
 
-use crate::sendable_closures::{SendableContextResolver, SendableFragment};
+use crate::sendable_closures::SendableFragment;
 use crate::state::SdkError;
 use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
@@ -76,7 +78,8 @@ type CompileResult<T> = Result<T, SdkError>;
 
 pub type RuleFragment = Box<dyn SendableFragment + Send + Sync + 'static>;
 
-pub type ContextResolver = Box<dyn SendableContextResolver + Send + Sync + 'static>;
+pub type ContextResolver =
+    Arc<dyn for<'a> Fn(&'a Context) -> Option<Cow<'a, str>> + Send + Sync + 'static>;
 
 trait Invertible {
     fn invert(&self, inverted: bool) -> bool;
@@ -121,39 +124,40 @@ struct StringComparatorType {
 
 //Context lifting properties - these resolve properties from the context
 fn context_value(node: Pairs<Rule>) -> ContextResolver {
-    let [child] = drain(node)
-        .expect("Context node is empty, this should only happen if the grammar is missing");
+    let [child] = drain(node).expect("Context node is empty");
 
     match child.as_rule() {
-        Rule::user_id => Box::new(|context: &Context| context.user_id.map(str::to_owned)),
-        Rule::app_name => Box::new(|context: &Context| context.app_name.map(str::to_owned)),
-        Rule::environment => Box::new(|context: &Context| context.environment.map(str::to_owned)),
-        Rule::session_id => Box::new(|context: &Context| context.session_id.map(str::to_owned)),
-        Rule::remote_address => {
-            Box::new(|context: &Context| context.remote_address.map(str::to_owned))
-        }
+        Rule::user_id => Arc::new(|c: &Context| c.user_id.map(Cow::Borrowed)),
+        Rule::app_name => Arc::new(|c: &Context| c.app_name.map(Cow::Borrowed)),
+        Rule::environment => Arc::new(|c: &Context| c.environment.map(Cow::Borrowed)),
+        Rule::session_id => Arc::new(|c: &Context| c.session_id.map(Cow::Borrowed)),
+        Rule::remote_address => Arc::new(|c: &Context| c.remote_address.map(Cow::Borrowed)),
+
         #[cfg(feature = "wall-clock")]
-        Rule::current_time => Box::new(|context: &Context| {
-            context
-                .current_time
-                .map(str::to_owned)
-                .or_else(|| Some(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()))
+        Rule::current_time => Arc::new(|c: &Context| {
+            c.current_time.map(Cow::Borrowed).or_else(|| {
+                Some(Cow::Owned(
+                    chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                ))
+            })
         }),
         #[cfg(not(feature = "wall-clock"))]
-        Rule::current_time => Box::new(|context: &Context| context.current_time.clone()),
+        Rule::current_time => Arc::new(|c: &Context| c.current_time.map(Cow::Borrowed)),
+
         Rule::random => {
             let value = child
                 .into_inner()
                 .next()
-                .map(|rule| {
-                    rule.as_str().parse::<usize>().expect(
-                        "Failed to parse random content value in the grammar, this shouldn't happen",
-                    )
-                })
+                .map(|rule| rule.as_str().parse::<usize>().expect("bad grammar random"))
                 .unwrap_or(100);
-            Box::new(move |_: &Context| Some(rand::rng().random_range(1..value).to_string()))
+
+            Arc::new(move |_c: &Context| {
+                Some(Cow::Owned(rand::rng().random_range(1..value).to_string()))
+            })
         }
+
         Rule::property => context_property(child.into_inner()),
+
         _ => unreachable!(),
     }
 }
@@ -165,7 +169,7 @@ pub(crate) fn coalesce_context_property(node: Pairs<Rule>) -> ContextResolver {
         stickiness_resolvers.push(context_value(child.into_inner()))
     }
 
-    Box::new(move |context: &Context| {
+    Arc::new(move |context: &Context| {
         stickiness_resolvers
             .iter()
             .find_map(|resolver| resolver(context))
@@ -180,11 +184,12 @@ fn context_property(node: Pairs<Rule>) -> ContextResolver {
     chars.next_back();
     let context_name = chars.as_str().to_string();
 
-    Box::new(move |context: &Context| -> Option<String> {
-        match &context.properties {
-            Some(props) => props.get(&context_name).cloned(),
-            None => None,
-        }
+    Arc::new(move |context: &Context| -> Option<Cow<'_, str>> {
+        context
+            .properties
+            .as_ref()?
+            .get(context_name.as_str())
+            .map(|v| Cow::Borrowed(v.as_str()))
     })
 }
 
@@ -506,11 +511,11 @@ fn list_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
                 match comparator {
                     ContentComparator::In => match context_value {
-                        Some(context_value) => values.contains(&context_value),
+                        Some(context_value) => values.contains(context_value.as_ref()),
                         None => false,
                     },
                     ContentComparator::NotIn => match context_value {
-                        Some(context_value) => !values.contains(&context_value),
+                        Some(context_value) => !values.contains(context_value.as_ref()),
                         None => true,
                     },
                 }
@@ -579,7 +584,7 @@ fn string_fragment_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> 
     Ok(Box::new(move |context: &Context| {
         let mut value = context_getter(context);
         if ignore_case {
-            value = value.map(|value| value.to_lowercase())
+            value = value.map(|v| Cow::Owned(v.to_lowercase()));
         }
         if let Some(value) = value {
             match comparator {
@@ -862,7 +867,7 @@ mod tests {
     #[test_case("sticky on environment | context[\"lies\"] | context[\"present\"] ", Some("1"); "Respects custom context")]
     #[test_case("sticky on environment | context[\"lies\"]", None; "Falls back to None eventually")]
     fn run_null_coalesce_test(rule: &str, expected: Option<&str>) {
-        let expected = expected.map(|s| s.to_string());
+        let expected = expected.map(|s| Cow::Borrowed(s));
 
         let mut props = HashMap::new();
         props.insert("present".into(), "1".into());
@@ -877,7 +882,7 @@ mod tests {
         let mut parse_result = Strategy::parse(Rule::stickiness_param, rule).unwrap();
         let stickiness_lookup =
             coalesce_context_property(parse_result.next().unwrap().into_inner());
-        let result: Option<String> = stickiness_lookup(&context);
+        let result: Option<Cow<str>> = stickiness_lookup(&context);
 
         assert_eq!(result, expected);
     }

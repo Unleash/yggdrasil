@@ -5,25 +5,6 @@
 
 use crate::EnrichedContext as Context;
 
-pub trait SendableContextResolver: Fn(&Context) -> Option<String> {
-    fn clone_boxed(&self) -> Box<dyn SendableContextResolver + Send + Sync + 'static>;
-}
-
-impl<T> SendableContextResolver for T
-where
-    T: 'static + Clone + Sync + Send + Fn(&Context) -> Option<String>,
-{
-    fn clone_boxed(&self) -> Box<dyn SendableContextResolver + Send + Sync + 'static> {
-        Box::new(T::clone(self))
-    }
-}
-
-impl Clone for Box<dyn SendableContextResolver + Send + Sync + 'static> {
-    fn clone(&self) -> Self {
-        self.as_ref().clone_boxed()
-    }
-}
-
 pub trait SendableFragment: Fn(&Context) -> bool {
     fn clone_boxed(&self) -> Box<dyn SendableFragment + Send + Sync + 'static>;
 }
