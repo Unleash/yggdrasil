@@ -1,37 +1,53 @@
 use std::collections::HashMap;
 use unleash_types::client_features::Context;
 
-#[derive(Clone)]
-pub struct EnrichedContext {
-    pub user_id: Option<String>,
-    pub session_id: Option<String>,
-    pub environment: Option<String>,
-    pub app_name: Option<String>,
-    pub current_time: Option<String>,
-    pub remote_address: Option<String>,
-    pub properties: Option<HashMap<String, String>>,
-    pub external_results: Option<HashMap<String, bool>>,
-    pub toggle_name: String,
-    pub runtime_hostname: Option<String>,
+pub struct EnrichedContext<'a> {
+    pub user_id: Option<&'a str>,
+    pub session_id: Option<&'a str>,
+    pub environment: Option<&'a str>,
+    pub app_name: Option<&'a str>,
+    pub current_time: Option<&'a str>,
+    pub remote_address: Option<&'a str>,
+    pub properties: Option<&'a HashMap<String, String>>,
+    pub external_results: Option<&'a HashMap<String, bool>>,
+    pub toggle_name: &'a str,
+    pub runtime_hostname: Option<&'a str>,
 }
 
-impl EnrichedContext {
+impl<'a> EnrichedContext<'a> {
     pub fn from(
-        context: Context,
-        toggle_name: String,
-        external_results: Option<HashMap<String, bool>>,
+        context: &'a Context,
+        toggle_name: &'a str,
+        external_results: Option<&'a HashMap<String, bool>>,
     ) -> Self {
         EnrichedContext {
-            user_id: context.user_id.clone(),
-            session_id: context.session_id.clone(),
-            environment: context.environment.clone(),
-            app_name: context.app_name.clone(),
-            current_time: context.current_time.clone(),
-            remote_address: context.remote_address.clone(),
-            properties: context.properties,
+            user_id: context.user_id.as_deref(),
+            session_id: context.session_id.as_deref(),
+            environment: context.environment.as_deref(),
+            app_name: context.app_name.as_deref(),
+            current_time: context.current_time.as_deref(),
+            remote_address: context.remote_address.as_deref(),
+            properties: context.properties.as_ref(),
             external_results,
             toggle_name,
             runtime_hostname: None,
+        }
+    }
+}
+
+impl<'a> EnrichedContext<'a> {
+    pub fn with_toggle_name(&self, toggle_name: &'a str) -> EnrichedContext<'a> {
+        EnrichedContext {
+            user_id: self.user_id,
+            session_id: self.session_id,
+            environment: self.environment,
+            app_name: self.app_name,
+            current_time: self.current_time,
+            remote_address: self.remote_address,
+            properties: self.properties,
+            external_results: self.external_results,
+            toggle_name,
+            runtime_hostname: self.runtime_hostname,
         }
     }
 }
