@@ -396,12 +396,9 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
     Ok(Box::new(move |context: &Context| {
         if let Some(stickiness) = stickiness_resolver(context) {
-            let group_id = match &group_id {
-                Some(group_id) => group_id.clone(),
-                None => context.toggle_name.to_string(),
-            };
+            let group_id = group_id.as_deref().unwrap_or(context.toggle_name);
 
-            let hash = normalized_hash(&group_id, &stickiness, 100, 0);
+            let hash = normalized_hash(group_id, &stickiness, 100, 0);
 
             if let Ok(hash) = hash {
                 hash <= percent_rollout.into()
