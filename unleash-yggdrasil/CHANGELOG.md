@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0](https://github.com/Unleash/yggdrasil/compare/v0.18.2...v0.19.0) - 2026-01-21
+
+### 🐛 Bug Fixes
+- do not count metrics tacitly on is enabled and get variant ([#329](https://github.com/Unleash/yggdrasil/issues/329)) (by @sighphyre) - #329
+
+### ⚙️ Miscellaneous Tasks
+- reduce allocations on isEnabled hot path by removing unnecessary Context clones ([#327](https://github.com/Unleash/yggdrasil/issues/327)) (by @sighphyre) - #327
+
+### Contributors
+
+* @sighphyre
+
 ## [0.18.2](https://github.com/Unleash/yggdrasil/compare/v0.18.1...v0.18.2) - 2026-01-15
 
 ### 🚀 Features
