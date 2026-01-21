@@ -38,3 +38,5 @@ devenv.local.nix
 .direnv*
 
 .DS_Store
+
+CLAUDE.md

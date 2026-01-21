@@ -48,12 +48,12 @@ impl BucketMetricOptions {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NumericMetricSample {
+pub struct CounterMetricSample {
     pub labels: MetricLabels,
     pub value: i64,
 }
 
-impl NumericMetricSample {
+impl CounterMetricSample {
     pub(crate) fn new(labels: MetricLabels, value: i64) -> Self {
         Self { labels, value }
     }
@@ -62,6 +62,25 @@ impl NumericMetricSample {
         Self {
             labels: HashMap::new(),
             value: 0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GaugeMetricSample {
+    pub labels: MetricLabels,
+    pub value: f64,
+}
+
+impl GaugeMetricSample {
+    pub(crate) fn new(labels: MetricLabels, value: f64) -> Self {
+        Self { labels, value }
+    }
+
+    pub(crate) fn zero() -> Self {
+        Self {
+            labels: HashMap::new(),
+            value: 0.0,
         }
     }
 }
@@ -131,7 +150,8 @@ impl BucketMetricSample {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MetricSample {
-    Numeric(NumericMetricSample),
+    Counter(CounterMetricSample),
+    Gauge(GaugeMetricSample),
     Bucket(BucketMetricSample),
 }
 
@@ -145,17 +165,29 @@ pub struct CollectedMetric {
 }
 
 impl CollectedMetric {
-    pub(crate) fn new_numeric(
+    pub(crate) fn new_counter(
         name: impl Into<String>,
         help: impl Into<String>,
-        metric_type: MetricType,
-        samples: Vec<NumericMetricSample>,
+        samples: Vec<CounterMetricSample>,
     ) -> Self {
         Self {
             name: name.into(),
             help: help.into(),
-            metric_type,
-            samples: samples.into_iter().map(MetricSample::Numeric).collect(),
+            metric_type: MetricType::Counter,
+            samples: samples.into_iter().map(MetricSample::Counter).collect(),
+        }
+    }
+
+    pub(crate) fn new_gauge(
+        name: impl Into<String>,
+        help: impl Into<String>,
+        samples: Vec<GaugeMetricSample>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            help: help.into(),
+            metric_type: MetricType::Gauge,
+            samples: samples.into_iter().map(MetricSample::Gauge).collect(),
         }
     }
 
@@ -172,12 +204,22 @@ impl CollectedMetric {
         }
     }
 
-    pub fn numeric_samples(&self) -> Vec<&NumericMetricSample> {
+    pub fn counter_samples(&self) -> Vec<&CounterMetricSample> {
         self.samples
             .iter()
             .filter_map(|s| match s {
-                MetricSample::Numeric(n) => Some(n),
-                MetricSample::Bucket(_) => None,
+                MetricSample::Counter(c) => Some(c),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn gauge_samples(&self) -> Vec<&GaugeMetricSample> {
+        self.samples
+            .iter()
+            .filter_map(|s| match s {
+                MetricSample::Gauge(g) => Some(g),
+                _ => None,
             })
             .collect()
     }
@@ -186,8 +228,8 @@ impl CollectedMetric {
         self.samples
             .iter()
             .filter_map(|s| match s {
-                MetricSample::Numeric(_) => None,
                 MetricSample::Bucket(b) => Some(b),
+                _ => None,
             })
             .collect()
     }

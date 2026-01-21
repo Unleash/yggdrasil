@@ -9,8 +9,8 @@ pub use gauge::Gauge;
 pub use histogram::Histogram;
 pub use registry::InMemoryMetricRegistry;
 pub use types::{
-    BucketMetricOptions, BucketMetricSample, CollectedMetric, HistogramBucket, MetricLabels,
-    MetricOptions, MetricSample, MetricType, NumericMetricSample,
+    BucketMetricOptions, BucketMetricSample, CollectedMetric, CounterMetricSample,
+    GaugeMetricSample, HistogramBucket, MetricLabels, MetricOptions, MetricSample, MetricType,
 };
 
 pub trait ImpactMetricRegistry {
@@ -20,14 +20,14 @@ pub trait ImpactMetricRegistry {
     fn inc_counter_with_labels(&self, name: &str, value: i64, labels: &MetricLabels);
 
     fn define_gauge(&self, opts: MetricOptions);
-    fn set_gauge(&self, name: &str, value: i64);
-    fn set_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels);
+    fn set_gauge(&self, name: &str, value: f64);
+    fn set_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels);
     fn inc_gauge(&self, name: &str);
-    fn inc_gauge_by(&self, name: &str, value: i64);
-    fn inc_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels);
+    fn inc_gauge_by(&self, name: &str, value: f64);
+    fn inc_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels);
     fn dec_gauge(&self, name: &str);
-    fn dec_gauge_by(&self, name: &str, value: i64);
-    fn dec_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels);
+    fn dec_gauge_by(&self, name: &str, value: f64);
+    fn dec_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels);
 
     fn define_histogram(&self, opts: BucketMetricOptions);
     fn observe_histogram(&self, name: &str, value: f64);
