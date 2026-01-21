@@ -1,12 +1,14 @@
 extern crate pest;
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::io::Cursor;
 use std::net::IpAddr;
 use std::num::ParseFloatError;
 use std::str::FromStr;
+use std::sync::Arc;
 
-use crate::sendable_closures::{SendableContextResolver, SendableFragment};
+use crate::sendable_closures::SendableFragment;
 use crate::state::SdkError;
 use crate::EnrichedContext as Context;
 use chrono::{DateTime, Utc};
@@ -76,7 +78,8 @@ type CompileResult<T> = Result<T, SdkError>;
 
 pub type RuleFragment = Box<dyn SendableFragment + Send + Sync + 'static>;
 
-pub type ContextResolver = Box<dyn SendableContextResolver + Send + Sync + 'static>;
+pub type ContextResolver =
+    Arc<dyn for<'a> Fn(&'a Context) -> Option<Cow<'a, str>> + Send + Sync + 'static>;
 
 trait Invertible {
     fn invert(&self, inverted: bool) -> bool;
@@ -121,37 +124,40 @@ struct StringComparatorType {
 
 //Context lifting properties - these resolve properties from the context
 fn context_value(node: Pairs<Rule>) -> ContextResolver {
-    let [child] = drain(node)
-        .expect("Context node is empty, this should only happen if the grammar is missing");
+    let [child] = drain(node).expect("Context node is empty");
 
     match child.as_rule() {
-        Rule::user_id => Box::new(|context: &Context| context.user_id.clone()),
-        Rule::app_name => Box::new(|context: &Context| context.app_name.clone()),
-        Rule::environment => Box::new(|context: &Context| context.environment.clone()),
-        Rule::session_id => Box::new(|context: &Context| context.session_id.clone()),
-        Rule::remote_address => Box::new(|context: &Context| context.remote_address.clone()),
+        Rule::user_id => Arc::new(|c: &Context| c.user_id.map(Cow::Borrowed)),
+        Rule::app_name => Arc::new(|c: &Context| c.app_name.map(Cow::Borrowed)),
+        Rule::environment => Arc::new(|c: &Context| c.environment.map(Cow::Borrowed)),
+        Rule::session_id => Arc::new(|c: &Context| c.session_id.map(Cow::Borrowed)),
+        Rule::remote_address => Arc::new(|c: &Context| c.remote_address.map(Cow::Borrowed)),
+
         #[cfg(feature = "wall-clock")]
-        Rule::current_time => Box::new(|context: &Context| {
-            context
-                .current_time
-                .clone()
-                .or_else(|| Some(chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()))
+        Rule::current_time => Arc::new(|c: &Context| {
+            c.current_time.map(Cow::Borrowed).or_else(|| {
+                Some(Cow::Owned(
+                    chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                ))
+            })
         }),
         #[cfg(not(feature = "wall-clock"))]
-        Rule::current_time => Box::new(|context: &Context| context.current_time.clone()),
+        Rule::current_time => Arc::new(|c: &Context| c.current_time.map(Cow::Borrowed)),
+
         Rule::random => {
             let value = child
                 .into_inner()
                 .next()
-                .map(|rule| {
-                    rule.as_str().parse::<usize>().expect(
-                        "Failed to parse random content value in the grammar, this shouldn't happen",
-                    )
-                })
+                .map(|rule| rule.as_str().parse::<usize>().expect("bad grammar random"))
                 .unwrap_or(100);
-            Box::new(move |_: &Context| Some(rand::rng().random_range(1..value).to_string()))
+
+            Arc::new(move |_c: &Context| {
+                Some(Cow::Owned(rand::rng().random_range(1..value).to_string()))
+            })
         }
+
         Rule::property => context_property(child.into_inner()),
+
         _ => unreachable!(),
     }
 }
@@ -163,7 +169,7 @@ pub(crate) fn coalesce_context_property(node: Pairs<Rule>) -> ContextResolver {
         stickiness_resolvers.push(context_value(child.into_inner()))
     }
 
-    Box::new(move |context: &Context| {
+    Arc::new(move |context: &Context| {
         stickiness_resolvers
             .iter()
             .find_map(|resolver| resolver(context))
@@ -178,11 +184,12 @@ fn context_property(node: Pairs<Rule>) -> ContextResolver {
     chars.next_back();
     let context_name = chars.as_str().to_string();
 
-    Box::new(move |context: &Context| -> Option<String> {
-        match &context.properties {
-            Some(props) => props.get(&context_name).cloned(),
-            None => None,
-        }
+    Arc::new(move |context: &Context| -> Option<Cow<'_, str>> {
+        context
+            .properties
+            .as_ref()?
+            .get(context_name.as_str())
+            .map(|v| Cow::Borrowed(v.as_str()))
     })
 }
 
@@ -389,12 +396,9 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
     Ok(Box::new(move |context: &Context| {
         if let Some(stickiness) = stickiness_resolver(context) {
-            let group_id = match &group_id {
-                Some(group_id) => group_id.clone(),
-                None => context.toggle_name.clone(),
-            };
+            let group_id = group_id.as_deref().unwrap_or(context.toggle_name);
 
-            let hash = normalized_hash(&group_id, &stickiness, 100, 0);
+            let hash = normalized_hash(group_id, &stickiness, 100, 0);
 
             if let Ok(hash) = hash {
                 hash <= percent_rollout.into()
@@ -428,7 +432,7 @@ fn get_hostname(_: &Context) -> CompileResult<String> {
 #[cfg(not(feature = "hostname"))]
 fn get_hostname(context: &Context) -> CompileResult<String> {
     if let Some(hostname) = &context.runtime_hostname {
-        return Ok(hostname.clone());
+        return Ok(hostname.to_string());
     }
     Err(SdkError::StrategyParseError(
         "Hostname is not supported on this platform".into(),
@@ -504,11 +508,11 @@ fn list_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
                 match comparator {
                     ContentComparator::In => match context_value {
-                        Some(context_value) => values.contains(&context_value),
+                        Some(context_value) => values.contains(context_value.as_ref()),
                         None => false,
                     },
                     ContentComparator::NotIn => match context_value {
-                        Some(context_value) => !values.contains(&context_value),
+                        Some(context_value) => !values.contains(context_value.as_ref()),
                         None => true,
                     },
                 }
@@ -577,7 +581,7 @@ fn string_fragment_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> 
     Ok(Box::new(move |context: &Context| {
         let mut value = context_getter(context);
         if ignore_case {
-            value = value.map(|value| value.to_lowercase())
+            value = value.map(|v| Cow::Owned(v.to_lowercase()));
         }
         if let Some(value) = value {
             match comparator {
@@ -661,11 +665,11 @@ mod tests {
     use std::collections::HashMap;
     use test_case::test_case;
 
-    fn context_from_user_id(user_id: &str) -> Context {
+    fn context_from_user_id(user_id: &str) -> Context<'_> {
         Context {
             user_id: Some(user_id.into()),
             current_time: None,
-            properties: Some(HashMap::new()),
+            properties: None,
             session_id: None,
             environment: None,
             app_name: None,
@@ -676,21 +680,17 @@ mod tests {
         }
     }
 
-    // This needs the toggle name for it to actually be useful for the parsing engine so it makes no sense
-    // to have a default implementation exposed in the library but it does make testing a lot easier for this
-    // test module
-    #[allow(clippy::derivable_impls)]
-    impl Default for Context {
+    impl Context<'_> {
         fn default() -> Self {
-            Self {
-                user_id: Default::default(),
-                session_id: Default::default(),
-                environment: Default::default(),
-                app_name: Default::default(),
-                current_time: Default::default(),
-                remote_address: Default::default(),
-                properties: Default::default(),
-                toggle_name: Default::default(),
+            Context {
+                user_id: None,
+                current_time: None,
+                properties: None,
+                session_id: None,
+                environment: None,
+                app_name: None,
+                remote_address: None,
+                toggle_name: "".into(),
                 external_results: None,
                 runtime_hostname: None,
             }
@@ -825,7 +825,7 @@ mod tests {
         let context = Context {
             current_time: None,
             user_id: Some("6".into()),
-            properties: Some(context_property),
+            properties: Some(&context_property),
             session_id: None,
             environment: None,
             app_name: None,
@@ -864,7 +864,7 @@ mod tests {
     #[test_case("sticky on environment | context[\"lies\"] | context[\"present\"] ", Some("1"); "Respects custom context")]
     #[test_case("sticky on environment | context[\"lies\"]", None; "Falls back to None eventually")]
     fn run_null_coalesce_test(rule: &str, expected: Option<&str>) {
-        let expected = expected.map(|s| s.to_string());
+        let expected = expected.map(|s| Cow::Borrowed(s));
 
         let mut props = HashMap::new();
         props.insert("present".into(), "1".into());
@@ -872,14 +872,14 @@ mod tests {
         let context = Context {
             user_id: Some("42".into()),
             session_id: Some("7".into()),
-            properties: Some(props),
+            properties: Some(&props),
             ..Context::default()
         };
 
         let mut parse_result = Strategy::parse(Rule::stickiness_param, rule).unwrap();
         let stickiness_lookup =
             coalesce_context_property(parse_result.next().unwrap().into_inner());
-        let result: Option<String> = stickiness_lookup(&context);
+        let result: Option<Cow<str>> = stickiness_lookup(&context);
 
         assert_eq!(result, expected);
     }
@@ -958,7 +958,7 @@ mod tests {
         let mut context = Context::default();
         let mut props = HashMap::new();
         props.insert("cutoff".into(), "2022-01-25T13:00:00.000Z".into());
-        context.properties = Some(props);
+        context.properties = Some(&props);
 
         assert_eq!(rule(&context), expected);
     }
@@ -971,7 +971,7 @@ mod tests {
         let mut context = Context::default();
         let mut props = HashMap::new();
         props.insert("cutoff".into(), "2022-01-25T13:00:00.000Z".into());
-        context.properties = Some(props);
+        context.properties = Some(&props);
 
         assert!(!rule(&context));
     }
@@ -1052,8 +1052,8 @@ mod tests {
         custom_strategy_results.insert("test_value".to_string(), true);
 
         let context = Context {
-            external_results: Some(custom_strategy_results),
-            ..Default::default()
+            external_results: Some(&custom_strategy_results),
+            ..Context::default()
         };
 
         assert!(!rule(&context));
@@ -1067,18 +1067,19 @@ mod tests {
         let mut custom_strategy_results = HashMap::new();
         custom_strategy_results.insert("test_value".to_string(), true);
 
-        let mut context = Context {
-            external_results: Some(custom_strategy_results),
-            ..Default::default()
+        let context = Context {
+            external_results: Some(&custom_strategy_results),
+            ..Context::default()
         };
 
         let true_result = rule(&context);
 
-        context
-            .external_results
-            .as_mut()
-            .unwrap()
-            .insert("test_value".to_string(), false);
+        let mut custom_strategy_results = HashMap::new();
+        custom_strategy_results.insert("test_value".to_string(), false);
+        let context = Context {
+            external_results: Some(&custom_strategy_results),
+            ..Context::default()
+        };
 
         let false_result = rule(&context);
 

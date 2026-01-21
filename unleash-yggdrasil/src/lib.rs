@@ -485,10 +485,7 @@ impl EngineState {
         enriched_context: &EnrichedContext,
     ) -> bool {
         toggle.dependencies.iter().all(|parent_dependency| {
-            let context = EnrichedContext {
-                toggle_name: toggle.name.clone(),
-                ..enriched_context.clone()
-            };
+            let context = enriched_context.with_toggle_name(toggle.name.as_str());
             let Some(compiled_parent) = self.get_toggle(&parent_dependency.feature) else {
                 return false;
             };
@@ -534,11 +531,8 @@ impl EngineState {
             state
                 .iter()
                 .map(|(name, toggle)| {
-                    let enriched_context = EnrichedContext::from(
-                        context.clone(),
-                        name.clone(),
-                        external_values.clone(),
-                    );
+                    let enriched_context =
+                        EnrichedContext::from(context, name, external_values.as_ref());
 
                     let enabled = self.enabled(toggle, &enriched_context);
                     (
@@ -565,7 +559,7 @@ impl EngineState {
             state.get(name).map(|compiled_toggle| ResolvedToggle {
                 enabled: self.enabled(
                     compiled_toggle,
-                    &EnrichedContext::from(context.clone(), name.into(), external_values.clone()),
+                    &EnrichedContext::from(context, name, external_values.as_ref()),
                 ),
                 impression_data: compiled_toggle.impression_data,
                 variant: self.get_variant(name, context, external_values),
@@ -606,7 +600,7 @@ impl EngineState {
     }
 
     pub fn check_enabled(&self, context: &EnrichedContext) -> Option<bool> {
-        self.get_toggle(&context.toggle_name)
+        self.get_toggle(context.toggle_name)
             .map(|toggle| self.enabled(toggle, context))
     }
 
@@ -616,8 +610,7 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> bool {
-        let enriched_context =
-            EnrichedContext::from(context.clone(), name.to_string(), external_values.clone());
+        let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
         let is_enabled = self
             .get_toggle(name)
@@ -631,7 +624,7 @@ impl EngineState {
 
     fn resolve_variant<'a>(
         &self,
-        variants: &'a Vec<CompiledVariant>,
+        variants: &'a [CompiledVariant],
         group_id: &str,
         context: &EnrichedContext,
     ) -> Option<&'a CompiledVariant> {
@@ -643,13 +636,11 @@ impl EngineState {
         }
         let total_weight: u32 = variants.iter().map(|var| var.weight as u32).sum();
 
-        let stickiness = variants
-            .first()
-            .and_then(|variant| variant.stickiness.clone());
+        let stickiness = variants.first().and_then(|v| v.stickiness.as_deref());
 
         let target = get_seed(stickiness, context)
             .map(|seed| {
-                normalized_hash(group_id, &seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
+                normalized_hash(group_id, seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
             })
             .unwrap_or_else(|| rand::rng().random_range(1..=total_weight));
 
@@ -700,7 +691,7 @@ impl EngineState {
     }
 
     pub fn check_variant(&self, context: &EnrichedContext) -> Option<VariantDef> {
-        self.get_toggle(&context.toggle_name).map(|toggle| {
+        self.get_toggle(context.toggle_name).map(|toggle| {
             if self.enabled(toggle, context) {
                 self.check_variant_by_toggle(toggle, context)
                     .unwrap_or_default()
@@ -717,8 +708,7 @@ impl EngineState {
         external_values: &Option<HashMap<String, bool>>,
     ) -> ExtendedVariantDef {
         let toggle = self.get_toggle(name);
-        let enriched_context =
-            EnrichedContext::from(context.clone(), name.to_string(), external_values.clone());
+        let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
         let enabled = toggle
             .map(|t| self.enabled(t, &enriched_context))
@@ -763,55 +753,50 @@ impl EngineState {
     }
 }
 
-fn get_seed(stickiness: Option<String>, context: &EnrichedContext) -> Option<String> {
-    match stickiness.as_deref() {
-        Some("default") | None => context
-            .user_id
-            .clone()
-            .or_else(|| context.session_id.clone()),
-        Some(custom_stickiness) => match custom_stickiness {
-            "userId" => context.user_id.clone(),
-            "sessionId" => context.session_id.clone(),
-            "environment" => context.environment.clone(),
-            "appName" => context.app_name.clone(),
-            "remoteAddress" => context.remote_address.clone(),
+fn get_seed<'a>(stickiness: Option<&str>, context: &'a EnrichedContext<'a>) -> Option<&'a str> {
+    match stickiness {
+        Some("default") | None => context.user_id.or(context.session_id),
+        Some(custom) => match custom {
+            "userId" => context.user_id,
+            "sessionId" => context.session_id,
+            "environment" => context.environment,
+            "appName" => context.app_name,
+            "remoteAddress" => context.remote_address,
             _ => context
                 .properties
-                .as_ref()
-                .and_then(|props| props.get(custom_stickiness))
-                .cloned(),
+                .and_then(|props| props.get(custom).map(|v| v.as_str())),
         },
     }
 }
 
 fn lookup_override_context<'a>(
     variant_override: &Override,
-    context: &'a EnrichedContext,
-) -> Option<&'a String> {
-    match variant_override.context_name.as_ref() as &str {
-        "userId" => context.user_id.as_ref(),
-        "sessionId" => context.session_id.as_ref(),
-        "environment" => context.environment.as_ref(),
-        "appName" => context.app_name.as_ref(),
-        "currentTime" => context.current_time.as_ref(),
-        "remoteAddress" => context.remote_address.as_ref(),
-        _ => context
-            .properties
-            .as_ref()
-            .and_then(|props| props.get(&variant_override.context_name)),
+    context: &'a EnrichedContext<'a>,
+) -> Option<&'a str> {
+    match variant_override.context_name.as_str() {
+        "userId" => context.user_id,
+        "sessionId" => context.session_id,
+        "environment" => context.environment,
+        "appName" => context.app_name,
+        "currentTime" => context.current_time,
+        "remoteAddress" => context.remote_address,
+        _ => context.properties.and_then(|props| {
+            props
+                .get(variant_override.context_name.as_str())
+                .map(|s| s.as_str())
+        }),
     }
 }
 
 fn check_for_variant_override<'a>(
-    variants: &'a Vec<CompiledVariant>,
-    context: &EnrichedContext,
+    variants: &'a [CompiledVariant],
+    context: &EnrichedContext<'_>,
 ) -> Option<&'a CompiledVariant> {
     for variant in variants {
         if let Some(overrides) = &variant.overrides {
             for o in overrides {
-                let context_property = lookup_override_context(o, context);
-                if let Some(context_property) = context_property {
-                    if o.values.contains(context_property) {
+                if let Some(context_property) = lookup_override_context(o, context) {
+                    if o.values.iter().any(|v| v.as_str() == context_property) {
                         return Some(variant);
                     }
                 }
@@ -1331,8 +1316,8 @@ mod test {
 
         let check_enabled = state
             .check_enabled(&EnrichedContext::from(
-                Context::default(),
-                "some-toggle".into(),
+                &Context::default(),
+                "some-toggle",
                 None,
             ))
             .unwrap();
@@ -1383,8 +1368,8 @@ mod test {
 
         let second_variant = state
             .check_variant(&EnrichedContext::from(
-                Context::default(),
-                "some-toggle".into(),
+                &Context::default(),
+                "some-toggle",
                 None,
             ))
             .unwrap_or_default();
@@ -1442,13 +1427,9 @@ mod test {
             .unwrap()
             .insert("customId".to_string(), "customId".to_string());
 
-        let enriched_context =
-            EnrichedContext::from(context.clone(), "some-toggle".to_string(), None);
+        let enriched_context = EnrichedContext::from(&context, "some-toggle", None);
 
-        assert_eq!(
-            get_seed(stickiness.map(String::from), &enriched_context),
-            expected.map(String::from)
-        );
+        assert_eq!(get_seed(stickiness, &enriched_context), expected);
     }
 
     #[test]
@@ -1573,8 +1554,7 @@ mod test {
                 values: override_values.iter().map(|s| s.to_string()).collect(),
             }]),
         }];
-        let enriched_context =
-            EnrichedContext::from(context.clone(), "some-toggle".to_string(), None);
+        let enriched_context = EnrichedContext::from(&context, "some-toggle", None);
 
         let result = check_for_variant_override(&variants, &enriched_context);
         assert_eq!(result.is_some(), expected);
@@ -1822,7 +1802,7 @@ mod test {
 
         let warnings = engine.take_state(feature_set);
         let enabled = engine
-            .check_enabled(&EnrichedContext::from(context, "toggle1".into(), None))
+            .check_enabled(&EnrichedContext::from(&context, "toggle1", None))
             .unwrap();
 
         assert!(enabled);
@@ -1896,7 +1876,7 @@ mod test {
 
         let warnings = engine.take_state(feature_set);
         let enabled = engine
-            .check_enabled(&EnrichedContext::from(context, "toggle1".into(), None))
+            .check_enabled(&EnrichedContext::from(&context, "toggle1", None))
             .unwrap();
 
         assert!(enabled);
