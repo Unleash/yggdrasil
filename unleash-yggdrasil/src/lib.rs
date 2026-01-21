@@ -617,8 +617,6 @@ impl EngineState {
             .map(|toggle| self.enabled(toggle, &enriched_context))
             .unwrap_or_default();
 
-        self.count_toggle(name, is_enabled);
-
         is_enabled
     }
 
@@ -719,9 +717,6 @@ impl EngineState {
             _ => None,
         }
         .unwrap_or_default();
-
-        self.count_toggle(name, enabled);
-        self.count_variant(name, &variant.name);
 
         variant.to_enriched_response(enabled)
     }
@@ -1051,102 +1046,6 @@ mod test {
     }
 
     #[test]
-    pub fn checking_a_toggle_also_increments_metrics() {
-        let mut compiled_state = AHashMap::new();
-        compiled_state.insert(
-            "some-toggle".to_string(),
-            CompiledToggle {
-                name: "some-toggle".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|context| context.user_id == Some("7".into())),
-                variants: vec![],
-                ..CompiledToggle::default()
-            },
-        );
-
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
-        };
-        let context_with_user_id_of_7 = Context {
-            user_id: Some("7".into()),
-            ..Context::default()
-        };
-
-        let blank_context = Context::default();
-
-        state.is_enabled("some-toggle", &context_with_user_id_of_7, &None);
-        state.is_enabled("some-toggle", &context_with_user_id_of_7, &None);
-
-        //No user id, no enabled state, this should increment the "no" metric
-        state.is_enabled("some-toggle", &blank_context, &None);
-
-        let metrics = state.get_metrics(Utc::now()).unwrap();
-        assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 2);
-        assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
-    }
-
-    #[test]
-    pub fn checking_a_variant_also_increments_metrics_including_toggle_metrics() {
-        let mut compiled_state = AHashMap::new();
-        compiled_state.insert(
-            "some-toggle".to_string(),
-            CompiledToggle {
-                name: "some-toggle".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|context| context.user_id == Some("7".into())),
-                variants: vec![CompiledVariant {
-                    name: "test-variant".into(),
-                    weight: 100,
-                    stickiness: None,
-                    payload: None,
-                    overrides: None,
-                }],
-                ..CompiledToggle::default()
-            },
-        );
-
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
-        };
-
-        let blank_context = Context::default();
-        let context_with_user_id_of_7 = Context {
-            user_id: Some("7".into()),
-            ..Context::default()
-        };
-
-        state.get_variant("some-toggle", &blank_context, &None);
-        state.get_variant("some-toggle", &context_with_user_id_of_7, &None);
-
-        let metrics = state.get_metrics(Utc::now()).unwrap();
-        let toggle_metric = metrics.toggles.get("some-toggle").unwrap();
-
-        let variant_metric = metrics
-            .toggles
-            .get("some-toggle")
-            .unwrap()
-            .variants
-            .get("test-variant")
-            .unwrap();
-
-        let disabled_variant_metric = metrics
-            .toggles
-            .get("some-toggle")
-            .unwrap()
-            .variants
-            .get("disabled")
-            .unwrap();
-
-        assert_eq!(variant_metric, &1);
-        assert_eq!(disabled_variant_metric, &1);
-        assert_eq!(toggle_metric.yes, 1);
-
-        assert_eq!(toggle_metric.no, 1);
-    }
-
-    #[test]
     pub fn no_valid_metrics_yields_none() {
         let mut compiled_state = AHashMap::new();
         compiled_state.insert(
@@ -1186,7 +1085,7 @@ mod test {
             ..Default::default()
         };
 
-        state.is_enabled("some-toggle", &Context::default(), &None);
+        state.count_toggle("some-toggle", true);
 
         let metrics = state.get_metrics(Utc::now());
         assert!(metrics.is_some());
@@ -1217,14 +1116,25 @@ mod test {
     }
 
     #[test]
-    pub fn unknown_features_and_variants_get_metrics() {
+    fn get_variant_and_is_enabled_do_not_increment_metrics() {
+        let toggle_name = "a-toggle";
+        let variant_name = "a-variant";
+        let context = Context::default();
+
         let mut compiled_state = AHashMap::new();
         compiled_state.insert(
-            "some-toggle".to_string(),
+            toggle_name.to_string(),
             CompiledToggle {
-                name: "some-toggle".into(),
+                name: toggle_name.into(),
                 enabled: true,
                 compiled_strategy: Box::new(|_| true),
+                variants: vec![CompiledVariant {
+                    name: variant_name.into(),
+                    weight: 1,
+                    stickiness: None,
+                    payload: None,
+                    overrides: None,
+                }],
                 ..CompiledToggle::default()
             },
         );
@@ -1234,173 +1144,19 @@ mod test {
             ..Default::default()
         };
 
-        state.is_enabled("missing-toggle", &Context::default(), &None);
-        state.get_variant("missing-toggle", &Context::default(), &None);
+        // quick sanity check that we do get metrics back when we expect
+        state.count_variant(toggle_name, variant_name);
+        let metrics = state.get_metrics(Utc::now());
+        assert!(metrics.is_some());
 
-        let metrics = state.get_metrics(Utc::now()).unwrap();
+        // but these definitely should not yield metrics
+        state.get_variant(toggle_name, &context, &None);
+        let metrics = state.get_metrics(Utc::now());
+        assert!(metrics.is_none());
 
-        let some_toggle_stats = metrics.toggles.get("missing-toggle").unwrap();
-        assert_eq!(some_toggle_stats.yes, 0);
-        assert_eq!(some_toggle_stats.no, 2);
-        assert_eq!(some_toggle_stats.variants.len(), 1);
-    }
-
-    #[test]
-    pub fn multiple_toggle_checks_stack_metrics() {
-        let mut compiled_state = AHashMap::new();
-        compiled_state.insert(
-            "some-toggle".to_string(),
-            CompiledToggle {
-                name: "some-toggle".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                ..CompiledToggle::default()
-            },
-        );
-
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
-        };
-
-        for _ in 0..10 {
-            state.is_enabled("some-toggle", &Context::default(), &None);
-            state.get_variant("some-toggle", &Context::default(), &None);
-
-            state.is_enabled("missing-toggle", &Context::default(), &None);
-        }
-
-        let metrics = state.get_metrics(Utc::now()).unwrap();
-
-        let some_toggle_stats = metrics.toggles.get("some-toggle").unwrap();
-        let missing_toggle_stats = metrics.toggles.get("missing-toggle").unwrap();
-
-        let disabled_variant_count = *some_toggle_stats.variants.get("disabled").unwrap();
-
-        assert_eq!(some_toggle_stats.yes, 20);
-        assert_eq!(some_toggle_stats.no, 0);
-        assert_eq!(some_toggle_stats.variants.len(), 1);
-        assert_eq!(disabled_variant_count, 10);
-
-        assert_eq!(missing_toggle_stats.yes, 0);
-        assert_eq!(missing_toggle_stats.no, 10);
-    }
-
-    #[test]
-    pub fn check_enabled_and_count_metrics_yields_same_metrics_as_is_enabled() {
-        let mut compiled_state = AHashMap::new();
-        compiled_state.insert(
-            "some-toggle".to_string(),
-            CompiledToggle {
-                name: "some-toggle".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                ..CompiledToggle::default()
-            },
-        );
-
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
-        };
-
-        let is_enabled = state.is_enabled("some-toggle", &Context::default(), &None);
-
-        let is_enabled_metrics = state
-            .get_metrics(Utc::now())
-            .unwrap()
-            .toggles
-            .get("some-toggle")
-            .unwrap()
-            .yes;
-
-        let check_enabled = state
-            .check_enabled(&EnrichedContext::from(
-                &Context::default(),
-                "some-toggle",
-                None,
-            ))
-            .unwrap();
-
-        state.count_toggle("some-toggle", check_enabled);
-
-        let count_toggle_metrics = state
-            .get_metrics(Utc::now())
-            .unwrap()
-            .toggles
-            .get("some-toggle")
-            .unwrap()
-            .yes;
-
-        assert_eq!(is_enabled_metrics, 1);
-        assert_eq!(is_enabled_metrics, count_toggle_metrics);
-
-        assert!(is_enabled);
-        assert_eq!(is_enabled, check_enabled);
-    }
-
-    #[test]
-    pub fn check_variant_and_count_metrics_yields_same_metrics_as_get_variant() {
-        let mut compiled_state = AHashMap::new();
-        compiled_state.insert(
-            "some-toggle".to_string(),
-            CompiledToggle {
-                name: "some-toggle".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                ..CompiledToggle::default()
-            },
-        );
-
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
-        };
-
-        let first_variant = state.get_variant("some-toggle", &Context::default(), &None);
-        let get_variant_metrics = state
-            .get_metrics(Utc::now())
-            .unwrap()
-            .toggles
-            .get("some-toggle")
-            .unwrap()
-            .clone();
-
-        let second_variant = state
-            .check_variant(&EnrichedContext::from(
-                &Context::default(),
-                "some-toggle",
-                None,
-            ))
-            .unwrap_or_default();
-
-        state.count_toggle("some-toggle", true);
-        state.count_variant("some-toggle", &second_variant.name);
-        let check_variant_metrics = state
-            .get_metrics(Utc::now())
-            .unwrap()
-            .toggles
-            .get("some-toggle")
-            .unwrap()
-            .clone();
-
-        assert_eq!(
-            first_variant,
-            VariantDef::default().to_enriched_response(true)
-        );
-        assert_eq!(first_variant.name, second_variant.name);
-
-        assert_eq!(get_variant_metrics.variants.len(), 1);
-        assert_eq!(check_variant_metrics.variants.len(), 1);
-
-        assert_eq!(get_variant_metrics.variants.get("disabled").unwrap(), &1);
-        assert_eq!(check_variant_metrics.variants.get("disabled").unwrap(), &1);
-
-        assert_eq!(get_variant_metrics.yes, 1);
-        assert_eq!(check_variant_metrics.yes, 1);
-
-        assert_eq!(get_variant_metrics.no, 0);
-        assert_eq!(check_variant_metrics.no, 0);
+        state.is_enabled(toggle_name, &context, &None);
+        let metrics = state.get_metrics(Utc::now());
+        assert!(metrics.is_none());
     }
 
     #[test_case(Some("default"), Some("sessionId"), Some("userId"), Some("userId"); "should return userId for default stickiness")]
@@ -1884,105 +1640,6 @@ mod test {
     }
 
     #[test]
-    pub fn metrics_are_not_recorded_for_parent_flags() {
-        let mut compiled_state = AHashMap::new();
-        compiled_state.insert(
-            "some-toggle".to_string(),
-            CompiledToggle {
-                name: "some-toggle".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                variants: vec![],
-                dependencies: vec![FeatureDependency {
-                    feature: "parent-flag".into(),
-                    enabled: Some(true),
-                    variants: None,
-                }],
-                ..CompiledToggle::default()
-            },
-        );
-
-        compiled_state.insert(
-            "parent-flag".to_string(),
-            CompiledToggle {
-                name: "parent-flag".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                variants: vec![],
-                ..CompiledToggle::default()
-            },
-        );
-
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
-        };
-
-        let blank_context = Context::default();
-
-        state.is_enabled("some-toggle", &blank_context, &None);
-
-        let metrics = state.get_metrics(Utc::now()).unwrap();
-        assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
-    }
-
-    #[test]
-    pub fn metrics_are_not_recorded_for_parent_flags_with_variants() {
-        let mut compiled_state = AHashMap::new();
-        compiled_state.insert(
-            "some-toggle".to_string(),
-            CompiledToggle {
-                name: "some-toggle".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                variants: vec![],
-                dependencies: vec![FeatureDependency {
-                    feature: "parent-flag".into(),
-                    enabled: Some(true),
-                    variants: Some(vec!["don't-ignore-me".into()]),
-                }],
-                ..CompiledToggle::default()
-            },
-        );
-
-        compiled_state.insert(
-            "parent-flag".to_string(),
-            CompiledToggle {
-                name: "parent-flag".into(),
-                enabled: true,
-                compiled_strategy: Box::new(|_| true),
-                variants: vec![],
-                compiled_variant_strategy: Some(vec![(
-                    Box::new(|_| true),
-                    vec![CompiledVariant {
-                        name: "don't-ignore-me".into(),
-                        weight: 100,
-                        stickiness: None,
-                        payload: None,
-                        overrides: None,
-                    }],
-                    "parent-flag".to_string(),
-                )]),
-                ..CompiledToggle::default()
-            },
-        );
-
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
-        };
-
-        let blank_context = Context::default();
-
-        state.is_enabled("some-toggle", &blank_context, &None);
-
-        let metrics = state.get_metrics(Utc::now()).unwrap();
-        assert_eq!(metrics.toggles.get("some-toggle").unwrap().yes, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
-    }
-
-    #[test]
     pub fn parent_flags_are_consulted_for_get_variant() {
         let mut compiled_state = AHashMap::new();
         compiled_state.insert(
@@ -2018,7 +1675,7 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: Some(compiled_state),
             ..Default::default()
         };
@@ -2028,10 +1685,6 @@ mod test {
         let variant = state.get_variant("some-toggle", &blank_context, &None);
 
         assert_eq!(variant.name, "disabled");
-
-        let metrics = state.get_metrics(Utc::now()).unwrap();
-        assert_eq!(metrics.toggles.get("some-toggle").unwrap().no, 1);
-        assert!(metrics.toggles.get("parent-flag").is_none());
     }
 
     #[test]
