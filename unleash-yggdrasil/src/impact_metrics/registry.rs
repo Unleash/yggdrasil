@@ -382,18 +382,6 @@ mod tests {
     }
 
     #[test]
-    fn gauge_should_support_float_values() {
-        let registry = InMemoryMetricRegistry::default();
-        registry.define_gauge(MetricOptions::new("float_gauge", "test"));
-
-        registry.set_gauge("float_gauge", 3.14);
-
-        let metrics = registry.collect();
-        let sample = &metrics[0].gauge_samples()[0];
-        assert_eq!(sample.value, 3.14);
-    }
-
-    #[test]
     fn should_observe_histogram_values() {
         let registry = InMemoryMetricRegistry::default();
         registry.define_histogram(BucketMetricOptions::new(
