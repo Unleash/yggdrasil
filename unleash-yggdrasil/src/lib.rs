@@ -375,11 +375,11 @@ impl EngineState {
         self.impact_metrics.define_gauge(opts);
     }
 
-    pub fn set_gauge(&self, name: &str, value: i64) {
+    pub fn set_gauge(&self, name: &str, value: f64) {
         self.impact_metrics.set_gauge(name, value);
     }
 
-    pub fn set_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+    pub fn set_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
         self.impact_metrics
             .set_gauge_with_labels(name, value, labels);
     }
@@ -388,11 +388,11 @@ impl EngineState {
         self.impact_metrics.inc_gauge(name);
     }
 
-    pub fn inc_gauge_by(&self, name: &str, value: i64) {
+    pub fn inc_gauge_by(&self, name: &str, value: f64) {
         self.impact_metrics.inc_gauge_by(name, value);
     }
 
-    pub fn inc_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+    pub fn inc_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
         self.impact_metrics
             .inc_gauge_with_labels(name, value, labels);
     }
@@ -401,11 +401,11 @@ impl EngineState {
         self.impact_metrics.dec_gauge(name);
     }
 
-    pub fn dec_gauge_by(&self, name: &str, value: i64) {
+    pub fn dec_gauge_by(&self, name: &str, value: f64) {
         self.impact_metrics.dec_gauge_by(name, value);
     }
 
-    pub fn dec_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+    pub fn dec_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
         self.impact_metrics
             .dec_gauge_with_labels(name, value, labels);
     }

@@ -47,13 +47,13 @@ impl ImpactMetricRegistry for InMemoryMetricRegistry {
             .or_insert_with(|| Arc::new(Gauge::new(opts)));
     }
 
-    fn set_gauge(&self, name: &str, value: i64) {
+    fn set_gauge(&self, name: &str, value: f64) {
         if let Some(gauge) = self.gauges.get(name) {
             gauge.set(value);
         }
     }
 
-    fn set_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+    fn set_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
         if let Some(gauge) = self.gauges.get(name) {
             gauge.set_with_labels(value, labels);
         }
@@ -65,13 +65,13 @@ impl ImpactMetricRegistry for InMemoryMetricRegistry {
         }
     }
 
-    fn inc_gauge_by(&self, name: &str, value: i64) {
+    fn inc_gauge_by(&self, name: &str, value: f64) {
         if let Some(gauge) = self.gauges.get(name) {
             gauge.inc_by(value);
         }
     }
 
-    fn inc_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+    fn inc_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
         if let Some(gauge) = self.gauges.get(name) {
             gauge.inc_with_labels(value, labels);
         }
@@ -83,13 +83,13 @@ impl ImpactMetricRegistry for InMemoryMetricRegistry {
         }
     }
 
-    fn dec_gauge_by(&self, name: &str, value: i64) {
+    fn dec_gauge_by(&self, name: &str, value: f64) {
         if let Some(gauge) = self.gauges.get(name) {
             gauge.dec_by(value);
         }
     }
 
-    fn dec_gauge_with_labels(&self, name: &str, value: i64, labels: &MetricLabels) {
+    fn dec_gauge_with_labels(&self, name: &str, value: f64, labels: &MetricLabels) {
         if let Some(gauge) = self.gauges.get(name) {
             gauge.dec_with_labels(value, labels);
         }
@@ -131,13 +131,13 @@ impl ImpactMetricsDataSource for InMemoryMetricRegistry {
             match metric.metric_type {
                 MetricType::Counter => {
                     self.define_counter(MetricOptions::new(&metric.name, &metric.help));
-                    for sample in metric.numeric_samples() {
+                    for sample in metric.counter_samples() {
                         self.inc_counter_with_labels(&metric.name, sample.value, &sample.labels);
                     }
                 }
                 MetricType::Gauge => {
                     self.define_gauge(MetricOptions::new(&metric.name, &metric.help));
-                    for sample in metric.numeric_samples() {
+                    for sample in metric.gauge_samples() {
                         self.set_gauge_with_labels(&metric.name, sample.value, &sample.labels);
                     }
                 }
@@ -168,15 +168,24 @@ impl ImpactMetricsDataSource for InMemoryMetricRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::impact_metrics::types::{BucketMetricSample, HistogramBucket, NumericMetricSample};
+    use crate::impact_metrics::types::{
+        BucketMetricSample, CounterMetricSample, GaugeMetricSample, HistogramBucket,
+    };
     use std::collections::HashMap;
 
-    fn sample(value: i64) -> NumericMetricSample {
-        NumericMetricSample::new(HashMap::new(), value)
+    fn counter_sample(value: i64) -> CounterMetricSample {
+        CounterMetricSample::new(HashMap::new(), value)
     }
 
-    fn sample_with_labels(labels: HashMap<String, String>, value: i64) -> NumericMetricSample {
-        NumericMetricSample::new(labels, value)
+    fn counter_sample_with_labels(
+        labels: HashMap<String, String>,
+        value: i64,
+    ) -> CounterMetricSample {
+        CounterMetricSample::new(labels, value)
+    }
+
+    fn gauge_sample_with_labels(labels: HashMap<String, String>, value: f64) -> GaugeMetricSample {
+        GaugeMetricSample::new(labels, value)
     }
 
     fn labels(pairs: &[(&str, &str)]) -> HashMap<String, String> {
@@ -198,11 +207,10 @@ mod tests {
         registry.inc_counter("test_counter");
 
         let metrics = registry.collect();
-        let expected = CollectedMetric::new_numeric(
+        let expected = CollectedMetric::new_counter(
             "test_counter",
             "testing",
-            MetricType::Counter,
-            vec![NumericMetricSample::new(HashMap::new(), 1)],
+            vec![CounterMetricSample::new(HashMap::new(), 1)],
         );
 
         assert_eq!(metrics, vec![expected]);
@@ -218,11 +226,10 @@ mod tests {
         registry.inc_counter_with_labels("labeled_counter", 2, &lbls);
 
         let metrics = registry.collect();
-        let expected = CollectedMetric::new_numeric(
+        let expected = CollectedMetric::new_counter(
             "labeled_counter",
             "with labels",
-            MetricType::Counter,
-            vec![NumericMetricSample::new(lbls, 5)],
+            vec![CounterMetricSample::new(lbls, 5)],
         );
 
         assert_eq!(metrics, vec![expected]);
@@ -243,18 +250,18 @@ mod tests {
         assert_eq!(result.name, "multi_label");
         assert_eq!(result.samples.len(), 3);
 
-        let mut samples_sorted: Vec<_> = result.numeric_samples();
+        let mut samples_sorted: Vec<_> = result.counter_samples();
         samples_sorted.sort_by_key(|s| s.value);
 
         assert_eq!(
             samples_sorted[0],
-            &sample_with_labels(labels(&[("a", "x")]), 1)
+            &counter_sample_with_labels(labels(&[("a", "x")]), 1)
         );
         assert_eq!(
             samples_sorted[1],
-            &sample_with_labels(labels(&[("b", "y")]), 2)
+            &counter_sample_with_labels(labels(&[("b", "y")]), 2)
         );
-        assert_eq!(samples_sorted[2], &sample(3));
+        assert_eq!(samples_sorted[2], &counter_sample(3));
     }
 
     #[test]
@@ -263,12 +270,8 @@ mod tests {
         registry.define_counter(MetricOptions::new("noop_counter", "noop"));
 
         let metrics = registry.collect();
-        let expected = CollectedMetric::new_numeric(
-            "noop_counter",
-            "noop",
-            MetricType::Counter,
-            vec![NumericMetricSample::zero()],
-        );
+        let expected =
+            CollectedMetric::new_counter("noop_counter", "noop", vec![CounterMetricSample::zero()]);
 
         assert_eq!(metrics, vec![expected]);
     }
@@ -281,21 +284,16 @@ mod tests {
         registry.inc_counter("flush_test");
 
         let first_batch = registry.collect();
-        let expected1 = CollectedMetric::new_numeric(
+        let expected1 = CollectedMetric::new_counter(
             "flush_test",
             "flush",
-            MetricType::Counter,
-            vec![NumericMetricSample::new(HashMap::new(), 1)],
+            vec![CounterMetricSample::new(HashMap::new(), 1)],
         );
         assert_eq!(first_batch, vec![expected1]);
 
         let second_batch = registry.collect();
-        let expected2 = CollectedMetric::new_numeric(
-            "flush_test",
-            "flush",
-            MetricType::Counter,
-            vec![NumericMetricSample::zero()],
-        );
+        let expected2 =
+            CollectedMetric::new_counter("flush_test", "flush", vec![CounterMetricSample::zero()]);
         assert_eq!(second_batch, vec![expected2]);
     }
 
@@ -310,21 +308,21 @@ mod tests {
         let flushed = registry.collect();
 
         let after_flush = registry.collect();
-        assert_eq!(after_flush[0].numeric_samples(), vec![&sample(0)]);
+        assert_eq!(after_flush[0].counter_samples(), vec![&counter_sample(0)]);
 
         registry.restore(flushed);
 
         let restored = registry.collect();
-        let mut samples_sorted: Vec<_> = restored[0].numeric_samples();
+        let mut samples_sorted: Vec<_> = restored[0].counter_samples();
         samples_sorted.sort_by_key(|s| s.value);
 
         assert_eq!(
             samples_sorted[0],
-            &sample_with_labels(labels(&[("tag", "b")]), 2)
+            &counter_sample_with_labels(labels(&[("tag", "b")]), 2)
         );
         assert_eq!(
             samples_sorted[1],
-            &sample_with_labels(labels(&[("tag", "a")]), 5)
+            &counter_sample_with_labels(labels(&[("tag", "a")]), 5)
         );
     }
 
@@ -334,16 +332,15 @@ mod tests {
         registry.define_gauge(MetricOptions::new("test_gauge", "gauge test"));
 
         let env_labels = labels(&[("env", "prod")]);
-        registry.inc_gauge_with_labels("test_gauge", 5, &env_labels);
-        registry.dec_gauge_with_labels("test_gauge", 2, &env_labels);
-        registry.set_gauge_with_labels("test_gauge", 10, &env_labels);
+        registry.inc_gauge_with_labels("test_gauge", 5.0, &env_labels);
+        registry.dec_gauge_with_labels("test_gauge", 2.0, &env_labels);
+        registry.set_gauge_with_labels("test_gauge", 10.0, &env_labels);
 
         let metrics = registry.collect();
-        let expected = CollectedMetric::new_numeric(
+        let expected = CollectedMetric::new_gauge(
             "test_gauge",
             "gauge test",
-            MetricType::Gauge,
-            vec![NumericMetricSample::new(labels(&[("env", "prod")]), 10)],
+            vec![GaugeMetricSample::new(labels(&[("env", "prod")]), 10.0)],
         );
 
         assert_eq!(metrics, vec![expected]);
@@ -357,9 +354,9 @@ mod tests {
             "tracks multiple envs",
         ));
 
-        registry.inc_gauge_with_labels("multi_env_gauge", 5, &labels(&[("env", "prod")]));
-        registry.dec_gauge_with_labels("multi_env_gauge", 2, &labels(&[("env", "dev")]));
-        registry.set_gauge_with_labels("multi_env_gauge", 10, &labels(&[("env", "test")]));
+        registry.inc_gauge_with_labels("multi_env_gauge", 5.0, &labels(&[("env", "prod")]));
+        registry.dec_gauge_with_labels("multi_env_gauge", 2.0, &labels(&[("env", "dev")]));
+        registry.set_gauge_with_labels("multi_env_gauge", 10.0, &labels(&[("env", "test")]));
 
         let metrics = registry.collect();
         let result = &metrics[0];
@@ -367,20 +364,20 @@ mod tests {
         assert_eq!(result.name, "multi_env_gauge");
         assert_eq!(result.samples.len(), 3);
 
-        let mut samples_sorted: Vec<_> = result.numeric_samples();
-        samples_sorted.sort_by_key(|s| s.value);
+        let mut samples_sorted: Vec<_> = result.gauge_samples();
+        samples_sorted.sort_by(|a, b| a.value.total_cmp(&b.value));
 
         assert_eq!(
             samples_sorted[0],
-            &sample_with_labels(labels(&[("env", "dev")]), -2)
+            &gauge_sample_with_labels(labels(&[("env", "dev")]), -2.0)
         );
         assert_eq!(
             samples_sorted[1],
-            &sample_with_labels(labels(&[("env", "prod")]), 5)
+            &gauge_sample_with_labels(labels(&[("env", "prod")]), 5.0)
         );
         assert_eq!(
             samples_sorted[2],
-            &sample_with_labels(labels(&[("env", "test")]), 10)
+            &gauge_sample_with_labels(labels(&[("env", "test")]), 10.0)
         );
     }
 

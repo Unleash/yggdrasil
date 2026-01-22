@@ -1,6 +1,6 @@
 use crate::impact_metrics::types::{
-    get_label_key, parse_label_key, CollectedMetric, MetricLabels, MetricOptions, MetricType,
-    NumericMetricSample,
+    get_label_key, parse_label_key, CollectedMetric, CounterMetricSample, MetricLabels,
+    MetricOptions,
 };
 use dashmap::DashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -45,21 +45,16 @@ impl Counter {
             let key = entry.key();
             let value = entry.value().swap(0, Ordering::Relaxed);
             if value != 0 {
-                samples.push(NumericMetricSample::new(parse_label_key(key), value));
+                samples.push(CounterMetricSample::new(parse_label_key(key), value));
             }
         }
 
         self.values.retain(|_, v| v.load(Ordering::Relaxed) != 0);
 
         if samples.is_empty() {
-            samples.push(NumericMetricSample::zero());
+            samples.push(CounterMetricSample::zero());
         }
 
-        CollectedMetric::new_numeric(
-            &self.opts.name,
-            &self.opts.help,
-            MetricType::Counter,
-            samples,
-        )
+        CollectedMetric::new_counter(&self.opts.name, &self.opts.help, samples)
     }
 }
