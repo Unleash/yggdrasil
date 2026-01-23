@@ -759,7 +759,8 @@ fn get_seed<'a>(stickiness: Option<&str>, context: &'a EnrichedContext<'a>) -> O
             "remoteAddress" => context.remote_address,
             _ => context
                 .properties
-                .and_then(|props| props.get(custom).map(|v| v.as_str())),
+                .as_ref()
+                .and_then(|props| props.get(custom)),
         },
     }
 }
@@ -775,11 +776,10 @@ fn lookup_override_context<'a>(
         "appName" => context.app_name,
         "currentTime" => context.current_time,
         "remoteAddress" => context.remote_address,
-        _ => context.properties.and_then(|props| {
-            props
-                .get(variant_override.context_name.as_str())
-                .map(|s| s.as_str())
-        }),
+        _ => context
+            .properties
+            .as_ref()
+            .and_then(|props| props.get(variant_override.context_name.as_str())),
     }
 }
 

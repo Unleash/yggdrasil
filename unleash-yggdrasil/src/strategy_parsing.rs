@@ -189,7 +189,7 @@ fn context_property(node: Pairs<Rule>) -> ContextResolver {
             .properties
             .as_ref()?
             .get(context_name.as_str())
-            .map(|v| Cow::Borrowed(v.as_str()))
+            .map(Cow::Borrowed)
     })
 }
 
@@ -530,7 +530,6 @@ fn external_value(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
             .external_results
             .as_ref()
             .and_then(|strategy_results| strategy_results.get(&strategy_index))
-            .copied()
             .unwrap_or(false)
     }))
 }
@@ -661,6 +660,8 @@ pub fn compile_rule(rule: &str) -> CompileResult<RuleFragment> {
 
 #[cfg(test)]
 mod tests {
+    use crate::state::{ExternalResultsRef, PropertiesRef};
+
     use super::*;
     use std::collections::HashMap;
     use test_case::test_case;
@@ -825,7 +826,7 @@ mod tests {
         let context = Context {
             current_time: None,
             user_id: Some("6".into()),
-            properties: Some(&context_property),
+            properties: Some(PropertiesRef::Strings(&context_property)),
             session_id: None,
             environment: None,
             app_name: None,
@@ -872,7 +873,7 @@ mod tests {
         let context = Context {
             user_id: Some("42".into()),
             session_id: Some("7".into()),
-            properties: Some(&props),
+            properties: Some(PropertiesRef::Strings(&props)),
             ..Context::default()
         };
 
@@ -958,7 +959,7 @@ mod tests {
         let mut context = Context::default();
         let mut props = HashMap::new();
         props.insert("cutoff".into(), "2022-01-25T13:00:00.000Z".into());
-        context.properties = Some(&props);
+        context.properties = Some(PropertiesRef::Strings(&props));
 
         assert_eq!(rule(&context), expected);
     }
@@ -971,7 +972,7 @@ mod tests {
         let mut context = Context::default();
         let mut props = HashMap::new();
         props.insert("cutoff".into(), "2022-01-25T13:00:00.000Z".into());
-        context.properties = Some(&props);
+        context.properties = Some(PropertiesRef::Strings(&props));
 
         assert!(!rule(&context));
     }
@@ -1052,7 +1053,7 @@ mod tests {
         custom_strategy_results.insert("test_value".to_string(), true);
 
         let context = Context {
-            external_results: Some(&custom_strategy_results),
+            external_results: Some(ExternalResultsRef::Strings(&custom_strategy_results)),
             ..Context::default()
         };
 
@@ -1068,7 +1069,7 @@ mod tests {
         custom_strategy_results.insert("test_value".to_string(), true);
 
         let context = Context {
-            external_results: Some(&custom_strategy_results),
+            external_results: Some(ExternalResultsRef::Strings(&custom_strategy_results)),
             ..Context::default()
         };
 
@@ -1077,7 +1078,7 @@ mod tests {
         let mut custom_strategy_results = HashMap::new();
         custom_strategy_results.insert("test_value".to_string(), false);
         let context = Context {
-            external_results: Some(&custom_strategy_results),
+            external_results: Some(ExternalResultsRef::Strings(&custom_strategy_results)),
             ..Context::default()
         };
 
