@@ -25,6 +25,9 @@ impl Gauge {
     }
 
     fn set_internal(&self, value: f64, labels: Option<&MetricLabels>) {
+        if !value.is_finite() {
+            return;
+        }
         let key = get_label_key(labels);
         self.values.insert(key, value);
     }
@@ -42,6 +45,9 @@ impl Gauge {
     }
 
     fn inc_internal(&self, value: f64, labels: Option<&MetricLabels>) {
+        if !value.is_finite() {
+            return;
+        }
         let key = get_label_key(labels);
         self.values
             .entry(key)
@@ -62,6 +68,9 @@ impl Gauge {
     }
 
     fn dec_internal(&self, value: f64, labels: Option<&MetricLabels>) {
+        if !value.is_finite() {
+            return;
+        }
         let key = get_label_key(labels);
         self.values
             .entry(key)
@@ -70,20 +79,13 @@ impl Gauge {
     }
 
     pub(crate) fn collect(&self) -> CollectedMetric {
-        let mut samples = Vec::new();
+        let samples: Vec<GaugeMetricSample> = self
+            .values
+            .iter()
+            .map(|entry| GaugeMetricSample::new(parse_label_key(entry.key()), *entry.value()))
+            .collect();
 
-        for mut entry in self.values.iter_mut() {
-            let value = std::mem::take(entry.value_mut());
-            if value != 0.0 {
-                samples.push(GaugeMetricSample::new(parse_label_key(entry.key()), value));
-            }
-        }
-
-        self.values.retain(|_, v| *v != 0.0);
-
-        if samples.is_empty() {
-            samples.push(GaugeMetricSample::zero());
-        }
+        self.values.clear();
 
         CollectedMetric::new_gauge(&self.opts.name, &self.opts.help, samples)
     }

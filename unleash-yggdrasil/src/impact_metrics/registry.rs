@@ -172,6 +172,7 @@ mod tests {
         BucketMetricSample, CounterMetricSample, GaugeMetricSample, HistogramBucket,
     };
     use std::collections::HashMap;
+    use test_case::test_case;
 
     fn counter_sample(value: i64) -> CounterMetricSample {
         CounterMetricSample::new(HashMap::new(), value)
@@ -540,5 +541,44 @@ mod tests {
         original_samples.sort_by(|a, b| a.sum.total_cmp(&b.sum));
 
         assert_eq!(restored_samples, original_samples);
+    }
+
+    #[test_case(f64::INFINITY; "positive infinity")]
+    #[test_case(f64::NEG_INFINITY; "negative infinity")]
+    #[test_case(f64::NAN; "NaN")]
+    fn should_silently_drop_invalid_values_for_all_metrics(invalid: f64) {
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_gauge(MetricOptions::new("g", "h"));
+        registry.define_histogram(BucketMetricOptions::new("h", "h", vec![1.0]));
+
+        registry.set_gauge("g", 5.0);
+        registry.set_gauge("g", invalid);
+        registry.inc_gauge_by("g", invalid);
+        registry.dec_gauge_by("g", invalid);
+        registry.observe_histogram("h", 0.5);
+        registry.observe_histogram("h", invalid);
+
+        let metrics = registry.collect();
+
+        assert_eq!(
+            metrics,
+            vec![
+                CollectedMetric::new_gauge(
+                    "g",
+                    "h",
+                    vec![GaugeMetricSample::new(HashMap::new(), 5.0)]
+                ),
+                CollectedMetric::new_bucket(
+                    "h",
+                    "h",
+                    vec![BucketMetricSample {
+                        labels: HashMap::new(),
+                        count: 1,
+                        sum: 0.5,
+                        buckets: vec![bucket(1.0, 1), bucket(f64::INFINITY, 1)],
+                    }]
+                ),
+            ]
+        );
     }
 }
