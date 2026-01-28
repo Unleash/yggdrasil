@@ -383,6 +383,26 @@ mod tests {
     }
 
     #[test]
+    fn should_return_empty_samples_for_gauge_after_collect() {
+        let registry = InMemoryMetricRegistry::default();
+        registry.define_gauge(MetricOptions::new("test_gauge", "gauge test"));
+
+        registry.set_gauge("test_gauge", 5.0);
+
+        let first_collect = registry.collect();
+        let expected1 = CollectedMetric::new_gauge(
+            "test_gauge",
+            "gauge test",
+            vec![GaugeMetricSample::new(HashMap::new(), 5.0)],
+        );
+        assert_eq!(first_collect, vec![expected1]);
+
+        let second_collect = registry.collect();
+        let expected2 = CollectedMetric::new_gauge("test_gauge", "gauge test", vec![]);
+        assert_eq!(second_collect, vec![expected2]);
+    }
+
+    #[test]
     fn should_observe_histogram_values() {
         let registry = InMemoryMetricRegistry::default();
         registry.define_histogram(BucketMetricOptions::new(
