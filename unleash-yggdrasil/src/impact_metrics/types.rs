@@ -76,13 +76,6 @@ impl GaugeMetricSample {
     pub(crate) fn new(labels: MetricLabels, value: f64) -> Self {
         Self { labels, value }
     }
-
-    pub(crate) fn zero() -> Self {
-        Self {
-            labels: HashMap::new(),
-            value: 0.0,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
