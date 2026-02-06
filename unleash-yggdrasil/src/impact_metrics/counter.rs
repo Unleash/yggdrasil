@@ -31,6 +31,9 @@ impl Counter {
     }
 
     fn inc_internal(&self, value: i64, labels: Option<&MetricLabels>) {
+        if value <= 0 {
+            return;
+        }
         let key = get_label_key(labels);
         self.values
             .entry(key)

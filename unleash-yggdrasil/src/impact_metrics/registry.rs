@@ -225,6 +225,7 @@ mod tests {
         let lbls = labels(&[("foo", "bar")]);
         registry.inc_counter_with_labels("labeled_counter", 3, &lbls);
         registry.inc_counter_with_labels("labeled_counter", 2, &lbls);
+        registry.inc_counter_with_labels("labeled_counter", -1, &lbls); // dropped
 
         let metrics = registry.collect();
         let expected = CollectedMetric::new_counter(
