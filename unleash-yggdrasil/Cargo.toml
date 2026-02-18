@@ -28,6 +28,7 @@ hostname = { version = "0.4.1", optional = true }
 ipnetwork = "0.21.0"
 ahash = "0.8.12"
 hashbrown = "0.16.0"
+regex = "1.12.3"
 
 [dependencies.serde]
 features = ["derive"]

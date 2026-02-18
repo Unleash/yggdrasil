@@ -56,6 +56,8 @@ string_list_operation_without_case = {
     ends_with_ignore_case       = { "ends_with_any_ignore_case" }
     contains_any_ignore_case    = { "contains_any_ignore_case" }
 
+regex_operation = { "matches_regex_ignoring_case" | "matches_regex" }
+
 list_operation = { "in" | "not_in" }
 
 invert_operation = { "!" }
@@ -71,6 +73,7 @@ constraint = {
         | numeric_constraint
         | default_strategy_constraint
         | string_fragment_constraint
+        | regex_constraint
         | list_constraint
         | external_value
     )
@@ -82,6 +85,7 @@ constraint = {
     ip_constraint = { context_value ~ ip_contains_operation ~ string_list }
         ip_contains_operation = _{ "contains_ip" }
     string_fragment_constraint = { context_value ~ ( string_list_operation_without_case | string_list_operation ) ~ string_list }
+    regex_constraint = { context_value ~ regex_operation ~ string }
     list_constraint = { context_value ~ list_operation ~ ( numeric_list | string_list | empty_list ) }
     date_constraint = { context_value ~ ordinal_operation ~ date }
     numeric_constraint = { context_value ~ ordinal_operation ~ num }
