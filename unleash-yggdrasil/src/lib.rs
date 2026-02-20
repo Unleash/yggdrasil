@@ -953,6 +953,7 @@ mod test {
     #[test_case("18-utf8-flag-names.json"; "UTF-8 tests")]
     #[test_case("19-delta-api-hydration.json"; "Delta hydration tests")]
     #[test_case("20-delta-api-events.json"; "Delta events tests")]
+    #[test_case("21-regex-constraint-operators.json"; "Regex constraint operators")]
 
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);

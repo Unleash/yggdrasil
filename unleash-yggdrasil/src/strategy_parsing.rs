@@ -18,6 +18,7 @@ use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::{Assoc, Op, PrattParser};
 use pest::Parser;
 use rand::Rng;
+use regex::RegexBuilder;
 use semver::Version;
 
 #[cfg(feature = "hostname")]
@@ -594,6 +595,30 @@ fn string_fragment_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> 
     }))
 }
 
+fn regex_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
+    let [context_getter_node, constraint_type_node, regex_pattern_node] = drain(node)?;
+    let context_getter = context_value(context_getter_node.into_inner());
+    let regex_pattern = string(regex_pattern_node);
+
+    let mut regex_builder = RegexBuilder::new(&regex_pattern);
+
+    if constraint_type_node.as_str() == "matches_regex_ignoring_case" {
+        regex_builder.case_insensitive(true);
+    }
+
+    let Ok(regex) = regex_builder.build() else {
+        return Ok(Box::new(move |_context: &Context| false));
+    };
+
+    Ok(Box::new(move |context: &Context| {
+        if let Some(value) = context_getter(context) {
+            regex.is_match(value.as_ref())
+        } else {
+            false
+        }
+    }))
+}
+
 fn constraint(mut node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let first = node.next();
     let second = node.next();
@@ -607,6 +632,7 @@ fn constraint(mut node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let constraint = match child.as_rule() {
         Rule::date_constraint => date_constraint(child.into_inner()),
         Rule::numeric_constraint => numeric_constraint(child.into_inner()),
+        Rule::regex_constraint => regex_constraint(child.into_inner()),
         Rule::semver_constraint => semver_constraint(child.into_inner()),
         Rule::rollout_constraint => rollout_constraint(child.into_inner()), //TODO: Do we need to support inversion here?
         Rule::default_strategy_constraint => default_strategy_constraint(child.into_inner()),
@@ -1093,6 +1119,22 @@ mod tests {
         let rule = compile_rule("user_id contains_any [\"some\\\"thing\"]").unwrap();
 
         let context = context_from_user_id("some\"thing");
+
+        assert!(rule(&context));
+    }
+
+    #[test]
+    fn evaluate_regex_match() {
+        let rule = compile_rule("user_id matches_regex \"^[^@]+@[^@]+$\"").unwrap();
+        let context = context_from_user_id("test@example.com");
+
+        assert!(rule(&context));
+    }
+
+    #[test]
+    fn evaluate_regex_match_ignoring_case() {
+        let rule = compile_rule("user_id matches_regex_ignoring_case \"^[^@]+@[^@]+$\"").unwrap();
+        let context = context_from_user_id("TEST@EXAMPLE.COM");
 
         assert!(rule(&context));
     }

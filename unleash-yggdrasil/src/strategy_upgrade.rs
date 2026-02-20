@@ -326,6 +326,11 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
             })
             .unwrap_or_default();
         format!("[{values}]")
+    } else if constraint.operator == Operator::RegexMatch {
+        format!(
+            "\"{}\"",
+            escape_quotes(constraint.value.as_ref().unwrap_or(&"".to_string()))
+        )
     } else {
         if constraint.operator == Operator::SemverEq
             || constraint.operator == Operator::SemverLt
@@ -368,6 +373,13 @@ fn upgrade_operator(op: &Operator, case_insensitive: bool) -> Option<String> {
                 Some("contains_any_ignore_case".into())
             } else {
                 Some("contains_any".into())
+            }
+        }
+        Operator::RegexMatch => {
+            if case_insensitive {
+                Some("matches_regex_ignoring_case".into())
+            } else {
+                Some("matches_regex".into())
             }
         }
         Operator::NumEq => Some("==".into()),
