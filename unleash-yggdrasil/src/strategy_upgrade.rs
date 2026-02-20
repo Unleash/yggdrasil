@@ -327,7 +327,10 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
             .unwrap_or_default();
         format!("[{values}]")
     } else if constraint.operator == Operator::RegexMatch {
-        format!("\"{}\"", escape_quotes(constraint.value.as_ref().unwrap_or(&"".to_string())))
+        format!(
+            "\"{}\"",
+            escape_quotes(constraint.value.as_ref().unwrap_or(&"".to_string()))
+        )
     } else {
         if constraint.operator == Operator::SemverEq
             || constraint.operator == Operator::SemverLt
