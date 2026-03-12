@@ -335,6 +335,8 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
         if constraint.operator == Operator::SemverEq
             || constraint.operator == Operator::SemverLt
             || constraint.operator == Operator::SemverGt
+            || constraint.operator == Operator::SemverLte
+            || constraint.operator == Operator::SemverGte
         {
             // A silly special case where we want to ingest
             // broken semver operators so we can reject them.
@@ -392,6 +394,8 @@ fn upgrade_operator(op: &Operator, case_insensitive: bool) -> Option<String> {
         Operator::SemverEq => Some("==".into()),
         Operator::SemverLt => Some("<".into()),
         Operator::SemverGt => Some(">".into()),
+        Operator::SemverLte => Some("<=".into()),
+        Operator::SemverGte => Some(">=".into()),
         Operator::Unknown(_) => None,
     }
 }

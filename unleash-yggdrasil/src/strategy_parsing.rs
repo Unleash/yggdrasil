@@ -798,7 +798,24 @@ mod tests {
     #[test_case("3.0.0", "user_id >= 3.0.0", true)]
     #[test_case("3.0.0-beta.stuff", "user_id == 3.0.0-beta.stuff", true)]
     #[test_case("3.0.0-beta.stuff+build1", "user_id == 3.0.0-beta.stuff+build1", true)]
+    #[test_case("3.0.1", "user_id >= 3.0.1", true)]
+    #[test_case("3.0.2", "user_id >= 3.0.1", true)]
     fn test_semver_gt(user_id: &str, rule: &str, expected: bool) {
+        run_test(user_id, rule, expected);
+    }
+
+    #[test_case("30.0.0", "user_id <= 30.0.0", true)]
+    #[test_case("3.0.0", "user_id <= 3.0.0", true)]
+    #[test_case("3.0.0-beta", "user_id <= 3.0.0-beta", true)]
+    #[test_case("3.0.0-beta.2", "user_id <= 3.0.0-beta.1", false)]
+    #[test_case("3.0.0-beta", "user_id <= 3.0.0-alpha", false)]
+    #[test_case("3.0.1-beta", "user_id <= 3.0.1-alpha", false)]
+    #[test_case("3.0.0", "user_id <= 3.0.0-alpha", false)]
+    #[test_case("3.0.0-beta.stuff", "user_id <= 3.0.0-beta.stuff", true)]
+    #[test_case("3.0.0-beta.stuff+build1", "user_id <= 3.0.0-beta.stuff+build1", true)]
+    #[test_case("3.0.1", "user_id <= 3.0.1", true)]
+    #[test_case("3.0.2", "user_id <= 3.0.1", false)]
+    fn test_semver_lt(user_id: &str, rule: &str, expected: bool) {
         run_test(user_id, rule, expected);
     }
 
