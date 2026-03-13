@@ -214,7 +214,7 @@ fn upgrade_remote_address(strategy: &Strategy) -> String {
                 .map(|x| format!("\"{x}\""))
                 .collect::<Vec<String>>()
                 .join(", ");
-            format!("remote_address contains_ip [{ips}]")
+            format!("remote_address in_cidr [{ips}]")
         }
         None => "false".into(),
     }
@@ -297,6 +297,7 @@ fn is_stringy(op: &Operator) -> bool {
             | Operator::StrEndsWith
             | Operator::StrStartsWith
             | Operator::StrContains
+            | Operator::InCidr
     )
 }
 
@@ -335,6 +336,8 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
         if constraint.operator == Operator::SemverEq
             || constraint.operator == Operator::SemverLt
             || constraint.operator == Operator::SemverGt
+            || constraint.operator == Operator::SemverLte
+            || constraint.operator == Operator::SemverGte
         {
             // A silly special case where we want to ingest
             // broken semver operators so we can reject them.
@@ -392,6 +395,9 @@ fn upgrade_operator(op: &Operator, case_insensitive: bool) -> Option<String> {
         Operator::SemverEq => Some("==".into()),
         Operator::SemverLt => Some("<".into()),
         Operator::SemverGt => Some(">".into()),
+        Operator::SemverLte => Some("<=".into()),
+        Operator::SemverGte => Some(">=".into()),
+        Operator::InCidr => Some("in_cidr".into()),
         Operator::Unknown(_) => None,
     }
 }
@@ -957,7 +963,7 @@ mod tests {
         let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
         assert_eq!(
             rule.as_str(),
-            "remote_address contains_ip [\"192.168.0.1\", \"192.168.0.2\", \"192.168.0.3\"]"
+            "remote_address in_cidr [\"192.168.0.1\", \"192.168.0.2\", \"192.168.0.3\"]"
         );
     }
 
