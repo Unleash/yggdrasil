@@ -35,7 +35,7 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = AHashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "5.2.2";
+pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
