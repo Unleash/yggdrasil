@@ -1226,7 +1226,7 @@ mod tests {
             .map(|x| format!("\"{}\"", x.trim()))
             .collect::<Vec<String>>();
 
-        let rule = format!("remote_address contains_ip [{}]", constraint_ips.join(","));
+        let rule = format!("remote_address in_cidr [{}]", constraint_ips.join(","));
         println!("Current rule {}", rule);
         let rule = compile_rule(&rule).unwrap();
 
@@ -1240,7 +1240,7 @@ mod tests {
 
     #[test]
     fn remote_address_constraint_never_matches_missing_context() {
-        let rule = compile_rule("remote_address contains_ip [\"127.0.0.1\"]").unwrap();
+        let rule = compile_rule("remote_address in_cidr [\"127.0.0.1\"]").unwrap();
         let context = Context::default();
 
         assert!(!rule(&context));
