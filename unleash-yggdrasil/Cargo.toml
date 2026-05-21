@@ -20,14 +20,14 @@ pest = "2.8.3"
 pest_derive = "2.8.3"
 lazy_static = "1.5.0"
 semver = "1.0.27"
-convert_case = "0.8.0"
-unleash-types = {version = "0.15.23", default-features = false}
+convert_case = "0.11.0"
+unleash-types = {version = "0.16.1", default-features = false}
 chrono = { version = "0.4.42", default-features = false, features = ["serde", "std"] }
 dashmap = "6.1.0"
 hostname = { version = "0.4.1", optional = true }
 ipnetwork = "0.21.0"
 ahash = "0.8.12"
-hashbrown = "0.16.0"
+hashbrown = "0.17.1"
 regex = "1.12.3"
 
 [dependencies.serde]
@@ -38,7 +38,7 @@ version = "1.0"
 test-case = "3.3.1"
 async-std = "1.13.2"
 async-std-test = "0.0.4"
-criterion = "0.7.0"
+criterion = "0.8.2"
 proptest = "1.8.0"
 serial_test = "3.2.0"
 
