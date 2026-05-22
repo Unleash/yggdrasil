@@ -35,7 +35,7 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
 pub type CompiledState = AHashMap<String, CompiledToggle>;
 
-pub const SUPPORTED_SPEC_VERSION: &str = "5.2.2";
+pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -954,6 +954,7 @@ mod test {
     #[test_case("19-delta-api-hydration.json"; "Delta hydration tests")]
     #[test_case("20-delta-api-events.json"; "Delta events tests")]
     #[test_case("21-regex-constraint-operators.json"; "Regex constraint operators")]
+    #[test_case("22-cidr-constraint-operators.json"; "Cidr constraints")]
 
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
