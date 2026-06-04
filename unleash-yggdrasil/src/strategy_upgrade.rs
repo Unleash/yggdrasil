@@ -333,21 +333,25 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
             escape_quotes(constraint.value.as_ref().unwrap_or(&"".to_string()))
         )
     } else {
-        if constraint.operator == Operator::SemverEq
-            || constraint.operator == Operator::SemverLt
-            || constraint.operator == Operator::SemverGt
-            || constraint.operator == Operator::SemverLte
-            || constraint.operator == Operator::SemverGte
+        let Some(value) = constraint.value.as_ref() else {
+            return "false".into();
+        };
+        if matches!(
+            constraint.operator,
+            Operator::SemverEq
+                | Operator::SemverLt
+                | Operator::SemverGt
+                | Operator::SemverLte
+                | Operator::SemverGte
+        ) && value.starts_with('v')
         {
             // A silly special case where we want to ingest
             // broken semver operators so we can reject them.
             // Handling this in the grammar feels awful so we're
             // just not going to
-            if constraint.value.as_ref().unwrap().starts_with('v') {
-                return "false".into();
-            }
+            return "false".into();
         }
-        constraint.value.clone().unwrap()
+        value.clone()
     };
 
     format!("{inversion}{context_name} {op} {value}")
@@ -796,6 +800,45 @@ mod tests {
         };
         let rule = upgrade_constraint(&constraint);
         assert_eq!(rule.as_str(), expected);
+    }
+
+    #[test_case(Operator::NumEq)]
+    #[test_case(Operator::NumLt)]
+    #[test_case(Operator::NumLte)]
+    #[test_case(Operator::NumGt)]
+    #[test_case(Operator::NumGte)]
+    #[test_case(Operator::DateAfter)]
+    #[test_case(Operator::DateBefore)]
+    #[test_case(Operator::SemverEq)]
+    #[test_case(Operator::SemverLt)]
+    #[test_case(Operator::SemverGt)]
+    #[test_case(Operator::SemverLte)]
+    #[test_case(Operator::SemverGte)]
+    fn scalar_operator_with_null_value_is_never_match(op: Operator) {
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: op,
+            case_insensitive: false,
+            inverted: false,
+            values: None,
+            value: None,
+        };
+        let rule = upgrade_constraint(&constraint);
+        assert_eq!(rule.as_str(), "false");
+    }
+
+    #[test]
+    fn scalar_operator_with_value_in_values_field_is_never_match() {
+        let constraint = Constraint {
+            context_name: "createdAt".into(),
+            operator: Operator::DateAfter,
+            case_insensitive: false,
+            inverted: false,
+            values: Some(vec!["2024-01-01T00:00:00Z".into()]),
+            value: None,
+        };
+        let rule = upgrade_constraint(&constraint);
+        assert_eq!(rule.as_str(), "false");
     }
 
     #[test_case(true, "!user_id <= 7")]
