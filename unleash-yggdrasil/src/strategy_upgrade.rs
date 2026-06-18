@@ -58,16 +58,12 @@ pub fn build_variant_rules(
     segment_map: &HashMap<i32, Segment>,
     toggle_name: &str,
 ) -> Vec<(String, Vec<StrategyVariant>, String, String)> {
-    let mut custom_strat_count = 0;
     strategies
         .iter()
         .filter(|strategy| strategy.variants.is_some())
         .map(|strategy| {
-            if strategy.is_custom() {
-                custom_strat_count += 1;
-            }
             (
-                upgrade_strategy(strategy, segment_map, custom_strat_count),
+                upgrade_variant_strategy(strategy, segment_map),
                 strategy.variants.clone().unwrap(),
                 strategy
                     .parameters
@@ -132,7 +128,18 @@ fn upgrade_strategy(
         StrategyType::Custom(_) => format!("external_value[\"customStrategy{strategy_count}\"]"),
     };
 
-    let segments = strategy
+    match resolve_strategy_constraints(strategy, segment_map) {
+        Err(_) => "false".into(),
+        Ok(Some(constraints)) => format!("({strategy_rule} and ({constraints}))"),
+        Ok(None) => strategy_rule,
+    }
+}
+
+fn resolve_strategy_constraints(
+    strategy: &Strategy,
+    segment_map: &HashMap<i32, Segment>,
+) -> Result<Option<String>, SdkError> {
+    let segment_constraints = strategy
         .segments
         .as_ref()
         .map(|segment| {
@@ -144,23 +151,20 @@ fn upgrade_strategy(
             })
         })
         .map(|iter| iter.collect::<Result<Vec<Vec<Constraint>>, SdkError>>())
-        .unwrap_or(Ok(vec![]));
-
-    if segments.is_err() {
-        return "false".into(); // We have a broken segment so default the entire strategy to false
-    }
-
-    let mut segment_constraints: Vec<Constraint> =
-        segments.unwrap().into_iter().flatten().collect();
+        .unwrap_or(Ok(vec![]))?;
 
     let mut raw_constraints = vec![];
     raw_constraints.append(&mut strategy.constraints.clone().unwrap_or_default());
-    raw_constraints.append(&mut segment_constraints);
+    raw_constraints.extend(segment_constraints.into_iter().flatten());
 
-    let constraints = upgrade_constraints(raw_constraints);
-    match constraints {
-        Some(constraints) => format!("({strategy_rule} and ({constraints}))"),
-        None => strategy_rule,
+    Ok(upgrade_constraints(raw_constraints))
+}
+
+fn upgrade_variant_strategy(strategy: &Strategy, segment_map: &HashMap<i32, Segment>) -> String {
+    match resolve_strategy_constraints(strategy, segment_map) {
+        Err(_) => "false".into(),
+        Ok(Some(constraints)) => format!("({constraints})"),
+        Ok(None) => "true".into(),
     }
 }
 
@@ -730,6 +734,62 @@ mod tests {
             output.as_str(),
             format!("55% sticky on random[10000] with group_id of \"Feature.flexibleRollout.userId.55\"")
         );
+    }
+
+    #[test]
+    fn variant_selection_rule_omits_rollout_gate() {
+        let mut parameters = HashMap::new();
+        parameters.insert("rollout".into(), "20".into());
+        parameters.insert("stickiness".into(), "random".into());
+        parameters.insert("groupId".into(), "my_experiment".into());
+
+        let strategy = Strategy {
+            name: "flexibleRollout".into(),
+            parameters: Some(parameters),
+            constraints: None,
+            segments: None,
+            sort_order: Some(1),
+            variants: Some(vec![]),
+        };
+
+        let rules = build_variant_rules(&[strategy], &HashMap::new(), "my_toggle");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].0, "true");
+        assert!(
+            !rules[0].0.contains('%'),
+            "variant rule must not carry a rollout gate"
+        );
+    }
+
+    #[test]
+    fn variant_selection_rule_keeps_constraints_but_not_rollout() {
+        let mut parameters = HashMap::new();
+        parameters.insert("rollout".into(), "20".into());
+        parameters.insert("stickiness".into(), "random".into());
+
+        let constraint = Constraint {
+            context_name: "country".into(),
+            values: Some(vec!["norway".into()]),
+            value: None,
+            operator: Operator::In,
+            case_insensitive: false,
+            inverted: false,
+        };
+
+        let strategy = Strategy {
+            name: "flexibleRollout".into(),
+            parameters: Some(parameters),
+            constraints: Some(vec![constraint]),
+            segments: None,
+            sort_order: Some(1),
+            variants: Some(vec![]),
+        };
+
+        let rules = build_variant_rules(&[strategy], &HashMap::new(), "my_toggle");
+        assert_eq!(rules.len(), 1);
+        assert_eq!(rules[0].0, "(context[\"country\"] in [\"norway\"])");
+        assert!(!rules[0].0.contains('%'));
+        assert!(compile_rule(&rules[0].0).is_ok());
     }
 
     #[test_case(
