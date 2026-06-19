@@ -7,6 +7,8 @@ use crate::state::SdkError;
 const DEFAULT_STICKINESS: &str = "user_id | session_id | random[10000]";
 const DEFAULT_RANDOM: &str = "random[10000]";
 
+pub(crate) type RawVariantRule = Vec<(String, Vec<StrategyVariant>, String, String)>;
+
 enum StrategyType {
     Default,
     UserWithId,
@@ -60,7 +62,7 @@ pub fn build_variant_rules(
     strategies: &[Strategy],
     segment_map: &HashMap<i32, Segment>,
     toggle_name: &str,
-) -> Result<Vec<(String, Vec<StrategyVariant>, String, String)>, SdkError> {
+) -> Result<RawVariantRule, SdkError> {
     let mut custom_strat_count = 0;
 
     strategies

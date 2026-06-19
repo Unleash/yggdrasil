@@ -40,6 +40,7 @@ pub type CompiledState = AHashMap<String, CompiledToggle>;
 pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
+type VariantRuleSet = Vec<(RuleFragment, Vec<CompiledVariant>, String)>;
 
 pub const KNOWN_STRATEGIES: [&str; 8] = [
     "default",
@@ -126,34 +127,33 @@ fn build_segment_map(segments: &Option<Vec<Segment>>) -> HashMap<i32, Segment> {
 fn compile_variant_rule(
     toggle: &ClientFeature,
     segment_map: &HashMap<i32, Segment>,
-) -> Result<Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>>, SdkError> {
-    let variant_rules: Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>> =
-        build_variant_rules(
-            &toggle.strategies.clone().unwrap_or_default(),
-            segment_map,
-            &toggle.name,
-        )?
-        .iter()
-        .map(|(rule_string, strategy_variants, stickiness, group_id)| {
-            let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
-            compiled_rule.map(|rule| {
-                (
-                    rule,
-                    strategy_variants
-                        .iter()
-                        .map(|strategy_variant| CompiledVariant {
-                            name: strategy_variant.name.clone(),
-                            weight: strategy_variant.weight,
-                            stickiness: Some(stickiness.clone()),
-                            payload: strategy_variant.payload.clone(),
-                            overrides: None,
-                        })
-                        .collect(),
-                    group_id.clone(),
-                )
-            })
+) -> Result<Option<VariantRuleSet>, SdkError> {
+    let variant_rules: Option<VariantRuleSet> = build_variant_rules(
+        &toggle.strategies.clone().unwrap_or_default(),
+        segment_map,
+        &toggle.name,
+    )?
+    .iter()
+    .map(|(rule_string, strategy_variants, stickiness, group_id)| {
+        let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
+        compiled_rule.map(|rule| {
+            (
+                rule,
+                strategy_variants
+                    .iter()
+                    .map(|strategy_variant| CompiledVariant {
+                        name: strategy_variant.name.clone(),
+                        weight: strategy_variant.weight,
+                        stickiness: Some(stickiness.clone()),
+                        payload: strategy_variant.payload.clone(),
+                        overrides: None,
+                    })
+                    .collect(),
+                group_id.clone(),
+            )
         })
-        .collect();
+    })
+    .collect();
 
     Ok(variant_rules)
 }
