@@ -203,7 +203,7 @@ pub fn compile(
     let get_variant_rule = compile_variant_rule(toggle, segment_map).unwrap_or_else(|e| {
         warnings.push(EvalWarning {
             toggle_name: toggle.name.clone(),
-            message: format!("Failed to compile toggle, this will always be off {e:?}"),
+            message: format!("Failed to compile toggle, this will always resolve to the default variant {e:?}"),
         });
 
         None
