@@ -186,7 +186,7 @@ pub fn compile(
     segment_map: &HashMap<i32, Segment>,
     warnings: &mut Vec<EvalWarning>,
 ) -> CompiledToggle {
-    let enabled_lambda = (|| {
+    let enabled_rule = (|| {
         let strategies = toggle.strategies.clone().unwrap_or_default();
         let rule_text = upgrade(&strategies, segment_map)?;
         compile_rule(rule_text.as_str())
@@ -200,7 +200,7 @@ pub fn compile(
         Box::new(|_| false)
     });
 
-    let get_variant_lambda = compile_variant_rule(toggle, segment_map).unwrap_or_else(|e| {
+    let get_variant_rule = compile_variant_rule(toggle, segment_map).unwrap_or_else(|e| {
         warnings.push(EvalWarning {
             toggle_name: toggle.name.clone(),
             message: format!("Failed to compile toggle, this will always be off {e:?}"),
@@ -213,9 +213,9 @@ pub fn compile(
         name: toggle.name.clone(),
         enabled: toggle.enabled,
         feature_type: toggle.feature_type.clone(),
-        compiled_variant_strategy: get_variant_lambda,
+        compiled_variant_strategy: get_variant_rule,
         variants: compile_variants(&toggle.variants),
-        compiled_strategy: enabled_lambda,
+        compiled_strategy: enabled_rule,
         impression_data: toggle.impression_data.unwrap_or_default(),
         project: toggle.project.clone().unwrap_or("default".to_string()),
         dependencies: toggle.dependencies.clone().unwrap_or_default(),
