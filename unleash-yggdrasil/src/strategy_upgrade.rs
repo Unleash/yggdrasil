@@ -35,9 +35,12 @@ impl IsCustom for Strategy {
     }
 }
 
-pub fn upgrade(strategies: &[Strategy], segment_map: &HashMap<i32, Segment>) -> String {
+pub fn upgrade(
+    strategies: &[Strategy],
+    segment_map: &HashMap<i32, Segment>,
+) -> Result<String, SdkError> {
     if strategies.is_empty() {
-        return "true".into();
+        return Ok("true".into());
     }
     let mut custom_strat_count = 0;
     let rule_text = strategies
@@ -48,17 +51,18 @@ pub fn upgrade(strategies: &[Strategy], segment_map: &HashMap<i32, Segment>) -> 
             }
             upgrade_strategy(strategy, segment_map, custom_strat_count)
         })
-        .collect::<Vec<String>>()
+        .collect::<Result<Vec<String>, SdkError>>()?
         .join(" or ");
-    rule_text
+    Ok(rule_text)
 }
 
 pub fn build_variant_rules(
     strategies: &[Strategy],
     segment_map: &HashMap<i32, Segment>,
     toggle_name: &str,
-) -> Vec<(String, Vec<StrategyVariant>, String, String)> {
+) -> Result<Vec<(String, Vec<StrategyVariant>, String, String)>, SdkError> {
     let mut custom_strat_count = 0;
+
     strategies
         .iter()
         .filter(|strategy| strategy.variants.is_some())
@@ -66,8 +70,9 @@ pub fn build_variant_rules(
             if strategy.is_custom() {
                 custom_strat_count += 1;
             }
-            (
-                upgrade_strategy(strategy, segment_map, custom_strat_count),
+
+            Ok((
+                upgrade_strategy(strategy, segment_map, custom_strat_count)?,
                 strategy.variants.clone().unwrap(),
                 strategy
                     .parameters
@@ -81,9 +86,9 @@ pub fn build_variant_rules(
                     .and_then(|params| params.get("groupId"))
                     .cloned()
                     .unwrap_or_else(|| toggle_name.to_owned()),
-            )
+            ))
         })
-        .collect::<Vec<(String, Vec<StrategyVariant>, String, String)>>()
+        .collect()
 }
 
 trait PropResolver {
@@ -119,7 +124,7 @@ fn upgrade_strategy(
     strategy: &Strategy,
     segment_map: &HashMap<i32, Segment>,
     strategy_count: usize,
-) -> String {
+) -> Result<String, SdkError> {
     let strategy_rule = match StrategyType::from(strategy.name.as_str()) {
         StrategyType::Default => "true".into(),
         StrategyType::UserWithId => upgrade_user_id_strategy(strategy),
@@ -140,27 +145,24 @@ fn upgrade_strategy(
                 segment_map
                     .get(segment_id)
                     .map(|segment| segment.constraints.clone())
-                    .ok_or(SdkError::StrategyEvaluationError)
+                    .ok_or(SdkError::StrategyParseError(
+                        "Unable to resolve a segment definition to a segment value".into(),
+                    ))
             })
         })
         .map(|iter| iter.collect::<Result<Vec<Vec<Constraint>>, SdkError>>())
-        .unwrap_or(Ok(vec![]));
+        .unwrap_or(Ok(vec![]))?;
 
-    if segments.is_err() {
-        return "false".into(); // We have a broken segment so default the entire strategy to false
-    }
-
-    let mut segment_constraints: Vec<Constraint> =
-        segments.unwrap().into_iter().flatten().collect();
+    let mut segment_constraints: Vec<Constraint> = segments.into_iter().flatten().collect();
 
     let mut raw_constraints = vec![];
     raw_constraints.append(&mut strategy.constraints.clone().unwrap_or_default());
     raw_constraints.append(&mut segment_constraints);
 
-    let constraints = upgrade_constraints(raw_constraints);
+    let constraints = upgrade_constraints(raw_constraints)?;
     match constraints {
-        Some(constraints) => format!("({strategy_rule} and ({constraints}))"),
-        None => strategy_rule,
+        Some(constraints) => Ok(format!("({strategy_rule} and ({constraints}))")),
+        None => Ok(strategy_rule),
     }
 }
 
@@ -277,16 +279,16 @@ fn get_rollout_target(strategy: &Strategy, target_property: &str) -> Option<usiz
         .and_then(Result::ok)
 }
 
-fn upgrade_constraints(constraints: Vec<Constraint>) -> Option<String> {
+fn upgrade_constraints(constraints: Vec<Constraint>) -> Result<Option<String>, SdkError> {
     if constraints.is_empty() {
-        return None;
+        return Ok(None);
     };
     let constraint_rules = constraints
         .iter()
         .map(upgrade_constraint)
-        .collect::<Vec<String>>();
+        .collect::<Result<Vec<String>, SdkError>>()?;
     let squashed_rules = constraint_rules.join(" and ");
-    Some(squashed_rules)
+    Ok(Some(squashed_rules))
 }
 
 fn is_stringy(op: &Operator) -> bool {
@@ -305,13 +307,12 @@ fn escape_quotes(stringy_operator: &str) -> String {
     stringy_operator.replace('\"', "\\\"")
 }
 
-fn upgrade_constraint(constraint: &Constraint) -> String {
+fn upgrade_constraint(constraint: &Constraint) -> Result<String, SdkError> {
     let context_name = upgrade_context_name(&constraint.context_name);
-    let op = upgrade_operator(&constraint.operator, constraint.case_insensitive);
-    if op.is_none() {
-        return "false".into();
-    }
-    let op = op.unwrap();
+    let op =
+        upgrade_operator(&constraint.operator, constraint.case_insensitive).ok_or_else(|| {
+            SdkError::StrategyParseError("Failed to resolve constraint operator".into())
+        })?;
     let inversion = if constraint.inverted { "!" } else { "" };
 
     let value = if is_stringy(&constraint.operator) {
@@ -344,13 +345,13 @@ fn upgrade_constraint(constraint: &Constraint) -> String {
             // Handling this in the grammar feels awful so we're
             // just not going to
             if constraint.value.as_ref().unwrap().starts_with('v') {
-                return "false".into();
+                return Ok("false".into());
             }
         }
         constraint.value.clone().unwrap()
     };
 
-    format!("{inversion}{context_name} {op} {value}")
+    Ok(format!("{inversion}{context_name} {op} {value}"))
 }
 
 fn upgrade_operator(op: &Operator, case_insensitive: bool) -> Option<String> {
@@ -448,7 +449,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(output, "user_id in [\"123\",\"222\",\"88\"]".to_string())
     }
 
@@ -466,7 +467,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(output, "user_id in [\"123\",\"222\",\"88\"]".to_string())
     }
 
@@ -490,7 +491,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(output, "(true and (user_id in [\"7\"]))".to_string())
     }
 
@@ -514,7 +515,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(
             output,
             "(true and (user_id in [\"7\"] and user_id in [\"7\"]))".to_string()
@@ -532,8 +533,9 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new());
-        assert_eq!(output, "true or true".to_string())
+        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new())
+            .expect("Failed to upgrade strategy");
+        assert_eq!(output, "true or true".to_string());
     }
 
     #[test]
@@ -556,13 +558,14 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new());
+        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new())
+            .expect("Failed to upgrade strategy");
         assert_eq!(output.as_str(), "(true and (user_id in [\"7\"] and user_id in [\"7\"])) or (true and (user_id in [\"7\"] and user_id in [\"7\"]))")
     }
 
     #[test]
     fn no_strategy_is_always_true() {
-        let output = upgrade(&[], &HashMap::new());
+        let output = upgrade(&[], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(output.as_str(), "true")
     }
 
@@ -586,7 +589,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(
             output.as_str(),
             "(true and (context[\"country\"] in [\"norway\"]))"
@@ -610,7 +613,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(
             output.as_str(),
             "55% sticky on user_id with group_id of \"Feature.flexibleRollout.userId.55\""
@@ -633,7 +636,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(output.as_str(), "55% sticky on user_id");
     }
 
@@ -653,7 +656,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(
             output.as_str(),
             "55% sticky on user_id | session_id | random[10000] with group_id of \"Feature.flexibleRollout.userId.55\""
@@ -675,7 +678,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(
             output.as_str(),
             "55% sticky on user_id | session_id | random[10000]"
@@ -699,7 +702,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(
             output.as_str(),
             format!(
@@ -725,7 +728,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(
             output.as_str(),
             format!("55% sticky on random[10000] with group_id of \"Feature.flexibleRollout.userId.55\"")
@@ -771,7 +774,7 @@ mod tests {
             values: Some(vec!["some".into(), "thing".into()]),
             value: None,
         };
-        let rule = upgrade_constraint(&constraint);
+        let rule = upgrade_constraint(&constraint).expect("Failed to upgrade constraint");
         assert_eq!(rule.as_str(), expected);
     }
 
@@ -794,7 +797,7 @@ mod tests {
             values: None,
             value: Some("7".into()),
         };
-        let rule = upgrade_constraint(&constraint);
+        let rule = upgrade_constraint(&constraint).expect("Failed to upgrade constraint");
         assert_eq!(rule.as_str(), expected);
     }
 
@@ -809,7 +812,7 @@ mod tests {
             values: None,
             value: Some("7".into()),
         };
-        let rule = upgrade_constraint(&constraint);
+        let rule = upgrade_constraint(&constraint).expect("Failed to upgrade constraint");
         assert_eq!(rule.as_str(), expected);
     }
 
@@ -824,7 +827,8 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[custom_strategy], &HashMap::new());
+        let output =
+            upgrade(&[custom_strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert_eq!(output.as_str(), "external_value[\"customStrategy1\"]")
     }
 
@@ -858,7 +862,8 @@ mod tests {
                 custom_strategy,
             ],
             &HashMap::new(),
-        );
+        )
+        .expect("Failed to upgrade strategy");
         assert_eq!(
             output.as_str(),
             "true or true or external_value[\"customStrategy1\"] or external_value[\"customStrategy2\"] or true or external_value[\"customStrategy3\"]"
@@ -875,7 +880,7 @@ mod tests {
             values: Some(vec!["some\"thing".into()]),
             value: None,
         };
-        let rule = upgrade_constraint(&constraint);
+        let rule = upgrade_constraint(&constraint).expect("Failed to upgrade constraint");
         assert_eq!(rule.as_str(), "user_id contains_any [\"some\\\"thing\"]");
     }
 
@@ -892,7 +897,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&[strategy], &HashMap::new());
+        let output = upgrade(&[strategy], &HashMap::new()).expect("Failed to upgrade strategy");
         assert!(compile_rule(&output).is_ok());
         assert_eq!(output.as_str(), "hostname in [\"DOS\", \"pop-os\"]");
     }
@@ -914,7 +919,8 @@ mod tests {
             variants: None,
         };
 
-        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        let rule =
+            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade strategy");
         assert_eq!(rule.as_str(), "false");
     }
 
@@ -928,7 +934,8 @@ mod tests {
             sort_order: None,
             variants: None,
         };
-        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        let rule =
+            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade strategy");
         assert_eq!(rule.as_str(), "false");
     }
 
@@ -942,7 +949,8 @@ mod tests {
             sort_order: None,
             variants: None,
         };
-        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        let rule =
+            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade strategy");
         assert_eq!(rule.as_str(), "false");
     }
 
@@ -960,7 +968,8 @@ mod tests {
             sort_order: None,
             variants: None,
         };
-        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        let rule =
+            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade strategy");
         assert_eq!(
             rule.as_str(),
             "remote_address in_cidr [\"192.168.0.1\", \"192.168.0.2\", \"192.168.0.3\"]"
@@ -982,7 +991,8 @@ mod tests {
             variants: None,
         };
 
-        let rule = upgrade_strategy(&strategy, &HashMap::new(), 0);
+        let rule =
+            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade a strategy");
 
         assert!(compile_rule(&rule).is_ok());
 

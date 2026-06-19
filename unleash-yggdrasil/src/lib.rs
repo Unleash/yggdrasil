@@ -33,6 +33,8 @@ use unleash_types::client_features::{
 };
 use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 
+use crate::state::SdkError;
+
 pub type CompiledState = AHashMap<String, CompiledToggle>;
 
 pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
@@ -124,13 +126,13 @@ fn build_segment_map(segments: &Option<Vec<Segment>>) -> HashMap<i32, Segment> {
 fn compile_variant_rule(
     toggle: &ClientFeature,
     segment_map: &HashMap<i32, Segment>,
-) -> Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>> {
+) -> Result<Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>>, SdkError> {
     let variant_rules: Option<Vec<(RuleFragment, Vec<CompiledVariant>, String)>> =
         build_variant_rules(
             &toggle.strategies.clone().unwrap_or_default(),
             segment_map,
             &toggle.name,
-        )
+        )?
         .iter()
         .map(|(rule_string, strategy_variants, stickiness, group_id)| {
             let compiled_rule: Option<RuleFragment> = compile_rule(rule_string).ok();
@@ -153,7 +155,7 @@ fn compile_variant_rule(
         })
         .collect();
 
-    variant_rules
+    Ok(variant_rules)
 }
 
 #[derive(Debug, Serialize)]
@@ -184,22 +186,36 @@ pub fn compile(
     segment_map: &HashMap<i32, Segment>,
     warnings: &mut Vec<EvalWarning>,
 ) -> CompiledToggle {
-    let rule = upgrade(&toggle.strategies.clone().unwrap_or_default(), segment_map);
-    let variant_rule = compile_variant_rule(toggle, segment_map);
+    let enabled_lambda = (|| {
+        let strategies = toggle.strategies.clone().unwrap_or_default();
+        let rule_text = upgrade(&strategies, segment_map)?;
+        compile_rule(rule_text.as_str())
+    })()
+    .unwrap_or_else(|e| {
+        warnings.push(EvalWarning {
+            toggle_name: toggle.name.clone(),
+            message: format!("Failed to compile toggle, this will always be off {e:?}"),
+        });
+
+        Box::new(|_| false)
+    });
+
+    let get_variant_lambda = compile_variant_rule(toggle, segment_map).unwrap_or_else(|e| {
+        warnings.push(EvalWarning {
+            toggle_name: toggle.name.clone(),
+            message: format!("Failed to compile toggle, this will always be off {e:?}"),
+        });
+
+        None
+    });
+
     CompiledToggle {
         name: toggle.name.clone(),
         enabled: toggle.enabled,
         feature_type: toggle.feature_type.clone(),
-        compiled_variant_strategy: variant_rule,
+        compiled_variant_strategy: get_variant_lambda,
         variants: compile_variants(&toggle.variants),
-        compiled_strategy: compile_rule(rule.as_str()).unwrap_or_else(|e| {
-            warnings.push(EvalWarning {
-                toggle_name: toggle.name.clone(),
-                message: format!("Failed to compile toggle, this will always be off {e:?}"),
-            });
-            Box::new(|_| false)
-        }),
-
+        compiled_strategy: enabled_lambda,
         impression_data: toggle.impression_data.unwrap_or_default(),
         project: toggle.project.clone().unwrap_or("default".to_string()),
         dependencies: toggle.dependencies.clone().unwrap_or_default(),
@@ -959,9 +975,7 @@ mod test {
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
         let mut engine = EngineState::default();
-        let warnings = engine.take_state(spec.state);
-
-        assert!(warnings.is_none());
+        engine.take_state(spec.state);
 
         if let Some(mut tests) = spec.tests {
             while let Some(test_case) = tests.pop() {
