@@ -67,7 +67,6 @@ pub fn build_variant_rules(
 
     strategies
         .iter()
-        .filter(|strategy| strategy.variants.is_some())
         .map(|strategy| {
             if strategy.is_custom() {
                 custom_strat_count += 1;
@@ -75,7 +74,7 @@ pub fn build_variant_rules(
 
             Ok((
                 upgrade_strategy(strategy, segment_map, custom_strat_count)?,
-                strategy.variants.clone().unwrap(),
+                strategy.variants.clone().unwrap_or_default(),
                 strategy
                     .parameters
                     .as_ref()

@@ -41,6 +41,7 @@ pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
 type VariantRuleSet = Vec<(RuleFragment, Vec<CompiledVariant>, String)>;
+type ResolvedVariantStrategy<'a> = (&'a Vec<CompiledVariant>, &'a String);
 
 pub const KNOWN_STRATEGIES: [&str; 8] = [
     "default",
@@ -540,6 +541,10 @@ impl EngineState {
             && (toggle.compiled_strategy)(context)
     }
 
+    fn base_enabled(&self, toggle: &CompiledToggle, context: &EnrichedContext) -> bool {
+        toggle.enabled && self.is_parent_dependency_satisfied(toggle, context)
+    }
+
     pub fn resolve_all(
         &self,
         context: &Context,
@@ -670,25 +675,29 @@ impl EngineState {
         None
     }
 
-    fn check_variant_by_toggle(
+    fn resolve_variant_strategy<'a>(
+        &self,
+        toggle: &'a CompiledToggle,
+        context: &EnrichedContext,
+    ) -> Option<ResolvedVariantStrategy<'a>> {
+        toggle
+            .compiled_variant_strategy
+            .as_ref()
+            .and_then(|variant_strategies| {
+                variant_strategies
+                    .iter()
+                    .find_map(|(rule, rule_variants, group_id)| {
+                        (rule)(context).then_some((rule_variants, group_id))
+                    })
+            })
+    }
+
+    fn check_variant_by_toggle_with_strategy_match(
         &self,
         toggle: &CompiledToggle,
         context: &EnrichedContext,
+        strategy_variants: Option<ResolvedVariantStrategy<'_>>,
     ) -> Option<VariantDef> {
-        let strategy_variants =
-            toggle
-                .compiled_variant_strategy
-                .as_ref()
-                .and_then(|variant_strategies| {
-                    let resolved_strategy_variants: Option<(&Vec<CompiledVariant>, &String)> =
-                        variant_strategies
-                            .iter()
-                            .find_map(|(rule, rule_variants, group_id)| {
-                                (rule)(context).then_some((rule_variants, group_id))
-                            });
-                    resolved_strategy_variants
-                });
-
         let variant = if let Some(strategy_variants) = strategy_variants {
             if strategy_variants.0.is_empty() {
                 self.resolve_variant(&toggle.variants, &toggle.name, context)
@@ -706,10 +715,45 @@ impl EngineState {
         })
     }
 
+    fn check_variant_by_toggle(
+        &self,
+        toggle: &CompiledToggle,
+        context: &EnrichedContext,
+    ) -> Option<VariantDef> {
+        let strategy_variants = self.resolve_variant_strategy(toggle, context);
+        self.check_variant_by_toggle_with_strategy_match(toggle, context, strategy_variants)
+    }
+
+    fn variant_enabled<'a>(
+        &self,
+        toggle: &'a CompiledToggle,
+        context: &EnrichedContext,
+    ) -> (bool, Option<ResolvedVariantStrategy<'a>>) {
+        if !self.base_enabled(toggle, context) {
+            return (false, None);
+        }
+
+        let strategy_variants = self.resolve_variant_strategy(toggle, context);
+        if strategy_variants.is_some() {
+            return (true, strategy_variants);
+        }
+
+        if toggle
+            .compiled_variant_strategy
+            .as_ref()
+            .is_some_and(|strategies| !strategies.is_empty())
+        {
+            return (false, None);
+        }
+
+        ((toggle.compiled_strategy)(context), None)
+    }
+
     pub fn check_variant(&self, context: &EnrichedContext) -> Option<VariantDef> {
         self.get_toggle(context.toggle_name).map(|toggle| {
-            if self.enabled(toggle, context) {
-                self.check_variant_by_toggle(toggle, context)
+            let (enabled, strategy_variants) = self.variant_enabled(toggle, context);
+            if enabled {
+                self.check_variant_by_toggle_with_strategy_match(toggle, context, strategy_variants)
                     .unwrap_or_default()
             } else {
                 VariantDef::default()
@@ -726,12 +770,16 @@ impl EngineState {
         let toggle = self.get_toggle(name);
         let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
-        let enabled = toggle
-            .map(|t| self.enabled(t, &enriched_context))
-            .unwrap_or_default();
+        let (enabled, strategy_variants) = toggle
+            .map(|toggle| self.variant_enabled(toggle, &enriched_context))
+            .unwrap_or((false, None));
 
         let variant = match toggle {
-            Some(toggle) if enabled => self.check_variant_by_toggle(toggle, &enriched_context),
+            Some(toggle) if enabled => self.check_variant_by_toggle_with_strategy_match(
+                toggle,
+                &enriched_context,
+                strategy_variants,
+            ),
             _ => None,
         }
         .unwrap_or_default();
