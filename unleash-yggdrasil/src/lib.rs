@@ -911,7 +911,14 @@ mod test {
     use ahash::AHashMap;
     use chrono::Utc;
     use serde::Deserialize;
-    use std::{collections::HashMap, fs};
+    use std::{
+        collections::HashMap,
+        fs,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+    };
     use test_case::test_case;
     use unleash_types::client_features::{
         ClientFeaturesDelta, FeatureDependency, Override, Payload,
@@ -1454,6 +1461,57 @@ mod test {
         };
         let variant = state.get_variant("some-toggle", &Context::default(), &None);
         assert_eq!(variant.name, "don't-ignore-me".to_string());
+    }
+
+    #[test]
+    pub fn get_variant_does_not_evaluate_strategy_variants_twice() {
+        let strategy_calls = Arc::new(AtomicUsize::new(0));
+        let variant_strategy_calls = Arc::new(AtomicUsize::new(0));
+
+        let mut compiled_state = AHashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new({
+                    let strategy_calls = strategy_calls.clone();
+                    move |_| {
+                        strategy_calls.fetch_add(1, Ordering::Relaxed);
+                        false
+                    }
+                }),
+                variants: vec![],
+                compiled_variant_strategy: Some(vec![(
+                    Box::new({
+                        let variant_strategy_calls = variant_strategy_calls.clone();
+                        move |_| {
+                            variant_strategy_calls.fetch_add(1, Ordering::Relaxed);
+                            true
+                        }
+                    }),
+                    vec![CompiledVariant {
+                        name: "strategy-variant".into(),
+                        weight: 100,
+                        stickiness: None,
+                        payload: None,
+                        overrides: None,
+                    }],
+                    "some-toggle".to_string(),
+                )]),
+                ..CompiledToggle::default()
+            },
+        );
+        let state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let variant = state.get_variant("some-toggle", &Context::default(), &None);
+
+        assert_eq!(variant.name, "strategy-variant".to_string());
+        assert_eq!(strategy_calls.load(Ordering::Relaxed), 0);
+        assert_eq!(variant_strategy_calls.load(Ordering::Relaxed), 1);
     }
 
     #[test]
