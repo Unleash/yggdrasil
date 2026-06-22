@@ -41,7 +41,16 @@ pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
 type VariantRuleSet = Vec<(RuleFragment, Vec<CompiledVariant>, String)>;
-type ResolvedVariantStrategy<'a> = (&'a Vec<CompiledVariant>, &'a String);
+struct MatchedStrategyVariants<'a> {
+    variants: &'a Vec<CompiledVariant>,
+    group_id: &'a String,
+}
+
+impl MatchedStrategyVariants<'_> {
+    fn has_strategy_variants(&self) -> bool {
+        !self.variants.is_empty()
+    }
+}
 
 pub const KNOWN_STRATEGIES: [&str; 8] = [
     "default",
@@ -679,7 +688,7 @@ impl EngineState {
         &self,
         toggle: &'a CompiledToggle,
         context: &EnrichedContext,
-    ) -> Option<ResolvedVariantStrategy<'a>> {
+    ) -> Option<MatchedStrategyVariants<'a>> {
         toggle
             .compiled_variant_strategy
             .as_ref()
@@ -687,7 +696,10 @@ impl EngineState {
                 variant_strategies
                     .iter()
                     .find_map(|(rule, rule_variants, group_id)| {
-                        (rule)(context).then_some((rule_variants, group_id))
+                        (rule)(context).then_some(MatchedStrategyVariants {
+                            variants: rule_variants,
+                            group_id,
+                        })
                     })
             })
     }
@@ -696,16 +708,16 @@ impl EngineState {
         &self,
         toggle: &CompiledToggle,
         context: &EnrichedContext,
-        strategy_variants: Option<ResolvedVariantStrategy<'_>>,
+        matched_strategy: Option<MatchedStrategyVariants<'_>>,
     ) -> Option<VariantDef> {
-        let variant = if let Some(strategy_variants) = strategy_variants {
-            if strategy_variants.0.is_empty() {
-                self.resolve_variant(&toggle.variants, &toggle.name, context)
-            } else {
-                self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
+        let variant = match matched_strategy {
+            Some(strategy) if strategy.has_strategy_variants() => {
+                self.resolve_variant(strategy.variants, strategy.group_id, context)
             }
-        } else {
-            self.resolve_variant(&toggle.variants, &toggle.name, context)
+            // Unleash can and will send empty lists for strategy variants when they aren't set
+            // in that case, we should treat it the same as missing variants and
+            // attempt to fall back to the top level variant
+            Some(_) | None => self.resolve_variant(&toggle.variants, &toggle.name, context),
         };
 
         variant.map(|variant| VariantDef {
@@ -728,7 +740,7 @@ impl EngineState {
         &self,
         toggle: &'a CompiledToggle,
         context: &EnrichedContext,
-    ) -> (bool, Option<ResolvedVariantStrategy<'a>>) {
+    ) -> (bool, Option<MatchedStrategyVariants<'a>>) {
         if !self.base_enabled(toggle, context) {
             return (false, None);
         }
