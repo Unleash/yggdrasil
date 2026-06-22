@@ -550,10 +550,6 @@ impl EngineState {
             && (toggle.compiled_strategy)(context)
     }
 
-    fn base_enabled(&self, toggle: &CompiledToggle, context: &EnrichedContext) -> bool {
-        toggle.enabled && self.is_parent_dependency_satisfied(toggle, context)
-    }
-
     pub fn resolve_all(
         &self,
         context: &Context,
@@ -741,7 +737,7 @@ impl EngineState {
         toggle: &'a CompiledToggle,
         context: &EnrichedContext,
     ) -> (bool, Option<MatchedStrategyVariants<'a>>) {
-        if !self.base_enabled(toggle, context) {
+        if !toggle.enabled && self.is_parent_dependency_satisfied(toggle, context) {
             return (false, None);
         }
 
