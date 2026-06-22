@@ -700,7 +700,7 @@ impl EngineState {
             })
     }
 
-    fn check_variant_by_toggle_with_strategy_match(
+    fn choose_variant(
         &self,
         toggle: &CompiledToggle,
         context: &EnrichedContext,
@@ -729,7 +729,7 @@ impl EngineState {
         context: &EnrichedContext,
     ) -> Option<VariantDef> {
         let strategy_variants = self.resolve_variant_strategy(toggle, context);
-        self.check_variant_by_toggle_with_strategy_match(toggle, context, strategy_variants)
+        self.choose_variant(toggle, context, strategy_variants)
     }
 
     fn variant_enabled<'a>(
@@ -761,7 +761,7 @@ impl EngineState {
         self.get_toggle(context.toggle_name).map(|toggle| {
             let (enabled, strategy_variants) = self.variant_enabled(toggle, context);
             if enabled {
-                self.check_variant_by_toggle_with_strategy_match(toggle, context, strategy_variants)
+                self.choose_variant(toggle, context, strategy_variants)
                     .unwrap_or_default()
             } else {
                 VariantDef::default()
@@ -783,11 +783,9 @@ impl EngineState {
             .unwrap_or((false, None));
 
         let variant = match toggle {
-            Some(toggle) if enabled => self.check_variant_by_toggle_with_strategy_match(
-                toggle,
-                &enriched_context,
-                strategy_variants,
-            ),
+            Some(toggle) if enabled => {
+                self.choose_variant(toggle, &enriched_context, strategy_variants)
+            }
             _ => None,
         }
         .unwrap_or_default();
