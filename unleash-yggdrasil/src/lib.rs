@@ -737,7 +737,7 @@ impl EngineState {
         toggle: &'a CompiledToggle,
         context: &EnrichedContext,
     ) -> (bool, Option<MatchedStrategyVariants<'a>>) {
-        if !toggle.enabled && self.is_parent_dependency_satisfied(toggle, context) {
+        if !toggle.enabled || !self.is_parent_dependency_satisfied(toggle, context) {
             return (false, None);
         }
 
