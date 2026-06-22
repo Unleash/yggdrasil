@@ -680,7 +680,7 @@ impl EngineState {
         None
     }
 
-    fn resolve_variant_strategy<'a>(
+    fn compute_variant_strategies<'a>(
         &self,
         toggle: &'a CompiledToggle,
         context: &EnrichedContext,
@@ -728,7 +728,7 @@ impl EngineState {
         toggle: &CompiledToggle,
         context: &EnrichedContext,
     ) -> Option<VariantDef> {
-        let strategy_variants = self.resolve_variant_strategy(toggle, context);
+        let strategy_variants = self.compute_variant_strategies(toggle, context);
         self.choose_variant(toggle, context, strategy_variants)
     }
 
@@ -741,7 +741,7 @@ impl EngineState {
             return (false, None);
         }
 
-        let strategy_variants = self.resolve_variant_strategy(toggle, context);
+        let strategy_variants = self.compute_variant_strategies(toggle, context);
         if strategy_variants.is_some() {
             return (true, strategy_variants);
         }
