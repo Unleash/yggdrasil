@@ -41,6 +41,16 @@ pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");
 type VariantRuleSet = Vec<(RuleFragment, Vec<CompiledVariant>, String)>;
+struct MatchedStrategyVariants<'a> {
+    variants: &'a Vec<CompiledVariant>,
+    group_id: &'a String,
+}
+
+impl MatchedStrategyVariants<'_> {
+    fn has_strategy_variants(&self) -> bool {
+        !self.variants.is_empty()
+    }
+}
 
 pub const KNOWN_STRATEGIES: [&str; 8] = [
     "default",
@@ -670,33 +680,40 @@ impl EngineState {
         None
     }
 
-    fn check_variant_by_toggle(
+    fn compute_variant_strategies<'a>(
+        &self,
+        toggle: &'a CompiledToggle,
+        context: &EnrichedContext,
+    ) -> Option<MatchedStrategyVariants<'a>> {
+        toggle
+            .compiled_variant_strategy
+            .as_ref()
+            .and_then(|variant_strategies| {
+                variant_strategies
+                    .iter()
+                    .find_map(|(rule, rule_variants, group_id)| {
+                        (rule)(context).then_some(MatchedStrategyVariants {
+                            variants: rule_variants,
+                            group_id,
+                        })
+                    })
+            })
+    }
+
+    fn choose_variant(
         &self,
         toggle: &CompiledToggle,
         context: &EnrichedContext,
+        matched_strategy: Option<MatchedStrategyVariants<'_>>,
     ) -> Option<VariantDef> {
-        let strategy_variants =
-            toggle
-                .compiled_variant_strategy
-                .as_ref()
-                .and_then(|variant_strategies| {
-                    let resolved_strategy_variants: Option<(&Vec<CompiledVariant>, &String)> =
-                        variant_strategies
-                            .iter()
-                            .find_map(|(rule, rule_variants, group_id)| {
-                                (rule)(context).then_some((rule_variants, group_id))
-                            });
-                    resolved_strategy_variants
-                });
-
-        let variant = if let Some(strategy_variants) = strategy_variants {
-            if strategy_variants.0.is_empty() {
-                self.resolve_variant(&toggle.variants, &toggle.name, context)
-            } else {
-                self.resolve_variant(strategy_variants.0, strategy_variants.1, context)
+        let variant = match matched_strategy {
+            Some(strategy) if strategy.has_strategy_variants() => {
+                self.resolve_variant(strategy.variants, strategy.group_id, context)
             }
-        } else {
-            self.resolve_variant(&toggle.variants, &toggle.name, context)
+            // Unleash can and will send empty lists for strategy variants when they aren't set
+            // in that case, we should treat it the same as missing variants and
+            // attempt to fall back to the top level variant
+            Some(_) | None => self.resolve_variant(&toggle.variants, &toggle.name, context),
         };
 
         variant.map(|variant| VariantDef {
@@ -706,10 +723,45 @@ impl EngineState {
         })
     }
 
+    fn check_variant_by_toggle(
+        &self,
+        toggle: &CompiledToggle,
+        context: &EnrichedContext,
+    ) -> Option<VariantDef> {
+        let strategy_variants = self.compute_variant_strategies(toggle, context);
+        self.choose_variant(toggle, context, strategy_variants)
+    }
+
+    fn variant_enabled<'a>(
+        &self,
+        toggle: &'a CompiledToggle,
+        context: &EnrichedContext,
+    ) -> (bool, Option<MatchedStrategyVariants<'a>>) {
+        if !toggle.enabled || !self.is_parent_dependency_satisfied(toggle, context) {
+            return (false, None);
+        }
+
+        let strategy_variants = self.compute_variant_strategies(toggle, context);
+        if strategy_variants.is_some() {
+            return (true, strategy_variants);
+        }
+
+        if toggle
+            .compiled_variant_strategy
+            .as_ref()
+            .is_some_and(|strategies| !strategies.is_empty())
+        {
+            return (false, None);
+        }
+
+        ((toggle.compiled_strategy)(context), None)
+    }
+
     pub fn check_variant(&self, context: &EnrichedContext) -> Option<VariantDef> {
         self.get_toggle(context.toggle_name).map(|toggle| {
-            if self.enabled(toggle, context) {
-                self.check_variant_by_toggle(toggle, context)
+            let (enabled, strategy_variants) = self.variant_enabled(toggle, context);
+            if enabled {
+                self.choose_variant(toggle, context, strategy_variants)
                     .unwrap_or_default()
             } else {
                 VariantDef::default()
@@ -726,12 +778,14 @@ impl EngineState {
         let toggle = self.get_toggle(name);
         let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
-        let enabled = toggle
-            .map(|t| self.enabled(t, &enriched_context))
-            .unwrap_or_default();
+        let (enabled, strategy_variants) = toggle
+            .map(|toggle| self.variant_enabled(toggle, &enriched_context))
+            .unwrap_or((false, None));
 
         let variant = match toggle {
-            Some(toggle) if enabled => self.check_variant_by_toggle(toggle, &enriched_context),
+            Some(toggle) if enabled => {
+                self.choose_variant(toggle, &enriched_context, strategy_variants)
+            }
             _ => None,
         }
         .unwrap_or_default();
@@ -863,7 +917,14 @@ mod test {
     use ahash::AHashMap;
     use chrono::Utc;
     use serde::Deserialize;
-    use std::{collections::HashMap, fs};
+    use std::{
+        collections::HashMap,
+        fs,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+    };
     use test_case::test_case;
     use unleash_types::client_features::{
         ClientFeaturesDelta, FeatureDependency, Override, Payload,
@@ -1406,6 +1467,57 @@ mod test {
         };
         let variant = state.get_variant("some-toggle", &Context::default(), &None);
         assert_eq!(variant.name, "don't-ignore-me".to_string());
+    }
+
+    #[test]
+    pub fn get_variant_does_not_evaluate_strategy_variants_twice() {
+        let strategy_calls = Arc::new(AtomicUsize::new(0));
+        let variant_strategy_calls = Arc::new(AtomicUsize::new(0));
+
+        let mut compiled_state = AHashMap::new();
+        compiled_state.insert(
+            "some-toggle".to_string(),
+            CompiledToggle {
+                name: "some-toggle".into(),
+                enabled: true,
+                compiled_strategy: Box::new({
+                    let strategy_calls = strategy_calls.clone();
+                    move |_| {
+                        strategy_calls.fetch_add(1, Ordering::Relaxed);
+                        false
+                    }
+                }),
+                variants: vec![],
+                compiled_variant_strategy: Some(vec![(
+                    Box::new({
+                        let variant_strategy_calls = variant_strategy_calls.clone();
+                        move |_| {
+                            variant_strategy_calls.fetch_add(1, Ordering::Relaxed);
+                            true
+                        }
+                    }),
+                    vec![CompiledVariant {
+                        name: "strategy-variant".into(),
+                        weight: 100,
+                        stickiness: None,
+                        payload: None,
+                        overrides: None,
+                    }],
+                    "some-toggle".to_string(),
+                )]),
+                ..CompiledToggle::default()
+            },
+        );
+        let state = EngineState {
+            compiled_state: Some(compiled_state),
+            ..Default::default()
+        };
+
+        let variant = state.get_variant("some-toggle", &Context::default(), &None);
+
+        assert_eq!(variant.name, "strategy-variant".to_string());
+        assert_eq!(strategy_calls.load(Ordering::Relaxed), 0);
+        assert_eq!(variant_strategy_calls.load(Ordering::Relaxed), 1);
     }
 
     #[test]
