@@ -345,11 +345,20 @@ fn upgrade_constraint(constraint: &Constraint) -> Result<String, SdkError> {
             // broken semver operators so we can reject them.
             // Handling this in the grammar feels awful so we're
             // just not going to
-            if constraint.value.as_ref().unwrap().starts_with('v') {
+            if constraint
+                .value
+                .as_ref()
+                .ok_or_else(|| {
+                    SdkError::StrategyParseError("Failed to resolve constraint value".into())
+                })?
+                .starts_with('v')
+            {
                 return Ok("false".into());
             }
         }
-        constraint.value.clone().unwrap()
+        constraint.value.clone().ok_or_else(|| {
+            SdkError::StrategyParseError("Failed to resolve constraint value".into())
+        })?
     };
 
     Ok(format!("{inversion}{context_name} {op} {value}"))
@@ -800,6 +809,43 @@ mod tests {
         };
         let rule = upgrade_constraint(&constraint).expect("Failed to upgrade constraint");
         assert_eq!(rule.as_str(), expected);
+    }
+
+    #[test_case(Operator::NumLt)]
+    #[test_case(Operator::SemverLt)]
+    fn scalar_constraint_without_value_returns_parse_error(op: Operator) {
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: op,
+            case_insensitive: false,
+            inverted: false,
+            values: None,
+            value: None,
+        };
+
+        let error = upgrade_constraint(&constraint).expect_err("Expected constraint upgrade error");
+
+        assert!(matches!(
+            error,
+            SdkError::StrategyParseError(message)
+                if message == "Failed to resolve constraint value"
+        ));
+    }
+
+    #[test]
+    fn semver_constraint_with_v_prefixed_value_is_false() {
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: Operator::SemverLt,
+            case_insensitive: false,
+            inverted: false,
+            values: None,
+            value: Some("v1.2.3".into()),
+        };
+
+        let rule = upgrade_constraint(&constraint).expect("Failed to upgrade constraint");
+
+        assert_eq!(rule.as_str(), "false");
     }
 
     #[test_case(true, "!user_id <= 7")]
