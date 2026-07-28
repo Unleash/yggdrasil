@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::atomic::AtomicU32;
@@ -664,11 +666,12 @@ impl EngineState {
 
         let stickiness = variants.first().and_then(|v| v.stickiness.as_deref());
 
-        let target = get_seed(stickiness, context)
-            .map(|seed| {
-                normalized_hash(group_id, seed, total_weight, VARIANT_NORMALIZATION_SEED).unwrap()
-            })
-            .unwrap_or_else(|| rand::rng().random_range(1..=total_weight));
+        let target = match get_seed(stickiness, context) {
+            Some(seed) => {
+                normalized_hash(group_id, seed, total_weight, VARIANT_NORMALIZATION_SEED).ok()?
+            }
+            None => rand::rng().random_range(1..=total_weight),
+        };
 
         let mut total_weight = 0;
         for variant in variants {
