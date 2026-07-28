@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.4](https://github.com/Unleash/yggdrasil/compare/v0.21.3...v0.21.4) - 2026-07-28
+
+### 🐛 Bug Fixes
+- prevent panics in bad feature config ([#349](https://github.com/Unleash/yggdrasil/issues/349)) (by @sighphyre) - #349
+
+### Contributors
+
+* @sighphyre
+
 ## [0.21.3](https://github.com/Unleash/yggdrasil/compare/v0.21.2...v0.21.3) - 2026-06-23
 
 ### 🐛 Bug Fixes
