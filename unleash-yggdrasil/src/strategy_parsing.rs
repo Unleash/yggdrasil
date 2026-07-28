@@ -124,10 +124,10 @@ struct StringComparatorType {
 }
 
 //Context lifting properties - these resolve properties from the context
-fn context_value(node: Pairs<Rule>) -> ContextResolver {
-    let [child] = drain(node).expect("Context node is empty");
+fn context_value(node: Pairs<Rule>) -> CompileResult<ContextResolver> {
+    let [child] = drain(node)?;
 
-    match child.as_rule() {
+    Ok(match child.as_rule() {
         Rule::user_id => Arc::new(|c: &Context| c.user_id.map(Cow::Borrowed)),
         Rule::app_name => Arc::new(|c: &Context| c.app_name.map(Cow::Borrowed)),
         Rule::environment => Arc::new(|c: &Context| c.environment.map(Cow::Borrowed)),
@@ -149,7 +149,7 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
             let value = child
                 .into_inner()
                 .next()
-                .map(|rule| rule.as_str().parse::<usize>().expect("bad grammar random"))
+                .and_then(|rule| rule.as_str().parse::<usize>().ok())
                 .unwrap_or(100);
 
             Arc::new(move |_c: &Context| {
@@ -157,41 +157,40 @@ fn context_value(node: Pairs<Rule>) -> ContextResolver {
             })
         }
 
-        Rule::property => context_property(child.into_inner()),
+        Rule::property => context_property(child.into_inner())?,
 
         _ => unreachable!(),
-    }
-}
-
-pub(crate) fn coalesce_context_property(node: Pairs<Rule>) -> ContextResolver {
-    let mut stickiness_resolvers = vec![];
-
-    for child in node {
-        stickiness_resolvers.push(context_value(child.into_inner()))
-    }
-
-    Arc::new(move |context: &Context| {
-        stickiness_resolvers
-            .iter()
-            .find_map(|resolver| resolver(context))
     })
 }
 
-fn context_property(node: Pairs<Rule>) -> ContextResolver {
-    let [content_node] = drain(node)
-        .expect("Context node is empty, this should only happen if the grammar is missing");
+pub(crate) fn coalesce_context_property(node: Pairs<Rule>) -> CompileResult<ContextResolver> {
+    let mut stickiness_resolvers = vec![];
+
+    for child in node {
+        stickiness_resolvers.push(context_value(child.into_inner())?)
+    }
+
+    Ok(Arc::new(move |context: &Context| {
+        stickiness_resolvers
+            .iter()
+            .find_map(|resolver| resolver(context))
+    }))
+}
+
+fn context_property(node: Pairs<Rule>) -> CompileResult<ContextResolver> {
+    let [content_node] = drain(node)?;
     let mut chars = content_node.as_str().chars();
     chars.next();
     chars.next_back();
     let context_name = chars.as_str().to_string();
 
-    Arc::new(move |context: &Context| -> Option<Cow<'_, str>> {
+    Ok(Arc::new(move |context: &Context| -> Option<Cow<'_, str>> {
         context
             .properties
             .as_ref()?
             .get(context_name.as_str())
             .map(Cow::Borrowed)
-    })
+    }))
 }
 
 fn to_ordinal_comparator(node: Pair<Rule>) -> OrdinalComparator {
@@ -296,7 +295,7 @@ fn ip(node: Pair<Rule>) -> Result<IpNetwork, IpNetworkError> {
 fn numeric_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_getter, ordinal_operation, number] = drain(node)?;
 
-    let context_getter = context_value(context_getter.into_inner());
+    let context_getter = context_value(context_getter.into_inner())?;
     let ordinal_operation = to_ordinal_comparator(ordinal_operation);
     let number = numeric(number)?;
 
@@ -324,7 +323,7 @@ fn numeric_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 fn date_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_getter_node, ordinal_operation_node, date_node] = drain(node)?;
 
-    let context_getter = context_value(context_getter_node.into_inner());
+    let context_getter = context_value(context_getter_node.into_inner())?;
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
     let date = date(date_node)?;
 
@@ -355,7 +354,7 @@ fn semver_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let children: [Pair<Rule>; 3] = drain(node)?;
     let [context_getter_node, ordinal_operation_node, semver_node] = children;
 
-    let context_getter = context_value(context_getter_node.into_inner());
+    let context_getter = context_value(context_getter_node.into_inner())?;
     let ordinal_operation = to_ordinal_comparator(ordinal_operation_node);
     let semver = semver(semver_node)?;
 
@@ -389,7 +388,7 @@ fn rollout_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 
     let percent_rollout = percentage(rollout_node)?;
 
-    let stickiness_resolver = coalesce_context_property(stickiness_node.into_inner());
+    let stickiness_resolver = coalesce_context_property(stickiness_node.into_inner())?;
     let group_id = node
         .next()
         .map(|node| group_id_param(node.into_inner()))
@@ -459,7 +458,7 @@ fn hostname_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 fn ip_matching_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_node, ip_node] = drain(node)?;
 
-    let context_getter = context_value(context_node.into_inner());
+    let context_getter = context_value(context_node.into_inner())?;
     let ip_list = harvest_ip_list(ip_node.into_inner());
 
     Ok(Box::new(move |context| {
@@ -475,7 +474,7 @@ fn ip_matching_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
 fn list_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_node, comparator_node, list_node] = drain(node)?;
 
-    let context_getter = context_value(context_node.into_inner());
+    let context_getter = context_value(context_node.into_inner())?;
     let comparator = to_content_comparator(comparator_node);
     let list = list_node;
 
@@ -567,7 +566,7 @@ fn default_strategy_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment>
 fn string_fragment_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_getter_node, comparator_node, list_node] = drain(node)?;
 
-    let context_getter = context_value(context_getter_node.into_inner());
+    let context_getter = context_value(context_getter_node.into_inner())?;
     let comparator_details = to_string_comparator(comparator_node);
     let comparator = comparator_details.comparator_type;
     let ignore_case = comparator_details.ignore_case;
@@ -597,7 +596,7 @@ fn string_fragment_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> 
 
 fn regex_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
     let [context_getter_node, constraint_type_node, regex_pattern_node] = drain(node)?;
-    let context_getter = context_value(context_getter_node.into_inner());
+    let context_getter = context_value(context_getter_node.into_inner())?;
     let regex_pattern = string(regex_pattern_node);
 
     let mut regex_builder = RegexBuilder::new(&regex_pattern);
@@ -922,7 +921,7 @@ mod tests {
 
         let mut parse_result = Strategy::parse(Rule::stickiness_param, rule).unwrap();
         let stickiness_lookup =
-            coalesce_context_property(parse_result.next().unwrap().into_inner());
+            coalesce_context_property(parse_result.next().unwrap().into_inner()).unwrap();
         let result: Option<Cow<str>> = stickiness_lookup(&context);
 
         assert_eq!(result, expected);
