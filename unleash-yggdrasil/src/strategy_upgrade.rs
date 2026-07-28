@@ -1,3 +1,5 @@
+#![deny(clippy::expect_used, clippy::unwrap_used)]
+
 use std::collections::HashMap;
 
 use unleash_types::client_features::{Constraint, Operator, Segment, Strategy, StrategyVariant};
@@ -438,6 +440,7 @@ fn upgrade_context_name(context_name: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use crate::strategy_parsing::compile_rule;
 
@@ -543,7 +546,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new())
+        let output = upgrade(&[strategy.clone(), strategy], &HashMap::new())
             .expect("Failed to upgrade strategy");
         assert_eq!(output, "true or true".to_string());
     }
@@ -568,7 +571,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new())
+        let output = upgrade(&[strategy.clone(), strategy], &HashMap::new())
             .expect("Failed to upgrade strategy");
         assert_eq!(output.as_str(), "(true and (user_id in [\"7\"] and user_id in [\"7\"])) or (true and (user_id in [\"7\"] and user_id in [\"7\"]))")
     }
@@ -900,7 +903,7 @@ mod tests {
         };
 
         let output = upgrade(
-            &vec![
+            &[
                 default_strategy.clone(),
                 default_strategy.clone(),
                 custom_strategy.clone(),
@@ -1039,7 +1042,7 @@ mod tests {
         };
 
         let rule =
-            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade a strategy");
+            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade strategy");
 
         assert!(compile_rule(&rule).is_ok());
 
