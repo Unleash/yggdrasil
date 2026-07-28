@@ -1,3 +1,5 @@
+#![deny(clippy::expect_used, clippy::unwrap_used)]
+
 use std::collections::HashMap;
 
 use unleash_types::client_features::{Constraint, Operator, Segment, Strategy, StrategyVariant};
@@ -345,11 +347,20 @@ fn upgrade_constraint(constraint: &Constraint) -> Result<String, SdkError> {
             // broken semver operators so we can reject them.
             // Handling this in the grammar feels awful so we're
             // just not going to
-            if constraint.value.as_ref().unwrap().starts_with('v') {
+            if constraint
+                .value
+                .as_ref()
+                .ok_or_else(|| {
+                    SdkError::StrategyParseError("Failed to resolve constraint value".into())
+                })?
+                .starts_with('v')
+            {
                 return Ok("false".into());
             }
         }
-        constraint.value.clone().unwrap()
+        constraint.value.clone().ok_or_else(|| {
+            SdkError::StrategyParseError("Failed to resolve constraint value".into())
+        })?
     };
 
     Ok(format!("{inversion}{context_name} {op} {value}"))
@@ -429,6 +440,7 @@ fn upgrade_context_name(context_name: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use crate::strategy_parsing::compile_rule;
 
@@ -534,7 +546,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new())
+        let output = upgrade(&[strategy.clone(), strategy], &HashMap::new())
             .expect("Failed to upgrade strategy");
         assert_eq!(output, "true or true".to_string());
     }
@@ -559,7 +571,7 @@ mod tests {
             variants: None,
         };
 
-        let output = upgrade(&vec![strategy.clone(), strategy], &HashMap::new())
+        let output = upgrade(&[strategy.clone(), strategy], &HashMap::new())
             .expect("Failed to upgrade strategy");
         assert_eq!(output.as_str(), "(true and (user_id in [\"7\"] and user_id in [\"7\"])) or (true and (user_id in [\"7\"] and user_id in [\"7\"]))")
     }
@@ -802,6 +814,43 @@ mod tests {
         assert_eq!(rule.as_str(), expected);
     }
 
+    #[test_case(Operator::NumLt)]
+    #[test_case(Operator::SemverLt)]
+    fn scalar_constraint_without_value_returns_parse_error(op: Operator) {
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: op,
+            case_insensitive: false,
+            inverted: false,
+            values: None,
+            value: None,
+        };
+
+        let error = upgrade_constraint(&constraint).expect_err("Expected constraint upgrade error");
+
+        assert!(matches!(
+            error,
+            SdkError::StrategyParseError(message)
+                if message == "Failed to resolve constraint value"
+        ));
+    }
+
+    #[test]
+    fn semver_constraint_with_v_prefixed_value_is_false() {
+        let constraint = Constraint {
+            context_name: "userId".into(),
+            operator: Operator::SemverLt,
+            case_insensitive: false,
+            inverted: false,
+            values: None,
+            value: Some("v1.2.3".into()),
+        };
+
+        let rule = upgrade_constraint(&constraint).expect("Failed to upgrade constraint");
+
+        assert_eq!(rule.as_str(), "false");
+    }
+
     #[test_case(true, "!user_id <= 7")]
     #[test_case(false, "user_id <= 7")]
     fn handles_negation(is_inverted: bool, expected: &str) {
@@ -854,7 +903,7 @@ mod tests {
         };
 
         let output = upgrade(
-            &vec![
+            &[
                 default_strategy.clone(),
                 default_strategy.clone(),
                 custom_strategy.clone(),
@@ -993,7 +1042,7 @@ mod tests {
         };
 
         let rule =
-            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade a strategy");
+            upgrade_strategy(&strategy, &HashMap::new(), 0).expect("Failed to upgrade strategy");
 
         assert!(compile_rule(&rule).is_ok());
 
