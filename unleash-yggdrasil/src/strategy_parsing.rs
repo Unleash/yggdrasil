@@ -369,12 +369,14 @@ fn semver_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
                     return false;
                 };
 
+                let ord = context_value.cmp_precedence(&semver);
+
                 match ordinal_operation {
-                    OrdinalComparator::Lte => context_value <= semver,
-                    OrdinalComparator::Lt => context_value < semver,
-                    OrdinalComparator::Gte => context_value >= semver,
-                    OrdinalComparator::Gt => context_value > semver,
-                    OrdinalComparator::Eq => context_value == semver,
+                    OrdinalComparator::Lte => ord.is_le(),
+                    OrdinalComparator::Lt => ord.is_lt(),
+                    OrdinalComparator::Gte => ord.is_ge(),
+                    OrdinalComparator::Gt => ord.is_gt(),
+                    OrdinalComparator::Eq => ord.is_eq(),
                 }
             }
             None => false,
