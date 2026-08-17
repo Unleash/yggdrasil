@@ -799,6 +799,8 @@ mod tests {
     #[test_case("3.0.0", "user_id >= 3.0.0", true)]
     #[test_case("3.0.0-beta.stuff", "user_id == 3.0.0-beta.stuff", true)]
     #[test_case("3.0.0-beta.stuff+build1", "user_id == 3.0.0-beta.stuff+build1", true)]
+    #[test_case("3.0.0-beta.stuff+build1", "user_id == 3.0.0-beta.stuff+build2", true)]
+    #[test_case("3.0.0-beta.stuff+build2", "user_id > 3.0.0-beta.stuff+build1", false)]
     #[test_case("3.0.1", "user_id >= 3.0.1", true)]
     #[test_case("3.0.2", "user_id >= 3.0.1", true)]
     fn test_semver_gt(user_id: &str, rule: &str, expected: bool) {
