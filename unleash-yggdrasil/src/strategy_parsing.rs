@@ -369,12 +369,14 @@ fn semver_constraint(node: Pairs<Rule>) -> CompileResult<RuleFragment> {
                     return false;
                 };
 
+                let ord = context_value.cmp_precedence(&semver);
+
                 match ordinal_operation {
-                    OrdinalComparator::Lte => context_value <= semver,
-                    OrdinalComparator::Lt => context_value < semver,
-                    OrdinalComparator::Gte => context_value >= semver,
-                    OrdinalComparator::Gt => context_value > semver,
-                    OrdinalComparator::Eq => context_value == semver,
+                    OrdinalComparator::Lte => ord.is_le(),
+                    OrdinalComparator::Lt => ord.is_lt(),
+                    OrdinalComparator::Gte => ord.is_ge(),
+                    OrdinalComparator::Gt => ord.is_gt(),
+                    OrdinalComparator::Eq => ord.is_eq(),
                 }
             }
             None => false,
@@ -797,6 +799,8 @@ mod tests {
     #[test_case("3.0.0", "user_id >= 3.0.0", true)]
     #[test_case("3.0.0-beta.stuff", "user_id == 3.0.0-beta.stuff", true)]
     #[test_case("3.0.0-beta.stuff+build1", "user_id == 3.0.0-beta.stuff+build1", true)]
+    #[test_case("3.0.0-beta.stuff+build1", "user_id == 3.0.0-beta.stuff+build2", true)]
+    #[test_case("3.0.0-beta.stuff+build2", "user_id > 3.0.0-beta.stuff+build1", false)]
     #[test_case("3.0.1", "user_id >= 3.0.1", true)]
     #[test_case("3.0.2", "user_id >= 3.0.1", true)]
     fn test_semver_gt(user_id: &str, rule: &str, expected: bool) {
