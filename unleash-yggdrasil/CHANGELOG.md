@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.5](https://github.com/Unleash/yggdrasil/compare/v0.21.4...v0.21.5) - 2026-08-19
+
+### ⚙️ Miscellaneous Tasks
+- use cmp_precedence instead of plan comparison ([#353](https://github.com/Unleash/yggdrasil/issues/353)) (by @daveleek) - #353
+- deny expect and unwrap on the crate level ([#350](https://github.com/Unleash/yggdrasil/issues/350)) (by @sighphyre) - #350
+
+### Contributors
+
+* @daveleek
+* @sighphyre
+
 ## [0.21.4](https://github.com/Unleash/yggdrasil/compare/v0.21.3...v0.21.4) - 2026-07-28
 
 ### 🐛 Bug Fixes
