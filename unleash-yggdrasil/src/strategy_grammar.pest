@@ -106,6 +106,31 @@ context_value = { random | user_id | session_id | remote_address | app_name | en
 
 
 expr = { term ~ (boolean_operation ~ term)* }
-term = _{ constraint | "(" ~ expr ~ ")" }
+term = _{ constraint | invert_operation? ~ "(" ~ expr ~ ")" }
 
-strategy = _{ SOI ~ expr ~ EOI }
+if_rules = { (if_rule ~ ";")+ }
+if_rule = { keyword_if ~ expr ~ keyword_then ~ if_result }
+    if_result = { boolean | variant_split | fixed_variant }
+        
+        fixed_variant = { keyword_variant ~ string }
+
+        variant_split = {
+            keyword_variants ~ "[" ~ weighted_variant ~ ("," ~ weighted_variant)* ~ "]"
+            ~ stickiness_param? ~ group_id_param?
+        }
+            weighted_variant = { string ~ ":" ~ weight }
+            weight = @{ ASCII_DIGIT+ }
+  
+    keyword_if = _{ !if_word ~ "if" }
+        if_word = @{ "if" ~ (ASCII_ALPHANUMERIC | "_") }
+
+    keyword_then = _{ !then_word ~ "then" }
+        then_word = @{ "then" ~ (ASCII_ALPHANUMERIC | "_") }
+    
+    keyword_variant = _{ !variant_word ~ "variant" }
+        variant_word = @{ "variant" ~ (ASCII_ALPHANUMERIC | "_") }
+
+    keyword_variants = _{ !variants_word ~ "variants" }
+        variants_word = @{ "variants" ~ (ASCII_ALPHANUMERIC | "_") }
+
+strategy = _{ SOI ~ (if_rules ~ expr? | expr) ~ EOI }
