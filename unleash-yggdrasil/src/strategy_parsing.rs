@@ -686,12 +686,19 @@ pub fn compile_rule(rule: &str) -> CompileResult<RuleFragment> {
     Ok(rule)
 }
 
+#[derive(Clone)]
+pub enum ReturnValue {
+    Boolean(bool),
+    Number(f64),
+    String(String),
+}
+
 enum Statement {
     If {
         condition: RuleFragment,
         body: Vec<Statement>,
     },
-    Return(bool),
+    Return(ReturnValue),
 }
 
 pub struct FeatureEval {
@@ -699,8 +706,19 @@ pub struct FeatureEval {
 }
 
 impl FeatureEval {
-    pub fn evaluate(&self, context: &Context) -> Option<bool> {
+    pub fn evaluate(&self, context: &Context) -> Option<ReturnValue> {
         run_block(&self.statements, context)
+    }
+}
+
+fn resolve_return_value(node: Pair<Rule>) -> CompileResult<ReturnValue> {
+    match node.as_rule() {
+        Rule::boolean => Ok(ReturnValue::Boolean(node.as_str() == "true")),
+        Rule::num => Ok(ReturnValue::Number(node.as_str().parse().map_err(|e| {
+            SdkError::StrategyParseError(format!("Failed to parse number {node}: {e}"))
+        })?)),
+        Rule::string => Ok(ReturnValue::String(node.as_str().to_string())),
+        _ => unreachable!(),
     }
 }
 
@@ -728,7 +746,8 @@ fn compile_statement(node: Pair<Rule>) -> CompileResult<Statement> {
         }
         Rule::return_statement => {
             let boolean = node.into_inner().next().unwrap();
-            Ok(Statement::Return(boolean.as_str() == "true"))
+            let return_value = resolve_return_value(boolean)?;
+            Ok(Statement::Return(return_value))
         }
         _ => {
             unreachable!()
@@ -736,10 +755,10 @@ fn compile_statement(node: Pair<Rule>) -> CompileResult<Statement> {
     }
 }
 
-fn run_block(statements: &[Statement], context: &Context) -> Option<bool> {
+fn run_block(statements: &[Statement], context: &Context) -> Option<ReturnValue> {
     for statement in statements {
         match statement {
-            Statement::Return(value) => return Some(*value),
+            Statement::Return(value) => return Some(value.clone()),
 
             Statement::If { condition, body } if condition(context) => {
                 if let Some(value) = run_block(body, context) {
@@ -785,7 +804,10 @@ mod tests {
         let feature_eval = compile_feature_eval(rule).unwrap();
         let context = Context::default();
         let result = feature_eval.evaluate(&context);
-        assert_eq!(result, Some(true));
+        let Some(ReturnValue::Boolean(value)) = result else {
+            panic!("expected a Boolean return");
+        };
+        assert_eq!(value, true);
     }
 
     #[test]
@@ -799,7 +821,10 @@ mod tests {
         let feature_eval = compile_feature_eval(rule).unwrap();
         let context = context_from_user_id("7");
         let result = feature_eval.evaluate(&context);
-        assert_eq!(result, Some(true));
+        let Some(ReturnValue::Boolean(value)) = result else {
+            panic!("expected a Boolean return");
+        };
+        assert_eq!(value, true);
     }
 
     #[test]
@@ -820,7 +845,49 @@ mod tests {
         let feature_eval = compile_feature_eval(rule).unwrap();
         let context = context_from_user_id("6");
         let result = feature_eval.evaluate(&context);
-        assert_eq!(result, Some(true));
+        let Some(ReturnValue::Boolean(value)) = result else {
+            panic!("expected a Boolean return");
+        };
+        assert_eq!(value, true);
+    }
+
+    #[test]
+    fn test_return_numeric_value_from_rule() {
+        let rule = r#"
+            return 42
+        "#;
+
+        let feature_eval = compile_feature_eval(rule).unwrap();
+        let context = Context::default();
+        let result = feature_eval.evaluate(&context);
+        let Some(ReturnValue::Number(value)) = result else {
+            panic!("expected a Numeric return");
+        };
+        assert_eq!(value, 42.0);
+    }
+
+    #[test]
+    fn test_return_goopy_string_value_from_complex_rule() {
+        // this test models a real example from our client spec suite - a strategy that's always on with a single constraint
+        // that checks if the environment is production and if so resolves a variant
+        let rule = r#"
+            if true and environment in ["production"] {
+              return "{\"name\":\"parent.variant\",\"weight\":1,\"payload\":{\"type\":\"string\",\"value\":\"variantValue\"}}"
+            }
+        "#;
+
+        let feature_eval = compile_feature_eval(rule).unwrap();
+        let mut context = Context::default();
+        context.environment = Some("production".into());
+        let result = feature_eval.evaluate(&context);
+        let Some(ReturnValue::String(value)) = result else {
+            panic!("expected a String return");
+        };
+        // okay yes the escaping is now a fever dream wrapped in a string literal
+        // but the idea works I think and shouldn't be a disaster to fix
+        // this can be parsed to a variant def now. Probably wants to be in the grammar itself as a lookup
+        // but that smells like a tomorrow problem
+        assert_eq!(value, "\"{\\\"name\\\":\\\"parent.variant\\\",\\\"weight\\\":1,\\\"payload\\\":{\\\"type\\\":\\\"string\\\",\\\"value\\\":\\\"variantValue\\\"}}\"");
     }
 
     fn context_from_user_id(user_id: &str) -> Context<'_> {
