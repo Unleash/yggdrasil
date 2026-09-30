@@ -28,6 +28,7 @@ use std::env;
 
 #[derive(Parser)]
 #[grammar = "strategy_grammar.pest"]
+#[grammar = "decisions.pest"]
 struct Strategy;
 
 lazy_static! {
@@ -685,6 +686,86 @@ pub fn compile_rule(rule: &str) -> CompileResult<RuleFragment> {
     Ok(rule)
 }
 
+enum Statement {
+    If {
+        condition: RuleFragment,
+        body: Vec<Statement>,
+    },
+    Return(bool),
+}
+
+pub struct FeatureEval {
+    statements: Vec<Statement>,
+}
+
+impl FeatureEval {
+    pub fn evaluate(&self, context: &Context) -> Option<bool> {
+        run_block(&self.statements, context)
+    }
+}
+
+fn compile_statements(nodes: Pairs<Rule>) -> CompileResult<Vec<Statement>> {
+    // Pest includes EOI which isn't really a statement we care about
+    // might be a better way to handle this but I can't think of one
+    // off the top of my head
+    nodes
+        .filter(|node| node.as_rule() != Rule::EOI)
+        .map(compile_statement)
+        .collect()
+}
+
+fn compile_statement(node: Pair<Rule>) -> CompileResult<Statement> {
+    match node.as_rule() {
+        Rule::if_statement => {
+            let mut children = node.into_inner();
+            let expr = children.next().unwrap();
+            let block = children.next().unwrap();
+
+            Ok(Statement::If {
+                condition: eval(expr.into_inner())?,
+                body: compile_statements(block.into_inner())?,
+            })
+        }
+        Rule::return_statement => {
+            let boolean = node.into_inner().next().unwrap();
+            Ok(Statement::Return(boolean.as_str() == "true"))
+        }
+        _ => {
+            unreachable!()
+        }
+    }
+}
+
+fn run_block(statements: &[Statement], context: &Context) -> Option<bool> {
+    for statement in statements {
+        match statement {
+            Statement::Return(value) => return Some(*value),
+
+            Statement::If { condition, body } if condition(context) => {
+                if let Some(value) = run_block(body, context) {
+                    return Some(value);
+                }
+            }
+
+            Statement::If { .. } => {}
+        }
+    }
+
+    None
+}
+
+pub fn compile_feature_eval(source: &str) -> CompileResult<FeatureEval> {
+    let nodes = Strategy::parse(Rule::feature_eval, source).map_err(|e| {
+        SdkError::StrategyParseError(format!("Failed to parse feature evaluation {source}: {e}"))
+    })?;
+
+    let [feature_eval] = drain(nodes)?;
+
+    Ok(FeatureEval {
+        statements: compile_statements(feature_eval.into_inner())?,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use crate::state::{ExternalResultsRef, PropertiesRef};
@@ -692,6 +773,55 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
     use test_case::test_case;
+
+    #[test]
+    fn test_basic_if_statement() {
+        let rule = r#"
+            if true {
+                return true
+            }
+        "#;
+
+        let feature_eval = compile_feature_eval(rule).unwrap();
+        let context = Context::default();
+        let result = feature_eval.evaluate(&context);
+        assert_eq!(result, Some(true));
+    }
+
+    #[test]
+    fn test_composite_if_statement() {
+        let rule = r#"
+            if (user_id == 7 or session_id == 10) or app_name starts_with_any_ignore_case ["my_app"] {
+                return true
+            }
+        "#;
+
+        let feature_eval = compile_feature_eval(rule).unwrap();
+        let context = context_from_user_id("7");
+        let result = feature_eval.evaluate(&context);
+        assert_eq!(result, Some(true));
+    }
+
+    #[test]
+    fn test_nested_if_statement() {
+        let rule = r#"
+            if user_id in [6, 7] {
+                if user_id == 7 {
+                    return true
+                }
+
+                if user_id == 6 {
+                    return true
+                }
+                return false
+            }
+        "#;
+
+        let feature_eval = compile_feature_eval(rule).unwrap();
+        let context = context_from_user_id("6");
+        let result = feature_eval.evaluate(&context);
+        assert_eq!(result, Some(true));
+    }
 
     fn context_from_user_id(user_id: &str) -> Context<'_> {
         Context {
