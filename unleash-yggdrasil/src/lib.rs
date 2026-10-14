@@ -289,7 +289,7 @@ impl EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: AtomicI64::new(started.timestamp()),
+            toggle_metrics_start: AtomicI64::new(started.timestamp_millis()),
             previous_state: Default::default(),
             started,
             impact_metrics: Default::default(),
@@ -303,7 +303,7 @@ impl Default for EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: AtomicI64::new(Utc::now().timestamp()),
+            toggle_metrics_start: AtomicI64::new(Utc::now().timestamp_millis()),
             previous_state: Default::default(),
             started: Utc::now(),
             impact_metrics: Default::default(),
@@ -1216,20 +1216,22 @@ mod test {
 
     #[test]
     pub fn getting_metrics_restarts_time() {
+        let initial_start = Utc::now();
         let compiled_state = AHashMap::new();
         let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
-            ..Default::default()
+            ..EngineState::initial_state(initial_start)
         };
 
         state.count_toggle("some-test-toggle", true);
 
-        let metrics = state.get_metrics(Utc::now()).unwrap();
+        let first_close = initial_start + chrono::Duration::milliseconds(1);
+        let second_close = first_close + chrono::Duration::milliseconds(1);
+        let metrics = state.get_metrics(first_close).unwrap();
         let start = metrics.start;
-        std::thread::sleep(std::time::Duration::from_millis(1));
 
         state.count_toggle("some-test-toggle", true);
-        let metrics = state.get_metrics(Utc::now()).unwrap();
+        let metrics = state.get_metrics(second_close).unwrap();
         let new_start = metrics.start;
 
         assert!(new_start > start);
