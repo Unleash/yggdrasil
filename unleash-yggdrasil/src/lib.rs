@@ -327,7 +327,7 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    pub fn apply_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
+    pub fn apply_delta(&self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
         let mut new_state: ClientFeatures = self.previous_state.load().as_ref().clone();
         new_state.apply_delta(delta);
         self.apply_client_features(new_state)
@@ -816,7 +816,7 @@ impl EngineState {
         variant.to_enriched_response(enabled)
     }
 
-    pub fn take_state(&mut self, message: UpdateMessage) -> Option<Vec<EvalWarning>> {
+    pub fn take_state(&self, message: UpdateMessage) -> Option<Vec<EvalWarning>> {
         match message {
             UpdateMessage::PartialUpdate(delta) => self.apply_delta(&delta),
             UpdateMessage::FullResponse(state) => self.apply_client_features(state),
@@ -833,10 +833,11 @@ impl EngineState {
         }
     }
 
-    pub fn apply_client_features(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
+    pub fn apply_client_features(&self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
-        self.previous_state = ArcSwap::from(Arc::new(toggles));
-        self.compiled_state = ArcSwapOption::from(Some(Arc::new(compiled_state)));
+        // self.previous_state = ArcSwap::from(Arc::new(toggles));
+        self.previous_state.store(Arc::new(toggles));
+        self.compiled_state.store(Some(Arc::new(compiled_state)));
         if !warnings.is_empty() {
             Some(warnings)
         } else {
@@ -1013,7 +1014,7 @@ mod test {
     #[test]
     fn can_load_single() {
         let delta = load_delta("delta_base.json");
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         engine.apply_delta(&delta);
         let snapshot = engine.compiled_state.load();
         let state = snapshot.as_ref().unwrap();
@@ -1025,7 +1026,7 @@ mod test {
     fn can_update_existing_state() {
         let delta = load_delta("delta_base.json");
         let patch = load_delta("delta_patch.json");
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             user_id: Some("4".into()),
             ..Context::default()
@@ -1072,7 +1073,7 @@ mod test {
 
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         engine.take_state(spec.state);
 
         if let Some(mut tests) = spec.tests {
@@ -1638,7 +1639,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
             ..Context::default()
@@ -1715,7 +1716,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
             ..Context::default()
@@ -1789,7 +1790,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
             ..Context::default()
@@ -1932,7 +1933,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             ..Context::default()
         };
@@ -1983,7 +1984,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
 
         let warnings = engine.take_state(feature_set);
 
@@ -2011,7 +2012,7 @@ mod test {
     fn get_state_returns_previous_state_when_loaded() {
         use unleash_types::client_features::{ClientFeature, ClientFeatures, Strategy};
 
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let client_features = ClientFeatures {
             features: vec![ClientFeature {
                 name: "test-feature".into(),
