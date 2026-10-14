@@ -504,8 +504,7 @@ impl EngineState {
             // reasonably sure this is infallible but expect/unwrap are denied
             // in this crate so we're silent failing here. "Now" is a reasonable
             // assumption here that should result in harmless behavior
-            let start =
-                DateTime::<Utc>::from_timestamp_millis(start_ms).unwrap_or_else(Utc::now);
+            let start = DateTime::<Utc>::from_timestamp_millis(start_ms).unwrap_or_else(Utc::now);
 
             Some(MetricBucket {
                 toggles: metrics,
