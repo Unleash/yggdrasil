@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::atomic::AtomicU32;
+use std::sync::Arc;
 
 #[macro_use]
 extern crate lazy_static;
@@ -16,6 +17,7 @@ pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
 use ahash::AHashMap;
+use arc_swap::ArcSwap;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use impact_metrics::{
@@ -38,6 +40,10 @@ use unleash_types::client_metrics::{MetricBucket, ToggleStats};
 use crate::state::SdkError;
 
 pub type CompiledState = AHashMap<String, CompiledToggle>;
+
+fn get_toggle<'a>(state: &'a CompiledState, name: &str) -> Option<&'a CompiledToggle> {
+    state.get(name)
+}
 
 pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
@@ -270,8 +276,8 @@ struct Metric {
 }
 
 pub struct EngineState {
-    compiled_state: Option<CompiledState>,
-    previous_state: ClientFeatures,
+    compiled_state: Option<ArcSwap<CompiledState>>,
+    previous_state: ArcSwap<ClientFeatures>,
     toggle_metrics: DashMap<String, Metric>,
     toggle_metrics_start: DateTime<Utc>,
     pub started: DateTime<Utc>,
@@ -322,15 +328,9 @@ pub struct ResolvedToggle {
 
 impl EngineState {
     pub fn apply_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
-        let mut new_state = self.previous_state.clone();
+        let mut new_state: ClientFeatures = self.previous_state.load().as_ref().clone();
         new_state.apply_delta(delta);
         self.apply_client_features(new_state)
-    }
-
-    fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
-        self.compiled_state
-            .as_ref()
-            .and_then(|state| state.get(name))
     }
 
     pub fn count_toggle(&self, name: &str, enabled: bool) {
@@ -514,9 +514,13 @@ impl EngineState {
         toggle: &CompiledToggle,
         enriched_context: &EnrichedContext,
     ) -> bool {
+        let Some(state) = self.compiled_state.as_ref().map(|state| state.load()) else {
+            return false;
+        };
+
         toggle.dependencies.iter().all(|parent_dependency| {
             let context = enriched_context.with_toggle_name(toggle.name.as_str());
-            let Some(compiled_parent) = self.get_toggle(&parent_dependency.feature) else {
+            let Some(compiled_parent) = get_toggle(&state, &parent_dependency.feature) else {
                 return false;
             };
 
@@ -559,6 +563,7 @@ impl EngineState {
     ) -> Option<HashMap<String, ResolvedToggle>> {
         self.compiled_state.as_ref().map(|state| {
             state
+                .load()
                 .iter()
                 .map(|(name, toggle)| {
                     let enriched_context =
@@ -586,15 +591,18 @@ impl EngineState {
         external_values: &Option<HashMap<String, bool>>,
     ) -> Option<ResolvedToggle> {
         self.compiled_state.as_ref().and_then(|state| {
-            state.get(name).map(|compiled_toggle| ResolvedToggle {
-                enabled: self.enabled(
-                    compiled_toggle,
-                    &EnrichedContext::from(context, name, external_values.as_ref()),
-                ),
-                impression_data: compiled_toggle.impression_data,
-                variant: self.get_variant(name, context, external_values),
-                project: compiled_toggle.project.clone(),
-            })
+            state
+                .load()
+                .get(name)
+                .map(|compiled_toggle| ResolvedToggle {
+                    enabled: self.enabled(
+                        compiled_toggle,
+                        &EnrichedContext::from(context, name, external_values.as_ref()),
+                    ),
+                    impression_data: compiled_toggle.impression_data,
+                    variant: self.get_variant(name, context, external_values),
+                    project: compiled_toggle.project.clone(),
+                })
         })
     }
 
@@ -603,6 +611,7 @@ impl EngineState {
             .as_ref()
             .map(|state| {
                 state
+                    .load()
                     .iter()
                     .map(|pair| {
                         let toggle = pair.1;
@@ -623,6 +632,7 @@ impl EngineState {
             .as_ref()
             .and_then(|state| {
                 state
+                    .load()
                     .get(name)
                     .map(|compiled_toggle| compiled_toggle.impression_data)
             })
@@ -630,8 +640,9 @@ impl EngineState {
     }
 
     pub fn check_enabled(&self, context: &EnrichedContext) -> Option<bool> {
-        self.get_toggle(context.toggle_name)
-            .map(|toggle| self.enabled(toggle, context))
+        let state = self.compiled_state.as_ref()?.load();
+        let toggle = get_toggle(&state, context.toggle_name)?;
+        Some(self.enabled(toggle, context))
     }
 
     pub fn is_enabled(
@@ -640,14 +651,15 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> bool {
+        let Some(state) = self.compiled_state.as_ref().map(|state| state.load()) else {
+            return false;
+        };
+
         let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
-        let is_enabled = self
-            .get_toggle(name)
+        get_toggle(&state, name)
             .map(|toggle| self.enabled(toggle, &enriched_context))
-            .unwrap_or_default();
-
-        is_enabled
+            .unwrap_or_default()
     }
 
     fn resolve_variant<'a>(
@@ -761,7 +773,9 @@ impl EngineState {
     }
 
     pub fn check_variant(&self, context: &EnrichedContext) -> Option<VariantDef> {
-        self.get_toggle(context.toggle_name).map(|toggle| {
+        let state = self.compiled_state.as_ref()?.load();
+
+        get_toggle(&state, context.toggle_name).map(|toggle| {
             let (enabled, strategy_variants) = self.variant_enabled(toggle, context);
             if enabled {
                 self.choose_variant(toggle, context, strategy_variants)
@@ -778,7 +792,12 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> ExtendedVariantDef {
-        let toggle = self.get_toggle(name);
+        let Some(state) = self.compiled_state.as_ref().map(|state| state.load()) else {
+            return VariantDef::default().to_enriched_response(false);
+        };
+
+        let toggle = get_toggle(&state, name);
+
         let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
         let (enabled, strategy_variants) = toggle
@@ -803,9 +822,10 @@ impl EngineState {
         }
     }
 
+    #[cfg(test)]
     pub fn get_state(&self) -> ClientFeatures {
         if self.compiled_state.is_some() {
-            self.previous_state.clone()
+            self.previous_state.load().as_ref().clone()
         } else {
             ClientFeatures::default()
         }
@@ -813,8 +833,8 @@ impl EngineState {
 
     pub fn apply_client_features(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
-        self.previous_state = toggles;
-        self.compiled_state = Some(compiled_state);
+        self.previous_state = ArcSwap::from(Arc::new(toggles));
+        self.compiled_state = Some(ArcSwap::from(Arc::new(compiled_state)));
         if !warnings.is_empty() {
             Some(warnings)
         } else {
@@ -918,6 +938,7 @@ impl Default for VariantDef {
 #[cfg(test)]
 mod test {
     use ahash::AHashMap;
+    use arc_swap::ArcSwap;
     use chrono::Utc;
     use serde::Deserialize;
     use std::{
@@ -934,7 +955,7 @@ mod test {
     };
 
     use crate::{
-        check_for_variant_override, get_seed, state::EnrichedContext, CompiledToggle,
+        check_for_variant_override, get_seed, get_toggle, state::EnrichedContext, CompiledToggle,
         CompiledVariant, Context, EngineState, UpdateMessage, VariantDef,
     };
 
@@ -992,7 +1013,9 @@ mod test {
         let delta = load_delta("delta_base.json");
         let mut engine = EngineState::default();
         engine.apply_delta(&delta);
-        assert!(engine.get_toggle("test-flag").is_some())
+        let state = engine.compiled_state.as_ref().unwrap().load();
+
+        assert!(get_toggle(&state, "test-flag").is_some())
     }
 
     #[test]
@@ -1006,12 +1029,16 @@ mod test {
         };
 
         engine.apply_delta(&delta);
+        let state = engine.compiled_state.as_ref().unwrap().load();
+
         assert!(!engine.is_enabled("test-flag", &context, &None));
-        assert!(engine.get_toggle("removed-flag").is_some());
+        assert!(get_toggle(&state, "removed-flag").is_some());
         assert!(!engine.is_enabled("segment-flag", &context, &None));
         engine.apply_delta(&patch);
+
+        let state = engine.compiled_state.as_ref().unwrap().load();
         assert!(engine.is_enabled("test-flag", &context, &None));
-        assert!(engine.get_toggle("removed-flag").is_none());
+        assert!(get_toggle(&state, "removed-flag").is_none());
         assert!(engine.is_enabled("segment-flag", &context, &None));
     }
 
@@ -1094,7 +1121,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
         let context = Context::default();
@@ -1116,7 +1143,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
         let context = Context::default();
@@ -1141,7 +1168,7 @@ mod test {
         );
 
         let mut state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1163,7 +1190,7 @@ mod test {
         );
 
         let mut state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1180,7 +1207,7 @@ mod test {
     pub fn getting_metrics_restarts_time() {
         let compiled_state = AHashMap::new();
         let mut state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1222,7 +1249,7 @@ mod test {
         );
 
         let mut state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1301,7 +1328,7 @@ mod test {
         );
 
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1351,7 +1378,7 @@ mod test {
         );
 
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1465,7 +1492,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
         let variant = state.get_variant("some-toggle", &Context::default(), &None);
@@ -1512,7 +1539,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1548,7 +1575,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
         let variant = state.get_variant("some-toggle", &Context::default(), &None);
@@ -1809,7 +1836,7 @@ mod test {
         );
 
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -2037,7 +2064,7 @@ mod test {
         );
 
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: Some(ArcSwap::from(Arc::new(compiled_state))),
             ..Default::default()
         };
 
