@@ -521,7 +521,7 @@ impl EngineState {
 
         toggle.dependencies.iter().all(|parent_dependency| {
             let context = enriched_context.with_toggle_name(toggle.name.as_str());
-            let Some(compiled_parent) = get_toggle(&state, &parent_dependency.feature) else {
+            let Some(compiled_parent) = get_toggle(state, &parent_dependency.feature) else {
                 return false;
             };
 
@@ -639,7 +639,7 @@ impl EngineState {
     pub fn check_enabled(&self, context: &EnrichedContext) -> Option<bool> {
         let snapshot = self.compiled_state.load();
         let state = snapshot.as_ref()?;
-        let toggle = get_toggle(&state, context.toggle_name)?;
+        let toggle = get_toggle(state, context.toggle_name)?;
         Some(self.enabled(toggle, context))
     }
 
@@ -656,7 +656,7 @@ impl EngineState {
 
         let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
-        get_toggle(&state, name)
+        get_toggle(state, name)
             .map(|toggle| self.enabled(toggle, &enriched_context))
             .unwrap_or_default()
     }
@@ -775,7 +775,7 @@ impl EngineState {
         let snapshot = self.compiled_state.load();
         let state = snapshot.as_ref()?;
 
-        get_toggle(&state, context.toggle_name).map(|toggle| {
+        get_toggle(state, context.toggle_name).map(|toggle| {
             let (enabled, strategy_variants) = self.variant_enabled(toggle, context);
             if enabled {
                 self.choose_variant(toggle, context, strategy_variants)
@@ -797,7 +797,7 @@ impl EngineState {
             return VariantDef::default().to_enriched_response(false);
         };
 
-        let toggle = get_toggle(&state, name);
+        let toggle = get_toggle(state, name);
 
         let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
