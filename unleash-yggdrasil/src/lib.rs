@@ -834,7 +834,6 @@ impl EngineState {
 
     pub fn apply_client_features(&self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
-        // self.previous_state = ArcSwap::from(Arc::new(toggles));
         self.previous_state.store(Arc::new(toggles));
         self.compiled_state.store(Some(Arc::new(compiled_state)));
         if !warnings.is_empty() {
