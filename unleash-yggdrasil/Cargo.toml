@@ -12,6 +12,7 @@ default = ["wall-clock"]
 wall-clock = ["chrono/clock", "chrono/wasmbind"]
 
 [dependencies]
+arc-swap = "1.9.2"
 serde_json = "1.0.145"
 murmur3 = "0.5.2"
 ipnet = "2.11.0"
