@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicI64, AtomicU32};
 use std::sync::Arc;
 
 #[macro_use]
@@ -279,7 +279,7 @@ pub struct EngineState {
     compiled_state: ArcSwapOption<CompiledState>,
     previous_state: ArcSwap<ClientFeatures>,
     toggle_metrics: DashMap<String, Metric>,
-    toggle_metrics_start: DateTime<Utc>,
+    toggle_metrics_start: AtomicI64,
     pub started: DateTime<Utc>,
     impact_metrics: impact_metrics::InMemoryMetricRegistry,
 }
@@ -289,7 +289,7 @@ impl EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: started,
+            toggle_metrics_start: AtomicI64::new(started.timestamp()),
             previous_state: Default::default(),
             started,
             impact_metrics: Default::default(),
@@ -303,7 +303,7 @@ impl Default for EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: Utc::now(),
+            toggle_metrics_start: AtomicI64::new(Utc::now().timestamp()),
             previous_state: Default::default(),
             started: Utc::now(),
             impact_metrics: Default::default(),
@@ -461,7 +461,7 @@ impl EngineState {
         self.impact_metrics.restore(metrics);
     }
 
-    pub fn get_metrics(&mut self, close_time: DateTime<Utc>) -> Option<MetricBucket> {
+    pub fn get_metrics(&self, close_time: DateTime<Utc>) -> Option<MetricBucket> {
         let metrics: HashMap<String, ToggleStats> = self
             .toggle_metrics
             .iter()
@@ -497,8 +497,16 @@ impl EngineState {
             .collect();
 
         if !metrics.is_empty() {
-            let start = self.toggle_metrics_start;
-            self.toggle_metrics_start = close_time;
+            let start_ms = self
+                .toggle_metrics_start
+                .swap(close_time.timestamp_millis(), Ordering::Relaxed);
+
+            // reasonably sure this is infallible but expect/unwrap are denied
+            // in this crate so we're silent failing here. "Now" is a reasonable
+            // assumption here that should result in harmless behavior
+            let start =
+                DateTime::<Utc>::from_timestamp_millis(start_ms).unwrap_or_else(Utc::now);
+
             Some(MetricBucket {
                 toggles: metrics,
                 start,
@@ -1171,7 +1179,7 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
@@ -1193,7 +1201,7 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
@@ -1210,7 +1218,7 @@ mod test {
     #[test]
     pub fn getting_metrics_restarts_time() {
         let compiled_state = AHashMap::new();
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
@@ -1252,7 +1260,7 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
