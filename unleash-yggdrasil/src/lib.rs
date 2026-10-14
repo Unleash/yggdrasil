@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicI64, AtomicU32};
 use std::sync::Arc;
 
 #[macro_use]
@@ -279,7 +279,7 @@ pub struct EngineState {
     compiled_state: ArcSwapOption<CompiledState>,
     previous_state: ArcSwap<ClientFeatures>,
     toggle_metrics: DashMap<String, Metric>,
-    toggle_metrics_start: DateTime<Utc>,
+    toggle_metrics_start: AtomicI64,
     pub started: DateTime<Utc>,
     impact_metrics: impact_metrics::InMemoryMetricRegistry,
 }
@@ -289,7 +289,7 @@ impl EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: started,
+            toggle_metrics_start: AtomicI64::new(started.timestamp_millis()),
             previous_state: Default::default(),
             started,
             impact_metrics: Default::default(),
@@ -303,7 +303,7 @@ impl Default for EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: Utc::now(),
+            toggle_metrics_start: AtomicI64::new(Utc::now().timestamp_millis()),
             previous_state: Default::default(),
             started: Utc::now(),
             impact_metrics: Default::default(),
@@ -461,7 +461,7 @@ impl EngineState {
         self.impact_metrics.restore(metrics);
     }
 
-    pub fn get_metrics(&mut self, close_time: DateTime<Utc>) -> Option<MetricBucket> {
+    pub fn get_metrics(&self, close_time: DateTime<Utc>) -> Option<MetricBucket> {
         let metrics: HashMap<String, ToggleStats> = self
             .toggle_metrics
             .iter()
@@ -497,8 +497,15 @@ impl EngineState {
             .collect();
 
         if !metrics.is_empty() {
-            let start = self.toggle_metrics_start;
-            self.toggle_metrics_start = close_time;
+            let start_ms = self
+                .toggle_metrics_start
+                .swap(close_time.timestamp_millis(), Ordering::Relaxed);
+
+            // reasonably sure this is infallible but expect/unwrap are denied
+            // in this crate so we're silent failing here. "Now" is a reasonable
+            // assumption here that should result in harmless behavior
+            let start = DateTime::<Utc>::from_timestamp_millis(start_ms).unwrap_or_else(Utc::now);
+
             Some(MetricBucket {
                 toggles: metrics,
                 start,
@@ -1171,7 +1178,7 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
@@ -1193,7 +1200,7 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
@@ -1209,20 +1216,22 @@ mod test {
 
     #[test]
     pub fn getting_metrics_restarts_time() {
+        let initial_start = Utc::now();
         let compiled_state = AHashMap::new();
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
-            ..Default::default()
+            ..EngineState::initial_state(initial_start)
         };
 
         state.count_toggle("some-test-toggle", true);
 
-        let metrics = state.get_metrics(Utc::now()).unwrap();
+        let first_close = initial_start + chrono::Duration::milliseconds(1);
+        let second_close = first_close + chrono::Duration::milliseconds(1);
+        let metrics = state.get_metrics(first_close).unwrap();
         let start = metrics.start;
-        std::thread::sleep(std::time::Duration::from_millis(1));
 
         state.count_toggle("some-test-toggle", true);
-        let metrics = state.get_metrics(Utc::now()).unwrap();
+        let metrics = state.get_metrics(second_close).unwrap();
         let new_start = metrics.start;
 
         assert!(new_start > start);
@@ -1252,7 +1261,7 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
+        let state = EngineState {
             compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
