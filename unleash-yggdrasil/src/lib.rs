@@ -823,7 +823,6 @@ impl EngineState {
         }
     }
 
-    #[cfg(test)]
     pub fn get_state(&self) -> ClientFeatures {
         let snapshot = self.compiled_state.load();
         if snapshot.is_some() {
