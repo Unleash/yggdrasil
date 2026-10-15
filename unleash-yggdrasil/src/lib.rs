@@ -2086,7 +2086,7 @@ mod test {
             assert_eq!(variant.name, "full-weight-variant".to_string());
         }
     }
-    
+
     #[test]
     fn engine_is_send_and_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
