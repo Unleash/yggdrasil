@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.6](https://github.com/Unleash/yggdrasil/compare/v0.21.5...v0.21.6) - 2026-10-15
+
+### 🚜 Refactor
+- move metrics to interior mutability ([#358](https://github.com/Unleash/yggdrasil/issues/358)) (by @sighphyre) - #358
+- move feature state to interior mutability ([#357](https://github.com/Unleash/yggdrasil/issues/357)) (by @sighphyre) - #357
+
+### ⚙️ Miscellaneous Tasks
+- format (by @sighphyre)
+- force send+sync for the engine state ([#360](https://github.com/Unleash/yggdrasil/issues/360)) (by @sighphyre) - #360
+
+### Contributors
+
+* @sighphyre
+
 ## [0.21.5](https://github.com/Unleash/yggdrasil/compare/v0.21.4...v0.21.5) - 2026-08-19
 
 ### ⚙️ Miscellaneous Tasks
