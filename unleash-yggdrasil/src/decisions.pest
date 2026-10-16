@@ -1,0 +1,7 @@
+return_statement = { "return" ~ boolean }
+if_statement = { "if" ~ expr ~ block }
+
+statement = _{ if_statement | return_statement }
+block = { "{" ~ statement* ~ "}" }
+
+feature_eval = { SOI ~ statement* ~ EOI }
