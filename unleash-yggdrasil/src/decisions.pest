@@ -1,4 +1,6 @@
-return_statement = { "return" ~ boolean }
+return_value = _{ boolean | num | string }
+return_statement = { "return" ~ return_value }
+
 if_statement = { "if" ~ expr ~ block }
 
 statement = _{ if_statement | return_statement }
