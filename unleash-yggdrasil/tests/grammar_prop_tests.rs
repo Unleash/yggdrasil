@@ -1,3 +1,5 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 use proptest::prelude::*;
 use unleash_yggdrasil::strategy_parsing::compile_rule;
 

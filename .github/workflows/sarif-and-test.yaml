@@ -17,6 +17,28 @@ on:
     - cron: '45 17 * * 2'
 
 jobs:
+  wasm-hostname:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Rust and Wasm target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Wasm test runner
+        run: cargo install wasm-pack --locked
+      - name: Test hostname in Node
+        working-directory: unleash-yggdrasil
+        env:
+          # Use Node's randomness instead of the embedding application's custom backend.
+          RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
+        run: wasm-pack test --node --features hostname --test wasm_hostname
+
   rust-clippy:
     runs-on: ubuntu-latest
     permissions:
