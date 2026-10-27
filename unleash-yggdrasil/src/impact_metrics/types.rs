@@ -1,8 +1,19 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[cfg(feature = "wasm-types")]
+use tsify::Tsify;
+
 pub type MetricLabels = HashMap<String, String>;
 
+// tsify::declare does not support hashmap_as_object on type aliases.
+// so a small little work around for that. For a single type I think its
+// probably fine. If this starts to grow then it needs a rethink
+#[cfg(feature = "wasm-types")]
+#[wasm_bindgen::prelude::wasm_bindgen(typescript_custom_section)]
+const METRIC_LABELS_TYPESCRIPT: &str = "export type MetricLabels = Record<string, string>;";
+
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum MetricType {
@@ -11,6 +22,7 @@ pub enum MetricType {
     Histogram,
 }
 
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MetricOptions {
     pub name: String,
@@ -47,6 +59,8 @@ impl BucketMetricOptions {
     }
 }
 
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
+#[cfg_attr(feature = "wasm-types", tsify(hashmap_as_object))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CounterMetricSample {
     pub labels: MetricLabels,
@@ -66,6 +80,8 @@ impl CounterMetricSample {
     }
 }
 
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
+#[cfg_attr(feature = "wasm-types", tsify(hashmap_as_object))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GaugeMetricSample {
     pub labels: MetricLabels,
@@ -78,6 +94,7 @@ impl GaugeMetricSample {
     }
 }
 
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HistogramBucket {
     #[serde(serialize_with = "serialize_le", deserialize_with = "deserialize_le")]
@@ -117,6 +134,8 @@ where
     }
 }
 
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
+#[cfg_attr(feature = "wasm-types", tsify(hashmap_as_object))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BucketMetricSample {
     pub labels: MetricLabels,
@@ -140,6 +159,8 @@ impl BucketMetricSample {
     }
 }
 
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
+#[cfg_attr(feature = "wasm-types", tsify(hashmap_as_object))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum MetricSample {
@@ -148,6 +169,8 @@ pub enum MetricSample {
     Bucket(BucketMetricSample),
 }
 
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
+#[cfg_attr(feature = "wasm-types", tsify(hashmap_as_object))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CollectedMetric {
     pub name: String,
