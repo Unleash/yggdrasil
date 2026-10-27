@@ -516,6 +516,21 @@ impl EngineState {
         }
     }
 
+    pub fn restore_metrics(&self, metrics: MetricBucket) {
+        for (toggle_name, toggle_stats) in metrics.toggles {
+            if let Some(toggle_metric) = self.toggle_metrics.get(&toggle_name) {
+                toggle_metric.yes.fetch_add(toggle_stats.yes, Ordering::Relaxed);
+                toggle_metric.no.fetch_add(toggle_stats.no, Ordering::Relaxed);
+
+                for (variant_name, variant_count) in toggle_stats.variants {
+                    if let Some(variant_metric) = toggle_metric.variants.get(&variant_name) {
+                        variant_metric.fetch_add(variant_count, Ordering::Relaxed);
+                    }
+                }
+            }
+        }
+    }
+
     fn is_parent_dependency_satisfied(
         &self,
         toggle: &CompiledToggle,
