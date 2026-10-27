@@ -1230,6 +1230,30 @@ mod test {
     }
 
     #[test]
+    fn restore_metrics_adds_collected_counts_to_new_metrics() {
+        let state = EngineState::default();
+        state.count_toggle("some-toggle", true);
+        state.count_toggle("some-toggle", false);
+        state.count_variant("some-toggle", "some-variant");
+
+        let collected = state.get_metrics(Utc::now()).unwrap();
+        assert!(state.get_metrics(Utc::now()).is_none());
+
+        state.count_toggle("some-toggle", true);
+        state.count_variant("some-toggle", "some-variant");
+        state.count_variant("some-toggle", "new-variant");
+        state.restore_metrics(collected);
+
+        let restored = state.get_metrics(Utc::now()).unwrap();
+        let stats = &restored.toggles["some-toggle"];
+        assert_eq!(stats.yes, 2);
+        assert_eq!(stats.no, 1);
+        assert_eq!(stats.variants["some-variant"], 2);
+        assert_eq!(stats.variants["new-variant"], 1);
+        assert!(state.get_metrics(Utc::now()).is_none());
+    }
+
+    #[test]
     pub fn getting_metrics_restarts_time() {
         let initial_start = Utc::now();
         let compiled_state = AHashMap::new();
