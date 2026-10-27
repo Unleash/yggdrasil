@@ -10,7 +10,5 @@ extern "C" {
 pub fn get() -> io::Result<OsString> {
     node_hostname()
         .map(OsString::from)
-        .map_err(|err| {
-            io::Error::other(format!("Failed to get hostname: {err:?}"))
-        })
+        .map_err(|err| io::Error::other(format!("Failed to get hostname: {err:?}")))
 }
