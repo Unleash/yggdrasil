@@ -45,6 +45,9 @@ fn get_toggle<'a>(state: &'a CompiledState, name: &str) -> Option<&'a CompiledTo
     state.get(name)
 }
 
+#[cfg(all(feature = "hostname", target_arch = "wasm32"))]
+mod wasm_hostname;
+
 pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
 pub const CORE_VERSION: &str = env!("CARGO_PKG_VERSION");

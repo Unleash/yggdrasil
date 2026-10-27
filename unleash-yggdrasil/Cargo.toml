@@ -10,6 +10,10 @@ license = "MIT"
 [features]
 default = ["wall-clock"]
 wall-clock = ["chrono/clock", "chrono/wasmbind"]
+hostname = ["dep:hostname", "dep:wasm-bindgen"]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+hostname = { version = "0.4.1", optional = true }
 
 [dependencies]
 arc-swap = "1.9.2"
@@ -25,11 +29,11 @@ convert_case = "0.11.0"
 unleash-types = {version = "0.16.1", default-features = false}
 chrono = { version = "0.4.42", default-features = false, features = ["serde", "std"] }
 dashmap = "6.1.0"
-hostname = { version = "0.4.1", optional = true }
 ipnetwork = "0.21.0"
 ahash = "0.8.12"
 hashbrown = "0.17.1"
 regex = "1.12.3"
+wasm-bindgen = { version = "0.2", optional = true }
 
 [dependencies.serde]
 features = ["derive"]
