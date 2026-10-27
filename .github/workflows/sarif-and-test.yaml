@@ -35,7 +35,8 @@ jobs:
       - name: Test hostname in Node
         working-directory: unleash-yggdrasil
         env:
-          # Use Node's randomness instead of the embedding application's custom backend.
+          # Gotta do something here for a random backend, even though we don't care
+          # get_random is a good enough fill for a test
           RUSTFLAGS: '--cfg getrandom_backend="wasm_js"'
         run: wasm-pack test --node --features hostname --test wasm_hostname
 
