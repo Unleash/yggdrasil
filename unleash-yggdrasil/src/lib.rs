@@ -30,14 +30,18 @@ use state::EnrichedContext;
 use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
+#[cfg(feature = "wasm-types")]
+use tsify::Tsify;
 pub use unleash_types::client_features::Context;
 use unleash_types::client_features::{
-    ClientFeature, ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
-    Segment, Variant,
+    ClientFeature, ClientFeaturesDelta, FeatureDependency, Override, Payload, Segment, Variant,
 };
-use unleash_types::client_metrics::{MetricBucket, ToggleStats};
+use unleash_types::client_metrics::ToggleStats;
 
 use crate::state::SdkError;
+
+pub use unleash_types::client_features::ClientFeatures;
+pub use unleash_types::client_metrics::MetricBucket;
 
 pub type CompiledState = AHashMap<String, CompiledToggle>;
 
@@ -84,6 +88,7 @@ pub struct CompiledToggle {
 }
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
 #[serde(rename_all = "camelCase")]
 pub struct ToggleDefinition {
     pub name: String,
@@ -943,6 +948,7 @@ impl VariantDef {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
 #[serde(rename_all = "camelCase")]
 pub struct ExtendedVariantDef {
     pub name: String,
