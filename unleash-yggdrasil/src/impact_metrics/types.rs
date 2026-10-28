@@ -97,6 +97,7 @@ impl GaugeMetricSample {
 #[cfg_attr(feature = "wasm-types", derive(Tsify))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HistogramBucket {
+    #[cfg_attr(feature = "wasm-types", tsify(type = "number | \"+Inf\""))]
     #[serde(serialize_with = "serialize_le", deserialize_with = "deserialize_le")]
     pub le: f64,
     pub count: i64,
