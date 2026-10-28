@@ -23,7 +23,7 @@ pub enum MetricType {
 }
 
 #[cfg_attr(feature = "wasm-types", derive(Tsify))]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MetricOptions {
     pub name: String,
     pub help: String,
