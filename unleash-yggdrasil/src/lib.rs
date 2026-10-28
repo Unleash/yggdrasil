@@ -516,6 +516,25 @@ impl EngineState {
         }
     }
 
+    pub fn restore_metrics(&self, metrics: MetricBucket) {
+        for (toggle_name, toggle_stats) in metrics.toggles {
+            if let Some(toggle_metric) = self.toggle_metrics.get(&toggle_name) {
+                toggle_metric
+                    .yes
+                    .fetch_add(toggle_stats.yes, Ordering::Relaxed);
+                toggle_metric
+                    .no
+                    .fetch_add(toggle_stats.no, Ordering::Relaxed);
+
+                for (variant_name, variant_count) in toggle_stats.variants {
+                    if let Some(variant_metric) = toggle_metric.variants.get(&variant_name) {
+                        variant_metric.fetch_add(variant_count, Ordering::Relaxed);
+                    }
+                }
+            }
+        }
+    }
+
     fn is_parent_dependency_satisfied(
         &self,
         toggle: &CompiledToggle,
@@ -1212,6 +1231,30 @@ mod test {
 
         let metrics = state.get_metrics(Utc::now());
         assert!(metrics.is_none());
+    }
+
+    #[test]
+    fn restore_metrics_adds_collected_counts_to_new_metrics() {
+        let state = EngineState::default();
+        state.count_toggle("some-toggle", true);
+        state.count_toggle("some-toggle", false);
+        state.count_variant("some-toggle", "some-variant");
+
+        let collected = state.get_metrics(Utc::now()).unwrap();
+        assert!(state.get_metrics(Utc::now()).is_none());
+
+        state.count_toggle("some-toggle", true);
+        state.count_variant("some-toggle", "some-variant");
+        state.count_variant("some-toggle", "new-variant");
+        state.restore_metrics(collected);
+
+        let restored = state.get_metrics(Utc::now()).unwrap();
+        let stats = &restored.toggles["some-toggle"];
+        assert_eq!(stats.yes, 2);
+        assert_eq!(stats.no, 1);
+        assert_eq!(stats.variants["some-variant"], 2);
+        assert_eq!(stats.variants["new-variant"], 1);
+        assert!(state.get_metrics(Utc::now()).is_none());
     }
 
     #[test]
