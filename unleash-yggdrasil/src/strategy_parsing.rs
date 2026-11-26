@@ -724,10 +724,10 @@ fn compile_statement(node: Pair<Rule>) -> CompileResult<Statement> {
             let mut children = node.into_inner();
             let expr = children
                 .next()
-                .ok_or_else(|| SdkError::StrategyEvaluationError)?;
+                .ok_or(SdkError::StrategyEvaluationError)?;
             let block = children
                 .next()
-                .ok_or_else(|| SdkError::StrategyEvaluationError)?;
+                .ok_or(SdkError::StrategyEvaluationError)?;
 
             Ok(Statement::If {
                 condition: eval(expr.into_inner())?,
@@ -738,7 +738,7 @@ fn compile_statement(node: Pair<Rule>) -> CompileResult<Statement> {
             let boolean = node
                 .into_inner()
                 .next()
-                .ok_or_else(|| SdkError::StrategyEvaluationError)?;
+                .ok_or(SdkError::StrategyEvaluationError)?;
             Ok(Statement::Return(boolean.as_str() == "true"))
         }
         _ => {
