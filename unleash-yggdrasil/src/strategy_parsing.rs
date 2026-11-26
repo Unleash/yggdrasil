@@ -722,12 +722,8 @@ fn compile_statement(node: Pair<Rule>) -> CompileResult<Statement> {
     match node.as_rule() {
         Rule::if_statement => {
             let mut children = node.into_inner();
-            let expr = children
-                .next()
-                .ok_or(SdkError::StrategyEvaluationError)?;
-            let block = children
-                .next()
-                .ok_or(SdkError::StrategyEvaluationError)?;
+            let expr = children.next().ok_or(SdkError::StrategyEvaluationError)?;
+            let block = children.next().ok_or(SdkError::StrategyEvaluationError)?;
 
             Ok(Statement::If {
                 condition: eval(expr.into_inner())?,
