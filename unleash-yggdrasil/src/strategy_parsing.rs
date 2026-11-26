@@ -718,8 +718,12 @@ fn compile_statement(node: Pair<Rule>) -> CompileResult<Statement> {
     match node.as_rule() {
         Rule::if_statement => {
             let mut children = node.into_inner();
-            let expr = children.next().unwrap();
-            let block = children.next().unwrap();
+            let expr = children
+                .next()
+                .ok_or_else(|| SdkError::StrategyEvaluationError)?;
+            let block = children
+                .next()
+                .ok_or_else(|| SdkError::StrategyEvaluationError)?;
 
             Ok(Statement::If {
                 condition: eval(expr.into_inner())?,
@@ -727,7 +731,10 @@ fn compile_statement(node: Pair<Rule>) -> CompileResult<Statement> {
             })
         }
         Rule::return_statement => {
-            let boolean = node.into_inner().next().unwrap();
+            let boolean = node
+                .into_inner()
+                .next()
+                .ok_or_else(|| SdkError::StrategyEvaluationError)?;
             Ok(Statement::Return(boolean.as_str() == "true"))
         }
         _ => {
