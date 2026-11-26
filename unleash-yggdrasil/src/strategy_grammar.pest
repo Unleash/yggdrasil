@@ -26,7 +26,7 @@ empty_list = { "[]" }
 string_list = { "[" ~ string ~ ( "," ~ string )* ~ "]" }
 semver_list = { "[" ~ semver ~ ( "," ~ semver )* ~ "]" }
 
-WHITESPACE = _{ " " | "\t" }
+WHITESPACE = _{ " " | "\t" | NEWLINE }
 NULL_COALESCE = _{ "|" }
 
 random = { "random[" ~ int ~ "]" | "random" }
