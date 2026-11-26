@@ -2,7 +2,8 @@
 
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicI64, AtomicU32};
+use std::sync::Arc;
 
 #[macro_use]
 extern crate lazy_static;
@@ -16,6 +17,7 @@ pub mod strategy_parsing;
 pub mod strategy_upgrade;
 
 use ahash::AHashMap;
+use arc_swap::{ArcSwap, ArcSwapOption};
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use impact_metrics::{
@@ -28,16 +30,27 @@ use state::EnrichedContext;
 use std::sync::atomic::Ordering;
 use strategy_parsing::{compile_rule, normalized_hash, RuleFragment};
 use strategy_upgrade::{build_variant_rules, upgrade};
+#[cfg(feature = "wasm-types")]
+use tsify::Tsify;
 pub use unleash_types::client_features::Context;
 use unleash_types::client_features::{
-    ClientFeature, ClientFeatures, ClientFeaturesDelta, FeatureDependency, Override, Payload,
-    Segment, Variant,
+    ClientFeature, ClientFeaturesDelta, FeatureDependency, Override, Payload, Segment, Variant,
 };
-use unleash_types::client_metrics::{MetricBucket, ToggleStats};
+use unleash_types::client_metrics::ToggleStats;
 
 use crate::state::SdkError;
 
+pub use unleash_types::client_features::ClientFeatures;
+pub use unleash_types::client_metrics::MetricBucket;
+
 pub type CompiledState = AHashMap<String, CompiledToggle>;
+
+fn get_toggle<'a>(state: &'a CompiledState, name: &str) -> Option<&'a CompiledToggle> {
+    state.get(name)
+}
+
+#[cfg(all(feature = "hostname", target_arch = "wasm32"))]
+mod wasm_hostname;
 
 pub const SUPPORTED_SPEC_VERSION: &str = "6.1.0";
 const VARIANT_NORMALIZATION_SEED: u32 = 86028157;
@@ -78,6 +91,7 @@ pub struct CompiledToggle {
 }
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
 #[serde(rename_all = "camelCase")]
 pub struct ToggleDefinition {
     pub name: String,
@@ -270,10 +284,10 @@ struct Metric {
 }
 
 pub struct EngineState {
-    compiled_state: Option<CompiledState>,
-    previous_state: ClientFeatures,
+    compiled_state: ArcSwapOption<CompiledState>,
+    previous_state: ArcSwap<ClientFeatures>,
     toggle_metrics: DashMap<String, Metric>,
-    toggle_metrics_start: DateTime<Utc>,
+    toggle_metrics_start: AtomicI64,
     pub started: DateTime<Utc>,
     impact_metrics: impact_metrics::InMemoryMetricRegistry,
 }
@@ -283,7 +297,7 @@ impl EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: started,
+            toggle_metrics_start: AtomicI64::new(started.timestamp_millis()),
             previous_state: Default::default(),
             started,
             impact_metrics: Default::default(),
@@ -297,7 +311,7 @@ impl Default for EngineState {
         Self {
             compiled_state: Default::default(),
             toggle_metrics: Default::default(),
-            toggle_metrics_start: Utc::now(),
+            toggle_metrics_start: AtomicI64::new(Utc::now().timestamp_millis()),
             previous_state: Default::default(),
             started: Utc::now(),
             impact_metrics: Default::default(),
@@ -321,16 +335,10 @@ pub struct ResolvedToggle {
 }
 
 impl EngineState {
-    pub fn apply_delta(&mut self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
-        let mut new_state = self.previous_state.clone();
+    pub fn apply_delta(&self, delta: &ClientFeaturesDelta) -> Option<Vec<EvalWarning>> {
+        let mut new_state: ClientFeatures = self.previous_state.load().as_ref().clone();
         new_state.apply_delta(delta);
         self.apply_client_features(new_state)
-    }
-
-    fn get_toggle(&self, name: &str) -> Option<&CompiledToggle> {
-        self.compiled_state
-            .as_ref()
-            .and_then(|state| state.get(name))
     }
 
     pub fn count_toggle(&self, name: &str, enabled: bool) {
@@ -461,7 +469,7 @@ impl EngineState {
         self.impact_metrics.restore(metrics);
     }
 
-    pub fn get_metrics(&mut self, close_time: DateTime<Utc>) -> Option<MetricBucket> {
+    pub fn get_metrics(&self, close_time: DateTime<Utc>) -> Option<MetricBucket> {
         let metrics: HashMap<String, ToggleStats> = self
             .toggle_metrics
             .iter()
@@ -497,8 +505,15 @@ impl EngineState {
             .collect();
 
         if !metrics.is_empty() {
-            let start = self.toggle_metrics_start;
-            self.toggle_metrics_start = close_time;
+            let start_ms = self
+                .toggle_metrics_start
+                .swap(close_time.timestamp_millis(), Ordering::Relaxed);
+
+            // reasonably sure this is infallible but expect/unwrap are denied
+            // in this crate so we're silent failing here. "Now" is a reasonable
+            // assumption here that should result in harmless behavior
+            let start = DateTime::<Utc>::from_timestamp_millis(start_ms).unwrap_or_else(Utc::now);
+
             Some(MetricBucket {
                 toggles: metrics,
                 start,
@@ -509,14 +524,38 @@ impl EngineState {
         }
     }
 
+    pub fn restore_metrics(&self, metrics: MetricBucket) {
+        for (toggle_name, toggle_stats) in metrics.toggles {
+            if let Some(toggle_metric) = self.toggle_metrics.get(&toggle_name) {
+                toggle_metric
+                    .yes
+                    .fetch_add(toggle_stats.yes, Ordering::Relaxed);
+                toggle_metric
+                    .no
+                    .fetch_add(toggle_stats.no, Ordering::Relaxed);
+
+                for (variant_name, variant_count) in toggle_stats.variants {
+                    if let Some(variant_metric) = toggle_metric.variants.get(&variant_name) {
+                        variant_metric.fetch_add(variant_count, Ordering::Relaxed);
+                    }
+                }
+            }
+        }
+    }
+
     fn is_parent_dependency_satisfied(
         &self,
         toggle: &CompiledToggle,
         enriched_context: &EnrichedContext,
     ) -> bool {
+        let snapshot = self.compiled_state.load();
+        let Some(state) = snapshot.as_ref() else {
+            return false;
+        };
+
         toggle.dependencies.iter().all(|parent_dependency| {
             let context = enriched_context.with_toggle_name(toggle.name.as_str());
-            let Some(compiled_parent) = self.get_toggle(&parent_dependency.feature) else {
+            let Some(compiled_parent) = get_toggle(state, &parent_dependency.feature) else {
                 return false;
             };
 
@@ -557,7 +596,7 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> Option<HashMap<String, ResolvedToggle>> {
-        self.compiled_state.as_ref().map(|state| {
+        self.compiled_state.load().as_ref().map(|state| {
             state
                 .iter()
                 .map(|(name, toggle)| {
@@ -585,7 +624,7 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> Option<ResolvedToggle> {
-        self.compiled_state.as_ref().and_then(|state| {
+        self.compiled_state.load().as_ref().and_then(|state| {
             state.get(name).map(|compiled_toggle| ResolvedToggle {
                 enabled: self.enabled(
                     compiled_toggle,
@@ -600,6 +639,7 @@ impl EngineState {
 
     pub fn list_known_toggles(&self) -> Vec<ToggleDefinition> {
         self.compiled_state
+            .load()
             .as_ref()
             .map(|state| {
                 state
@@ -620,6 +660,7 @@ impl EngineState {
 
     pub fn should_emit_impression_event(&self, name: &str) -> bool {
         self.compiled_state
+            .load()
             .as_ref()
             .and_then(|state| {
                 state
@@ -630,8 +671,10 @@ impl EngineState {
     }
 
     pub fn check_enabled(&self, context: &EnrichedContext) -> Option<bool> {
-        self.get_toggle(context.toggle_name)
-            .map(|toggle| self.enabled(toggle, context))
+        let snapshot = self.compiled_state.load();
+        let state = snapshot.as_ref()?;
+        let toggle = get_toggle(state, context.toggle_name)?;
+        Some(self.enabled(toggle, context))
     }
 
     pub fn is_enabled(
@@ -640,14 +683,16 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> bool {
+        let snapshot = self.compiled_state.load();
+        let Some(state) = snapshot.as_ref() else {
+            return false;
+        };
+
         let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
-        let is_enabled = self
-            .get_toggle(name)
+        get_toggle(state, name)
             .map(|toggle| self.enabled(toggle, &enriched_context))
-            .unwrap_or_default();
-
-        is_enabled
+            .unwrap_or_default()
     }
 
     fn resolve_variant<'a>(
@@ -761,7 +806,10 @@ impl EngineState {
     }
 
     pub fn check_variant(&self, context: &EnrichedContext) -> Option<VariantDef> {
-        self.get_toggle(context.toggle_name).map(|toggle| {
+        let snapshot = self.compiled_state.load();
+        let state = snapshot.as_ref()?;
+
+        get_toggle(state, context.toggle_name).map(|toggle| {
             let (enabled, strategy_variants) = self.variant_enabled(toggle, context);
             if enabled {
                 self.choose_variant(toggle, context, strategy_variants)
@@ -778,7 +826,13 @@ impl EngineState {
         context: &Context,
         external_values: &Option<HashMap<String, bool>>,
     ) -> ExtendedVariantDef {
-        let toggle = self.get_toggle(name);
+        let snapshot = self.compiled_state.load();
+        let Some(state) = snapshot.as_ref() else {
+            return VariantDef::default().to_enriched_response(false);
+        };
+
+        let toggle = get_toggle(state, name);
+
         let enriched_context = EnrichedContext::from(context, name, external_values.as_ref());
 
         let (enabled, strategy_variants) = toggle
@@ -796,7 +850,7 @@ impl EngineState {
         variant.to_enriched_response(enabled)
     }
 
-    pub fn take_state(&mut self, message: UpdateMessage) -> Option<Vec<EvalWarning>> {
+    pub fn take_state(&self, message: UpdateMessage) -> Option<Vec<EvalWarning>> {
         match message {
             UpdateMessage::PartialUpdate(delta) => self.apply_delta(&delta),
             UpdateMessage::FullResponse(state) => self.apply_client_features(state),
@@ -804,17 +858,18 @@ impl EngineState {
     }
 
     pub fn get_state(&self) -> ClientFeatures {
-        if self.compiled_state.is_some() {
-            self.previous_state.clone()
+        let snapshot = self.compiled_state.load();
+        if snapshot.is_some() {
+            self.previous_state.load().as_ref().clone()
         } else {
             ClientFeatures::default()
         }
     }
 
-    pub fn apply_client_features(&mut self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
+    pub fn apply_client_features(&self, toggles: ClientFeatures) -> Option<Vec<EvalWarning>> {
         let (compiled_state, warnings) = compile_state(&toggles);
-        self.previous_state = toggles;
-        self.compiled_state = Some(compiled_state);
+        self.previous_state.store(Arc::new(toggles));
+        self.compiled_state.store(Some(Arc::new(compiled_state)));
         if !warnings.is_empty() {
             Some(warnings)
         } else {
@@ -896,6 +951,7 @@ impl VariantDef {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "wasm-types", derive(Tsify))]
 #[serde(rename_all = "camelCase")]
 pub struct ExtendedVariantDef {
     pub name: String,
@@ -918,6 +974,7 @@ impl Default for VariantDef {
 #[cfg(test)]
 mod test {
     use ahash::AHashMap;
+    use arc_swap::ArcSwapOption;
     use chrono::Utc;
     use serde::Deserialize;
     use std::{
@@ -934,7 +991,7 @@ mod test {
     };
 
     use crate::{
-        check_for_variant_override, get_seed, state::EnrichedContext, CompiledToggle,
+        check_for_variant_override, get_seed, get_toggle, state::EnrichedContext, CompiledToggle,
         CompiledVariant, Context, EngineState, UpdateMessage, VariantDef,
     };
 
@@ -990,28 +1047,37 @@ mod test {
     #[test]
     fn can_load_single() {
         let delta = load_delta("delta_base.json");
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         engine.apply_delta(&delta);
-        assert!(engine.get_toggle("test-flag").is_some())
+        let snapshot = engine.compiled_state.load();
+        let state = snapshot.as_ref().unwrap();
+
+        assert!(get_toggle(&state, "test-flag").is_some())
     }
 
     #[test]
     fn can_update_existing_state() {
         let delta = load_delta("delta_base.json");
         let patch = load_delta("delta_patch.json");
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             user_id: Some("4".into()),
             ..Context::default()
         };
 
         engine.apply_delta(&delta);
+        let snapshot = engine.compiled_state.load();
+        let state = snapshot.as_ref().unwrap();
+
         assert!(!engine.is_enabled("test-flag", &context, &None));
-        assert!(engine.get_toggle("removed-flag").is_some());
+        assert!(get_toggle(&state, "removed-flag").is_some());
         assert!(!engine.is_enabled("segment-flag", &context, &None));
         engine.apply_delta(&patch);
+
+        let snapshot = engine.compiled_state.load();
+        let state = snapshot.as_ref().unwrap();
         assert!(engine.is_enabled("test-flag", &context, &None));
-        assert!(engine.get_toggle("removed-flag").is_none());
+        assert!(get_toggle(&state, "removed-flag").is_none());
         assert!(engine.is_enabled("segment-flag", &context, &None));
     }
 
@@ -1040,7 +1106,7 @@ mod test {
 
     fn run_client_spec(spec_name: &str) {
         let spec = load_spec(spec_name);
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         engine.take_state(spec.state);
 
         if let Some(mut tests) = spec.tests {
@@ -1094,7 +1160,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
         let context = Context::default();
@@ -1116,7 +1182,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
         let context = Context::default();
@@ -1140,8 +1206,8 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
+        let state = EngineState {
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1162,8 +1228,8 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
+        let state = EngineState {
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1177,21 +1243,47 @@ mod test {
     }
 
     #[test]
+    fn restore_metrics_adds_collected_counts_to_new_metrics() {
+        let state = EngineState::default();
+        state.count_toggle("some-toggle", true);
+        state.count_toggle("some-toggle", false);
+        state.count_variant("some-toggle", "some-variant");
+
+        let collected = state.get_metrics(Utc::now()).unwrap();
+        assert!(state.get_metrics(Utc::now()).is_none());
+
+        state.count_toggle("some-toggle", true);
+        state.count_variant("some-toggle", "some-variant");
+        state.count_variant("some-toggle", "new-variant");
+        state.restore_metrics(collected);
+
+        let restored = state.get_metrics(Utc::now()).unwrap();
+        let stats = &restored.toggles["some-toggle"];
+        assert_eq!(stats.yes, 2);
+        assert_eq!(stats.no, 1);
+        assert_eq!(stats.variants["some-variant"], 2);
+        assert_eq!(stats.variants["new-variant"], 1);
+        assert!(state.get_metrics(Utc::now()).is_none());
+    }
+
+    #[test]
     pub fn getting_metrics_restarts_time() {
+        let initial_start = Utc::now();
         let compiled_state = AHashMap::new();
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
-            ..Default::default()
+        let state = EngineState {
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
+            ..EngineState::initial_state(initial_start)
         };
 
         state.count_toggle("some-test-toggle", true);
 
-        let metrics = state.get_metrics(Utc::now()).unwrap();
+        let first_close = initial_start + chrono::Duration::milliseconds(1);
+        let second_close = first_close + chrono::Duration::milliseconds(1);
+        let metrics = state.get_metrics(first_close).unwrap();
         let start = metrics.start;
-        std::thread::sleep(std::time::Duration::from_millis(1));
 
         state.count_toggle("some-test-toggle", true);
-        let metrics = state.get_metrics(Utc::now()).unwrap();
+        let metrics = state.get_metrics(second_close).unwrap();
         let new_start = metrics.start;
 
         assert!(new_start > start);
@@ -1221,8 +1313,8 @@ mod test {
             },
         );
 
-        let mut state = EngineState {
-            compiled_state: Some(compiled_state),
+        let state = EngineState {
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1301,7 +1393,7 @@ mod test {
         );
 
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1351,7 +1443,7 @@ mod test {
         );
 
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1465,7 +1557,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
         let variant = state.get_variant("some-toggle", &Context::default(), &None);
@@ -1512,7 +1604,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1548,7 +1640,7 @@ mod test {
             },
         );
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
         let variant = state.get_variant("some-toggle", &Context::default(), &None);
@@ -1606,7 +1698,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
             ..Context::default()
@@ -1683,7 +1775,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
             ..Context::default()
@@ -1757,7 +1849,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             user_id: Some("7".into()),
             ..Context::default()
@@ -1809,7 +1901,7 @@ mod test {
         );
 
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -1900,7 +1992,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let context = Context {
             ..Context::default()
         };
@@ -1951,7 +2043,7 @@ mod test {
 
         let feature_set: UpdateMessage =
             UpdateMessage::FullResponse(serde_json::from_str(raw_state).unwrap());
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
 
         let warnings = engine.take_state(feature_set);
 
@@ -1979,7 +2071,7 @@ mod test {
     fn get_state_returns_previous_state_when_loaded() {
         use unleash_types::client_features::{ClientFeature, ClientFeatures, Strategy};
 
-        let mut engine = EngineState::default();
+        let engine = EngineState::default();
         let client_features = ClientFeatures {
             features: vec![ClientFeature {
                 name: "test-feature".into(),
@@ -2037,7 +2129,7 @@ mod test {
         );
 
         let state = EngineState {
-            compiled_state: Some(compiled_state),
+            compiled_state: ArcSwapOption::from(Some(Arc::new(compiled_state))),
             ..Default::default()
         };
 
@@ -2045,5 +2137,11 @@ mod test {
             let variant = state.get_variant("some-toggle", &Context::default(), &None);
             assert_eq!(variant.name, "full-weight-variant".to_string());
         }
+    }
+
+    #[test]
+    fn engine_is_send_and_sync() {
+        fn assert_send_sync<T: Send + Sync>() {}
+        assert_send_sync::<EngineState>();
     }
 }

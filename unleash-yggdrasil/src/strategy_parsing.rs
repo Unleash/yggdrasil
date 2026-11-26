@@ -21,10 +21,14 @@ use rand::Rng;
 use regex::RegexBuilder;
 use semver::Version;
 
-#[cfg(feature = "hostname")]
+#[cfg(all(feature = "hostname", not(target_arch = "wasm32")))]
 use hostname;
+
 #[cfg(feature = "hostname")]
 use std::env;
+
+#[cfg(all(feature = "hostname", target_arch = "wasm32"))]
+use crate::wasm_hostname as hostname;
 
 #[derive(Parser)]
 #[grammar = "strategy_grammar.pest"]
