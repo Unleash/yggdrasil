@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0](https://github.com/Unleash/yggdrasil/compare/v0.21.7...v0.22.0) - 2026-11-27
+
+### 💼 Other
+- add arbitrary return values from the grammar ([#355](https://github.com/Unleash/yggdrasil/issues/355)) (by @sighphyre) - #355
+- if statement resolution for the grammar ([#354](https://github.com/Unleash/yggdrasil/issues/354)) (by @sighphyre) - #354
+
+### Contributors
+
+* @sighphyre
+
 ## [0.21.7](https://github.com/Unleash/yggdrasil/compare/v0.21.6...v0.21.7) - 2026-10-28
 
 ### 🚀 Features
